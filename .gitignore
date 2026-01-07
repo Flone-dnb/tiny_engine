@@ -1,0 +1,11 @@
+build
+*.user
+*.vs
+*.TMP
+out
+CMakeSettings.json
+*.autosave
+.cache
+src/*/debug.cmake
+.ccls-cache
+compile_commands.json
