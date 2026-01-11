@@ -12,12 +12,16 @@ set(PROJECT_SOURCES
     src/io/filesystem.c
     src/misc/globals.c
     src/misc/error.c
+    src/game_manager.c
+    src/renderer.c
     include/window.h
     include/io/log.h
     include/io/paths.h
     include/io/filesystem.h
     include/misc/globals.h
     include/misc/error.h
+    include/game_manager.h
+    include/renderer.h
 )
 
 # Define targets (one without any specific macros and another for compilation with editor).

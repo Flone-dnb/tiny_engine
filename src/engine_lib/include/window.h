@@ -1,10 +1,38 @@
 #pragma once
 
+#include <stdbool.h>
+
+struct te_game_manager;
+
 /** Game window. */
-typedef struct {
+typedef struct te_window {
     /** SDL window. */
     struct SDL_Window* sdl_window;
+
+    /** Game manager that window created. */
+    struct te_game_manager* game_manager;
+
+    /** Current width of the window. */
+    unsigned int width;
+
+    /** Current height of the window. */
+    unsigned int height;
+
+    /** `true` if the window needs to be closed. */
+    bool quit_requested;
 } te_window;
+
+/** Initial callbacks that the user must specify. */
+typedef struct te_game_window_callbacks {
+    /** Called when engine initialized everything and the game is ready to start. */
+    void (*on_game_started)(struct te_game_manager* game_manager);
+
+    /** Called before a new frame is rendered. */
+    void (*on_game_tick)(struct te_game_manager* game_manager, float delta_time_sec);
+
+    /** Called before the window is closed (before the game is closed). */
+    void (*on_window_close)(struct te_game_manager* game_manager);
+} te_game_window_callbacks;
 
 /**
  * Creates a new window.
@@ -21,3 +49,44 @@ te_window* window_create(const char* window_title);
  * @param window Window.
  */
 void window_destroy(te_window* window);
+
+/**
+ * Runs the window's event loop.
+ *
+ * @param window Window.
+ * @param game_callbacks Essential game callbacks that should be specified.
+ */
+void window_process_events(te_window* window, te_game_window_callbacks* game_callbacks);
+
+/**
+ * Returns the current size of the window.
+ *
+ * @param window Window.
+ * @param width  The current width of the window.
+ * @param height The current height of the window.
+ */
+void window_get_size(te_window* window, unsigned int* width, unsigned int* height);
+
+/**
+ * Sets a flag that stops the window from processing window events
+ * that were initiated by calling @ref window_process_events.
+ *
+ * @param window Window to close.
+ */
+void window_close(te_window* window);
+
+// ------------------------------------------------------------------------------------------------
+//                                       PRIVATE API
+// ------------------------------------------------------------------------------------------------
+
+union SDL_Event;
+
+/**
+ * Processes the specified window event.
+ *
+ * @param window Window.
+ * @param event Event to process.
+ *
+ * @return `true` if received "quit" event.
+ */
+bool prv_window_process_event(te_window* window, union SDL_Event event);

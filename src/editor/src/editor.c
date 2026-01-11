@@ -1,10 +1,19 @@
 #include "editor.h"
 
-#include "window.h"
+void
+editor_on_game_started(struct te_game_manager* game_manager) {
+    (void)game_manager;
+    // TODO
+}
 
 void
-editor_run(void) {
-    te_window* window = window_create("tiny engine editor");
+editor_on_game_tick(struct te_game_manager* game_manager, float delta_time_sec) {
+    (void)game_manager;
+    (void)delta_time_sec;
+    // TODO
+}
 
-    window_destroy(window);
+void
+editor_on_window_close(struct te_game_manager* game_manager) {
+    (void)game_manager;
 }

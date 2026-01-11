@@ -1,18 +1,22 @@
 #include "window.h"
 
+#include <SDL3/SDL_error.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include "game_manager.h"
 #include "io/filesystem.h"
 #include "io/log.h"
 #include "io/paths.h"
 #include "misc/error.h"
-
 #define SDL_MAIN_HANDLED
+#include "SDL3/SDL_events.h"
 #include "SDL3/SDL_init.h"
+#include "SDL3/SDL_timer.h"
 #include "SDL3/SDL_video.h"
 
 te_window*
 window_create(const char* window_title) {
+
     // Destroy old log file.
     filesystem_remove_file(paths_get_log_file());
 
@@ -71,10 +75,90 @@ window_create(const char* window_title) {
 
     te_window* window = malloc(sizeof(te_window));
     window->sdl_window = sdl_window;
+    window->game_manager = NULL;
+    window->width = (unsigned int)display_width;
+    window->height = (unsigned int)display_height;
+    window->quit_requested = false;
 
-    log_info_fmt("created a window of size %dx%d", display_width, display_height);
+    log_info_fmt("created a window of size %dx%d", window->width, window->height);
 
     return window;
+}
+
+void
+window_process_events(te_window* window, te_game_window_callbacks* game_callbacks) {
+    window->game_manager = game_manager_create(window, game_callbacks->on_game_tick);
+
+    game_callbacks->on_game_started(window->game_manager);
+
+    // Used to calculate delta time.
+    unsigned long current_time_counter = SDL_GetPerformanceCounter();
+    unsigned long prev_time_counter = 0;
+
+    while (!window->quit_requested) {
+        // Process available window events.
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            const bool received_quit_event = prv_window_process_event(window, event);
+
+            // Use `OR` instead of assignment because the user can call `window_close`.
+            window->quit_requested |= received_quit_event;
+        }
+
+        // Calculate delta time.
+        prev_time_counter = current_time_counter;
+        current_time_counter = SDL_GetPerformanceCounter();
+        const double delta_time_ms =
+            (double)((current_time_counter - prev_time_counter) * 1000) / (double)(SDL_GetPerformanceFrequency());
+        const float delta_time_sec = (float)(delta_time_ms * 0.001);
+
+        prv_game_manager_tick(window->game_manager, delta_time_sec);
+        prv_game_manager_draw_frame(window->game_manager);
+    }
+
+    game_callbacks->on_window_close(window->game_manager);
+
+    // Destroy game manager.
+    game_manager_destroy(window->game_manager);
+    window->game_manager = NULL;
+}
+
+bool
+prv_window_process_event(te_window* window, union SDL_Event event) {
+    switch (event.type) {
+        case (SDL_EVENT_WINDOW_RESIZED):
+        case (SDL_EVENT_WINDOW_MAXIMIZED):
+        case (SDL_EVENT_WINDOW_MINIMIZED): {
+            // Save new size.
+            int width;
+            int height;
+            if (SDL_GetWindowSizeInPixels(window->sdl_window, &width, &height) == false) {
+                show_error_and_abort(SDL_GetError());
+            }
+            window->width = (unsigned int)width;
+            window->height = (unsigned int)height;
+
+            // Notify.
+            prv_game_manager_on_window_size_changed(window->game_manager);
+            break;
+        }
+        case (SDL_EVENT_QUIT): {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void
+window_get_size(te_window* window, unsigned int* width, unsigned int* height) {
+    *width = window->width;
+    *height = window->height;
+}
+
+void
+window_close(te_window* window) {
+    window->quit_requested = true;
 }
 
 void
