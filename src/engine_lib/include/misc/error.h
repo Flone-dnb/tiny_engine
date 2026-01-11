@@ -30,6 +30,13 @@ void error_destroy(te_error* err);
  */
 void show_error_and_abort(const char* message);
 
+/**
+ * Converts GL error to text, shows it and aborts the program. 
+ *
+ * @param gl_erorr GL error.
+ */
+void show_gl_error_and_abort(unsigned int gl_erorr);
+
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API
 // ------------------------------------------------------------------------------------------------

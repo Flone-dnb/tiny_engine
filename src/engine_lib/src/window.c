@@ -26,8 +26,8 @@ window_create(const char* window_title) {
             show_error_and_abort(SDL_GetError());
         }
 
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3); // IF CHANGING
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1); // ALSO CHANGE GLAD
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2); // IF CHANGING
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0); // ALSO CHANGE GLAD
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 
 #if defined(DEBUG)
@@ -45,14 +45,16 @@ window_create(const char* window_title) {
     // Get available displays.
     int display_count = 0;
     SDL_DisplayID* displays = SDL_GetDisplays(&display_count);
-    if (display_count == 0) {
+    if (display_count <= 0) {
         show_error_and_abort("unable to find at least 1 display");
     }
 
     // Get display resolution.
-    const SDL_DisplayMode* pMode = SDL_GetDesktopDisplayMode(displays[0]);
-    int display_width = pMode->w;
-    int display_height = pMode->h;
+    const unsigned int used_display_id = displays[0];
+    const SDL_DisplayMode* display_info = SDL_GetDesktopDisplayMode(used_display_id);
+    const int display_width = display_info->w;
+    const int display_height = display_info->h;
+    const unsigned int display_refresh_rate = (unsigned int)display_info->refresh_rate;
     SDL_free(displays);
 
     // Create SDL window.
@@ -78,6 +80,7 @@ window_create(const char* window_title) {
     window->game_manager = NULL;
     window->width = (unsigned int)display_width;
     window->height = (unsigned int)display_height;
+    window->display_refresh_rate = display_refresh_rate;
     window->quit_requested = false;
 
     log_info_fmt("created a window of size %dx%d", window->width, window->height);
@@ -116,11 +119,15 @@ window_process_events(te_window* window, te_game_window_callbacks* game_callback
         prv_game_manager_draw_frame(window->game_manager);
     }
 
+    log_info("window is closing");
+
     game_callbacks->on_window_close(window->game_manager);
 
     // Destroy game manager.
     game_manager_destroy(window->game_manager);
     window->game_manager = NULL;
+
+    log_info("game manager is destroyed");
 }
 
 bool
@@ -154,6 +161,11 @@ void
 window_get_size(te_window* window, unsigned int* width, unsigned int* height) {
     *width = window->width;
     *height = window->height;
+}
+
+unsigned int
+window_get_display_refresh_rate(te_window* window) {
+    return window->display_refresh_rate;
 }
 
 void

@@ -11,7 +11,7 @@ game_manager_create(struct te_window* window,
     game_manager->window = window;
     game_manager->on_game_tick = on_game_tick;
 
-    game_manager->renderer = (te_renderer*)malloc(sizeof(te_renderer));
+    game_manager->renderer = renderer_create(window);
 
     return game_manager;
 }

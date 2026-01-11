@@ -18,6 +18,9 @@ typedef struct te_window {
     /** Current height of the window. */
     unsigned int height;
 
+    /** Refresh rate of the used display. */
+    unsigned int display_refresh_rate;
+
     /** `true` if the window needs to be closed. */
     bool quit_requested;
 } te_window;
@@ -66,6 +69,15 @@ void window_process_events(te_window* window, te_game_window_callbacks* game_cal
  * @param height The current height of the window.
  */
 void window_get_size(te_window* window, unsigned int* width, unsigned int* height);
+
+/**
+ * Returns refresh rate of the used display.
+ *
+ * @param window Window.
+ *
+ * @return Display's refresh rate.
+ */
+unsigned int window_get_display_refresh_rate(te_window* window);
 
 /**
  * Sets a flag that stops the window from processing window events

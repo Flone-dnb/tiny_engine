@@ -2,6 +2,8 @@
 
 project(tiny_engine C)
 
+option(ENGINE_FORCE_ENABLE_DEBUG_TOOLS "Can be useful in Release builds to measure performance, enabled in non-release builds by default" OFF)
+
 # -------------------------------------------------------------------------------------------------
 #                              PREPARE FOR ADDING ENGINE TARGETS
 # -------------------------------------------------------------------------------------------------
@@ -22,6 +24,14 @@ endif()
 if(NOT IS_RELEASE_BUILD)
     message(STATUS "${PROJECT_NAME}: adding debug macros.")
     add_compile_definitions(DEBUG)
+endif()
+
+# Debug tools.
+if(NOT IS_RELEASE_BUILD)
+    add_compile_definitions(ENGINE_DEBUG_TOOLS)
+elseif(ENGINE_FORCE_ENABLE_DEBUG_TOOLS)
+    message(WARNING "Note: you enabled ENGINE_DEBUG_TOOLS in release build.")
+    add_compile_definitions(ENGINE_DEBUG_TOOLS)
 endif()
 
 # Prepare some variables.

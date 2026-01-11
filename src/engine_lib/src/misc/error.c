@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "SDL3/SDL_messagebox.h"
+#include "glad/glad.h"
 #include "io/log.h"
 
 te_error*
@@ -39,6 +40,22 @@ show_error_and_abort(const char* message) {
     te_error* err = error_create(message);
     error_show_and_abort(err);
     error_destroy(err);
+}
+
+void
+show_gl_error_and_abort(unsigned int gl_erorr) {
+    switch (gl_erorr) {
+        case GL_INVALID_ENUM: show_error_and_abort("GL error: INVALID_ENUM"); break;
+        case GL_INVALID_VALUE: show_error_and_abort("GL error: INVALID_VALUE"); break;
+        case GL_INVALID_OPERATION: show_error_and_abort("GL error: INVALID_OPERATION"); break;
+        case GL_OUT_OF_MEMORY: show_error_and_abort("GL error: OUT_OF_MEMORY"); break;
+        case GL_INVALID_FRAMEBUFFER_OPERATION: show_error_and_abort("GL error: INVALID_FRAMEBUFFER_OPERATION"); break;
+        default: {
+            char error_msg[128] = {0};
+            snprintf(&error_msg[0], 128, "GL error: %u", gl_erorr);
+            show_error_and_abort(&error_msg[0]);
+        } break;
+    }
 }
 
 void

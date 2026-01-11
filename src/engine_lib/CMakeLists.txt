@@ -40,6 +40,11 @@ tiny_engine_configure_target(${ENGINE_LIB_TARGET_FOR_EDITOR})
 # Define editor macros for editor's version of the engine_lib.
 target_compile_definitions(${ENGINE_LIB_TARGET_FOR_EDITOR} PUBLIC ENGINE_EDITOR)
 
+if (IS_RELEASE_BUILD)
+    # The editor needs debug drawing and debug console even in release builds.
+    target_compile_definitions(${ENGINE_LIB_TARGET_FOR_EDITOR} PUBLIC ENGINE_DEBUG_TOOLS)
+endif()
+
 # -------------------------------------------------------------------------------------------------
 #                                       DEPENDENCIES
 # -------------------------------------------------------------------------------------------------
@@ -62,11 +67,11 @@ target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE SDL3::SDL3)
 message(STATUS "${PROJECT_NAME}: adding dependency \"GLAD\"...")
 set(GLAD_TARGET_NAME glad)
 add_library(${GLAD_TARGET_NAME} STATIC
-    ${RELATIVE_EXT_PATH}/glad_gles31/src/glad.c
-    ${RELATIVE_EXT_PATH}/glad_gles31/include/KHR/khrplatform.h
-    ${RELATIVE_EXT_PATH}/glad_gles31/include/glad/glad.h
+    ${RELATIVE_EXT_PATH}/glad_gles20/src/glad.c
+    ${RELATIVE_EXT_PATH}/glad_gles20/include/KHR/khrplatform.h
+    ${RELATIVE_EXT_PATH}/glad_gles20/include/glad/glad.h
 )
-target_include_directories(${GLAD_TARGET_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH}/glad_gles31/include)
+target_include_directories(${GLAD_TARGET_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH}/glad_gles20/include)
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE ${GLAD_TARGET_NAME})
 add_dependencies(${ENGINE_LIB_DEPS_TARGET} ${GLAD_TARGET_NAME})
 
