@@ -1,18 +1,24 @@
 #pragma once
 
 struct te_window;
-struct te_renderer;
+struct te_world;
 
-/** Stores all core systems such as ECS, physics, audio, renderer and etc. */
+/** Stores all core systems such as game world, physics, audio, renderer and etc. */
 typedef struct te_game_manager {
     /** Always valid pointer to the window that owns this object. This pointer should not be freed. */
     struct te_window* window;
 
-    /** Renderer created by game manager. */
+    /** Renderer. */
     struct te_renderer* renderer;
+
+    /** Game worlds. */
+    struct te_world** worlds;
 
     /** User callback that should be called on game tick. */
     void (*on_game_tick)(struct te_game_manager* game_manager, float delta_time_sec);
+
+    /** Number of elements in the @ref worlds array. */
+    unsigned int world_count;
 } te_game_manager;
 
 /**
@@ -32,6 +38,14 @@ te_game_manager* game_manager_create(struct te_window* window,
  * @param game_manager Game manager to destroy.
  */
 void game_manager_destroy(te_game_manager* game_manager);
+
+/**
+ * Creates a new world.
+ *
+ * @param game_manager Game manager.
+ * @param name         World name. The name will be copied to the world's object.
+ */
+void game_manager_create_world(te_game_manager* game_manager, const char* name);
 
 /**
  * Returns window that owns game manager.
