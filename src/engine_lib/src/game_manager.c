@@ -4,6 +4,24 @@
 #include "renderer.h"
 #include "world.h"
 
+/** Stores all core systems such as game world, physics, audio, renderer and etc. */
+struct te_game_manager {
+    /** Always valid pointer to the window that owns this object. This pointer should not be freed. */
+    struct te_window* window;
+
+    /** Renderer. */
+    struct te_renderer* renderer;
+
+    /** Game worlds. */
+    struct te_world** worlds;
+
+    /** User callback that should be called on game tick. */
+    void (*on_game_tick)(struct te_game_manager* game_manager, float delta_time_sec);
+
+    /** Number of elements in the @ref worlds array. */
+    unsigned int world_count;
+};
+
 te_game_manager*
 game_manager_create(struct te_window* window,
                     void (*on_game_tick)(te_game_manager* game_manager, float delta_time_sec)) {
@@ -58,7 +76,13 @@ game_manager_get_window(te_game_manager* game_manager) {
 
 void
 prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
+    // User callback.
     game_manager->on_game_tick(game_manager, delta_time_sec);
+
+    // Tick worlds.
+    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+        prv_world_tick(game_manager->worlds[i], delta_time_sec);
+    }
 }
 
 void

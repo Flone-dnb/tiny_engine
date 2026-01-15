@@ -1,18 +1,8 @@
 #pragma once
 
+typedef struct te_renderer te_renderer;
+
 struct te_window;
-
-/** Draws on the window. */
-typedef struct te_renderer {
-    /** Always valid pointer, window that owns the renderer. This pointer should not be freed. */
-    struct te_window* window;
-
-    /** GL context. */
-    struct SDL_GLContextState* gl_context;
-
-    /** GL depth function used. */
-    unsigned int gl_depth_func;
-} te_renderer;
 
 /**
  * Creates a new renderer.

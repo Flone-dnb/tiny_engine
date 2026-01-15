@@ -1,10 +1,6 @@
 #pragma once
 
-/** Groups error-related information. */
-typedef struct {
-    /** Error message. */
-    char* message;
-} te_error;
+typedef struct te_error te_error;
 
 /** The "public" version of the function. */
 #define error_create(message) prv_error_create(message, __FILE__, __LINE__)

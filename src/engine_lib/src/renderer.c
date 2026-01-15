@@ -8,10 +8,22 @@
 #include "misc/error.h"
 #include "window.h"
 
+/** Draws on the window. */
+struct te_renderer {
+    /** Always valid pointer, window that owns the renderer. This pointer should not be freed. */
+    struct te_window* window;
+
+    /** GL context. */
+    struct SDL_GLContextState* gl_context;
+
+    /** GL depth function used. */
+    unsigned int gl_depth_func;
+};
+
 #if defined(DEBUG)
 void GLAPIENTRY
-debugMessageCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message,
-                     const void* userParam) {
+debugMessageCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
+                     const GLchar* message, const void* userParam) {
     (void)id;
     (void)length;
     (void)userParam;
@@ -38,7 +50,7 @@ renderer_create(struct te_window* window) {
     renderer->gl_depth_func = GL_LEQUAL; // less/equal is needed for main pass (after z prepass)
 
     // Create GL context.
-    renderer->gl_context = SDL_GL_CreateContext(window->sdl_window);
+    renderer->gl_context = SDL_GL_CreateContext(prv_window_get_sdl_window(window));
     if (renderer->gl_context == NULL) {
         show_error_and_abort(SDL_GetError());
     }
@@ -57,7 +69,8 @@ renderer_create(struct te_window* window) {
 
 #if defined(DEBUG)
     if (GLAD_GL_KHR_debug != 1) {
-        show_error_and_abort("the GPU does not support GL_KHR_DEBUG extension which is required for debug builds");
+        show_error_and_abort(
+            "the GPU does not support GL_KHR_DEBUG extension which is required for debug builds");
     }
     glEnable(GL_DEBUG_OUTPUT);
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
@@ -101,7 +114,7 @@ void
 renderer_set_fps_limit(te_renderer* renderer, unsigned int limit) {
     (void)renderer;
     (void)limit;
-    log_info("TODO: FPS limit not implemented");
+    log_warn("TODO: FPS limit not implemented");
 }
 
 void
@@ -116,7 +129,7 @@ prv_renderer_draw_frame(te_renderer* renderer) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    SDL_GL_SwapWindow(renderer->window->sdl_window);
+    SDL_GL_SwapWindow(prv_window_get_sdl_window(renderer->window));
 }
 
 void

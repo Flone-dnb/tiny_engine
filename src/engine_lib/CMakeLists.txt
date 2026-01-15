@@ -15,6 +15,7 @@ set(PROJECT_SOURCES
     src/game_manager.c
     src/renderer.c
     src/world.c
+    src/ecs/ecs.c
     include/window.h
     include/io/log.h
     include/io/paths.h
@@ -24,6 +25,7 @@ set(PROJECT_SOURCES
     include/game_manager.h
     include/renderer.h
     include/world.h
+    include/ecs/ecs.h
 )
 
 # Define targets (one without any specific macros and another for compilation with editor).

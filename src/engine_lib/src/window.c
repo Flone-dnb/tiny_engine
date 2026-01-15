@@ -14,6 +14,27 @@
 #include "SDL3/SDL_timer.h"
 #include "SDL3/SDL_video.h"
 
+/** Game window. */
+struct te_window {
+    /** SDL window. */
+    struct SDL_Window* sdl_window;
+
+    /** Game manager that window created. */
+    struct te_game_manager* game_manager;
+
+    /** Current width of the window. */
+    unsigned int width;
+
+    /** Current height of the window. */
+    unsigned int height;
+
+    /** Refresh rate of the used display. */
+    unsigned int display_refresh_rate;
+
+    /** `true` if the window needs to be closed. */
+    bool quit_requested;
+};
+
 te_window*
 window_create(const char* window_title) {
 
@@ -111,8 +132,8 @@ window_process_events(te_window* window, te_game_window_callbacks* game_callback
         // Calculate delta time.
         prev_time_counter = current_time_counter;
         current_time_counter = SDL_GetPerformanceCounter();
-        const double delta_time_ms =
-            (double)((current_time_counter - prev_time_counter) * 1000) / (double)(SDL_GetPerformanceFrequency());
+        const double delta_time_ms = (double)((current_time_counter - prev_time_counter) * 1000)
+                                     / (double)(SDL_GetPerformanceFrequency());
         const float delta_time_sec = (float)(delta_time_ms * 0.001);
 
         prv_game_manager_tick(window->game_manager, delta_time_sec);
@@ -128,33 +149,6 @@ window_process_events(te_window* window, te_game_window_callbacks* game_callback
     window->game_manager = NULL;
 
     log_info("game manager is destroyed");
-}
-
-bool
-prv_window_process_event(te_window* window, union SDL_Event event) {
-    switch (event.type) {
-        case (SDL_EVENT_WINDOW_RESIZED):
-        case (SDL_EVENT_WINDOW_MAXIMIZED):
-        case (SDL_EVENT_WINDOW_MINIMIZED): {
-            // Save new size.
-            int width;
-            int height;
-            if (SDL_GetWindowSizeInPixels(window->sdl_window, &width, &height) == false) {
-                show_error_and_abort(SDL_GetError());
-            }
-            window->width = (unsigned int)width;
-            window->height = (unsigned int)height;
-
-            // Notify.
-            prv_game_manager_on_window_size_changed(window->game_manager);
-            break;
-        }
-        case (SDL_EVENT_QUIT): {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 void
@@ -188,4 +182,36 @@ window_destroy(te_window* window) {
         log_info("");
         log_info_fmt("WARNINGS logged: %d | ERRORS logged: %d", warn_count, err_count);
     }
+}
+
+bool
+prv_window_process_event(te_window* window, union SDL_Event event) {
+    switch (event.type) {
+        case (SDL_EVENT_WINDOW_RESIZED):
+        case (SDL_EVENT_WINDOW_MAXIMIZED):
+        case (SDL_EVENT_WINDOW_MINIMIZED): {
+            // Save new size.
+            int width;
+            int height;
+            if (SDL_GetWindowSizeInPixels(window->sdl_window, &width, &height) == false) {
+                show_error_and_abort(SDL_GetError());
+            }
+            window->width = (unsigned int)width;
+            window->height = (unsigned int)height;
+
+            // Notify.
+            prv_game_manager_on_window_size_changed(window->game_manager);
+            break;
+        }
+        case (SDL_EVENT_QUIT): {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+SDL_Window*
+prv_window_get_sdl_window(te_window* window) {
+    return window->sdl_window;
 }

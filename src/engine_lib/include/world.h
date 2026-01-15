@@ -1,15 +1,8 @@
 #pragma once
 
+typedef struct te_world te_world;
+
 struct te_game_manager;
-
-/** World represents several objects: audio system, cameras, game objects and etc. */
-typedef struct te_world {
-    /** Always valid pointer. Game manager that owns this world. You should not free/destroy this pointer. */
-    struct te_game_manager* game_manager;
-
-    /** World name. */
-    char* name;
-} te_world;
 
 /**
  * Returns world's name.
@@ -36,3 +29,11 @@ te_world* prv_world_create(struct te_game_manager* game_manager, const char* nam
  * @param world World to destroy.
  */
 void prv_world_destroy(te_world* world);
+
+/**
+ * Called before a new frame is rendered.
+ *
+ * @param world World.
+ * @param delta_time_sec Time (in seconds) since the previous call to this function.
+ */
+void prv_world_tick(te_world* world, float delta_time_sec);
