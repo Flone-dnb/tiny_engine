@@ -3,10 +3,10 @@
 /** Manager for entities, components and systems. */
 typedef struct te_ecs te_ecs;
 
-/** Value used for specify "no entity ID". */
+/** Value used to specify "no entity ID". */
 #define TE_ECS_ENTITY_ID_INVALID 0xffffffff
 
-/** Engine component type IDS. */
+/** Engine component type IDs. */
 enum te_ecs_engine_component_type_id : unsigned int {
     ECS_COMPONENT_TYPE_TRANSFORM = 0,
     // ... new engine component types go here ...
@@ -158,6 +158,30 @@ unsigned int* ecs_get_entity_ids(te_ecs* ecs, unsigned int* count);
  * (you must cast the pointer type). Do not free/delete returned pointer, the pointer is valid until the entity is not destroyed.
  */
 void* ecs_get_entity_component(te_ecs* ecs, unsigned int entity_id, unsigned int component_type_id);
+
+/**
+ * Returns a non-NULL pointer to the name of the entity.
+ *
+ * @param ecs ECS manager.
+ *
+ * @param entity_id ID of the entity.
+ *
+ * @return Non-NULL pointer to the name. You must not free/destroy returned pointer. The pointer
+ * is valid until the entity is not destroyed.
+ */
+const char* ecs_get_entity_name(te_ecs* ecs, unsigned int entity_id);
+
+/**
+ * Returns TE_ECS_ENTITY_ID_INVALID if the entity does not have a parent entity, otherwise 
+ * returns entity ID of the parent entity.
+ *
+ * @param ecs ECS manager.
+ *
+ * @param entity_id ID of the entity.
+ *
+ * @return TE_ECS_ENTITY_ID_INVALID if no parent.
+ */
+unsigned int ecs_get_entity_parent(te_ecs* ecs, unsigned int entity_id);
 
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API

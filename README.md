@@ -1,6 +1,8 @@
 # tiny engine
 
-Tiny 3D game engine for low-poly games.
+Tiny 3D game engine for making small low-poly games.
+
+Supported platforms: Windows (x64), Linux (x64 and ARM64).
 
 # Roadmap
 

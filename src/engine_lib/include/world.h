@@ -3,6 +3,7 @@
 typedef struct te_world te_world;
 
 struct te_game_manager;
+struct te_ecs;
 
 /**
  * Returns world's name.
@@ -10,6 +11,15 @@ struct te_game_manager;
  * @return Do not free/destroy returned pointer.
  */
 const char* world_get_name(te_world* world);
+
+/**
+ * Returns ECS manager of the world.
+ *
+ * @param world World.
+ *
+ * @return ECS manager.
+ */
+struct te_ecs* world_get_ecs(te_world* world);
 
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API

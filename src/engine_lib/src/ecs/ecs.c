@@ -11,7 +11,7 @@ enum te_ecs_callback_type : unsigned int {
     ECS_CALLBACK_TYPE_ON_TICK = 0,
     // ... new types go here ...
 
-    ECS_CALLBACK_TYPE_COUNT, // <- mark the total number of elements in the enum
+    ECS_CALLBACK_TYPE_COUNT, // <- marks the total number of elements in the enum
 };
 
 struct te_ecs_system;
@@ -87,7 +87,7 @@ typedef struct te_ecs_entity {
     /** Number of elements in the array @ref components. */
     unsigned int component_count;
 
-    /** @ref TE_ECS_ENTITY_ID_INVALID if no parent entity. */
+    /** TE_ECS_ENTITY_ID_INVALID if no parent entity. */
     unsigned int opt_parent_entity_id;
 } te_ecs_entity;
 
@@ -95,7 +95,7 @@ typedef struct te_ecs_entity {
 typedef struct te_ecs_components_of_type {
     /**
      * Array of components (data) of the same type. Can have "gaps" of invalid data see
-     * @ref unused_components.
+     * @ref unused_component_indices.
      */
     void* components;
 
@@ -114,8 +114,8 @@ typedef struct te_ecs_components_of_type {
 
 /** Manager for entities, components and systems. */
 struct te_ecs {
-    /** All currently registered systems. */
-    te_ecs_system** systems;
+    /** All currently registered systems. Size of this array is @ref system_count. */
+    te_ecs_system* systems;
 
     /**
      * Components of all registered entities.
@@ -144,7 +144,7 @@ struct te_ecs {
      */
     unsigned int* unused_entity_indices;
 
-    /** Number of elements in the array @ref registered_systems. */
+    /** Number of elements in the array @ref systems. */
     unsigned int system_count;
 
     /** Number of elements in the array @ref callbacks_on_tick. */
@@ -299,23 +299,22 @@ ecs_register_system(te_ecs* ecs, void* user_system,
 
     // Expand array.
     {
-        te_ecs_system** new_systems = malloc(sizeof(te_ecs_system*) * (ecs->system_count + 1));
+        te_ecs_system* new_systems = malloc(sizeof(te_ecs_system) * (ecs->system_count + 1));
 
-        memcpy(new_systems, ecs->systems, sizeof(te_ecs_system*) * ecs->system_count);
+        memcpy(new_systems, ecs->systems, sizeof(te_ecs_system) * ecs->system_count);
 
         free(ecs->systems);
         ecs->systems = new_systems;
     }
 
     // Create new system.
-    te_ecs_system* sys = malloc(sizeof(te_ecs_system));
+    te_ecs_system* sys = &ecs->systems[ecs->system_count];
     sys->user_system = user_system;
     sys->on_after_entity_created = on_after_entity_created;
     sys->on_before_entity_destroyed = on_before_entity_destroyed;
     sys->registered_callbacks = NULL;
     sys->registered_callback_count = 0;
 
-    ecs->systems[ecs->system_count] = sys;
     ecs->system_count += 1;
 
     // Notify system.
@@ -334,7 +333,7 @@ ecs_unregister_system(te_ecs* ecs, void* user_system) {
     unsigned int system_index = 0;
     bool found_system = false;
     for (unsigned int i = 0; i < ecs->system_count; i++) {
-        if (ecs->systems[i]->user_system == user_system) {
+        if (ecs->systems[i].user_system == user_system) {
             system_index = i;
             found_system = true;
             break;
@@ -345,22 +344,22 @@ ecs_unregister_system(te_ecs* ecs, void* user_system) {
     }
 
     // Destroy the system.
-    if (ecs->systems[system_index]->registered_callback_count > 0) {
+    if (ecs->systems[system_index].registered_callback_count > 0) {
         show_error_and_abort("the system is being unregistered but it still has some "
-                             "callback not unregistered");
+                             "callbacks not unregistered");
     }
-    free(ecs->systems[system_index]);
 
     // Shrink the systems array.
     if (ecs->system_count == 1) {
         free(ecs->systems);
         ecs->systems = NULL;
     } else {
-        te_ecs_system** new_systems = malloc(sizeof(te_ecs_system*) * (ecs->system_count - 1));
+        te_ecs_system* new_systems = malloc(sizeof(te_ecs_system) * (ecs->system_count - 1));
 
-        memcpy(new_systems, ecs->systems, sizeof(te_ecs_system*) * system_index);
+        memcpy(new_systems, ecs->systems, sizeof(te_ecs_system) * system_index);
+
         memcpy(new_systems + system_index, ecs->systems + (system_index + 1),
-               sizeof(te_ecs_system*) * (ecs->system_count - system_index - 1));
+               sizeof(te_ecs_system) * (ecs->system_count - system_index - 1));
 
         free(ecs->systems);
         ecs->systems = new_systems;
@@ -496,7 +495,7 @@ ecs_create_entity(te_ecs* ecs, const char* name, unsigned int component_count,
     {
         ecs->is_creating_or_destroying_entity = true;
         for (unsigned int i = 0; i < ecs->system_count; i++) {
-            ecs->systems[i]->on_after_entity_created(ecs->systems[i]->user_system, ecs, entity_index);
+            ecs->systems[i].on_after_entity_created(ecs->systems[i].user_system, ecs, entity_index);
         }
         ecs->is_creating_or_destroying_entity = false;
     }
@@ -514,7 +513,7 @@ ecs_destroy_entity(te_ecs* ecs, unsigned int entity_id) {
     {
         ecs->is_creating_or_destroying_entity = true;
         for (unsigned int i = 0; i < ecs->system_count; i++) {
-            ecs->systems[i]->on_before_entity_destroyed(ecs->systems[i]->user_system, ecs, entity_id);
+            ecs->systems[i].on_before_entity_destroyed(ecs->systems[i].user_system, ecs, entity_id);
         }
         ecs->is_creating_or_destroying_entity = false;
     }
@@ -547,6 +546,7 @@ ecs_destroy_entity(te_ecs* ecs, unsigned int entity_id) {
     // Second, destroy the entity.
     free(entity->name);
     entity->name = NULL;
+    entity->opt_parent_entity_id = TE_ECS_ENTITY_ID_INVALID;
 
     // Add to unused.
     {
@@ -563,11 +563,18 @@ ecs_destroy_entity(te_ecs* ecs, unsigned int entity_id) {
         ecs->unused_entity_count += 1;
     }
 
-    if (entity->opt_parent_entity_id != TE_ECS_ENTITY_ID_INVALID) {
-        const unsigned int parent_entity_id = entity->opt_parent_entity_id;
-        entity->opt_parent_entity_id = TE_ECS_ENTITY_ID_INVALID;
+    // Check if there are child entities.
+    for (unsigned int i = 0; i < ecs->entity_array_size; i++) {
+        if (ecs->entities[i].name == NULL) {
+            // Destroyed entity.
+            continue;
+        }
 
-        ecs_destroy_entity(ecs, parent_entity_id);
+        if (ecs->entities[i].opt_parent_entity_id != entity_id) {
+            continue;
+        }
+
+        ecs_destroy_entity(ecs, i);
     }
 }
 
@@ -578,7 +585,7 @@ ecs_system_register_callback_on_tick(te_ecs* ecs, void* user_system,
     unsigned int system_index = 0;
     bool found_system = false;
     for (unsigned int i = 0; i < ecs->system_count; i++) {
-        if (ecs->systems[i]->user_system == user_system) {
+        if (ecs->systems[i].user_system == user_system) {
             system_index = i;
             found_system = true;
             break;
@@ -587,7 +594,7 @@ ecs_system_register_callback_on_tick(te_ecs* ecs, void* user_system,
     if (!found_system) {
         show_error_and_abort("the specified system is not registered");
     }
-    te_ecs_system* sys = ecs->systems[system_index];
+    te_ecs_system* sys = &ecs->systems[system_index];
 
     unsigned int callback_index = 0;
 
@@ -636,7 +643,7 @@ ecs_system_unregister_callback_on_tick(te_ecs* ecs, void* user_system) {
     unsigned int system_index = 0;
     bool found_system = false;
     for (unsigned int i = 0; i < ecs->system_count; i++) {
-        if (ecs->systems[i]->user_system == user_system) {
+        if (ecs->systems[i].user_system == user_system) {
             system_index = i;
             found_system = true;
             break;
@@ -645,7 +652,7 @@ ecs_system_unregister_callback_on_tick(te_ecs* ecs, void* user_system) {
     if (!found_system) {
         show_error_and_abort("the specified system is not registered");
     }
-    te_ecs_system* sys = ecs->systems[system_index];
+    te_ecs_system* sys = &ecs->systems[system_index];
 
     unsigned int global_callback_index = 0;
 
@@ -777,6 +784,36 @@ ecs_get_entity_component(te_ecs* ecs, unsigned int entity_id, unsigned int compo
     }
 
     return NULL;
+}
+
+const char*
+ecs_get_entity_name(te_ecs* ecs, unsigned int entity_id) {
+    if (entity_id >= ecs->registered_entity_count) {
+        show_error_and_abort("invalid entity ID specified");
+    }
+
+#if defined(DEBUG)
+    if (ecs->entities[entity_id].name == NULL) {
+        show_error_and_abort("you are requesting already destroyed entity");
+    }
+#endif
+
+    return ecs->entities[entity_id].name;
+}
+
+unsigned int
+ecs_get_entity_parent(te_ecs* ecs, unsigned int entity_id) {
+    if (entity_id >= ecs->registered_entity_count) {
+        show_error_and_abort("invalid entity ID specified");
+    }
+
+#if defined(DEBUG)
+    if (ecs->entities[entity_id].name == NULL) {
+        show_error_and_abort("you are requesting already destroyed entity");
+    }
+#endif
+
+    return ecs->entities[entity_id].opt_parent_entity_id;
 }
 
 void

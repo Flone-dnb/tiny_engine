@@ -10,7 +10,7 @@ struct te_world {
     struct te_game_manager* game_manager;
 
     /** ECS for this world. */
-    struct te_ecs* ecs;
+    te_ecs* ecs;
 
     /** World name. */
     char* name;
@@ -19,6 +19,11 @@ struct te_world {
 const char*
 world_get_name(te_world* world) {
     return world->name;
+}
+
+te_ecs*
+world_get_ecs(te_world* world) {
+    return world->ecs;
 }
 
 te_world*
