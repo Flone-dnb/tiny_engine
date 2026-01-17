@@ -1,3 +1,6 @@
 [submodule "ext/SDL"]
 	path = ext/SDL
 	url = https://github.com/libsdl-org/SDL.git
+[submodule "ext/cglm"]
+	path = ext/cglm
+	url = https://github.com/recp/cglm.git

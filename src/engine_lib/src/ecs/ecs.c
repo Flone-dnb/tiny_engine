@@ -6,6 +6,11 @@
 #include <string.h>
 #include "misc/error.h"
 
+#include "ecs/camera_component.h"
+#include "ecs/transform_component.h"
+
+void prv_ecs_register_engine_components(te_ecs* ecs);
+
 /** Types of callbacks the systems can register. */
 enum te_ecs_callback_type : unsigned int {
     ECS_CALLBACK_TYPE_ON_TICK = 0,
@@ -86,9 +91,6 @@ typedef struct te_ecs_entity {
 
     /** Number of elements in the array @ref components. */
     unsigned int component_count;
-
-    /** TE_ECS_ENTITY_ID_INVALID if no parent entity. */
-    unsigned int opt_parent_entity_id;
 } te_ecs_entity;
 
 /** Groups information about components of the same type. */
@@ -202,6 +204,8 @@ ecs_create(void) {
         ecs->is_callbacks_changed_while_triggering[i] = false;
     }
     ecs->is_creating_or_destroying_entity = false;
+
+    prv_ecs_register_engine_components(ecs);
 
     return ecs;
 }
@@ -370,7 +374,7 @@ ecs_unregister_system(te_ecs* ecs, void* user_system) {
 
 unsigned int
 ecs_create_entity(te_ecs* ecs, const char* name, unsigned int component_count,
-                  unsigned int* component_type_ids, unsigned int opt_parent_entity_id) {
+                  unsigned int* component_type_ids) {
     if (ecs->registered_entity_count == TE_ECS_ENTITY_ID_INVALID) {
         show_error_and_abort("reached the maximum number of entities");
     }
@@ -430,7 +434,6 @@ ecs_create_entity(te_ecs* ecs, const char* name, unsigned int component_count,
     entity->name[name_len] = 0;
 
     entity->component_count = component_count;
-    entity->opt_parent_entity_id = opt_parent_entity_id;
 
     // Init components.
     entity->components = malloc(sizeof(te_ecs_entity_component) * component_count);
@@ -546,7 +549,6 @@ ecs_destroy_entity(te_ecs* ecs, unsigned int entity_id) {
     // Second, destroy the entity.
     free(entity->name);
     entity->name = NULL;
-    entity->opt_parent_entity_id = TE_ECS_ENTITY_ID_INVALID;
 
     // Add to unused.
     {
@@ -561,20 +563,6 @@ ecs_destroy_entity(te_ecs* ecs, unsigned int entity_id) {
 
         ecs->unused_entity_indices[ecs->unused_entity_count] = entity_id;
         ecs->unused_entity_count += 1;
-    }
-
-    // Check if there are child entities.
-    for (unsigned int i = 0; i < ecs->entity_array_size; i++) {
-        if (ecs->entities[i].name == NULL) {
-            // Destroyed entity.
-            continue;
-        }
-
-        if (ecs->entities[i].opt_parent_entity_id != entity_id) {
-            continue;
-        }
-
-        ecs_destroy_entity(ecs, i);
     }
 }
 
@@ -769,9 +757,11 @@ ecs_get_entity_ids(te_ecs* ecs, unsigned int* count) {
 
 void*
 ecs_get_entity_component(te_ecs* ecs, unsigned int entity_id, unsigned int component_type_id) {
+#if defined(DEBUG)
     if (entity_id >= ecs->registered_entity_count) {
         show_error_and_abort("invalid entity ID specified");
     }
+#endif
 
     te_ecs_entity* entity = &ecs->entities[entity_id];
     for (unsigned int i = 0; i < entity->component_count; i++) {
@@ -799,21 +789,6 @@ ecs_get_entity_name(te_ecs* ecs, unsigned int entity_id) {
 #endif
 
     return ecs->entities[entity_id].name;
-}
-
-unsigned int
-ecs_get_entity_parent(te_ecs* ecs, unsigned int entity_id) {
-    if (entity_id >= ecs->registered_entity_count) {
-        show_error_and_abort("invalid entity ID specified");
-    }
-
-#if defined(DEBUG)
-    if (ecs->entities[entity_id].name == NULL) {
-        show_error_and_abort("you are requesting already destroyed entity");
-    }
-#endif
-
-    return ecs->entities[entity_id].opt_parent_entity_id;
 }
 
 void
@@ -889,4 +864,12 @@ prv_ecs_tick(te_ecs* ecs, float delta_time_sec) {
     free(notified_systems);
 
     ecs->is_triggering_system_callbacks[ECS_CALLBACK_TYPE_ON_TICK] = false;
+}
+
+void
+prv_ecs_register_engine_components(te_ecs* ecs) {
+    ecs_register_component_type(ecs, TE_ECS_COMPONENT_TYPE_TRANSFORM, prv_transform_component_get_sizeof(),
+                                prv_transform_component_init);
+    ecs_register_component_type(ecs, TE_ECS_COMPONENT_TYPE_CAMERA, prv_camera_component_get_sizeof(),
+                                prv_camera_component_init);
 }

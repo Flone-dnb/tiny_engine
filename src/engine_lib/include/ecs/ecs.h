@@ -8,10 +8,11 @@ typedef struct te_ecs te_ecs;
 
 /** Engine component type IDs. */
 enum te_ecs_engine_component_type_id : unsigned int {
-    ECS_COMPONENT_TYPE_TRANSFORM = 0,
+    TE_ECS_COMPONENT_TYPE_TRANSFORM = 0,
+    TE_ECS_COMPONENT_TYPE_CAMERA,
     // ... new engine component types go here ...
 
-    ECS_COMPONENT_TYPE_FIRST_GAME_COMPONENT, // <- first component type ID for games
+    TE_ECS_COMPONENT_TYPE_FIRST_GAME_COMPONENT, // <- first component type ID for games
 };
 
 /**
@@ -95,13 +96,10 @@ void ecs_unregister_system(te_ecs* ecs, void* user_system);
  * @param component_type_ids Non-NULL pointer to type IDs of the components that the entity has
  * (component types must be previously registered using @ref ecs_register_component_type).
  *
- * @param opt_parent_entity_id Specify TE_ECS_ENTITY_ID_INVALID if the newly entity is not a child of some other entity,
- * otherwise specify a valid ID of an existing entity.
- *
  * @return Unique ID of the created entity.
  */
 unsigned int ecs_create_entity(te_ecs* ecs, const char* name, unsigned int component_count,
-                               unsigned int* component_type_ids, unsigned int opt_parent_entity_id);
+                               unsigned int* component_type_ids);
 
 /**
  * Destroys an entity that was previously created using @ref ecs_create_entity.
@@ -170,18 +168,6 @@ void* ecs_get_entity_component(te_ecs* ecs, unsigned int entity_id, unsigned int
  * is valid until the entity is not destroyed.
  */
 const char* ecs_get_entity_name(te_ecs* ecs, unsigned int entity_id);
-
-/**
- * Returns TE_ECS_ENTITY_ID_INVALID if the entity does not have a parent entity, otherwise 
- * returns entity ID of the parent entity.
- *
- * @param ecs ECS manager.
- *
- * @param entity_id ID of the entity.
- *
- * @return TE_ECS_ENTITY_ID_INVALID if no parent.
- */
-unsigned int ecs_get_entity_parent(te_ecs* ecs, unsigned int entity_id);
 
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API

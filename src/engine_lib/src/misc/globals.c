@@ -47,11 +47,35 @@ globals_get_app_name(void) {
         }
 
         // Save app name.
-        for (unsigned long src = last_slash_pos + 1, dst = 0; src < path_len && dst < (unsigned long)max_app_name_len;
-             src++, dst++) {
+        for (unsigned long src = last_slash_pos + 1, dst = 0;
+             src < path_len && dst < (unsigned long)max_app_name_len; src++, dst++) {
             cached_app_name[dst] = buffer[src];
         }
     }
 
     return &cached_app_name[0];
+}
+
+void
+globals_get_world_forward(float out[4]) {
+    out[0] = 0.0f;
+    out[1] = 0.0f;
+    out[2] = -1.0f;
+    out[3] = 0.0f;
+}
+
+void
+globals_get_world_right(float out[4]) {
+    out[0] = 1.0f;
+    out[1] = 0.0f;
+    out[2] = 0.0f;
+    out[3] = 0.0f;
+}
+
+void
+globals_get_world_up(float out[4]) {
+    out[0] = 0.0f;
+    out[1] = 1.0f;
+    out[2] = 0.0f;
+    out[3] = 0.0f;
 }

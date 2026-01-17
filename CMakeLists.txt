@@ -48,7 +48,7 @@ function(tiny_engine_configure_target TARGET_NAME)
     if(MSVC)
         target_compile_options(${TARGET_NAME} PUBLIC /W3 /WX)
     else()
-        target_compile_options(${TARGET_NAME} PUBLIC -Wall -Wextra -Werror -Wconversion)
+        target_compile_options(${TARGET_NAME} PUBLIC -Wall -Wextra -Werror -Wconversion -Wno-unused-but-set-parameter)
     endif()
 
     # Add includes (relative to the target's directory).

@@ -16,6 +16,9 @@ set(PROJECT_SOURCES
     src/renderer.c
     src/world.c
     src/ecs/ecs.c
+    src/ecs/transform_component.c
+    src/ecs/camera_component.c
+    src/ecs/camera_system.c
     include/window.h
     include/io/log.h
     include/io/paths.h
@@ -26,6 +29,9 @@ set(PROJECT_SOURCES
     include/renderer.h
     include/world.h
     include/ecs/ecs.h
+    include/ecs/transform_component.h
+    include/ecs/camera_component.h
+    include/ecs/camera_system.h
 )
 
 # Define targets (one without any specific macros and another for compilation with editor).
@@ -78,6 +84,16 @@ add_library(${GLAD_TARGET_NAME} STATIC
 target_include_directories(${GLAD_TARGET_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH}/glad_gles20/include)
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE ${GLAD_TARGET_NAME})
 add_dependencies(${ENGINE_LIB_DEPS_TARGET} ${GLAD_TARGET_NAME})
+
+# Add cglm.
+message(STATUS "${PROJECT_NAME}: adding dependency \"cglm\"...")
+set(CGLM_SHARED OFF CACHE BOOL "" FORCE)
+set(CGLM_STATIC ON CACHE BOOL "" FORCE)
+set(CGLM_USE_C99 ON CACHE BOOL "" FORCE)
+set(CGLM_USE_TEST OFF CACHE BOOL "" FORCE)
+add_subdirectory(${RELATIVE_EXT_PATH}/cglm ${DEPENDENCY_BUILD_DIR_NAME}/cglm EXCLUDE_FROM_ALL)
+target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE cglm_headers)
+target_compile_definitions(cglm_headers INTERFACE CGLM_ALL_UNALIGNED)
 
 # Link engine library to dependencies.
 target_link_libraries(${ENGINE_LIB_TARGET} PUBLIC ${ENGINE_LIB_DEPS_TARGET})
