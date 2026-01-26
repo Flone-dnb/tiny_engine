@@ -1,7 +1,7 @@
 #include "game_manager.h"
 
 #include <stdlib.h>
-#include "renderer.h"
+#include "render/renderer.h"
 #include "world.h"
 
 /** Stores all core systems such as game world, physics, audio, renderer and etc. */
@@ -12,7 +12,7 @@ struct te_game_manager {
     /** Renderer. */
     struct te_renderer* renderer;
 
-    /** Game worlds. */
+    /** Game worlds. Size of this array is @ref world_count. */
     struct te_world** worlds;
 
     /** User callback that should be called on game tick. */
@@ -74,15 +74,21 @@ game_manager_get_window(te_game_manager* game_manager) {
     return game_manager->window;
 }
 
+te_renderer*
+game_manager_get_renderer(te_game_manager* game_manager) {
+    return game_manager->renderer;
+}
+
+struct te_world**
+game_manager_get_worlds(te_game_manager* game_manager, unsigned int* world_count) {
+    *world_count = game_manager->world_count;
+    return game_manager->worlds;
+}
+
 void
 prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
-    // User callback.
+    // Trigger user callback.
     game_manager->on_game_tick(game_manager, delta_time_sec);
-
-    // Tick worlds.
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
-        prv_world_tick(game_manager->worlds[i], delta_time_sec);
-    }
 }
 
 void

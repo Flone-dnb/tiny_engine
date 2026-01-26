@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "misc/error.h"
 #include "misc/globals.h"
@@ -35,7 +36,8 @@ paths_get_config_dir(void) {
         }
         CoTaskMemFree(pPathTmp);
 
-        sprintf(cached_path_to_config_dir, "%s/tiny_engine/%s/config/", &path_buff[0], globals_get_app_name());
+        sprintf(cached_path_to_config_dir, "%s/tiny_engine/%s/config/", &path_buff[0],
+                globals_get_app_name());
 #elif __linux__
 
 #if defined(__aarch64__)
@@ -46,7 +48,8 @@ paths_get_config_dir(void) {
         if (home_path == NULL) {
             show_error_and_abort("unable to query environment variable HOME");
         }
-        sprintf(cached_path_to_config_dir, "%s/.config/tiny_engine/%s/config/", home_path, globals_get_app_name());
+        sprintf(cached_path_to_config_dir, "%s/.config/tiny_engine/%s/config/", home_path,
+                globals_get_app_name());
 #endif
 
 #else
@@ -94,7 +97,8 @@ paths_get_log_file(void) {
         if (home_path == NULL) {
             show_error_and_abort("unable to query environment variable HOME");
         }
-        sprintf(cached_path_to_log_file, "%s/.config/tiny_engine/%s/log.txt", home_path, globals_get_app_name());
+        sprintf(cached_path_to_log_file, "%s/.config/tiny_engine/%s/log.txt", home_path,
+                globals_get_app_name());
 #endif
 
 #else
@@ -103,4 +107,18 @@ paths_get_log_file(void) {
     }
 
     return &cached_path_to_log_file[0];
+}
+
+char*
+paths_prepend_res_to_path(const char* relative_path) {
+    const unsigned long len = strlen(relative_path);
+
+    char* new_path = malloc(sizeof(char) * (len + 4 + 1));
+
+    memcpy(new_path, "res/", sizeof(char) * 4);
+    memcpy(new_path + 4, relative_path, sizeof(char) * len);
+
+    new_path[len + 4] = 0;
+
+    return new_path;
 }

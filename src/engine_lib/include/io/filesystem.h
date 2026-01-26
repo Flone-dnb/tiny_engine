@@ -1,3 +1,7 @@
+//
+// This file provides cross-platform filesystem functions.
+//
+
 #pragma once
 
 #include <stdbool.h>

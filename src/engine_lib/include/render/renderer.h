@@ -3,6 +3,7 @@
 typedef struct te_renderer te_renderer;
 
 struct te_window;
+struct te_shader_manager;
 
 /**
  * Creates a new renderer.
@@ -27,6 +28,15 @@ void renderer_destroy(te_renderer* renderer);
  * @param limit    Maximum allowed FPS, specify 0 to disable.
 */
 void renderer_set_fps_limit(te_renderer* renderer, unsigned int limit);
+
+/**
+ * Returns shader manager.
+ *
+ * @param renderer Renderer.
+ *
+ * @return Always valid pointer. Do not free/destroy the pointer. Valid while the renderer exists.
+ */
+struct te_shader_manager* renderer_get_shader_manager(te_renderer* renderer);
 
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API

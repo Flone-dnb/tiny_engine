@@ -151,6 +151,18 @@ window_process_events(te_window* window, te_game_window_callbacks* game_callback
     log_info("game manager is destroyed");
 }
 
+struct te_game_manager*
+window_get_game_manager(te_window* window) {
+#if defined(DEBUG)
+    if (window->game_manager == NULL) {
+        show_error_and_abort(
+            "game manager is not created yet (game not started) or was already destroyed (game ended)");
+    }
+#endif
+
+    return window->game_manager;
+}
+
 void
 window_get_size(te_window* window, unsigned int* width, unsigned int* height) {
     *width = window->width;

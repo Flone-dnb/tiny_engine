@@ -13,12 +13,14 @@ set(PROJECT_SOURCES
     src/misc/globals.c
     src/misc/error.c
     src/game_manager.c
-    src/renderer.c
     src/world.c
-    src/ecs/ecs.c
-    src/ecs/transform_component.c
-    src/ecs/camera_component.c
-    src/ecs/camera_system.c
+    src/render/renderer.c
+    src/render/model_renderer.h
+    src/render/model_renderer.c
+    src/render/shader_manager.c
+    src/game/camera.c
+    src/game/model.c
+    include/math_funcs.h
     include/window.h
     include/io/log.h
     include/io/paths.h
@@ -26,12 +28,11 @@ set(PROJECT_SOURCES
     include/misc/globals.h
     include/misc/error.h
     include/game_manager.h
-    include/renderer.h
+    include/render/renderer.h
+    include/render/shader_manager.h
     include/world.h
-    include/ecs/ecs.h
-    include/ecs/transform_component.h
-    include/ecs/camera_component.h
-    include/ecs/camera_system.h
+    include/game/camera.h
+    include/game/model.h
 )
 
 # Define targets (one without any specific macros and another for compilation with editor).
@@ -46,6 +47,9 @@ add_library(${ENGINE_LIB_TARGET_FOR_EDITOR} STATIC ${PROJECT_SOURCES})
 
 tiny_engine_configure_target(${ENGINE_LIB_TARGET})
 tiny_engine_configure_target(${ENGINE_LIB_TARGET_FOR_EDITOR})
+
+target_include_directories(${ENGINE_LIB_TARGET} PRIVATE src)
+target_include_directories(${ENGINE_LIB_TARGET_FOR_EDITOR} PRIVATE src)
 
 # Define editor macros for editor's version of the engine_lib.
 target_compile_definitions(${ENGINE_LIB_TARGET_FOR_EDITOR} PUBLIC ENGINE_EDITOR)

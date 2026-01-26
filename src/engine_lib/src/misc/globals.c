@@ -57,25 +57,22 @@ globals_get_app_name(void) {
 }
 
 void
-globals_get_world_forward(float out[4]) {
+globals_get_world_forward(float out[3]) {
     out[0] = 0.0f;
     out[1] = 0.0f;
     out[2] = -1.0f;
-    out[3] = 0.0f;
 }
 
 void
-globals_get_world_right(float out[4]) {
+globals_get_world_right(float out[3]) {
     out[0] = 1.0f;
     out[1] = 0.0f;
     out[2] = 0.0f;
-    out[3] = 0.0f;
 }
 
 void
-globals_get_world_up(float out[4]) {
+globals_get_world_up(float out[3]) {
     out[0] = 0.0f;
     out[1] = 1.0f;
     out[2] = 0.0f;
-    out[3] = 0.0f;
 }

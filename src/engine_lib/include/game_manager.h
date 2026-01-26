@@ -2,6 +2,7 @@
 
 typedef struct te_game_manager te_game_manager;
 
+struct te_renderer;
 struct te_window;
 struct te_world;
 
@@ -40,6 +41,25 @@ void game_manager_create_world(te_game_manager* game_manager, const char* name);
  * @return Always valid pointer to the window. You should not free/destroy returned pointer.
  */
 struct te_window* game_manager_get_window(te_game_manager* game_manager);
+
+/**
+ * Returns renderer.
+ *
+ * @param game_manager Game manager.
+ *
+ * @return Always valid pointer to the renderer. You should not free/destroy returned pointer.
+ */
+struct te_renderer* game_manager_get_renderer(te_game_manager* game_manager);
+
+/**
+ * Returns all currently existing worlds.
+ *
+ * @param game_manager Game manager.
+ * @param world_count  Specify a non-NULL pointer that will be filled with the number of elements in the returned array.
+ *
+ * @return NULL if no world exists, otherwise array of world pointers. Do not free/destroy returned pointer.
+ */
+struct te_world** game_manager_get_worlds(te_game_manager* game_manager, unsigned int* world_count);
 
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API

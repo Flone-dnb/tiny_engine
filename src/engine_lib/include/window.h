@@ -43,6 +43,24 @@ void window_destroy(te_window* window);
 void window_process_events(te_window* window, te_game_window_callbacks* game_callbacks);
 
 /**
+ * Returns game manager.
+ *
+ * @param window Window.
+ *
+ * @return Always valid pointer to the game manager. Do not free/destroy returned pointer.
+ * Valid while @ref window_process_events (i.e. the game) is running.
+ */
+struct te_game_manager* window_get_game_manager(te_window* window);
+
+/**
+ * Sets a flag that stops the window from processing window events
+ * that were initiated by calling @ref window_process_events.
+ *
+ * @param window Window to close.
+ */
+void window_close(te_window* window);
+
+/**
  * Returns the current size of the window.
  *
  * @param window Window.
@@ -59,14 +77,6 @@ void window_get_size(te_window* window, unsigned int* width, unsigned int* heigh
  * @return Display's refresh rate.
  */
 unsigned int window_get_display_refresh_rate(te_window* window);
-
-/**
- * Sets a flag that stops the window from processing window events
- * that were initiated by calling @ref window_process_events.
- *
- * @param window Window to close.
- */
-void window_close(te_window* window);
 
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API

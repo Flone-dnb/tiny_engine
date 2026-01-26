@@ -6,10 +6,9 @@ Supported platforms: Windows (x64), Linux (x64 and ARM64).
 
 # Roadmap
 
-- [X] Simple ECS
-- [ ] Config management (progress, settings, etc.)
-- [ ] Type reflection
 - [ ] Forward renderer using OpenGL ES 2.0
+- [ ] Config management (settings, input, progress)
+- [ ] Type reflection
 - [ ] GLTF/GLB import
 - [ ] GUI
 - [ ] Audio
