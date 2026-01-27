@@ -111,7 +111,7 @@ window_create(const char* window_title) {
 
 void
 window_process_events(te_window* window, te_game_window_callbacks* game_callbacks) {
-    window->game_manager = game_manager_create(window, game_callbacks->on_game_tick);
+    window->game_manager = prv_game_manager_create(window, game_callbacks->on_game_tick);
 
     game_callbacks->on_game_started(window->game_manager);
 
@@ -145,7 +145,7 @@ window_process_events(te_window* window, te_game_window_callbacks* game_callback
     game_callbacks->on_window_close(window->game_manager);
 
     // Destroy game manager.
-    game_manager_destroy(window->game_manager);
+    prv_game_manager_destroy(window->game_manager);
     window->game_manager = NULL;
 
     log_info("game manager is destroyed");

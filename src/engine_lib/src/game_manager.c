@@ -23,8 +23,8 @@ struct te_game_manager {
 };
 
 te_game_manager*
-game_manager_create(struct te_window* window,
-                    void (*on_game_tick)(te_game_manager* game_manager, float delta_time_sec)) {
+prv_game_manager_create(struct te_window* window,
+                        void (*on_game_tick)(te_game_manager* game_manager, float delta_time_sec)) {
     te_game_manager* game_manager = (te_game_manager*)malloc(sizeof(te_game_manager));
 
     game_manager->window = window;
@@ -39,7 +39,7 @@ game_manager_create(struct te_window* window,
 }
 
 void
-game_manager_destroy(te_game_manager* game_manager) {
+prv_game_manager_destroy(te_game_manager* game_manager) {
     // First destroy worlds.
     for (unsigned int i = 0; i < game_manager->world_count; i++) {
         prv_world_destroy(game_manager->worlds[i]);
@@ -51,7 +51,7 @@ game_manager_destroy(te_game_manager* game_manager) {
     free(game_manager);
 }
 
-void
+te_world*
 game_manager_create_world(te_game_manager* game_manager, const char* name) {
     te_world** new_worlds = malloc(sizeof(te_world*) * (game_manager->world_count + 1u));
 
@@ -61,12 +61,15 @@ game_manager_create_world(te_game_manager* game_manager, const char* name) {
     }
 
     // Create new world.
-    new_worlds[game_manager->world_count] = prv_world_create(game_manager, name);
+    te_world* new_world = prv_world_create(game_manager, name);
+    new_worlds[game_manager->world_count] = new_world;
     game_manager->world_count += 1;
 
     // Save new array.
     free(game_manager->worlds);
     game_manager->worlds = new_worlds;
+
+    return new_world;
 }
 
 struct te_window*

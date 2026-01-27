@@ -15,20 +15,12 @@ struct te_model;
 const char* world_get_name(te_world* world);
 
 /**
- * Sets the camera to view the world.
- *
- * @param world  World.
- * @param camera Camara to make active or NULL to have no active camera.
- */
-void world_set_active_camera(te_world* world, struct te_camera* camera);
-
-/**
  * Spawns the model in the world.
  *
  * @remark The model will be automatically despawned and destroyed when the world is being destroyed
  * but you can despawn the model earlier using @ref world_despawn_model.
  *
- * @param world  World.
+ * @param world World.
  * @param model Model to spawn.
  */
 void world_spawn_model(te_world* world, struct te_model* model);
@@ -36,10 +28,39 @@ void world_spawn_model(te_world* world, struct te_model* model);
 /**
  * Despawns a previously spawned model (see @ref world_spawn_model).
  *
- * @param world  World.
+ * @param world World.
  * @param model Model to despawn.
  */
 void world_despawn_model(te_world* world, struct te_model* model);
+
+/**
+ * Spawns the camera in the world.
+ *
+ * @remark The camera will be automatically despawned and destroyed when the world is being destroyed
+ * but you can despawn the camera earlier using @ref world_despawn_camera.
+ *
+ * @param world  World.
+ * @param camera Camera to spawn.
+ */
+void world_spawn_camera(te_world* world, struct te_camera* camera);
+
+/**
+ * Despawns a previously spawned camera (see @ref world_spawn_camera).
+ *
+ * @param world  World.
+ * @param camera Camera to despawn.
+ */
+void world_despawn_camera(te_world* world, struct te_camera* camera);
+
+/**
+ * Sets the camera to view the world.
+ *
+ * @remark The camera must be previously spawned in this world.
+ *
+ * @param world  World.
+ * @param camera Camara to make active or NULL to have no active camera.
+ */
+void world_set_active_camera(te_world* world, struct te_camera* camera);
 
 /**
  * Returns NULL if the world has no active camera, otherwise pointer to a valid camera.

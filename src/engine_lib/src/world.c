@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "game/camera.h"
 #include "game/model.h"
 #include "misc/error.h"
 #include "render/model_renderer.h"
@@ -13,7 +14,7 @@ struct te_world {
     struct te_game_manager* game_manager;
 
     /** NULL if no active camera. Do not free/destroy this pointer. The camera will register/unregister itself. */
-    struct te_camera* active_camera;
+    te_camera* active_camera;
 
     /**
      * Always valid pointer, size of this array is @ref spawned_models_array_size but the actually
@@ -90,11 +91,16 @@ world_get_name(te_world* world) {
 }
 
 void
-world_set_active_camera(te_world* world, struct te_camera* camera) {
+world_set_active_camera(te_world* world, te_camera* camera) {
+    if (camera_get_world(camera) != world) {
+        show_error_and_abort(
+            "in order to make a camera active in the world you first need to spawn the camera in the world");
+    }
+
     world->active_camera = camera;
 }
 
-struct te_camera*
+te_camera*
 world_get_active_camera(te_world* world) {
     return world->active_camera;
 }
@@ -155,4 +161,28 @@ world_despawn_model(te_world* world, te_model* model) {
     world->spawned_model_count -= 1;
 
     prv_model_on_despawned(model);
+}
+
+void
+world_spawn_camera(te_world* world, te_camera* camera) {
+    if (camera_get_world(camera) != NULL) {
+        show_error_and_abort("the specified camera cannot be spawned in this world because the camera "
+                             "must be first despawned from the world it currently resides in");
+    }
+
+    prv_camera_set_world(camera, world);
+}
+
+void
+world_despawn_camera(te_world* world, te_camera* camera) {
+    if (camera_get_world(camera) != world) {
+        show_error_and_abort(
+            "the specified camera cannot be despawned from this world as it's not spawned in this world");
+    }
+
+    prv_camera_set_world(camera, NULL);
+
+    if (world->active_camera == camera) {
+        world->active_camera = NULL;
+    }
 }

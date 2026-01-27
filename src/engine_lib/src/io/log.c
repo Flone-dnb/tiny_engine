@@ -50,7 +50,8 @@ prv_log(enum te_log_category category, const char* message, char* filepath, int 
 
     // Create log prefix.
     char log_prefix[512] = {0};
-    snprintf(&log_prefix[0], 511, "[%s] [%s] [%s:%d]", time_str, category_str, filepath + filename_start, line);
+    snprintf(&log_prefix[0], 511, "[%s] [%s] [%s:%d]", time_str, category_str, filepath + filename_start,
+             line);
 
     // Open log file.
     const char* path_to_log_file = paths_get_log_file();
@@ -70,13 +71,16 @@ void
 prv_log_fmt(enum te_log_category category, char* filepath, int line, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
+    va_list args_copy;
+    va_copy(args_copy, args);
 
-    unsigned long size = (unsigned long)snprintf(NULL, 0, fmt, args);
+    unsigned long size = (unsigned long)vsnprintf(NULL, 0, fmt, args);
     char* message = malloc(size + 1ul);
     memset(message, 0, size + 1ul);
 
-    vsprintf(message, fmt, args);
+    vsprintf(message, fmt, args_copy);
 
+    va_end(args_copy);
     va_end(args);
 
     prv_log(category, message, filepath, line);

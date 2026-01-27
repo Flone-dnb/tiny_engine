@@ -3,6 +3,7 @@
 #include "cglm/cglm.h"
 
 typedef struct te_camera te_camera;
+struct te_world;
 
 /**
  * Creates a new camera.
@@ -163,6 +164,15 @@ void camera_get_view_mat(te_camera* camera, mat4 out);
  */
 void camera_get_proj_mat(te_camera* camera, mat4 out);
 
+/**
+ * Returns world the camera is spawned in.
+ *
+ * @param camere Camera.
+ *
+ * @return NULL if the camera is not spawned.
+ */
+struct te_world* camera_get_world(te_camera* camera);
+
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API
 // ------------------------------------------------------------------------------------------------
@@ -176,3 +186,11 @@ void camera_get_proj_mat(te_camera* camera, mat4 out);
  * @param height Height (in pixels).
  */
 void prv_camera_set_render_target_size(te_camera* camera, unsigned int width, unsigned int height);
+
+/**
+ * Sets world the camera is spawned in.
+ *
+ * @param camera Camera.
+ * @param world  NULL to mark if despawn.
+ */
+void prv_camera_set_world(te_camera* camera, struct te_world* world);

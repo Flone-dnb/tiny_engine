@@ -5,6 +5,9 @@
 
 /** It's a game camera alright. */
 struct te_camera {
+    /** Not NULL if spawned. Do not free/destroy this pointer. */
+    struct te_world* world;
+
     /** View matrix. May be outdated, see @ref is_view_mat_outdated. */
     mat4 view_mat;
 
@@ -58,6 +61,7 @@ te_camera*
 camera_create() {
     te_camera* camera = malloc(sizeof(te_camera));
 
+    camera->world = NULL;
     glm_vec3_zero(camera->location);
     glm_vec3_zero(camera->rotation);
     globals_get_world_forward(camera->forward);
@@ -237,6 +241,11 @@ camera_get_proj_mat(te_camera* camera, mat4 out) {
     glm_mat4_copy(camera->proj_mat, out);
 }
 
+struct te_world*
+camera_get_world(te_camera* camera) {
+    return camera->world;
+}
+
 void
 prv_camera_set_render_target_size(te_camera* camera, unsigned int width, unsigned int height) {
     if ((width == camera->render_width) && (height == camera->render_height)) {
@@ -246,4 +255,9 @@ prv_camera_set_render_target_size(te_camera* camera, unsigned int width, unsigne
     camera->render_width = width;
     camera->render_height = height;
     camera->is_proj_mat_outdated = true;
+}
+
+void
+prv_camera_set_world(te_camera* camera, struct te_world* world) {
+    camera->world = world;
 }

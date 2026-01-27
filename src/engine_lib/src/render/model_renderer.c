@@ -36,7 +36,7 @@ struct te_model_renderer {
      * about which render data belongs to which shader is stored in @ref shader_groups.
      *
      * Size of this array is @ref render_data_array_size but the actual number of valid
-     * (used) elements is @ref render_data_count. When some model's render data is removed all next
+     * (used) elements might be different. When some model's render data is removed all next
      * elements are shifted to the left to make sure the array does not have any "holes".
      * This array does not shrink but the number of used (valid) elements may decrease.
      */
@@ -54,7 +54,7 @@ struct te_model_renderer {
      *
      * Public API users store indices into this array so items cannot be reordered/moved.
      * This array CAN have "holes" in it (invalid items). Invalid items store INVALID_DATA_INDEX value.
-     * This array does not shrink. Size of this array is @ref handle_to_data_index_array_size.
+     * This array does not shrink. Size of this array is @ref handle_to_data_array_size.
      */
     unsigned int* handle_to_data;
 
@@ -64,7 +64,7 @@ struct te_model_renderer {
     /** Size of the array @ref render_data. */
     unsigned int render_data_array_size;
 
-    /** Size of the array @ref handle_to_data_index. */
+    /** Size of the array @ref handle_to_data. */
     unsigned int handle_to_data_array_size;
 };
 
@@ -313,9 +313,10 @@ model_renderer_draw(te_model_renderer* renderer, ivec4 gl_viewport, mat4 view_pr
             glUniformMatrix3fv(group->uniform_normal_mat, 1, GL_FALSE, data->normal_mat[0]);
             glUniform4fv(group->uniform_color, 1, data->color);
 
-            TODO; // set VBO, EBO
+            glBindBuffer(GL_ARRAY_BUFFER, data->vbo);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data->ebo);
 
-            glDrawElements(GL_TRIANGLES, TODO, GL_UNSIGNED_SHORT, NULL);
+            glDrawElements(GL_TRIANGLES, data->index_count, GL_UNSIGNED_SHORT, NULL);
         }
     }
 }

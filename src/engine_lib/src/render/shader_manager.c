@@ -30,6 +30,7 @@ typedef struct te_shader_program {
     unsigned int usage_count;
 } te_shader_program;
 
+/** Loads, compiles and caches shader programs. */
 struct te_shader_manager {
     /** Compiled shaders. Size of this array is @ref shader_count. */
     te_shader_program* shaders;
@@ -58,7 +59,7 @@ prv_shader_manager_destroy(te_shader_manager* manager) {
 
 unsigned int
 prv_shader_manager_compile_shader(const char* path, bool is_frag) {
-    const char* prefix = "#version 100 es\n"
+    const char* prefix = "#version 100\n"
                          "precision highp float;\n"
                          "precision highp int;\n\n";
     const unsigned long prefix_len = strlen(prefix);
@@ -116,7 +117,11 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
         char line_text[16] = {0};
         unsigned int line_num = 2;
 
-        for (unsigned int src = 0, dst = 0; src < code_len; src++) {
+        fmt_code[0] = '\n';
+        fmt_code[1] = '1';
+        fmt_code[2] = '.';
+        fmt_code[3] = ' ';
+        for (unsigned int src = 0, dst = 4; src < code_len; src++) {
             fmt_code[dst] = shader_code[src];
             dst += 1;
             if (shader_code[src] == 0) {

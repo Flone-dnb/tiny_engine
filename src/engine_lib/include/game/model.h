@@ -114,6 +114,15 @@ void model_get_scale(te_model* model, vec3 out);
  */
 void model_get_color(te_model* model, vec4 out);
 
+/**
+ * Returns world the model is spawned in.
+ *
+ * @param model Model.
+ *
+ * @return NULL if not spawned.
+ */
+struct te_world* model_get_world(te_model* model);
+
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API
 // ------------------------------------------------------------------------------------------------

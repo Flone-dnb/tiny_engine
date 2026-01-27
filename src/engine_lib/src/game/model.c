@@ -12,6 +12,21 @@
 #include "render/shader_manager.h"
 #include "world.h"
 
+/** Vertex of a model. */
+typedef struct te_model_vertex {
+    // NOTE: if changing this struct also update gl vertex attribute description
+
+    /** Position. */
+    vec3 pos;
+
+    /** Normal direction. */
+    vec3 normal;
+
+    /** UV. */
+    vec2 uv;
+} te_model_vertex;
+
+/** 3D model. */
 struct te_model {
     /**
      * Path (relative to the `res` directory) to the file that stores mesh geometry.
@@ -210,8 +225,16 @@ model_get_color(te_model* model, vec4 out) {
     glm_vec4_copy(model->color, out);
 }
 
+te_world*
+model_get_world(te_model* model) {
+    return model->world;
+}
+
+void prv_model_generate_cube(te_model_vertex** vertices, unsigned short** indices, unsigned int* vertex_count,
+                             unsigned int* index_count);
+
 void
-prv_model_on_spawned(te_model* model, struct te_world* world) {
+prv_model_on_spawned(te_model* model, te_world* world) {
     model->world = world;
 
     // Get shader program.
@@ -227,27 +250,43 @@ prv_model_on_spawned(te_model* model, struct te_world* world) {
     }
 
     // Load geometry.
+    unsigned int index_count = 0;
     {
+        te_model_vertex* vertices;
+        unsigned int vertex_count;
+        unsigned short* indices;
+        prv_model_generate_cube(&vertices, &indices, &vertex_count, &index_count);
+
         glGenBuffers(1, &model->vbo);
         glGenBuffers(1, &model->ebo);
 
         glBindBuffer(GL_ARRAY_BUFFER, model->vbo);
-        glBufferData(GL_ARRAY_BUFFER, TODO, TODO, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(te_model_vertex) * vertex_count, vertices, GL_STATIC_DRAW);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, model->ebo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * TODO, TODO, GL_STATIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * index_count, indices, GL_STATIC_DRAW);
 
-        glEnableVertexAttribArray(0, TODO);
-        glEnableVertexAttribArray(1, TODO);
-        glEnableVertexAttribArray(2, TODO);
+        const unsigned long pos_offset = 0;
+        const unsigned long normal_offset = sizeof(vec3);
+        const unsigned long uv_offset = sizeof(vec3) * 2;
 
-        glVertexAttribPointer(0, TODO);
-        glVertexAttribPointer(1, TODO);
-        glVertexAttribPointer(2, TODO);
-
+        // Position.
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), &pos_offset);
         glBindAttribLocation(model->shader_prog_id, 0, "pos");
+
+        // Normal.
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), &normal_offset);
         glBindAttribLocation(model->shader_prog_id, 1, "normal");
+
+        // UV.
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), &uv_offset);
         glBindAttribLocation(model->shader_prog_id, 2, "uv");
+
+        free(vertices);
+        free(indices);
     }
 
     // Add to rendering.
@@ -263,6 +302,11 @@ prv_model_on_spawned(te_model* model, struct te_world* world) {
 
         glm_vec4_copy(model->color, data->color);
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
+        data->vbo = model->vbo;
+        data->ebo = model->ebo;
+        data->tex_id = 0;
+        glm_vec2_make((vec2){-1.0f, -1.0f}, data->tiling);
+        data->index_count = index_count;
     }
 }
 
@@ -287,4 +331,144 @@ prv_model_on_despawned(te_model* model) {
     model->shader_prog_id = 0xffffffff;
     model->vbo = 0xffffffff;
     model->ebo = 0xffffffff;
+}
+
+void
+prv_model_generate_cube(te_model_vertex** vertices, unsigned short** indices, unsigned int* vertex_count,
+                        unsigned int* index_count) {
+    const float half = 0.5f;
+
+    (*vertex_count) = 24;
+    (*vertices) = malloc(sizeof(te_model_vertex) * (*vertex_count));
+
+    // Init UVs.
+    for (unsigned int i = 0; i < (*vertex_count); i += 4) {
+        glm_vec2_make((vec2){1.0f, 1.0f}, (*vertices)[i].uv);
+        glm_vec2_make((vec2){0.0f, 1.0f}, (*vertices)[i + 1].uv);
+        glm_vec2_make((vec2){1.0f, 0.0f}, (*vertices)[i + 2].uv);
+        glm_vec2_make((vec2){0.0f, 0.0f}, (*vertices)[i + 3].uv);
+    }
+
+    // Init normals.
+    unsigned int normal_i = 0;
+    for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
+        glm_vec3_make((vec3){1.0f, 0.0f, 0.0f}, (*vertices)[normal_i].normal);
+    }
+    for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
+        glm_vec3_make((vec3){-1.0f, 0.0f, 0.0f}, (*vertices)[normal_i].normal);
+    }
+    for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
+        glm_vec3_make((vec3){0.0f, 1.0f, 0.0f}, (*vertices)[normal_i].normal);
+    }
+    for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
+        glm_vec3_make((vec3){0.0f, -1.0f, 0.0f}, (*vertices)[normal_i].normal);
+    }
+    for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
+        glm_vec3_make((vec3){0.0f, 0.0f, 1.0f}, (*vertices)[normal_i].normal);
+    }
+    for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
+        glm_vec3_make((vec3){.0f, 0.0f, -1.0f}, (*vertices)[normal_i].normal);
+    }
+
+    // Init positions.
+
+    // +X face.
+    unsigned int i = 0;
+    glm_vec3_make((vec3){half, -half, -half}, (*vertices)[i].pos);
+    i += 1;
+    glm_vec3_make((vec3){half, half, -half}, (*vertices)[i].pos);
+    i += 1;
+    glm_vec3_make((vec3){half, -half, half}, (*vertices)[i].pos);
+    i += 1;
+    glm_vec3_make((vec3){half, half, half}, (*vertices)[i].pos);
+    i += 1;
+
+    // -X face.
+    glm_vec3_make((vec3){-half, half, -half}, (*vertices)[i].pos);
+    i += 1;
+    glm_vec3_make((vec3){-half, -half, -half}, (*vertices)[i].pos);
+    i += 1;
+    glm_vec3_make((vec3){-half, half, half}, (*vertices)[i].pos);
+    i += 1;
+    glm_vec3_make((vec3){-half, -half, half}, (*vertices)[i].pos);
+    i += 1;
+
+    // +Y face.
+    glm_vec3_make((vec3){half, half, -half}, (*vertices)[i].pos);
+    i += 1;
+    glm_vec3_make((vec3){-half, half, -half}, (*vertices)[i].pos);
+    i += 1;
+    glm_vec3_make((vec3){half, half, half}, (*vertices)[i].pos);
+    i += 1;
+    glm_vec3_make((vec3){-half, half, half}, (*vertices)[i].pos);
+    i += 1;
+
+    // -Y face.
+    glm_vec3_make((vec3){-half, -half, -half}, (*vertices)[i].pos);
+    i += 1;
+    glm_vec3_make((vec3){half, -half, -half}, (*vertices)[i].pos);
+    i += 1;
+    glm_vec3_make((vec3){-half, -half, half}, (*vertices)[i].pos);
+    i += 1;
+    glm_vec3_make((vec3){half, -half, half}, (*vertices)[i].pos);
+    i += 1;
+
+    // +Z face.
+    glm_vec3_make((vec3){-half, -half, half}, (*vertices)[i].pos);
+    i += 1;
+    glm_vec3_make((vec3){half, -half, half}, (*vertices)[i].pos);
+    i += 1;
+    glm_vec3_make((vec3){-half, half, half}, (*vertices)[i].pos);
+    i += 1;
+    glm_vec3_make((vec3){half, half, half}, (*vertices)[i].pos);
+    i += 1;
+
+    // -Z face.
+    glm_vec3_make((vec3){-half, half, -half}, (*vertices)[i].pos);
+    i += 1;
+    glm_vec3_make((vec3){half, half, -half}, (*vertices)[i].pos);
+    i += 1;
+    glm_vec3_make((vec3){-half, -half, -half}, (*vertices)[i].pos);
+    i += 1;
+    glm_vec3_make((vec3){half, -half, -half}, (*vertices)[i].pos);
+    i += 1;
+
+    (*index_count) = 36;
+    (*indices) = malloc(sizeof(unsigned short) * (*index_count));
+    (*indices)[0] = 0; // +X face.
+    (*indices)[1] = 1;
+    (*indices)[2] = 2;
+    (*indices)[3] = 3;
+    (*indices)[4] = 2;
+    (*indices)[5] = 1;
+    (*indices)[6] = 4; // -X face.
+    (*indices)[7] = 5;
+    (*indices)[8] = 6;
+    (*indices)[9] = 7;
+    (*indices)[10] = 6;
+    (*indices)[11] = 5;
+    (*indices)[12] = 8; // +Y face.
+    (*indices)[13] = 9;
+    (*indices)[14] = 10;
+    (*indices)[15] = 11;
+    (*indices)[16] = 10;
+    (*indices)[17] = 9;
+    (*indices)[18] = 12; // -Y face.
+    (*indices)[19] = 13;
+    (*indices)[20] = 14;
+    (*indices)[21] = 15;
+    (*indices)[22] = 14;
+    (*indices)[23] = 13;
+    (*indices)[24] = 16; // +Z face.
+    (*indices)[25] = 17;
+    (*indices)[26] = 18;
+    (*indices)[27] = 19;
+    (*indices)[28] = 18;
+    (*indices)[29] = 17;
+    (*indices)[30] = 20; // -Z face.
+    (*indices)[31] = 21;
+    (*indices)[32] = 22;
+    (*indices)[33] = 23;
+    (*indices)[34] = 22;
+    (*indices)[35] = 21;
 }
