@@ -6,8 +6,8 @@
 
 #if defined(WIN32)
 #define NOMINMAX
-#include <windows.h>
 #include <direct.h>
+#include <windows.h>
 #define mkdir(dir, mode) _mkdir(dir)
 #elif __linux__
 #include <sys/stat.h>
@@ -23,7 +23,7 @@ filesystem_ensure_dirs_exist(const char* file_path) {
 
     char* next_sep = strchr(file_path, pathSeparator);
     while (next_sep != NULL) {
-        const size_t dir_path_len = next_sep - file_path;
+        const size_t dir_path_len = (size_t)(next_sep - file_path);
         memcpy(dir_path, file_path, dir_path_len);
         dir_path[dir_path_len] = 0;
 

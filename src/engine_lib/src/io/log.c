@@ -79,9 +79,13 @@ prv_log_fmt(enum te_log_category category, char* filepath, int line, const char*
     va_list args_copy;
     va_copy(args_copy, args);
 
-    int size = vsnprintf(NULL, 0, fmt, args);
+    int test_size = vsnprintf(NULL, 0, fmt, args);
+    if (test_size <= 0) {
+        show_error_and_abort("failed to format last log message");
+    }
+    size_t size = (size_t)test_size;
     char* message = malloc(size + 1);
-    memset(message, 0, size + 1l);
+    memset(message, 0, size + 1);
 
     vsprintf(message, fmt, args_copy);
 

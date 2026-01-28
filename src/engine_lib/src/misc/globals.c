@@ -12,7 +12,7 @@
 #error "unsupported OS"
 #endif
 
-static char max_app_name_len = 64;
+static unsigned int max_app_name_len = 64;
 static char cached_app_name[64] = {0};
 
 const char*
@@ -47,8 +47,8 @@ globals_get_app_name(void) {
         }
 
         // Save app name.
-        for (size_t src = last_slash_pos + 1, dst = 0;
-             src < path_len && dst < max_app_name_len; src++, dst++) {
+        for (size_t src = last_slash_pos + 1, dst = 0; src < path_len && dst < max_app_name_len;
+             src++, dst++) {
 #if defined(WIN32)
             if (buffer[src] == '.') {
                 // don't copy ".exe"
