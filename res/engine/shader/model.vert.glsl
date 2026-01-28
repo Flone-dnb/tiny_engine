@@ -11,7 +11,7 @@ uniform mat4 world_mat;
 uniform mat3 normal_mat;
 
 void main(void) {
-    vec4 world_pos = world_mat * vec4(pos, 1.0F);
+    vec4 world_pos = world_mat * vec4(pos, 1.0);
     gl_Position = view_proj_mat * world_pos;
 
     frag_pos = world_pos.xyz;

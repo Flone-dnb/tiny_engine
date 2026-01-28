@@ -46,7 +46,7 @@ function(tiny_engine_configure_target TARGET_NAME)
 
     # More warnings.
     if(MSVC)
-        target_compile_options(${TARGET_NAME} PUBLIC /W3 /WX)
+        target_compile_options(${TARGET_NAME} PUBLIC /W3 /WX /wd4996) # disable "unsafe function" warning
     else()
         target_compile_options(${TARGET_NAME} PUBLIC -Wall -Wextra -Werror -Wconversion -Wno-unused-but-set-parameter)
     endif()

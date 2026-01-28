@@ -62,7 +62,7 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
     const char* prefix = "#version 100\n"
                          "precision highp float;\n"
                          "precision highp int;\n\n";
-    const unsigned long prefix_len = strlen(prefix);
+    const size_t prefix_len = strlen(prefix);
 
     FILE* f = fopen(path, "rb");
     if (f == NULL) {
@@ -83,7 +83,7 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
 
     // Read content.
     char* file_content = malloc(sizeof(char) * (file_size + 1));
-    const unsigned long bytes_read = fread(file_content, 1, file_size, f);
+    const size_t bytes_read = fread(file_content, 1, file_size, f);
     file_content[file_size] = 0;
     if (bytes_read != file_size) {
         show_error_and_abort("failed to read the shader file");
@@ -95,7 +95,7 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
     memcpy(shader_code, prefix, sizeof(char) * prefix_len);
     memcpy(shader_code + prefix_len, file_content, file_size);
     shader_code[prefix_len + file_size] = 0;
-    const unsigned long code_len = prefix_len + file_size;
+    const size_t code_len = prefix_len + file_size;
 
     // Compile shader.
     const unsigned int shader_id = glCreateShader(is_frag ? GL_FRAGMENT_SHADER : GL_VERTEX_SHADER);
@@ -110,7 +110,7 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
         glGetShaderInfoLog(shader_id, 4096, NULL, comp_error_msg);
 
         // Format output (log source code with line numbers).
-        const unsigned long fmt_code_len = code_len + 4096;
+        const size_t fmt_code_len = code_len + 4096;
         char* fmt_code = malloc(sizeof(char) * fmt_code_len);
         memset(fmt_code, 0, sizeof(char) * fmt_code_len);
 
@@ -121,7 +121,7 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
         fmt_code[1] = '1';
         fmt_code[2] = '.';
         fmt_code[3] = ' ';
-        for (unsigned int src = 0, dst = 4; src < code_len; src++) {
+        for (size_t src = 0, dst = 4; src < code_len; src++) {
             fmt_code[dst] = shader_code[src];
             dst += 1;
             if (shader_code[src] == 0) {
@@ -131,9 +131,11 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
             if (shader_code[src] == '\n') {
                 // Append line number.
                 snprintf(line_text, 16, "%u. ", line_num);
-                const unsigned long line_len = strlen(line_text);
+                const size_t line_len = strlen(line_text);
                 memcpy(fmt_code + dst, line_text, line_len);
                 dst += line_len;
+
+                line_num += 1;
             }
         }
 
@@ -154,8 +156,8 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
 unsigned int
 shader_manager_request_shader(te_shader_manager* manager, const char* vert_relative_path,
                               const char* frag_relative_path) {
-    const unsigned long vert_relative_path_len = strlen(vert_relative_path);
-    const unsigned long frag_relative_path_len = strlen(frag_relative_path);
+    const size_t vert_relative_path_len = strlen(vert_relative_path);
+    const size_t frag_relative_path_len = strlen(frag_relative_path);
 
     // Check cache.
     unsigned int index = 0;

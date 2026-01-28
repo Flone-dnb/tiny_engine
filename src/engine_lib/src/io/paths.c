@@ -7,6 +7,13 @@
 #include "misc/error.h"
 #include "misc/globals.h"
 
+#if defined(WIN32)
+#define NOMINMAX
+#include <Windows.h>
+#include <KnownFolders.h>
+#include <Shlobj.h>
+#endif
+
 static char cached_path_to_config_dir[2048] = {0};
 static char cached_path_to_log_file[2048] = {0};
 
@@ -15,7 +22,7 @@ paths_get_config_dir(void) {
     if (cached_path_to_config_dir[0] == 0) {
 #if defined(WIN32)
         PWSTR path_tmp = NULL;
-        const HRESULT result = SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &path_tmp);
+        const HRESULT result = SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &path_tmp);
         if (result != S_OK) {
             CoTaskMemFree(path_tmp);
             show_error_and_abort("failed to query config dir path");
@@ -23,18 +30,18 @@ paths_get_config_dir(void) {
 
         // Copy path and replace slashes.
         char path_buff[256] = {0};
-        const unsigned long path_len = strlen(path_tmp);
+        const size_t path_len = wcslen(path_tmp);
         if (path_len > 256) {
             show_error_and_abort("path to AppData folder is too long");
         }
-        for (unsigned long i = 0; i < path_len; i++) {
+        for (size_t i = 0; i < path_len; i++) {
             if (path_tmp[i] == '\\') {
                 path_buff[i] = '/';
             } else {
-                path_buff[i] = path_tmp[i];
+                path_buff[i] = (char)path_tmp[i];
             }
         }
-        CoTaskMemFree(pPathTmp);
+        CoTaskMemFree(path_tmp);
 
         sprintf(cached_path_to_config_dir, "%s/tiny_engine/%s/config/", &path_buff[0],
                 globals_get_app_name());
@@ -65,7 +72,7 @@ paths_get_log_file(void) {
     if (cached_path_to_log_file[0] == 0) {
 #if defined(WIN32)
         PWSTR path_tmp = NULL;
-        const HRESULT result = SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &path_tmp);
+        const HRESULT result = SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &path_tmp);
         if (result != S_OK) {
             CoTaskMemFree(path_tmp);
             show_error_and_abort("failed to query config dir path");
@@ -73,18 +80,18 @@ paths_get_log_file(void) {
 
         // Copy path and replace slashes.
         char path_buff[256] = {0};
-        const unsigned long path_len = strlen(path_tmp);
+        const size_t path_len = wcslen(path_tmp);
         if (path_len > 256) {
             show_error_and_abort("path to AppData folder is too long");
         }
-        for (unsigned long i = 0; i < path_len; i++) {
+        for (size_t i = 0; i < path_len; i++) {
             if (path_tmp[i] == '\\') {
                 path_buff[i] = '/';
             } else {
-                path_buff[i] = path_tmp[i];
+                path_buff[i] = (char)path_tmp[i];
             }
         }
-        CoTaskMemFree(pPathTmp);
+        CoTaskMemFree(path_tmp);
 
         sprintf(cached_path_to_log_file, "%s/tiny_engine/%s/log.txt", &path_buff[0], globals_get_app_name());
 #elif __linux__
@@ -111,7 +118,7 @@ paths_get_log_file(void) {
 
 char*
 paths_prepend_res_to_path(const char* relative_path) {
-    const unsigned long len = strlen(relative_path);
+    const size_t len = strlen(relative_path);
 
     char* new_path = malloc(sizeof(char) * (len + 4 + 1));
 

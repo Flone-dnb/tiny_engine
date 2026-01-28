@@ -18,9 +18,9 @@ prv_error_create(const char* message, char* file, int line) {
     char location_info[512] = {0};
     snprintf(&location_info[0], 512, " (%s:%d)", file, line);
 
-    const unsigned long message_len = strlen(message);
-    const unsigned long location_info_len = strlen(location_info);
-    const unsigned long full_message_len = message_len + location_info_len + 1ul;
+    const size_t message_len = strlen(message);
+    const size_t location_info_len = strlen(location_info);
+    const size_t full_message_len = message_len + location_info_len + 1;
 
     // Init error.
     te_error* err = malloc(sizeof(te_error));

@@ -83,7 +83,7 @@ model_create(const char* path_to_geo) {
     if (path_to_geo == NULL) {
         model->path_to_geo = NULL;
     } else {
-        const unsigned long path_len = strlen(path_to_geo);
+        const size_t path_len = strlen(path_to_geo);
         model->path_to_geo = malloc(sizeof(char) * (path_len + 1));
         memcpy(model->path_to_geo, path_to_geo, path_len);
         model->path_to_geo[path_len] = 0;
@@ -185,7 +185,7 @@ model_set_custom_vert_shader(te_model* model, const char* vert_relative_path) {
 
     free(model->custom_vert_relative_path);
 
-    const unsigned long len = strlen(vert_relative_path);
+    const size_t len = strlen(vert_relative_path);
     model->custom_vert_relative_path = malloc(sizeof(char) * (len + 1));
     memcpy(model->custom_vert_relative_path, vert_relative_path, sizeof(char) * len);
     model->custom_vert_relative_path[len] = 0;
@@ -199,7 +199,7 @@ model_set_custom_frag_shader(te_model* model, const char* frag_relative_path) {
 
     free(model->custom_frag_relative_path);
 
-    const unsigned long len = strlen(frag_relative_path);
+    const size_t len = strlen(frag_relative_path);
     model->custom_frag_relative_path = malloc(sizeof(char) * (len + 1));
     memcpy(model->custom_frag_relative_path, frag_relative_path, sizeof(char) * len);
     model->custom_frag_relative_path[len] = 0;

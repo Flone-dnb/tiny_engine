@@ -34,9 +34,9 @@ globals_get_app_name(void) {
 #endif
 
         // Find last slash in the path.
-        unsigned long path_len = strlen(buffer);
-        unsigned long last_slash_pos = path_len;
-        for (unsigned long i = path_len - 1; i > 0; i--) {
+        const size_t path_len = strlen(buffer);
+        size_t last_slash_pos = path_len;
+        for (size_t i = path_len - 1; i > 0; i--) {
             if (buffer[i] == '/' || buffer[i] == '\\') {
                 last_slash_pos = i;
                 break;
@@ -47,8 +47,14 @@ globals_get_app_name(void) {
         }
 
         // Save app name.
-        for (unsigned long src = last_slash_pos + 1, dst = 0;
-             src < path_len && dst < (unsigned long)max_app_name_len; src++, dst++) {
+        for (size_t src = last_slash_pos + 1, dst = 0;
+             src < path_len && dst < max_app_name_len; src++, dst++) {
+#if defined(WIN32)
+            if (buffer[src] == '.') {
+                // don't copy ".exe"
+                break;
+            }
+#endif
             cached_app_name[dst] = buffer[src];
         }
     }

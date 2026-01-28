@@ -7,6 +7,7 @@
 #include <time.h>
 #include "io/filesystem.h"
 #include "io/paths.h"
+#include "misc/error.h"
 
 static unsigned int error_count_logged = 0;
 static unsigned int warn_count_logged = 0;
@@ -40,8 +41,8 @@ prv_log(enum te_log_category category, const char* message, char* filepath, int 
     }
 
     // Find filename start in the filepath.
-    unsigned long filename_start = 0;
-    for (unsigned long i = strlen(filepath) - 1; i > 0; i--) {
+    size_t filename_start = 0;
+    for (size_t i = strlen(filepath) - 1; i > 0; i--) {
         if (filepath[i] == '/' || filepath[i] == '\\') {
             filename_start = i + 1;
             break;
@@ -57,6 +58,10 @@ prv_log(enum te_log_category category, const char* message, char* filepath, int 
     const char* path_to_log_file = paths_get_log_file();
     filesystem_ensure_dirs_exist(path_to_log_file);
     FILE* log_file = fopen(path_to_log_file, "a");
+    if (log_file == NULL) {
+        printf("failed to open log file");
+        abort();
+    }
 
     fprintf(log_file, "%s %s\n", log_prefix, message);
 #if defined(DEBUG)
@@ -74,9 +79,9 @@ prv_log_fmt(enum te_log_category category, char* filepath, int line, const char*
     va_list args_copy;
     va_copy(args_copy, args);
 
-    unsigned long size = (unsigned long)vsnprintf(NULL, 0, fmt, args);
-    char* message = malloc(size + 1ul);
-    memset(message, 0, size + 1ul);
+    int size = vsnprintf(NULL, 0, fmt, args);
+    char* message = malloc(size + 1);
+    memset(message, 0, size + 1l);
 
     vsprintf(message, fmt, args_copy);
 

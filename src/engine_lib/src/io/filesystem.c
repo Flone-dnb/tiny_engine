@@ -7,6 +7,7 @@
 #if defined(WIN32)
 #define NOMINMAX
 #include <windows.h>
+#include <direct.h>
 #define mkdir(dir, mode) _mkdir(dir)
 #elif __linux__
 #include <sys/stat.h>
@@ -16,19 +17,14 @@
 
 void
 filesystem_ensure_dirs_exist(const char* file_path) {
-    const char pathSeparator =
-#if defined(WIN32)
-        '\\';
-#else
-        '/';
-#endif
+    const char pathSeparator = '/'; // we convert \\ to / on windows
 
     char* dir_path = malloc(strlen(file_path) + 1);
 
     char* next_sep = strchr(file_path, pathSeparator);
     while (next_sep != NULL) {
-        long dir_path_len = next_sep - file_path;
-        memcpy(dir_path, file_path, (unsigned long)dir_path_len);
+        const size_t dir_path_len = next_sep - file_path;
+        memcpy(dir_path, file_path, dir_path_len);
         dir_path[dir_path_len] = 0;
 
         if (!filesystem_does_path_exists(dir_path)) {

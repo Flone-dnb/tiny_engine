@@ -68,7 +68,7 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
     world->is_being_destroyed = false;
 
     // Copy name.
-    const unsigned long name_len = strlen(name);
+    const size_t name_len = strlen(name);
     world->name = malloc(sizeof(char) * (name_len + 1));
     memcpy(world->name, name, name_len);
     world->name[name_len] = 0;

@@ -10,12 +10,12 @@
  */
 void
 math_make_rotation_mat(vec3 rotation_deg, mat4 out) {
-    vec3 z = GLM_VEC3_ZERO;
-    vec3 y = GLM_VEC3_ZERO;
-    vec3 x = GLM_VEC3_ZERO;
-    z[2] = 1.0f;
-    y[1] = 1.0f;
-    x[0] = 1.0f;
+    vec3 z;
+    vec3 y;
+    vec3 x;
+    glm_vec3_make((vec3){0.0f, 0.0f, 1.0f}, z);
+    glm_vec3_make((vec3){0.0f, 1.0f, 0.0f}, y);
+    glm_vec3_make((vec3){1.0f, 0.0f, 0.0f}, x);
 
     mat4 z_rot;
     glm_rotate_make(z_rot, glm_rad(rotation_deg[2]), z);

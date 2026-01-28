@@ -116,8 +116,8 @@ window_process_events(te_window* window, te_game_window_callbacks* game_callback
     game_callbacks->on_game_started(window->game_manager);
 
     // Used to calculate delta time.
-    unsigned long current_time_counter = SDL_GetPerformanceCounter();
-    unsigned long prev_time_counter = 0;
+    size_t current_time_counter = SDL_GetPerformanceCounter();
+    size_t prev_time_counter = 0;
 
     while (!window->quit_requested) {
         // Process available window events.
