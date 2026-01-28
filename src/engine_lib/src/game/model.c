@@ -271,19 +271,19 @@ prv_model_on_spawned(te_model* model, te_world* world) {
         const unsigned long uv_offset = sizeof(vec3) * 2;
 
         // Position.
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), &pos_offset);
         glBindAttribLocation(model->shader_prog_id, 0, "pos");
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), &pos_offset);
+        glEnableVertexAttribArray(0);
 
         // Normal.
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), &normal_offset);
         glBindAttribLocation(model->shader_prog_id, 1, "normal");
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), &normal_offset);
+        glEnableVertexAttribArray(1);
 
         // UV.
-        glEnableVertexAttribArray(2);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), &uv_offset);
         glBindAttribLocation(model->shader_prog_id, 2, "uv");
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), &uv_offset);
+        glEnableVertexAttribArray(2);
 
         free(vertices);
         free(indices);

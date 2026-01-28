@@ -24,6 +24,9 @@ struct te_world {
      */
     te_model** spawned_models;
 
+    /** NULL if nothing spawned, size of this array is @ref spawned_camera_count. */
+    te_camera** spawned_cameras;
+
     /** Renders models of the world. */
     te_model_renderer* model_renderer;
 
@@ -35,6 +38,9 @@ struct te_world {
 
     /** Size of the array @ref spawned_models. */
     unsigned int spawned_models_array_size;
+
+    /** Size of the array @ref spawned_cameras. */
+    unsigned int spawned_camera_count;
 
     /** `true` if the world is currently being destroyed. */
     bool is_being_destroyed;
@@ -49,10 +55,15 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
     te_world* world = malloc(sizeof(te_world));
 
     world->game_manager = game_manager;
+
     world->active_camera = NULL;
+    world->spawned_cameras = NULL;
+    world->spawned_camera_count = 0;
+
     world->spawned_model_count = 0;
     world->spawned_models_array_size = 128;
     world->spawned_models = malloc(sizeof(te_model*) * world->spawned_models_array_size);
+
     world->model_renderer = model_renderer_create();
     world->is_being_destroyed = false;
 
@@ -70,16 +81,24 @@ prv_world_destroy(te_world* world) {
     world->is_being_destroyed = true;
 
     // Despawn and destroy world objects.
-    while (world->spawned_model_count > 0) {
-        te_model* model = world->spawned_models[world->spawned_model_count - 1];
-        world->spawned_model_count -= 1;
-        prv_model_on_despawned(model);
-        model_destroy(model);
+    {
+        while (world->spawned_model_count > 0) {
+            te_model* model = world->spawned_models[world->spawned_model_count - 1];
+            world->spawned_model_count -= 1;
+            prv_model_on_despawned(model);
+            model_destroy(model);
+        }
+        free(world->spawned_models);
+
+        while (world->spawned_camera_count > 0) {
+            te_camera* camera = world->spawned_cameras[world->spawned_camera_count - 1];
+            world->spawned_camera_count -= 1;
+            camera_destroy(camera);
+        }
+        free(world->spawned_cameras);
     }
 
-    free(world->spawned_models);
     free(world->name);
-
     model_renderer_destroy(world->model_renderer);
 
     free(world);
@@ -170,6 +189,15 @@ world_spawn_camera(te_world* world, te_camera* camera) {
                              "must be first despawned from the world it currently resides in");
     }
 
+    te_camera** new_cameras = malloc(sizeof(te_camera*) * (world->spawned_camera_count + 1));
+    memcpy(new_cameras, world->spawned_cameras, sizeof(te_camera*) * world->spawned_camera_count);
+
+    free(world->spawned_cameras);
+    world->spawned_cameras = new_cameras;
+
+    new_cameras[world->spawned_camera_count] = camera;
+    world->spawned_camera_count += 1;
+
     prv_camera_set_world(camera, world);
 }
 
@@ -184,5 +212,32 @@ world_despawn_camera(te_world* world, te_camera* camera) {
 
     if (world->active_camera == camera) {
         world->active_camera = NULL;
+    }
+
+    if (world->spawned_camera_count == 1) {
+        free(world->spawned_cameras);
+        world->spawned_camera_count = 0;
+    } else {
+        unsigned int i = 0;
+        bool found = false;
+        for (; i < world->spawned_camera_count; i++) {
+            if (world->spawned_cameras[i] != camera) {
+                continue;
+            }
+
+            found = true;
+            break;
+        }
+        if (!found) {
+            show_error_and_abort("unable to find the specified camera");
+        }
+
+        te_camera** new_cameras = malloc(sizeof(te_camera*) * (world->spawned_model_count - 1));
+        memcpy(new_cameras, world->spawned_cameras, sizeof(te_camera*) * i);
+        memcpy(new_cameras + i, world->spawned_cameras + (i + 1), world->spawned_camera_count - i - 1);
+
+        free(world->spawned_cameras);
+        world->spawned_cameras = new_cameras;
+        world->spawned_camera_count -= 1;
     }
 }

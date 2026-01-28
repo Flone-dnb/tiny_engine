@@ -145,6 +145,7 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
         show_error_and_abort("failed to compile shader, see log for more details");
     }
 
+    free(file_content);
     free(shader_code);
 
     return shader_id;
@@ -232,6 +233,9 @@ shader_manager_request_shader(te_shader_manager* manager, const char* vert_relat
         memcpy(prog->frag_relative_path, frag_relative_path, sizeof(char) * frag_relative_path_len);
         prog->frag_relative_path[frag_relative_path_len] = 0;
         prog->frag_relative_path_len = (unsigned int)frag_relative_path_len;
+
+        free(vert_path);
+        free(frag_path);
     }
 
     manager->shaders[index].usage_count += 1;
@@ -264,6 +268,10 @@ shader_manager_mark_unused_shader(te_shader_manager* manager, unsigned int prog_
     }
 
     glDeleteProgram(manager->shaders[index].id);
+
+    // Cleanup shader group.
+    free(manager->shaders[index].frag_relative_path);
+    free(manager->shaders[index].vert_relative_path);
 
     // Remove from cache.
     if (manager->shader_count == 1) {

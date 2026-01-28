@@ -81,7 +81,7 @@ renderer_create(struct te_window* window) {
     renderer->shader_manager = prv_shader_manager_create();
     renderer->worlds_render_info_array_size = 2;
     renderer->worlds_render_info =
-        malloc(sizeof(te_world_render_info*) * renderer->worlds_render_info_array_size);
+        malloc(sizeof(te_world_render_info) * renderer->worlds_render_info_array_size);
 
     // Create GL context.
     renderer->gl_context = SDL_GL_CreateContext(prv_window_get_sdl_window(window));
