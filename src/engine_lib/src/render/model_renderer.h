@@ -24,7 +24,7 @@ typedef struct te_model_render_data {
     // 128 bytes ---------
 
     /** Number of elements in the index buffer. */
-    unsigned int index_count;
+    int index_count;
 
     /** Vertex buffer object ID. */
     unsigned int vbo;

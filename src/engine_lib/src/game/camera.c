@@ -172,9 +172,14 @@ recalculate_directions(te_camera* camera) {
     globals_get_world_right(global_up);
     global_up[3] = 0.0f;
 
-    glm_mat4_mulv(rot_mat, global_forward, camera->forward);
-    glm_mat4_mulv(rot_mat, global_right, camera->right);
-    glm_mat4_mulv(rot_mat, global_up, camera->up);
+    vec4 forward, right, up;
+    glm_mat4_mulv(rot_mat, global_forward, forward);
+    glm_mat4_mulv(rot_mat, global_right, right);
+    glm_mat4_mulv(rot_mat, global_up, up);
+
+    glm_vec3_copy(forward, camera->forward);
+    glm_vec3_copy(right, camera->right);
+    glm_vec3_copy(up, camera->up);
 
     camera->is_directions_outdated = false;
 }

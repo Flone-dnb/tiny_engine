@@ -306,7 +306,7 @@ prv_model_on_spawned(te_model* model, te_world* world) {
         data->ebo = model->ebo;
         data->tex_id = 0;
         glm_vec2_make((vec2){-1.0f, -1.0f}, data->tiling);
-        data->index_count = index_count;
+        data->index_count = (int)index_count;
     }
 }
 
