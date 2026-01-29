@@ -14,7 +14,7 @@
 
 /** Vertex of a model. */
 typedef struct te_model_vertex {
-    // NOTE: if changing this struct also update gl vertex attribute description
+    // NOTE: if changing this struct also update gl vertex attribute description and offsets
 
     /** Position. */
     vec3 pos;
@@ -266,23 +266,19 @@ prv_model_on_spawned(te_model* model, te_world* world) {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, model->ebo);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * index_count, indices, GL_STATIC_DRAW);
 
-        const unsigned long pos_offset = 0;
-        const unsigned long normal_offset = sizeof(vec3);
-        const unsigned long uv_offset = sizeof(vec3) * 2;
-
         // Position.
         glBindAttribLocation(model->shader_prog_id, 0, "pos");
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), &pos_offset);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), NULL);
         glEnableVertexAttribArray(0);
 
         // Normal.
         glBindAttribLocation(model->shader_prog_id, 1, "normal");
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), &normal_offset);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)sizeof(vec3));
         glEnableVertexAttribArray(1);
 
         // UV.
         glBindAttribLocation(model->shader_prog_id, 2, "uv");
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), &uv_offset);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)(sizeof(vec3) * 2));
         glEnableVertexAttribArray(2);
 
         free(vertices);
