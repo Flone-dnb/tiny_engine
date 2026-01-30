@@ -15,21 +15,15 @@ struct te_game_manager {
     /** Game worlds. Size of this array is @ref world_count. */
     struct te_world** worlds;
 
-    /** User callback that should be called on game tick. */
-    void (*on_game_tick)(struct te_game_manager* game_manager, float delta_time_sec);
-
     /** Number of elements in the @ref worlds array. */
     unsigned int world_count;
 };
 
 te_game_manager*
-prv_game_manager_create(struct te_window* window,
-                        void (*on_game_tick)(te_game_manager* game_manager, float delta_time_sec)) {
+prv_game_manager_create(struct te_window* window) {
     te_game_manager* game_manager = (te_game_manager*)malloc(sizeof(te_game_manager));
 
     game_manager->window = window;
-    game_manager->on_game_tick = on_game_tick;
-
     game_manager->worlds = NULL;
     game_manager->world_count = 0;
 
@@ -90,8 +84,9 @@ game_manager_get_worlds(te_game_manager* game_manager, unsigned int* world_count
 
 void
 prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
-    // Trigger user callback.
-    game_manager->on_game_tick(game_manager, delta_time_sec);
+    (void)game_manager;
+    (void)delta_time_sec;
+    // TODO
 }
 
 void

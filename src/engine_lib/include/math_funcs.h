@@ -8,7 +8,7 @@
  * @param rotation_deg Rotation in degrees.
  * @param out          Resulting rotation matrix.
  */
-void
+static inline void
 math_make_rotation_mat(vec3 rotation_deg, mat4 out) {
     vec3 z;
     vec3 y;

@@ -52,13 +52,10 @@ struct te_world** game_manager_get_worlds(te_game_manager* game_manager, unsigne
  * Creates a new game manager.
  *
  * @param window Window that owns this object.
- * @param on_game_tick User callback that should be called on game tick.
  *
  * @return Created game manager.
  */
-te_game_manager* prv_game_manager_create(struct te_window* window,
-                                         void (*on_game_tick)(te_game_manager* game_manager,
-                                                              float delta_time_sec));
+te_game_manager* prv_game_manager_create(struct te_window* window);
 
 /**
  * Destroys game manager.

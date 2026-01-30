@@ -14,6 +14,10 @@
 #include "SDL3/SDL_timer.h"
 #include "SDL3/SDL_video.h"
 
+#if defined(__aarch64__) || defined(__ARM64__)
+#define IS_ARM64
+#endif
+
 /** Game window. */
 struct te_window {
     /** SDL window. */
@@ -21,6 +25,15 @@ struct te_window {
 
     /** Game manager that window created. */
     struct te_game_manager* game_manager;
+
+    /** User-specified callbacks. Do not free/destroy this pointer. The user will free it. */
+    te_window_callbacks* user_callbacks;
+
+    /** User's main game system. Do not free this pointer. */
+    void* game_instance;
+
+    /** Non NULL if have a connected gamepad. Do not free this pointer. */
+    SDL_Gamepad* connected_gamepad;
 
     /** Current width of the window. */
     unsigned int width;
@@ -31,13 +44,18 @@ struct te_window {
     /** Refresh rate of the used display. */
     unsigned int display_refresh_rate;
 
+    /** `true` if gamepad input was received on this frame. Used to determine when the input device changes. */
+    bool had_gamepad_input_curr_frame;
+
+    /** `true` if gamepad input was received on the last frame. Used to determine when the input device changes. */
+    bool had_gamepad_input_prev_frame;
+
     /** `true` if the window needs to be closed. */
     bool quit_requested;
 };
 
 te_window*
 window_create(const char* window_title) {
-
     // Destroy old log file.
     filesystem_remove_file(paths_get_log_file());
 
@@ -98,7 +116,12 @@ window_create(const char* window_title) {
 
     te_window* window = malloc(sizeof(te_window));
     window->sdl_window = sdl_window;
+    window->connected_gamepad = NULL;
     window->game_manager = NULL;
+    window->user_callbacks = NULL;
+    window->game_instance = NULL;
+    window->had_gamepad_input_curr_frame = false;
+    window->had_gamepad_input_prev_frame = false;
     window->width = (unsigned int)display_width;
     window->height = (unsigned int)display_height;
     window->display_refresh_rate = display_refresh_rate;
@@ -110,10 +133,51 @@ window_create(const char* window_title) {
 }
 
 void
-window_process_events(te_window* window, te_game_window_callbacks* game_callbacks) {
-    window->game_manager = prv_game_manager_create(window, game_callbacks->on_game_tick);
+window_destroy(te_window* window) {
+    SDL_DestroyWindow(window->sdl_window);
 
-    game_callbacks->on_game_started(window->game_manager);
+    free(window);
+
+    SDL_Quit();
+
+    // Log warnings/errors count (if were logged).
+    const unsigned int warn_count = log_get_warning_count_logged();
+    const unsigned int err_count = log_get_error_count_logged();
+    if (warn_count > 0 || err_count > 0) {
+        log_info("");
+        log_info_fmt("WARNINGS logged: %d | ERRORS logged: %d", warn_count, err_count);
+    }
+}
+
+void
+window_process_events(te_window* window, te_window_callbacks* window_callbacks, void* game_instance) {
+    window->user_callbacks = window_callbacks;
+    window->game_instance = game_instance;
+    window->game_manager = prv_game_manager_create(window);
+
+    // See if we have a gamepad connected.
+    {
+        int count = 0;
+        SDL_JoystickID* ids = SDL_GetGamepads(&count);
+
+        for (int i = 0; i < count; i++) {
+            if (SDL_IsGamepad(ids[i])) {
+                window->connected_gamepad = SDL_OpenGamepad(ids[i]);
+                break;
+            }
+        }
+
+        SDL_free(ids);
+    }
+
+    // Notify the user.
+    window->user_callbacks->on_game_started(window->game_instance, window->game_manager);
+    if (window->connected_gamepad != NULL) {
+        window->had_gamepad_input_curr_frame = true;
+        window->had_gamepad_input_prev_frame = true;
+        window->user_callbacks->on_gamepad_connected(window->game_instance, window->game_manager,
+                                                     SDL_GetGamepadName(window->connected_gamepad));
+    }
 
     // Used to calculate delta time.
     size_t current_time_counter = SDL_GetPerformanceCounter();
@@ -136,17 +200,31 @@ window_process_events(te_window* window, te_game_window_callbacks* game_callback
                                      / (double)(SDL_GetPerformanceFrequency());
         const float delta_time_sec = (float)(delta_time_ms * 0.001);
 
-        prv_game_manager_tick(window->game_manager, delta_time_sec);
+        // Tick.
+        {
+            prv_game_manager_tick(window->game_manager, delta_time_sec);
+            window->user_callbacks->on_game_tick(window->game_instance, window->game_manager, delta_time_sec);
+
+            if (window->had_gamepad_input_prev_frame != window->had_gamepad_input_curr_frame) {
+                window->had_gamepad_input_prev_frame = window->had_gamepad_input_curr_frame;
+                window->user_callbacks->on_input_source_changed(window->game_instance, window->game_manager,
+                                                                window->had_gamepad_input_curr_frame);
+            }
+        }
+
+        // Draw.
         prv_game_manager_draw_frame(window->game_manager);
     }
 
     log_info("window is closing");
 
-    game_callbacks->on_window_close(window->game_manager);
+    window->user_callbacks->on_window_close(window->game_instance, window->game_manager);
 
     // Destroy game manager.
     prv_game_manager_destroy(window->game_manager);
     window->game_manager = NULL;
+    window->user_callbacks = NULL;
+    window->game_instance = NULL;
 
     log_info("game manager is destroyed");
 }
@@ -161,6 +239,11 @@ window_get_game_manager(te_window* window) {
 #endif
 
     return window->game_manager;
+}
+
+bool
+window_is_gamepad_connected(te_window* window) {
+    return window->connected_gamepad != NULL;
 }
 
 void
@@ -179,26 +262,103 @@ window_close(te_window* window) {
     window->quit_requested = true;
 }
 
-void
-window_destroy(te_window* window) {
-    SDL_DestroyWindow(window->sdl_window);
-
-    free(window);
-
-    SDL_Quit();
-
-    // Log warnings/errors count (if were logged).
-    const unsigned int warn_count = log_get_warning_count_logged();
-    const unsigned int err_count = log_get_error_count_logged();
-    if (warn_count > 0 || err_count > 0) {
-        log_info("");
-        log_info_fmt("WARNINGS logged: %d | ERRORS logged: %d", warn_count, err_count);
-    }
-}
-
 bool
 prv_window_process_event(te_window* window, union SDL_Event event) {
     switch (event.type) {
+        case (SDL_EVENT_MOUSE_MOTION): {
+            window->user_callbacks->on_mouse_moved(window->game_instance, window->game_manager,
+                                                   event.motion.xrel, event.motion.yrel);
+            break;
+        }
+        case (SDL_EVENT_MOUSE_BUTTON_DOWN): {
+            window->user_callbacks->on_mouse_button_pressed(window->game_instance, window->game_manager,
+                                                            (enum te_mouse_button)event.button.button);
+            break;
+        }
+        case (SDL_EVENT_MOUSE_BUTTON_UP): {
+            window->user_callbacks->on_mouse_button_released(window->game_instance, window->game_manager,
+                                                             (enum te_mouse_button)event.button.button);
+            break;
+        }
+        case (SDL_EVENT_KEY_DOWN): {
+            if (event.key.repeat != 0) {
+                // Ignore repeat events.
+                break;
+            }
+#if defined(IS_ARM64)
+            if (window->connected_gamepad != nullptr) {
+                // In some cases while using retro-handhelds (they have built in gamepad) gamepad buttons trigger
+                // keyboard input before the actual gamepad button input.
+                break;
+            }
+#endif
+            window->had_gamepad_input_curr_frame = false;
+
+            te_keyboard_modifiers mods;
+            mods.mod = event.key.mod;
+            window->user_callbacks->on_keyboard_button_pressed(window->game_instance, window->game_manager,
+                                                               (enum te_keyboard_button)event.key.scancode,
+                                                               mods);
+            break;
+        }
+        case (SDL_EVENT_KEY_UP): {
+            if (event.key.repeat != 0) {
+                // Ignore repeat events.
+                break;
+            }
+#if defined(IS_ARM64)
+            if (window->connected_gamepad != nullptr) {
+                // Same as in "pressed" event.
+                break;
+            }
+#endif
+            window->had_gamepad_input_curr_frame = false;
+
+            te_keyboard_modifiers mods;
+            mods.mod = event.key.mod;
+            window->user_callbacks->on_keyboard_button_released(window->game_instance, window->game_manager,
+                                                                (enum te_keyboard_button)event.key.scancode,
+                                                                mods);
+            break;
+        }
+        case (SDL_EVENT_GAMEPAD_AXIS_MOTION): {
+#if defined(DEBUG)
+            if (sizeof(event.gaxis.value) != 2) {
+                show_error_and_abort("expected \"short\" type");
+            }
+#endif
+            window->had_gamepad_input_curr_frame = true;
+
+            const float new_pos = (float)event.gaxis.value / 32767.0f;
+            window->user_callbacks->on_gamepad_axis_moved(window->game_instance, window->game_manager,
+                                                          (enum te_gamepad_axis)event.gaxis.axis, new_pos);
+            break;
+        }
+        case (SDL_EVENT_GAMEPAD_BUTTON_DOWN): {
+            window->had_gamepad_input_curr_frame = true;
+            window->user_callbacks->on_gamepad_button_pressed(window->game_instance, window->game_manager,
+                                                              (enum te_gamepad_button)event.gbutton.button);
+            break;
+        }
+        case (SDL_EVENT_GAMEPAD_BUTTON_UP): {
+            window->had_gamepad_input_curr_frame = true;
+            window->user_callbacks->on_gamepad_button_released(window->game_instance, window->game_manager,
+                                                               (enum te_gamepad_button)event.gbutton.button);
+            break;
+        }
+        case (SDL_EVENT_MOUSE_WHEEL): {
+            window->user_callbacks->on_mouse_scroll_moved(window->game_instance, window->game_manager,
+                                                          event.wheel.y);
+            break;
+        }
+        case (SDL_EVENT_WINDOW_FOCUS_GAINED): {
+            window->user_callbacks->on_window_received_focus(window->game_instance, window->game_manager);
+            break;
+        }
+        case (SDL_EVENT_WINDOW_FOCUS_LOST): {
+            window->user_callbacks->on_window_lost_focus(window->game_instance, window->game_manager);
+            break;
+        }
         case (SDL_EVENT_WINDOW_RESIZED):
         case (SDL_EVENT_WINDOW_MAXIMIZED):
         case (SDL_EVENT_WINDOW_MINIMIZED): {
@@ -213,6 +373,24 @@ prv_window_process_event(te_window* window, union SDL_Event event) {
 
             // Notify.
             prv_game_manager_on_window_size_changed(window->game_manager);
+            break;
+        }
+        case (SDL_EVENT_GAMEPAD_ADDED): {
+            if (window->connected_gamepad == NULL) {
+                window->connected_gamepad = SDL_OpenGamepad(event.cdevice.which);
+                window->user_callbacks->on_gamepad_connected(window->game_instance, window->game_manager,
+                                                             SDL_GetGamepadName(window->connected_gamepad));
+            }
+            break;
+        }
+        case (SDL_EVENT_GAMEPAD_REMOVED): {
+            if (window->connected_gamepad != NULL
+                && event.cdevice.which
+                       == SDL_GetJoystickID(SDL_GetGamepadJoystick(window->connected_gamepad))) {
+                SDL_CloseGamepad(window->connected_gamepad);
+                window->connected_gamepad = NULL;
+                window->user_callbacks->on_gamepad_disconnected(window->game_instance, window->game_manager);
+            }
             break;
         }
         case (SDL_EVENT_QUIT): {

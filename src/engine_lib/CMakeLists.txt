@@ -22,6 +22,9 @@ set(PROJECT_SOURCES
     src/game/model.c
     include/math_funcs.h
     include/window.h
+    include/input/keyboard_button.h
+    include/input/mouse_button.h
+    include/input/gamepad_button.h
     include/io/log.h
     include/io/paths.h
     include/io/filesystem.h
