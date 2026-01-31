@@ -10,6 +10,7 @@
 #include "render/model_renderer.h"
 #include "render/renderer.h"
 #include "render/shader_manager.h"
+#include "render/texture_manager.h"
 #include "world.h"
 
 /** Vertex of a model. */
@@ -40,6 +41,9 @@ struct te_model {
     /** NULL if default fragment shader is used. Path (relative to the `res` directory) to custom fragment shader.  */
     char* custom_frag_relative_path;
 
+    /** NULL if texture is not set, otherwise path (relative to the `res` directory) to the texture file. */
+    char* tex_path;
+
     /** NULL if not spawned. Do not free/destroy this pointer. */
     te_world* world;
 
@@ -54,6 +58,12 @@ struct te_model {
 
     /** Scale. */
     vec3 scale;
+
+    /** Texture tiling multiplier. */
+    vec2 tex_tiling;
+
+    /** Offset for UV coordinates. */
+    vec2 uv_offset;
 
     /** Stores invalid value if not spawned (see @ref world). */
     unsigned int render_data_handle;
@@ -77,8 +87,11 @@ model_create(const char* path_to_geo) {
     model->shader_prog_id = 0xffffffff;
     model->vbo = 0xffffffff;
     model->ebo = 0xffffffff;
+    model->tex_path = NULL;
     model->custom_vert_relative_path = NULL;
     model->custom_frag_relative_path = NULL;
+    glm_vec2_one(model->tex_tiling);
+    glm_vec2_zero(model->uv_offset);
 
     if (path_to_geo == NULL) {
         model->path_to_geo = NULL;
@@ -103,6 +116,7 @@ model_create(const char* path_to_geo) {
 
 void
 model_destroy(te_model* model) {
+    free(model->tex_path);
     free(model->path_to_geo);
     free(model);
 }
@@ -178,6 +192,75 @@ model_set_color(te_model* model, vec4 color) {
 }
 
 void
+model_set_texture(te_model* model, const char* relative_path) {
+    if (model->tex_path == NULL && relative_path == NULL) {
+        return;
+    }
+
+    free(model->tex_path);
+
+    if (relative_path == NULL) {
+        // Remove current texture.
+        model->tex_path = NULL;
+        if (model->world != NULL) {
+            // Update render data.
+            te_model_render_data* data = model_renderer_get_render_data_tmp(
+                world_get_model_renderer(model->world), model->render_data_handle);
+
+            unsigned int tex_id = data->tex_id;
+            data->tex_id = 0;
+            glm_vec2_make((vec2){-1.0f, -1.0f}, data->tex_tiling);
+
+            te_texture_manager* texture_manager =
+                renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(model->world)));
+            texture_manager_mark_unused_texture(texture_manager, tex_id);
+        }
+    } else {
+        // Set new texture.
+        const size_t len = strlen(relative_path);
+        model->tex_path = malloc(sizeof(char) * (len + 1));
+        memcpy(model->tex_path, relative_path, sizeof(char) * len);
+        model->tex_path[len] = 0;
+
+        if (model->world != NULL) {
+            // Update render data.
+            te_model_render_data* data = model_renderer_get_render_data_tmp(
+                world_get_model_renderer(model->world), model->render_data_handle);
+
+            te_texture_manager* texture_manager =
+                renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(model->world)));
+            data->tex_id =
+                texture_manager_request_texture(texture_manager, relative_path, TE_TLO_GENERATE_MIPMAPS);
+            glm_vec2_copy(model->tex_tiling, data->tex_tiling);
+        }
+    }
+}
+
+void
+model_set_texture_tiling(te_model* model, vec2 tex_tiling) {
+    glm_vec2_copy(tex_tiling, model->tex_tiling);
+
+    if (model->world != NULL && model->tex_path != NULL) {
+        // Update render data.
+        te_model_render_data* data = model_renderer_get_render_data_tmp(
+            world_get_model_renderer(model->world), model->render_data_handle);
+        glm_vec2_copy(model->tex_tiling, data->tex_tiling);
+    }
+}
+
+void
+model_set_uv_offset(te_model* model, vec2 uv_offset) {
+    glm_vec2_copy(uv_offset, model->uv_offset);
+
+    if (model->world != NULL) {
+        // Update render data.
+        te_model_render_data* data = model_renderer_get_render_data_tmp(
+            world_get_model_renderer(model->world), model->render_data_handle);
+        glm_vec2_copy(model->uv_offset, data->uv_offset);
+    }
+}
+
+void
 model_set_custom_vert_shader(te_model* model, const char* vert_relative_path) {
     if (model->world != NULL) {
         show_error_and_abort("setting custom shader is not allowed while the model is spawned");
@@ -223,6 +306,21 @@ model_get_scale(te_model* model, vec3 out) {
 void
 model_get_color(te_model* model, vec4 out) {
     glm_vec4_copy(model->color, out);
+}
+
+const char*
+model_get_texture(te_model* model) {
+    return model->tex_path;
+}
+
+void
+model_get_texture_tiling(te_model* model, vec2 tex_tiling) {
+    glm_vec2_copy(model->tex_tiling, tex_tiling);
+}
+
+void
+model_get_uv_offset(te_model* model, vec2 uv_offset) {
+    glm_vec2_copy(model->uv_offset, uv_offset);
 }
 
 te_world*
@@ -301,22 +399,41 @@ prv_model_on_spawned(te_model* model, te_world* world) {
         data->vbo = model->vbo;
         data->ebo = model->ebo;
         data->tex_id = 0;
-        glm_vec2_make((vec2){-1.0f, -1.0f}, data->tiling);
+        glm_vec2_copy((vec2){-1.0f, -1.0f}, data->tex_tiling);
+        glm_vec2_copy(model->uv_offset, data->uv_offset);
         data->index_count = (int)index_count;
+        if (model->tex_path != NULL) {
+            te_texture_manager* texture_manager =
+                renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(model->world)));
+            data->tex_id =
+                texture_manager_request_texture(texture_manager, model->tex_path, TE_TLO_GENERATE_MIPMAPS);
+            glm_vec2_copy(model->tex_tiling, data->tex_tiling);
+        }
     }
 }
 
 void
 prv_model_on_despawned(te_model* model) {
+    te_renderer* renderer = game_manager_get_renderer(world_get_game_manager(model->world));
+    te_texture_manager* texture_manager = renderer_get_texture_manager(renderer);
+    te_shader_manager* shader_manager = renderer_get_shader_manager(renderer);
     te_model_renderer* model_renderer = world_get_model_renderer(model->world);
+
+    unsigned int tex_id = 0;
+    {
+        te_model_render_data* data = model_renderer_get_render_data_tmp(
+            world_get_model_renderer(model->world), model->render_data_handle);
+        tex_id = data->tex_id;
+    }
 
     // Remove from rendering.
     model_renderer_remove_model(model_renderer, model->render_data_handle);
 
-    // Mark shader unused.
-    te_shader_manager* shader_manager =
-        renderer_get_shader_manager(game_manager_get_renderer(world_get_game_manager(model->world)));
+    // Mark unused stuff.
     shader_manager_mark_unused_shader(shader_manager, model->shader_prog_id);
+    if (model->tex_path != NULL) {
+        texture_manager_mark_unused_texture(texture_manager, tex_id);
+    }
 
     // Release geometry.
     glDeleteBuffers(1, &model->vbo);

@@ -11,6 +11,7 @@
 #include "misc/error.h"
 #include "render/model_renderer.h"
 #include "render/shader_manager.h"
+#include "render/texture_manager.h"
 #include "window.h"
 #include "world.h"
 
@@ -36,6 +37,9 @@ struct te_renderer {
 
     /** Shader manager. */
     te_shader_manager* shader_manager;
+
+    /** Texture manager. */
+    te_texture_manager* texture_manager;
 
     /**
      * Preallocated array to keep active cameras while submitting a new frame.
@@ -79,6 +83,7 @@ renderer_create(struct te_window* window) {
     renderer->window = window;
     renderer->gl_depth_func = GL_LEQUAL; // less/equal is needed for main pass (after z prepass)
     renderer->shader_manager = prv_shader_manager_create();
+    renderer->texture_manager = prv_texture_manager_create();
     renderer->worlds_render_info_array_size = 2;
     renderer->worlds_render_info =
         malloc(sizeof(te_world_render_info) * renderer->worlds_render_info_array_size);
@@ -141,6 +146,7 @@ renderer_create(struct te_window* window) {
 
 void
 renderer_destroy(te_renderer* renderer) {
+    prv_texture_manager_destroy(renderer->texture_manager);
     prv_shader_manager_destroy(renderer->shader_manager);
     free(renderer->worlds_render_info);
 
@@ -161,6 +167,11 @@ renderer_set_fps_limit(te_renderer* renderer, unsigned int limit) {
 te_shader_manager*
 renderer_get_shader_manager(te_renderer* renderer) {
     return renderer->shader_manager;
+}
+
+te_texture_manager*
+renderer_get_texture_manager(te_renderer* renderer) {
+    return renderer->texture_manager;
 }
 
 void

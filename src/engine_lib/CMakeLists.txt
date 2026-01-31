@@ -18,6 +18,7 @@ set(PROJECT_SOURCES
     src/render/model_renderer.h
     src/render/model_renderer.c
     src/render/shader_manager.c
+    src/render/texture_manager.c
     src/game/camera.c
     src/game/model.c
     include/math_funcs.h
@@ -33,6 +34,7 @@ set(PROJECT_SOURCES
     include/game_manager.h
     include/render/renderer.h
     include/render/shader_manager.h
+    include/render/texture_manager.h
     include/world.h
     include/game/camera.h
     include/game/model.h

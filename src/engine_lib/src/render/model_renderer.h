@@ -16,12 +16,15 @@ typedef struct te_model_render_data {
     vec4 color;
 
     /** Texture tiling multiplier. Must store -1 if @ref tex_id is 0. */
-    vec2 tiling;
+    vec2 tex_tiling;
 
     /** 0 if not used. */
     unsigned int tex_id;
 
     // 128 bytes ---------
+
+    /** Offset for UV coordinates. */
+    vec2 uv_offset;
 
     /** Number of elements in the index buffer. */
     int index_count;

@@ -4,3 +4,6 @@
 [submodule "ext/cglm"]
 	path = ext/cglm
 	url = https://github.com/recp/cglm.git
+[submodule "ext/stb"]
+	path = ext/stb
+	url = https://github.com/nothings/stb.git

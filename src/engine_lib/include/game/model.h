@@ -55,6 +55,31 @@ void model_set_scale(te_model* model, vec3 scale);
 void model_set_color(te_model* model, vec4 color);
 
 /**
+ * Sets texture.
+ *
+ * @param model Model.
+ * @param relative_path Path to the texture file relative to the `res` directory.
+ * This string is copied and stored in the model. Specify NULL to remove texture.
+ */
+void model_set_texture(te_model* model, const char* relative_path);
+
+/**
+ * Sets texture tiling multiplier.
+ *
+ * @param model Model.
+ * @param tex_tiling Tiling multiplier.
+ */
+void model_set_texture_tiling(te_model* model, vec2 tex_tiling);
+
+/**
+ * Sets offset for UV coordinates.
+ *
+ * @param model Model.
+ * @param uv_offset UV offset.
+ */
+void model_set_uv_offset(te_model* model, vec2 uv_offset);
+
+/**
  * Sets custom vertex shader.
  *
  * @remark Can only be used before the model is spawned.
@@ -113,6 +138,32 @@ void model_get_scale(te_model* model, vec3 out);
  * @param out   Value to write the color (RGBA) to.
  */
 void model_get_color(te_model* model, vec4 out);
+
+/**
+ * Returns NULL if texture is not set, otherwise path (relative to the `res` directory)
+ * to the used texture.
+ *
+ * @param model Model.
+ *
+ * @return NULL or path. Do not free returned string. Valid while the model exists.
+ */
+const char* model_get_texture(te_model* model);
+
+/**
+ * Returns texture tiling multiplier.
+ *
+ * @param model Model.
+ * @param tex_tiling Tiling multiplier.
+ */
+void model_get_texture_tiling(te_model* model, vec2 tex_tiling);
+
+/**
+ * Returns offset for UV coordinates.
+ *
+ * @param model Model.
+ * @param uv_offset UV offset.
+ */
+void model_get_uv_offset(te_model* model, vec2 uv_offset);
 
 /**
  * Returns world the model is spawned in.

@@ -15,17 +15,17 @@ typedef struct te_shader_group {
     /** Number of elements that use the same shader program. */
     unsigned int count;
 
-    /** Uniform location. */
+    /// @cond UNDOCUMENTED
+    /// uniform locations -----------------------
+
     int uniform_view_proj_mat;
-
-    /** Uniform location. */
     int uniform_world_mat;
-
-    /** Uniform location. */
     int uniform_normal_mat;
-
-    /** Uniform location. */
     int uniform_color;
+    int uniform_tiling;
+    int uniform_uv_offset;
+
+    /// @endcond
 } te_shader_group;
 
 /** Model renderer. */
@@ -103,7 +103,8 @@ int
 get_uniform_location(unsigned int prog_id, const char* name) {
     const int location = glGetUniformLocation(prog_id, name);
     if (CGLM_UNLIKELY(location < 0)) {
-        log_info_fmt("missing uniform variable named \"%s\"", name);
+        log_info_fmt("missing uniform variable named \"%s\", maybe it was optimized out due to being unused",
+                     name);
         show_error_and_abort("unable to find a uniform variable, see log for details");
     }
     return location;
@@ -115,6 +116,8 @@ model_renderer_init_uniforms(te_shader_group* group) {
     group->uniform_world_mat = get_uniform_location(group->prog_id, "world_mat");
     group->uniform_normal_mat = get_uniform_location(group->prog_id, "normal_mat");
     group->uniform_color = get_uniform_location(group->prog_id, "color");
+    group->uniform_tiling = get_uniform_location(group->prog_id, "tiling");
+    group->uniform_uv_offset = get_uniform_location(group->prog_id, "uv_offset");
 }
 
 unsigned int
@@ -312,6 +315,10 @@ model_renderer_draw(te_model_renderer* renderer, ivec4 gl_viewport, mat4 view_pr
             glUniformMatrix4fv(group->uniform_world_mat, 1, GL_FALSE, data->world_mat[0]);
             glUniformMatrix3fv(group->uniform_normal_mat, 1, GL_FALSE, data->normal_mat[0]);
             glUniform4fv(group->uniform_color, 1, data->color);
+            glUniform2fv(group->uniform_tiling, 1, data->tex_tiling);
+            glUniform2fv(group->uniform_uv_offset, 1, data->uv_offset);
+
+            glBindTexture(GL_TEXTURE_2D, data->tex_id); // binds 0 if not set
 
             glBindBuffer(GL_ARRAY_BUFFER, data->vbo);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data->ebo);
