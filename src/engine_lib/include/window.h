@@ -110,6 +110,23 @@ void window_process_events(te_window* window, te_window_callbacks* window_callba
 struct te_game_manager* window_get_game_manager(te_window* window);
 
 /**
+ * Captures the mouse cursor to be inside of the window.
+ *
+ * @param window Window.
+ * @param enable `true` to enable.
+ */
+void window_capture_mouse_cursor(te_window* window, bool enable);
+
+/**
+ * Tells if the mouse is currently captured (see @ref window_capture_mouse_cursor).
+ *
+ * @param window Window.
+ *
+ * @return `true` if captured.
+ */
+bool window_is_mouse_captured(te_window* window);
+
+/**
  * Tell if a gamepad is currently connected or not.
  *
  * @param window Window.

@@ -1,5 +1,6 @@
 #include "game/camera.h"
 
+#include "math_funcs.h"
 #include "misc/error.h"
 #include "misc/globals.h"
 
@@ -64,9 +65,9 @@ camera_create() {
     camera->world = NULL;
     glm_vec3_zero(camera->location);
     glm_vec3_zero(camera->rotation);
-    globals_get_world_forward(camera->forward);
-    globals_get_world_right(camera->right);
-    globals_get_world_up(camera->up);
+    glm_vec3_zero(camera->forward);
+    glm_vec3_zero(camera->right);
+    glm_vec3_zero(camera->up);
     camera->viewport[0] = 0.0f;
     camera->viewport[1] = 0.0f;
     camera->viewport[2] = 1.0f;
@@ -78,7 +79,7 @@ camera_create() {
     camera->render_height = 0; // not set yet
     camera->is_view_mat_outdated = true;
     camera->is_proj_mat_outdated = true;
-    camera->is_directions_outdated = false;
+    camera->is_directions_outdated = true;
 
     return camera;
 }
@@ -158,18 +159,18 @@ camera_get_viewport(te_camera* camera, vec4 out) {
 void
 recalculate_directions(te_camera* camera) {
     mat4 rot_mat;
-    glm_euler(camera->rotation, rot_mat);
+    math_make_rotation_mat(camera->rotation, rot_mat);
 
     vec4 global_forward;
     globals_get_world_forward(global_forward);
     global_forward[3] = 0.0f;
 
     vec4 global_right;
-    globals_get_world_right(global_forward);
+    globals_get_world_right(global_right);
     global_right[3] = 0.0f;
 
     vec4 global_up;
-    globals_get_world_right(global_up);
+    globals_get_world_up(global_up);
     global_up[3] = 0.0f;
 
     vec4 forward, right, up;

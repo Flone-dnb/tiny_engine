@@ -4,6 +4,7 @@
 #pragma comment(linker, "/subsystem:windows /entry:mainCRTStartup")
 #endif
 
+#include <stdlib.h>
 #include "editor.h"
 #include "window.h"
 
@@ -43,7 +44,9 @@ main(void) {
     callbacks.on_window_lost_focus = &editor_on_window_lost_focus;
     callbacks.on_window_close = &editor_on_window_close;
 
-    window_process_events(window, &callbacks, NULL);
+    te_editor* editor = editor_create();
+    window_process_events(window, &callbacks, editor);
+    editor_destroy(editor);
 
     window_destroy(window);
 

@@ -7,7 +7,9 @@
 set(PROJECT_SOURCES
     src/main.c
     src/editor.c
+    src/editor_camera.c
     include/editor.h
+    include/editor_camera.h
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})

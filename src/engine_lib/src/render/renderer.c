@@ -155,7 +155,7 @@ void
 renderer_set_fps_limit(te_renderer* renderer, unsigned int limit) {
     (void)renderer;
     (void)limit;
-    log_warn("TODO: FPS limit not implemented");
+    // TODO
 }
 
 te_shader_manager*

@@ -216,6 +216,7 @@ world_despawn_camera(te_world* world, te_camera* camera) {
 
     if (world->spawned_camera_count == 1) {
         free(world->spawned_cameras);
+        world->spawned_cameras = NULL;
         world->spawned_camera_count = 0;
     } else {
         unsigned int i = 0;

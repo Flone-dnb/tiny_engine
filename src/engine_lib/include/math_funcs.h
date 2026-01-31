@@ -3,6 +3,28 @@
 #include "cglm/cglm.h"
 
 /**
+ * Used to fix a common problem where diagonal movement has ~1.4 speed instead of 1.
+ *
+ * @param movement Input vector to fix ("forward" input in X and "right" input in Y).
+ */
+static inline void
+math_fix_diagonal_movement_speedup(vec2 movement) {
+    const float square_sum = movement[0] * movement[0] + movement[1] * movement[1];
+    if (square_sum < 0.1f) { // don't normalize if vector is zero or very small to avoid NaNs
+        return;
+    }
+
+    const float length = sqrtf(square_sum);
+    if (length <= 1.0f) { // only normalize when exceeding 1 to keep small gamepad thumbstick movements
+        return;
+    }
+
+    // normalize
+    movement[0] /= length;
+    movement[1] /= length;
+}
+
+/**
  * Creates a new rotation matrix.
  *
  * @param rotation_deg Rotation in degrees.
@@ -26,7 +48,6 @@ math_make_rotation_mat(vec3 rotation_deg, mat4 out) {
     mat4 x_rot;
     glm_rotate_make(x_rot, glm_rad(rotation_deg[0]), x);
 
-    // The order of rotations is: Z first, then Y, then X.
     glm_mat4_mul(y_rot, z_rot, out);
-    glm_mat4_mul(x_rot, out, out);
+    glm_mat4_mul(out, x_rot, out);
 }

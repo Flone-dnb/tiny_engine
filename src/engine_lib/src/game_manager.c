@@ -1,6 +1,9 @@
 #include "game_manager.h"
 
+#include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
+#include "misc/error.h"
 #include "render/renderer.h"
 #include "world.h"
 
@@ -13,7 +16,7 @@ struct te_game_manager {
     struct te_renderer* renderer;
 
     /** Game worlds. Size of this array is @ref world_count. */
-    struct te_world** worlds;
+    te_world** worlds;
 
     /** Number of elements in the @ref worlds array. */
     unsigned int world_count;
@@ -47,23 +50,55 @@ prv_game_manager_destroy(te_game_manager* game_manager) {
 
 te_world*
 game_manager_create_world(te_game_manager* game_manager, const char* name) {
-    te_world** new_worlds = malloc(sizeof(te_world*) * (game_manager->world_count + 1u));
+    // Expand array.
+    te_world** new_worlds = malloc(sizeof(te_world*) * (game_manager->world_count + 1));
+    memcpy(new_worlds, game_manager->worlds, sizeof(te_world*) * game_manager->world_count);
 
-    // Copy old pointers.
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
-        new_worlds[i] = game_manager->worlds[i];
-    }
-
-    // Create new world.
-    te_world* new_world = prv_world_create(game_manager, name);
-    new_worlds[game_manager->world_count] = new_world;
-    game_manager->world_count += 1;
-
-    // Save new array.
     free(game_manager->worlds);
     game_manager->worlds = new_worlds;
 
+    // Create new world.
+    te_world* new_world = prv_world_create(game_manager, name);
+    game_manager->worlds[game_manager->world_count] = new_world;
+    game_manager->world_count += 1;
+
     return new_world;
+}
+
+void
+game_manager_destroy_world(te_game_manager* game_manager, te_world* world) {
+    if (game_manager->world_count == 1) {
+        game_manager->world_count = 0;
+        prv_world_destroy(game_manager->worlds[0]);
+        free(game_manager->worlds);
+        game_manager->worlds = NULL;
+    } else {
+        bool found = false;
+        unsigned int index = 0;
+        for (unsigned int i = 0; i < game_manager->world_count; i++) {
+            if (game_manager->worlds[i] != world) {
+                continue;
+            }
+            found = true;
+            index = i;
+            break;
+        }
+        if (!found) {
+            show_error_and_abort("unable to find the specified world to destroy");
+        }
+
+        prv_world_destroy(game_manager->worlds[index]);
+
+        te_world** new_worlds = malloc(sizeof(te_world*) * (game_manager->world_count - 1));
+        memcpy(new_worlds, game_manager->worlds, sizeof(te_world*) * index);
+        memcpy(new_worlds + index, game_manager->worlds + (index + 1),
+               sizeof(te_world*) * (game_manager->world_count - index - 1));
+
+        free(game_manager->worlds);
+        game_manager->worlds = new_worlds;
+
+        game_manager->world_count -= 1;
+    }
 }
 
 struct te_window*

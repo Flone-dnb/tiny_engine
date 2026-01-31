@@ -52,6 +52,9 @@ struct te_window {
 
     /** `true` if the window needs to be closed. */
     bool quit_requested;
+
+    /** `true` if mouse captured. */
+    bool is_mouse_captured;
 };
 
 te_window*
@@ -120,12 +123,13 @@ window_create(const char* window_title) {
     window->game_manager = NULL;
     window->user_callbacks = NULL;
     window->game_instance = NULL;
-    window->had_gamepad_input_curr_frame = false;
-    window->had_gamepad_input_prev_frame = false;
     window->width = (unsigned int)display_width;
     window->height = (unsigned int)display_height;
     window->display_refresh_rate = display_refresh_rate;
+    window->had_gamepad_input_curr_frame = false;
+    window->had_gamepad_input_prev_frame = false;
     window->quit_requested = false;
+    window->is_mouse_captured = false;
 
     log_info_fmt("created a window of size %dx%d", window->width, window->height);
 
@@ -239,6 +243,25 @@ window_get_game_manager(te_window* window) {
 #endif
 
     return window->game_manager;
+}
+
+void
+window_capture_mouse_cursor(te_window* window, bool enable) {
+    if (window->is_mouse_captured == enable) {
+        return;
+    }
+
+    if (!SDL_SetWindowRelativeMouseMode(window->sdl_window, enable)) {
+        log_info(SDL_GetError());
+        return;
+    }
+
+    window->is_mouse_captured = enable;
+}
+
+bool
+window_is_mouse_captured(te_window* window) {
+    return window->is_mouse_captured;
 }
 
 bool

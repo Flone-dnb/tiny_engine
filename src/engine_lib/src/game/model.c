@@ -118,7 +118,7 @@ prv_model_calc_world_normal_matrices(te_model* model, mat4 world, mat3 normal) {
     mat4 scale_mat;
     glm_scale_make(scale_mat, model->scale);
 
-    // Scale first, then rotate, then translate.
+    // Scale, rotate and then translate.
     glm_mat4_mul(rot_mat, scale_mat, world);
     glm_mat4_mul(translate_mat, world, world);
 

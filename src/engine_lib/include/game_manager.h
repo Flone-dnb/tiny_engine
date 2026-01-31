@@ -17,6 +17,14 @@ struct te_world;
 struct te_world* game_manager_create_world(te_game_manager* game_manager, const char* name);
 
 /**
+ * Destroys a world previously created using @ref game_manager_create_world.
+ *
+ * @param game_manager Game manager.
+ * @param world        World to destroy.
+ */
+void game_manager_destroy_world(te_game_manager* game_manager, struct te_world* world);
+
+/**
  * Returns window that owns game manager.
  *
  * @param game_manager Game manager.

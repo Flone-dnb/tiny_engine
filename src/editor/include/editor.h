@@ -6,6 +6,30 @@
 
 struct te_game_manager;
 
+typedef struct te_editor te_editor;
+
+/**
+ * Creates a new editor instance.
+ *
+ * @return Editor.
+ */
+te_editor* editor_create();
+
+/**
+ * Destroys editor instance.
+ *
+ * @param editor Editor.
+ */
+void editor_destroy(te_editor* editor);
+
+/**
+ * Creates a new game world.
+ *
+ * @param editor Editor.
+ * @param game_manager Game manager.
+ */
+void editor_create_game_world(te_editor* editor, struct te_game_manager* game_manager);
+
 /// @cond UNDOCUMENTED
 // window callbacks -------------------------------------------------------------------------------
 
