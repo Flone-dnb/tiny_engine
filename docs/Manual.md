@@ -49,3 +49,46 @@ camera_destroy(camera);
 ```
 
 When the engine returns a pointer to you (like in the example above) often you need to make sure to free/destroy the pointer but in some cases you should not do that for example when the engine returns pointer to the game's window, in these cases the documentation for the function will specifically state that you should not free/destroy returned pointer so make sure to read the docs on the functions you are using.
+
+# Game world
+
+Create a new game world (level) using the following code:
+
+```C
+te_world* game_world = game_manager_create_world(game_manager, "game");
+
+// ... and later don't forget to:
+game_manager_destroy_world(game_manager, game_world);
+```
+
+Game world is a container for game objects.
+
+# Game objects
+
+You can find all available game objects in `src/engine_lib/include/game`.
+
+The camera is a game object that's needed to view the world, here's an example of creating such object:
+
+```C
+te_camera* camera = camera_create();
+world_spawn_camera(game_world, camera); // spawn first
+world_set_active_camera(game_world, camera); // then set active
+
+// ... and later:
+camera_destroy(camera);
+```
+
+Other game objects include things like models (AKA meshes), their usage is similar.
+
+# Texture import
+
+There's no texture import, just copy your image somewhere inside of the `res` directory.
+
+In order to use the imported texture (for example on a model) you need to assign it using the editor or using the code like so:
+
+```C
+model_set_texture(model, "game/texture/sometex.png"); // located at `res/game/...`
+```
+
+When you import a GLTF/GLB file textures will be automatically imported (copied) to the `res` directory and the connection between imported meshes and their assigned textures will be saved in the imported files.
+
