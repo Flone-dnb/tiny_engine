@@ -6,7 +6,7 @@ Supported platforms: Windows (x64), Linux (x64 and ARM64).
 
 # Roadmap
 
-- [ ] Forward renderer using OpenGL ES 2.0
+- [X] Forward renderer using OpenGL ES 2.0
 - [ ] Config management (settings, input, progress)
 - [ ] Type reflection
 - [ ] GLTF/GLB import
