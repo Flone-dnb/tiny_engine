@@ -21,11 +21,7 @@ Supported platforms: Windows (x64), Linux (x64 and ARM64).
 
 # Documentation
 
-Documentation for this engine consists of 2 parts: API reference (generated from code comments) and the manual (at `docs/Manual.md`), Doxygen is used to generate documentation in the HTML format, it includes both API reference and the manual (copied from `docs/Manual.md`).
-
-If you're are game developer you generally don't need Doxygen, the only thing that you need is the manual, you can read it at `docs/Manual.md`.
-
-Because the Doxygen is configured to turn warnings into errors any missing documentation will make Doxygen fail with an error. We don't run Doxygen locally but instead have it in the CI to monitor in case we missed some docs. If you want to generate documentation locally you need to execute the `doxygen` command while being in the `docs` directory. Generated documentation will be located at `docs/gen/html`, open the `index.html` file from this directory to view the documentation.
+You can read the manual from `docs/Manual.md`. There are also a lot of comments in the code.
 
 # Prerequisites
 

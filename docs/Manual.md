@@ -1,6 +1,6 @@
 # Manual
 
-This is a manual - a step-by-step guide to introduce you to various aspects of the engine. This manual will not explain every piece of code, only some high-level entities and their usage, more specific documentation can be always found in the struct/function/variable documentation in the source code, every code entity is documented so you should not get lost.
+This is a manual - a step-by-step guide to introduce you to various aspects of the engine. This manual will not explain every piece of code, only some high-level entities and their usage, more specific documentation can be always found in the source code comments.
 
 # Project manager
 

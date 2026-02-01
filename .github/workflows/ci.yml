@@ -4,22 +4,20 @@ on: [push, pull_request, pull_request_review]
 
 jobs:
   doxygen:
-    name: Run doxygen
-    runs-on: windows-latest
+    name: Check docs 
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Install dependencies
+      - name: Run tiny_ref_checker
         run: |
-          choco install doxygen.install
-          Copy "C:\Program Files\doxygen\bin\doxygen.exe" "C:\ProgramData\Chocolatey\bin\doxygen.exe"
-          Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
-          refreshenv
-          echo "Installed doxygen of version $(doxygen -v)."
-      - name: Run doxygen
-        run: |
-          cd docs
-          doxygen
+          git clone https://github.com/Flone-dnb/tiny_ref_checker.git
+          cd tiny_ref_checker
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build . --target tiny_ref_checker --config=Release
+          ./tiny_ref_checker ../../src
   build-windows:
     name: Build on Windows
     runs-on: windows-latest
