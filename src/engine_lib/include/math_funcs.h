@@ -2,11 +2,7 @@
 
 #include "cglm/cglm.h"
 
-/**
- * Used to fix a common problem where diagonal movement has ~1.4 speed instead of 1.
- *
- * @param movement Input vector to fix ("forward" input in X and "right" input in Y).
- */
+// Used to fix a common problem where diagonal movement has ~1.4 speed instead of 1.
 static inline void
 math_fix_diagonal_movement_speedup(vec2 movement) {
     const float square_sum = movement[0] * movement[0] + movement[1] * movement[1];
@@ -24,12 +20,7 @@ math_fix_diagonal_movement_speedup(vec2 movement) {
     movement[1] /= length;
 }
 
-/**
- * Creates a new rotation matrix.
- *
- * @param rotation_deg Rotation in degrees.
- * @param out          Resulting rotation matrix.
- */
+// Creates a new rotation matrix from a rotation (in degrees).
 static inline void
 math_make_rotation_mat(vec3 rotation_deg, mat4 out) {
     vec3 z;

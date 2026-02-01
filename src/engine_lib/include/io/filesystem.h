@@ -6,25 +6,11 @@
 
 #include <stdbool.h>
 
-/**
- * Recursively creates directories (if not existed before).
- *
- * @param path Path to check.
- */
+// Recursively creates directories for the specified path (if directories did not existed before).
 void filesystem_ensure_dirs_exist(const char* path);
 
-/**
- * Checks if the specified path exists.
- *
- * @param path Path to check.
- *
- * @return `true` if exists.
- */
+// Checks if the specified path exists.
 bool filesystem_does_path_exists(const char* path);
 
-/**
- * Deletes the file at the specified path.
- *
- * @param path Path to file.
- */
+// Deletes a file at the specified path.
 void filesystem_remove_file(const char* path);

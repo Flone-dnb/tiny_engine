@@ -6,12 +6,11 @@
 #include "window.h"
 #include "world.h"
 
-/** Main editor object. */
 struct te_editor {
-    /** Always valid pointer. Must be destroyed during the editor's destruction. */
+    // Always valid pointer. Must be destroyed during the editor's destruction.
     te_editor_camera* editor_camera;
 
-    /** Not NULL if game world exists. */
+    // Not NULL if game world exists.
     te_world* game_world;
 };
 

@@ -9,33 +9,33 @@
 #include "io/paths.h"
 #include "misc/error.h"
 
-/** Groups information about a shader program. */
+// Groups information about a shader program.
 typedef struct te_shader_program {
-    /** Non-NULL path (relative to the `res` directory) to the vertex shader. */
+    // Non-NULL path (relative to the `res` directory) to the vertex shader.
     char* vert_relative_path;
 
-    /** Non-NULL path (relative to the `res` directory) to the fragment shader. */
+    // Non-NULL path (relative to the `res` directory) to the fragment shader.
     char* frag_relative_path;
 
-    /** strlen of @ref vert_relative_path. */
+    // strlen of @ref vert_relative_path.
     unsigned int vert_relative_path_len;
 
-    /** strlen of @ref frag_relative_path. */
+    // strlen of @ref frag_relative_path.
     unsigned int frag_relative_path_len;
 
-    /** OpenGL ID of the shader program. */
+    // OpenGL ID of the shader program.
     unsigned int id;
 
-    /** The number of places this program is currently used in. */
+    // The number of places this program is currently used in.
     unsigned int usage_count;
 } te_shader_program;
 
-/** Loads, compiles and caches shader programs. */
+// Loads, compiles and caches shader programs.
 struct te_shader_manager {
-    /** Compiled shaders. Size of this array is @ref shader_count. */
+    // Compiled shaders. Size of this array is @ref shader_count.
     te_shader_program* shaders;
 
-    /** Size of @ref shaders. */
+    // Size of @ref shaders.
     unsigned int shader_count;
 };
 

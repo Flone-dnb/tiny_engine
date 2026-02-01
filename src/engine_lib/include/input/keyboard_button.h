@@ -4,61 +4,31 @@
 #include "SDL3/SDL_keyboard.h"
 #include "SDL3/SDL_keycode.h"
 
-/** Wraps SDL keyboard modifiers. */
 typedef struct te_keyboard_modifiers {
-    /** SDL keyboard modifiers value. */
+    // SDL keyboard modifiers value.
     uint16_t mod;
 } te_keyboard_modifiers;
 
-/**
- * Tells if the left shift key is pressed.
- *
- * @param mods Modifiers.
- *
- * @return `true` if pressed.
- */
 static inline bool
 keyboard_modifiers_is_shift_pressed(te_keyboard_modifiers* mods) {
     return mods->mod & SDL_KMOD_LSHIFT;
 }
 
-/**
- * Tells if the left ctrl key is pressed.
- *
- * @param mods Modifiers.
- *
- * @return `true` if pressed.
- */
 static inline bool
 keyboard_modifiers_is_ctrl_pressed(te_keyboard_modifiers* mods) {
     return mods->mod & SDL_KMOD_LCTRL;
 }
 
-/**
- * Tells if the left alt key is pressed.
- *
- * @param mods Modifiers.
- *
- * @return `true` if pressed.
- */
 static inline bool
 keyboard_modifiers_is_alt_pressed(te_keyboard_modifiers* mods) {
     return mods->mod & SDL_KMOD_LALT;
 }
 
-/**
- * Tells if the caps lock key is pressed.
- *
- * @param mods Modifiers.
- *
- * @return `true` if pressed.
- */
 static inline bool
 keyboard_modifiers_is_caps_lock_pressed(te_keyboard_modifiers* mods) {
     return mods->mod & SDL_KMOD_CAPS;
 }
 
-/** Keyboard buttons. */
 enum te_keyboard_button {
     TE_KB_SPACE = SDL_SCANCODE_SPACE,
     TE_KB_COMMA = SDL_SCANCODE_COMMA,
@@ -140,13 +110,8 @@ enum te_keyboard_button {
     TE_KB_RIGHT_ALT = SDL_SCANCODE_RALT,
 };
 
-/**
- * Converts keyboard button enum value to a string.
- *
- * @param button Keyboard button.
- *
- * @return Button name. Do not free/destroy returned pointer.
- */
+// Converts keyboard button enum value to a string.
+// Do not free/destroy returned pointer.
 static inline const char*
 keyboard_button_get_name(enum te_keyboard_button button) {
     return SDL_GetKeyName(SDL_SCANCODE_TO_KEYCODE((SDL_Scancode)button));

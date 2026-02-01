@@ -8,48 +8,46 @@
 #include "misc/error.h"
 #include "render/model_renderer.h"
 
-/** World represents several objects: audio system, cameras, game objects and etc. */
+// World represents several objects: audio system, cameras, game objects and etc.
 struct te_world {
-    /** Always valid pointer. Game manager that owns this world. You should not free/destroy this pointer. */
+    // Always valid pointer. Game manager that owns this world. You should not free/destroy this pointer.
     struct te_game_manager* game_manager;
 
-    /** NULL if no active camera. Do not free/destroy this pointer. The camera will register/unregister itself. */
+    // NULL if no active camera. Do not free/destroy this pointer. The camera will register/unregister itself.
     te_camera* active_camera;
 
-    /**
-     * Always valid pointer, size of this array is @ref spawned_models_array_size but the actually
-     * used number of elements is @ref spawned_model_count. If some model despawned some pointers
-     * will be shifted to keep the array valid without any "holes". This array does not shrink
-     * but the number of used (valid) elements may decrease.
-     */
+    // Always valid pointer, size of this array is @ref spawned_models_array_size but the actually
+    // used number of elements is @ref spawned_model_count. If some model despawned some pointers
+    // will be shifted to keep the array valid without any "holes". This array does not shrink
+    // but the number of used (valid) elements may decrease.
     te_model** spawned_models;
 
-    /** NULL if nothing spawned, size of this array is @ref spawned_camera_count. */
+    // NULL if nothing spawned, size of this array is @ref spawned_camera_count.
     te_camera** spawned_cameras;
 
-    /** Renders models of the world. */
+    // Renders models of the world.
     te_model_renderer* model_renderer;
 
-    /** World name. */
+    // World name.
     char* name;
 
-    /** Number of spawned models in @ref spawned_models. */
+    // Number of spawned models in @ref spawned_models.
     unsigned int spawned_model_count;
 
-    /** Size of the array @ref spawned_models. */
+    // Size of the array @ref spawned_models.
     unsigned int spawned_models_array_size;
 
-    /** Size of the array @ref spawned_cameras. */
+    // Size of the array @ref spawned_cameras.
     unsigned int spawned_camera_count;
 
-    /** `true` if the world is currently being destroyed. */
+    // `true` if the world is currently being destroyed.
     bool is_being_destroyed;
 };
 
 te_world*
 prv_world_create(struct te_game_manager* game_manager, const char* name) {
     if (name == NULL) {
-        show_error_and_abort("world name should not be NULL");
+        show_error_and_abort("world name must not be NULL");
     }
 
     te_world* world = malloc(sizeof(te_world));

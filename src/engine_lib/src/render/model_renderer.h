@@ -4,35 +4,26 @@
 
 typedef struct te_model_renderer te_model_renderer;
 
-/** Data used to render a model. */
+// Data used to submit a model for rendering.
 typedef struct te_model_render_data {
-    /** World matrix. */
     mat4 world_mat;
-
-    /** Normal matrix. */
     mat3 normal_mat;
-
-    /** Color of the model. */
     vec4 color;
 
-    /** Texture tiling multiplier. Must store -1 if @ref tex_id is 0. */
+    // Texture tiling multiplier. Must store -1 if @ref tex_id is 0.
     vec2 tex_tiling;
 
-    /** 0 if not used. */
+    // 0 if not used.
     unsigned int tex_id;
 
     // 128 bytes ---------
 
-    /** Offset for UV coordinates. */
     vec2 uv_offset;
 
-    /** Number of elements in the index buffer. */
+    // Number of elements in the index buffer.
     int index_count;
 
-    /** Vertex buffer object ID. */
     unsigned int vbo;
-
-    /** Element buffer object ID. */
     unsigned int ebo;
 } te_model_render_data;
 

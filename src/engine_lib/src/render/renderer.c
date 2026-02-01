@@ -15,42 +15,36 @@
 #include "window.h"
 #include "world.h"
 
-/** Groups info used during the rendering. */
+// Groups info used during the rendering of a world.
 typedef struct te_world_render_info {
-    /** World. */
+    // Do not free/destroy this pointer.
     te_world* world;
 
-    /** View projection matrix of the camera. */
+    // View projection matrix of the camera.
     mat4 view_proj_mat;
 
-    /** OpenGL viewport in pixels (left-bottom origin). */
+    // OpenGL viewport in pixels (left-bottom origin).
     ivec4 gl_viewport;
 } te_world_render_info;
 
-/** Draws on the window. */
 struct te_renderer {
-    /** Always valid pointer, window that owns the renderer. This pointer should not be freed. */
+    // Always valid pointer, window that owns the renderer. This pointer should not be freed.
     struct te_window* window;
 
-    /** GL context. */
     struct SDL_GLContextState* gl_context;
 
-    /** Shader manager. */
+    // Created by the renderer.
     te_shader_manager* shader_manager;
-
-    /** Texture manager. */
     te_texture_manager* texture_manager;
 
-    /**
-     * Preallocated array to keep active cameras while submitting a new frame.
-     * Size of this array is @ref worlds_render_info_array_size.
-     */
+    // Preallocated array to keep active cameras while submitting a new frame.
+    // Size of this array is @ref worlds_render_info_array_size.
     te_world_render_info* worlds_render_info;
 
-    /** Size of the array @ref worlds_render_info. */
+    // Size of the array @ref worlds_render_info.
     unsigned int worlds_render_info_array_size;
 
-    /** GL depth function used. */
+    // GL depth function used.
     unsigned int gl_depth_func;
 };
 

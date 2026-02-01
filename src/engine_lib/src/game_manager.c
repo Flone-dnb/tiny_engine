@@ -7,18 +7,17 @@
 #include "render/renderer.h"
 #include "world.h"
 
-/** Stores all core systems such as game world, physics, audio, renderer and etc. */
+// Stores all core systems such as game world, physics, audio, renderer and etc.
 struct te_game_manager {
-    /** Always valid pointer to the window that owns this object. This pointer should not be freed. */
+    // Always valid pointer to the window that owns this object. This pointer should not be freed.
     struct te_window* window;
 
-    /** Renderer. */
-    struct te_renderer* renderer;
+    te_renderer* renderer;
 
-    /** Game worlds. Size of this array is @ref world_count. */
+    // Game worlds. Size of this array is @ref world_count.
     te_world** worlds;
 
-    /** Number of elements in the @ref worlds array. */
+    // Number of elements in the @ref worlds array.
     unsigned int world_count;
 };
 
@@ -50,6 +49,10 @@ prv_game_manager_destroy(te_game_manager* game_manager) {
 
 te_world*
 game_manager_create_world(te_game_manager* game_manager, const char* name) {
+    if (name == NULL) {
+        show_error_and_abort("world name must not be NULL");
+    }
+
     // Expand array.
     te_world** new_worlds = malloc(sizeof(te_world*) * (game_manager->world_count + 1));
     memcpy(new_worlds, game_manager->worlds, sizeof(te_world*) * game_manager->world_count);

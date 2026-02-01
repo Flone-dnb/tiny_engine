@@ -7,9 +7,7 @@
 #include "glad/glad.h"
 #include "io/log.h"
 
-/** Groups error-related information. */
 struct te_error {
-    /** Error message. */
     char* message;
 };
 

@@ -7,64 +7,53 @@
 
 #define INVALID_DATA_INDEX 0xffffffff
 
-/** Stores information about models that use the same shader program. */
+// Stores information about models that use the same shader program.
 typedef struct te_shader_group {
-    /** OpenGL ID of the shader program. */
+    // OpenGL ID of the shader program.
     unsigned int prog_id;
 
-    /** Number of elements that use the same shader program. */
+    // Number of elements that use the same shader program.
     unsigned int count;
 
-    /// @cond UNDOCUMENTED
-    /// uniform locations -----------------------
-
+    // uniform locations -----------------------
     int uniform_view_proj_mat;
     int uniform_world_mat;
     int uniform_normal_mat;
     int uniform_color;
     int uniform_tiling;
     int uniform_uv_offset;
-
-    /// @endcond
 } te_shader_group;
 
-/** Model renderer. */
 struct te_model_renderer {
-    /**
-     * This array stores render data sorted by shader program so first N elements use the same
-     * shader program, then next M elements use another shader program and so on. Information
-     * about which render data belongs to which shader is stored in @ref shader_groups.
-     *
-     * Size of this array is @ref render_data_array_size but the actual number of valid
-     * (used) elements might be different. When some model's render data is removed all next
-     * elements are shifted to the left to make sure the array does not have any "holes".
-     * This array does not shrink but the number of used (valid) elements may decrease.
-     */
+    // This array stores render data sorted by shader program so first N elements use the same
+    // shader program, then next M elements use another shader program and so on. Information
+    // about which render data belongs to which shader is stored in @ref shader_groups.
+    //
+    // Size of this array is @ref render_data_array_size but the actual number of valid
+    // (used) elements might be different. When some model's render data is removed all next
+    // elements are shifted to the left to make sure the array does not have any "holes".
+    // This array does not shrink but the number of used (valid) elements may decrease.
     te_model_render_data* render_data;
 
-    /**
-     * Stores information about which models use which shaders in @ref render_data.
-     * First item in this array points to the first item in @ref render_data.
-     * Size of this array is @ref shader_group_count.
-     */
+    // Stores information about which models use which shaders in @ref render_data.
+    // First item in this array points to the first item in @ref render_data.
+    // Size of this array is @ref shader_group_count.
     te_shader_group* shader_groups;
 
-    /**
-     * Index into this array using a model's handle to get index into @ref render_data.
-     *
-     * Public API users store indices into this array so items cannot be reordered/moved.
-     * This array CAN have "holes" in it (invalid items). Invalid items store INVALID_DATA_INDEX value.
-     * This array does not shrink. Size of this array is @ref handle_to_data_array_size.
-     */
+    // Index into this array using a model's handle to get index into @ref render_data.
+    //
+    // Public API users store indices into this array so items cannot be reordered/moved.
+    // This array CAN have "holes" in it (invalid items). Invalid items store INVALID_DATA_INDEX value.
+    // This array does not shrink. Size of this array is @ref handle_to_data_array_size.
     unsigned int* handle_to_data;
 
-    /** Number of elements in @ref shader_groups. */
+    // Number of elements in @ref shader_groups.
     unsigned int shader_group_count;
 
-    /** Size of the array @ref render_data. */
+    // Size of the array @ref render_data.
     unsigned int render_data_array_size;
 
-    /** Size of the array @ref handle_to_data. */
+    // Size of the array @ref handle_to_data.
     unsigned int handle_to_data_array_size;
 };
 

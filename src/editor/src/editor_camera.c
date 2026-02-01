@@ -9,25 +9,19 @@
 #define DEFAULT_CAMERA_SPEED 4.0f
 
 struct te_editor_camera {
-    /** The actual camera. */
     te_camera* camera;
 
-    /**
-     * Stores the current state of the input.
-     * X stores "forward" movement in [-1.0f; 1.0], Y stores "right" movement and Z stores up.
-     */
+    // Stores the current state of the input.
+    // X stores "forward" movement in [-1.0f; 1.0], Y stores "right" movement and Z stores up.
     vec3 movement_input;
 
-    /** The current state of the right thumbstick. */
+    // The current state of the right thumbstick.
     vec2 gamepad_look;
 
-    /** Rotation speed multiplier. */
     float rotation_sensitivity;
-
-    /** Movement speed multiplier. */
     float speed;
 
-    /** `true` if should react to the input. */
+    // `true` if should react to the input.
     bool is_input_enabled;
 };
 

@@ -4,57 +4,50 @@
 #include "misc/error.h"
 #include "misc/globals.h"
 
-/** It's a game camera alright. */
 struct te_camera {
-    /** Not NULL if spawned. Do not free/destroy this pointer. */
+    // Not NULL if spawned. Do not free/destroy this pointer.
     struct te_world* world;
 
-    /** View matrix. May be outdated, see @ref is_view_mat_outdated. */
+    // View matrix. May be outdated, see @ref is_view_mat_outdated.
     mat4 view_mat;
 
-    /** Projection matrix. May be outdated, see @ref is_proj_mat_outdated. */
+    // Projection matrix. May be outdated, see @ref is_proj_mat_outdated.
     mat4 proj_mat;
 
-    /** Position of the top-left corner of the viewport rectangle in XY and size in ZW (in range [0; 1]). */
+    // Position of the top-left corner of the viewport rectangle in XY and size in ZW (in range [0; 1]).
     vec4 viewport;
 
-    /** Location. */
     vec3 location;
 
-    /** Rotation in degrees. */
+    // Rotation in degrees.
     vec3 rotation;
 
-    /** Camera's forward direction. May be outdated, see @ref is_directions_outdated. */
+    // Camera's forward direction. May be outdated, see @ref is_directions_outdated.
     vec3 forward;
 
-    /** Camera's right direction. May be outdated, see @ref is_directions_outdated. */
+    // Camera's right direction. May be outdated, see @ref is_directions_outdated.
     vec3 right;
 
-    /** Camera's up direction. May be outdated, see @ref is_directions_outdated. */
+    // Camera's up direction. May be outdated, see @ref is_directions_outdated.
     vec3 up;
 
-    /** Distance to the camera's near clip plane. */
     float near_clip;
-
-    /** Distance to the camera's far clip plane. */
     float far_clip;
 
-    /** Width (in pixels) of the render target. */
+    // Render target size (in pixels).
     unsigned int render_width;
-
-    /** Height (in pixels) of the render target. */
     unsigned int render_height;
 
-    /** Vertical field of view of the camera (in degrees). */
+    // Vertical FOV in degrees.
     unsigned char vertical_fov;
 
-    /** `true` @ref view_mat contains outdated value and needs to be recalculated. */
+    // `true` @ref view_mat contains outdated value and needs to be recalculated.
     bool is_view_mat_outdated;
 
-    /** `true` if forward, right and up directions are outdated and need to be recalculated. */
+    // `true` if forward, right and up directions are outdated and need to be recalculated.
     bool is_directions_outdated;
 
-    /** `true` if @ref proj_mat contains outdated value and needs to be recalculated. */
+    // `true` if @ref proj_mat contains outdated value and needs to be recalculated.
     bool is_proj_mat_outdated;
 };
 

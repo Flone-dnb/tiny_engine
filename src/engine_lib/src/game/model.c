@@ -13,69 +13,50 @@
 #include "render/texture_manager.h"
 #include "world.h"
 
-/** Vertex of a model. */
+// Vertex of a model.
 typedef struct te_model_vertex {
     // NOTE: if changing this struct also update gl vertex attribute description and offsets
-
-    /** Position. */
     vec3 pos;
-
-    /** Normal direction. */
     vec3 normal;
-
-    /** UV. */
     vec2 uv;
 } te_model_vertex;
 
-/** 3D model. */
+// 3D model.
 struct te_model {
-    /**
-     * Path (relative to the `res` directory) to the file that stores mesh geometry.
-     * NULL if instead a default model should be used.
-     */
+    // Path (relative to the `res` directory) to the file that stores mesh geometry.
+    // NULL if instead a default model should be used.
     char* path_to_geo;
 
-    /** NULL if default vertex shader is used. Path (relative to the `res` directory) to custom vertex shader. */
+    // NULL if default vertex shader is used. Path (relative to the `res` directory) to custom vertex shader.
     char* custom_vert_relative_path;
 
-    /** NULL if default fragment shader is used. Path (relative to the `res` directory) to custom fragment shader.  */
+    // NULL if default fragment shader is used. Path (relative to the `res` directory) to custom fragment shader.
     char* custom_frag_relative_path;
 
-    /** NULL if texture is not set, otherwise path (relative to the `res` directory) to the texture file. */
+    // NULL if texture is not set, otherwise path (relative to the `res` directory) to the texture file.
     char* tex_path;
 
-    /** NULL if not spawned. Do not free/destroy this pointer. */
+    // NULL if not spawned. Do not free/destroy this pointer.
     te_world* world;
 
-    /** Color of the model in the RGBA format in range [0.0; 1.0]. */
+    // Color in RGBA format in range [0.0; 1.0].
     vec4 color;
 
-    /** Location. */
     vec3 location;
 
-    /** Rotation in degrees. */
+    // Rotation in degrees.
     vec3 rotation;
 
-    /** Scale. */
     vec3 scale;
 
-    /** Texture tiling multiplier. */
     vec2 tex_tiling;
-
-    /** Offset for UV coordinates. */
     vec2 uv_offset;
 
-    /** Stores invalid value if not spawned (see @ref world). */
+    // Stores invalid value if not spawned (see @ref world).
     unsigned int render_data_handle;
 
-    /** Stores invalid value if not spawned (see @ref world). OpenGL ID of the shader program used. */
+    // Stores invalid value if not spawned (see @ref world). OpenGL ID of the shader program used.
     unsigned int shader_prog_id;
-
-    /** Vertex buffer object ID. Invalid if not spawned (see @ref world). */
-    unsigned int vbo;
-
-    /** Element buffer object ID. Invalid if not spawned (see @ref world). */
-    unsigned int ebo;
 };
 
 te_model*
@@ -85,8 +66,6 @@ model_create(const char* path_to_geo) {
     model->world = NULL;
     model->render_data_handle = 0xffffffff;
     model->shader_prog_id = 0xffffffff;
-    model->vbo = 0xffffffff;
-    model->ebo = 0xffffffff;
     model->tex_path = NULL;
     model->custom_vert_relative_path = NULL;
     model->custom_frag_relative_path = NULL;
@@ -349,19 +328,21 @@ prv_model_on_spawned(te_model* model, te_world* world) {
 
     // Load geometry.
     unsigned int index_count = 0;
+    unsigned int vbo = 0;
+    unsigned int ebo = 0;
     {
         te_model_vertex* vertices;
         unsigned int vertex_count;
         unsigned short* indices;
         prv_model_generate_cube(&vertices, &indices, &vertex_count, &index_count);
 
-        glGenBuffers(1, &model->vbo);
-        glGenBuffers(1, &model->ebo);
+        glGenBuffers(1, &vbo);
+        glGenBuffers(1, &ebo);
 
-        glBindBuffer(GL_ARRAY_BUFFER, model->vbo);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(GL_ARRAY_BUFFER, sizeof(te_model_vertex) * vertex_count, vertices, GL_STATIC_DRAW);
 
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, model->ebo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * index_count, indices, GL_STATIC_DRAW);
 
         // Position.
@@ -396,8 +377,8 @@ prv_model_on_spawned(te_model* model, te_world* world) {
 
         glm_vec4_copy(model->color, data->color);
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
-        data->vbo = model->vbo;
-        data->ebo = model->ebo;
+        data->vbo = vbo;
+        data->ebo = ebo;
         data->tex_id = 0;
         glm_vec2_copy((vec2){-1.0f, -1.0f}, data->tex_tiling);
         glm_vec2_copy(model->uv_offset, data->uv_offset);
@@ -420,10 +401,14 @@ prv_model_on_despawned(te_model* model) {
     te_model_renderer* model_renderer = world_get_model_renderer(model->world);
 
     unsigned int tex_id = 0;
+    unsigned int vbo = 0;
+    unsigned int ebo = 0;
     {
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             world_get_model_renderer(model->world), model->render_data_handle);
         tex_id = data->tex_id;
+        vbo = data->vbo;
+        ebo = data->ebo;
     }
 
     // Remove from rendering.
@@ -436,14 +421,12 @@ prv_model_on_despawned(te_model* model) {
     }
 
     // Release geometry.
-    glDeleteBuffers(1, &model->vbo);
-    glDeleteBuffers(1, &model->ebo);
+    glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &ebo);
 
     model->world = NULL;
     model->render_data_handle = 0xffffffff;
     model->shader_prog_id = 0xffffffff;
-    model->vbo = 0xffffffff;
-    model->ebo = 0xffffffff;
 }
 
 void

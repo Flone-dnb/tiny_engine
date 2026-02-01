@@ -18,47 +18,47 @@
 #define IS_ARM64
 #endif
 
-/** Game window. */
 struct te_window {
-    /** SDL window. */
     struct SDL_Window* sdl_window;
 
-    /** Game manager that window created. */
+    // Game manager that window created.
     struct te_game_manager* game_manager;
 
-    /** User-specified callbacks. Do not free/destroy this pointer. The user will free it. */
+    // User-specified callbacks. Do not free/destroy this pointer. The user will free it.
     te_window_callbacks* user_callbacks;
 
-    /** User's main game system. Do not free this pointer. */
+    // User's main game system. Do not free this pointer.
     void* game_instance;
 
-    /** Non NULL if have a connected gamepad. Do not free this pointer. */
+    // Non NULL if have a connected gamepad. Do not free this pointer.
     SDL_Gamepad* connected_gamepad;
 
-    /** Current width of the window. */
+    // Current size of the window (in pixels).
     unsigned int width;
-
-    /** Current height of the window. */
     unsigned int height;
 
-    /** Refresh rate of the used display. */
+    // Refresh rate of the used display.
     unsigned int display_refresh_rate;
 
-    /** `true` if gamepad input was received on this frame. Used to determine when the input device changes. */
+    // true` if gamepad input was received on this frame. Used to determine when the input device changes.
     bool had_gamepad_input_curr_frame;
 
-    /** `true` if gamepad input was received on the last frame. Used to determine when the input device changes. */
+    // `true` if gamepad input was received on the last frame. Used to determine when the input device changes.
     bool had_gamepad_input_prev_frame;
 
-    /** `true` if the window needs to be closed. */
+    // `true` if the window needs to be closed.
     bool quit_requested;
 
-    /** `true` if mouse captured. */
+    // `true` if mouse captured.
     bool is_mouse_captured;
 };
 
 te_window*
 window_create(const char* window_title) {
+    if (window_title == NULL) {
+        show_error_and_abort("window title text must not be NULL");
+    }
+
     // Destroy old log file.
     filesystem_remove_file(paths_get_log_file());
 
@@ -229,6 +229,7 @@ window_process_events(te_window* window, te_window_callbacks* window_callbacks, 
     window->game_manager = NULL;
     window->user_callbacks = NULL;
     window->game_instance = NULL;
+    window->connected_gamepad = NULL;
 
     log_info("game manager is destroyed");
 }

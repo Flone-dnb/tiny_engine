@@ -9,29 +9,30 @@
 #include "misc/error.h"
 
 #define STB_IMAGE_IMPLEMENTATION
+#define STBI_NO_SIMD
 #include "stb/stb_image.h"
 
-/** Groups information about a texture. */
+// Groups information about a texture.
 typedef struct te_texture {
-    /** Non-NULL path (relative to the `res` directory) to the texture. */
+    // Non-NULL path (relative to the `res` directory) to the texture.
     char* relative_path;
 
-    /** strlen of @ref relative_path. */
+    // strlen of @ref relative_path.
     unsigned int relative_path_len;
 
-    /** OpenGL ID of the texture. */
+    // OpenGL ID of the texture.
     unsigned int id;
 
-    /** The number of places this texture is currently used in. */
+    // The number of places this texture is currently used in.
     unsigned int usage_count;
 } te_texture;
 
-/** Loads textures from disk. */
+// Loads textures from disk.
 struct te_texture_manager {
-    /** Loaded textures. Size of this array is @ref texture_count. */
+    // Loaded textures. Size of this array is @ref texture_count.
     te_texture* textures;
 
-    /** Size of @ref textures. */
+    // Size of @ref textures.
     unsigned int texture_count;
 };
 
