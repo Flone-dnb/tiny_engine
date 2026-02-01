@@ -58,7 +58,7 @@ void model_renderer_destroy(te_model_renderer* renderer);
  * @param renderer Renderer.
  * @param prog_id  OpenGL of the shader program the model is using.
  *
- * @return Handle to update model's render data using @ref model_renderer_get_render_data.
+ * @return Handle to update model's render data using @ref model_renderer_get_render_data_tmp.
  */
 unsigned int model_renderer_add_model(te_model_renderer* renderer, unsigned int prog_id);
 
