@@ -17,8 +17,8 @@ void main(void) {
     }
 
     // TODO: dummy normal usage (before lighting is implemented)
-    if (frag_normal.x < -50.0f){
-	out_color.r = 0.0f;
+    if (frag_normal.x < -50.0){
+	out_color.r = 0.0;
     }
  
     gl_FragColor = out_color;
