@@ -41,4 +41,17 @@ void prv_debug_console_on_keyboard_input_text(const char* text);
 
 void prv_debug_console_draw(float delta_time_sec);
 
+// Groups various statistics that can be displayed using the debug console's command "show_stats".
+typedef struct te_debug_stats {
+    unsigned int fps;
+
+    // in MB
+    unsigned int process_mem;
+    unsigned int total_mem;
+    unsigned int total_used_mem;
+} te_debug_stats;
+
+// Returns always valid pointer to update debug stats.
+te_debug_stats* prv_debug_console_get_stats();
+
 #endif

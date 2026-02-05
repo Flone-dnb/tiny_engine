@@ -11,7 +11,7 @@
 #include "window.h"
 
 // Fixed text height for drawing text, in range [0.0; 1.0].
-#define TE_DEBUG_DRAWER_TEXT_HEIGHT 0.0325f
+static float debug_drawer_default_text_height = 0.03f;
 
 // Prepared data to render a glyph.
 typedef struct te_debug_drawer_glyph {
@@ -177,7 +177,7 @@ debug_drawer_draw_text_at_pos(const char* text, float time_sec, vec3 color, vec2
     // Cache glyphs.
     te_font_manager* font_manager = renderer_get_font_manager(drawer.renderer);
     const float font_height = prv_font_manager_get_font_height_to_load();
-    const float font_scale = TE_DEBUG_DRAWER_TEXT_HEIGHT / font_height;
+    const float font_scale = debug_drawer_default_text_height / font_height;
     new_item->glyphs = malloc(sizeof(te_debug_drawer_glyph) * new_item->text_len);
     for (unsigned int i = 0; i < new_item->text_len; i++) {
         te_font_glyph src = font_manager_get_glyph(font_manager, (unsigned long)new_item->text[i]);
@@ -200,6 +200,11 @@ debug_drawer_draw_text_at_pos(const char* text, float time_sec, vec3 color, vec2
     drawer.text_count += 1;
 }
 
+float
+debug_drawer_get_default_text_height() {
+    return debug_drawer_default_text_height;
+}
+
 void
 prv_debug_drawer_free_text(te_debug_drawer_text* text) {
     free(text->text);
@@ -218,7 +223,7 @@ prv_debug_drawer_draw(struct te_renderer* renderer, float delta_time_sec) {
 
     if (drawer.text_count > 0) {
         const float font_height = prv_font_manager_get_font_height_to_load();
-        const float font_scale = TE_DEBUG_DRAWER_TEXT_HEIGHT / font_height;
+        const float font_scale = debug_drawer_default_text_height / font_height;
 
         glUseProgram(drawer.text_shader.prog_id);
         glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo);

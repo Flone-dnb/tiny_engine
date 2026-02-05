@@ -30,6 +30,8 @@ struct te_texture_manager* renderer_get_texture_manager(te_renderer* renderer);
 // Always valid pointer. Do not free/destroy the pointer, valid while the renderer exists.
 struct te_font_manager* renderer_get_font_manager(te_renderer* renderer);
 
+unsigned int renderer_get_fps(te_renderer* renderer);
+
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API
 // ------------------------------------------------------------------------------------------------

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "debug_console.h"
+#include "io/log.h"
 #include "misc/error.h"
 #include "render/debug_drawer.h"
 #include "render/renderer.h"
@@ -19,6 +20,8 @@ struct te_game_manager {
 
     // Game worlds. Size of this array is @ref world_count.
     te_world** worlds;
+
+    te_debug_stats debug_stats;
 
     // Number of elements in the @ref worlds array.
     unsigned int world_count;
@@ -40,6 +43,22 @@ prv_game_manager_create(struct te_window* window) {
 
 #if defined(ENGINE_DEBUG_TOOLS)
     prv_debug_drawer_init(game_manager->renderer);
+#endif
+
+#if defined(ENGINE_ASAN_ENABLED)
+    log_info("AddressSanitizer (ASan) is enabled, expect increased RAM usage!");
+#endif
+
+#if defined(DEBUG)
+    log_info("DEBUG macro is defined, running debug build");
+#else
+    log_info("DEBUG macro is NOT defined, running release build");
+#endif
+
+#if defined(ENGINE_DEBUG_TOOLS)
+    log_info("ENGINE_DEBUG_TOOLS macro is defined, debug tools are enabled");
+#else
+    log_info("ENGINE_DEBUG_TOOLS macro is NOT defined");
 #endif
 
     return game_manager;
@@ -158,3 +177,10 @@ void
 prv_game_manager_on_window_size_changed(te_game_manager* game_manager) {
     prv_renderer_on_window_size_changed(game_manager->renderer);
 }
+
+#if defined(ENGINE_DEBUG_TOOLS)
+te_debug_stats*
+prv_game_manager_get_debug_stats(te_game_manager* game_manager) {
+    return &game_manager->debug_stats;
+}
+#endif

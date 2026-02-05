@@ -1,9 +1,12 @@
 #include "debug_console.h"
+#include <stdio.h>
+#include "misc/error.h"
 #if defined(ENGINE_DEBUG_TOOLS)
 
 #include <stdint.h>
 #include <string.h>
 #include "hashmap.c/hashmap.h"
+#include "misc/memory_usage.h"
 #include "render/debug_drawer.h"
 
 // Command hash for hashmap.
@@ -32,10 +35,18 @@ struct te_debug_console {
     // Result of the user input, displayed if @ref message_sec_left is > 0.
     const char* message;
 
+    te_debug_stats stats;
+
+    // Copy of @ref stats displayed for @ref time_sec_to_update_state.
+    te_debug_stats displayed_stats;
+
     vec2 screen_pos;
 
     // Time (in seconds) left to display @ref message.
     float message_sec_left;
+
+    // Time (in seconds) until @ref displayed_stats is updated.
+    float time_sec_to_update_stats;
 
     // Number of valid elements in @ref input.
     unsigned int input_valid_len;
@@ -44,10 +55,26 @@ struct te_debug_console {
     unsigned int input_total_len;
 
     bool is_shown;
+
+    // For @ref stats. Can be drawn even if the console is hidden.
+    bool show_stats;
 };
 
 // Static to allow using debug console easily from various places.
 static te_debug_console console;
+
+void
+prv_debug_console_show_stats(struct te_game_manager* game_manager) {
+    (void)game_manager;
+    console.show_stats = true;
+    console.displayed_stats = console.stats;
+}
+
+void
+prv_debug_console_hide_stats(struct te_game_manager* game_manager) {
+    (void)game_manager;
+    console.show_stats = false;
+}
 
 void
 prv_debug_console_init() {
@@ -57,10 +84,27 @@ prv_debug_console_init() {
     console.input = malloc(sizeof(char) * console.input_total_len);
     console.input_valid_len = 0;
     console.is_shown = false;
+    console.show_stats = false;
     console.message = NULL;
     console.message_sec_left = 0.0f;
+    console.time_sec_to_update_stats = 0.0f;
+    memset(&console.stats, 0, sizeof(te_debug_stats));
+    memset(&console.displayed_stats, 0, sizeof(te_debug_stats));
 
     glm_vec2_copy((vec2){0.01f, 0.95f}, console.screen_pos);
+
+    {
+        te_debug_console_command command = {0};
+        command.name = "show_stats";
+        command.no_args = prv_debug_console_show_stats;
+        debug_console_register_command(command);
+    }
+    {
+        te_debug_console_command command = {0};
+        command.name = "hide_stats";
+        command.no_args = prv_debug_console_hide_stats;
+        debug_console_register_command(command);
+    }
 }
 
 void
@@ -168,7 +212,61 @@ prv_debug_console_on_keyboard_input_text(const char* text) {
 }
 
 void
+prv_debug_console_draw_stat(vec2 screen_pos, const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    va_list args_copy;
+    va_start(args_copy, fmt);
+
+    int len = vsnprintf(NULL, 0, fmt, args);
+    if (CGLM_UNLIKELY(len <= 0)) {
+        va_end(args);
+        va_end(args_copy);
+        show_error_and_abort("snprintf error");
+    }
+    len += 1;
+
+    char* text = malloc(sizeof(char) * ((unsigned int)len + 1));
+    vsnprintf(text, (unsigned int)len, fmt, args_copy);
+    text[len] = 0;
+
+    debug_drawer_draw_text_at_pos(text, 0.0f, (vec3){1.0f, 1.0f, 1.0f}, screen_pos);
+    screen_pos[1] += debug_drawer_get_default_text_height();
+
+    free(text);
+    va_end(args);
+    va_end(args_copy);
+}
+
+void
 prv_debug_console_draw(float delta_time_sec) {
+    console.time_sec_to_update_stats -= delta_time_sec;
+    if (console.time_sec_to_update_stats <= 0.0f) {
+        console.displayed_stats = console.stats;
+        console.time_sec_to_update_stats = 1.0f;
+
+        te_debug_stats* stats = &console.displayed_stats;
+        stats->process_mem = (unsigned int)(memory_usage_get_process_used_memory() / 1024 / 1024);
+        stats->total_used_mem = (unsigned int)(memory_usage_get_total_used_memory() / 1024 / 1024);
+        stats->total_mem = (unsigned int)(memory_usage_get_total_memory() / 1024 / 1024);
+    }
+
+    if (console.show_stats) {
+        te_debug_stats* stats = &console.displayed_stats;
+        vec2 screen_pos;
+        glm_vec2_copy((vec2){0.01f, 0.7f}, screen_pos);
+
+        prv_debug_console_draw_stat(screen_pos, "FPS: %u", stats->fps);
+
+#if defined(ENGINE_ASAN_ENABLED)
+        prv_debug_console_draw_stat(screen_pos, "RAM used (MB): %zu (%zu/%zu) (ASan enabled)",
+                                    stats->process_mem, stats->total_used_mem, stats->total_mem);
+#else
+        prv_debug_console_draw_stat(screen_pos, "RAM used (MB): %zu (%zu/%zu)", stats->process_mem,
+                                    stats->total_used_mem, stats->total_mem);
+#endif
+    }
+
     if (!console.is_shown) {
         return;
     }
@@ -185,6 +283,11 @@ prv_debug_console_draw(float delta_time_sec) {
     } else {
         debug_drawer_draw_text_at_pos(console.input, 0.0f, (vec3){1.0f, 1.0f, 1.0f}, console.screen_pos);
     }
+}
+
+te_debug_stats*
+prv_debug_console_get_stats() {
+    return &console.stats;
 }
 
 #endif

@@ -2,10 +2,13 @@
 
 #include <stdlib.h>
 #include "SDL3/SDL_error.h"
+#include "SDL3/SDL_timer.h"
 #include "SDL3/SDL_video.h"
 #include "debug_console.h"
 #include "game/camera.h"
+#if defined(ENGINE_DEBUG_TOOLS)
 #include "game_manager.h"
+#endif
 #include "glad/glad.h"
 #include "io/log.h"
 #include "limits.h"
@@ -17,6 +20,20 @@
 #include "render/texture_manager.h"
 #include "window.h"
 #include "world.h"
+#if defined(WIN32)
+// TODO
+#elif defined(__linux__)
+#include "time.h"
+#endif
+
+// Stuff needed to calculate FPS and keep frame limit.
+typedef struct te_renderer_frame_stats {
+    // Stats collected for the last second.
+    unsigned int frame_count;
+    float time_sec_since_update;
+
+    unsigned int fps;
+} te_renderer_frame_stats;
 
 // Groups info used during the rendering of a world.
 typedef struct te_world_render_info {
@@ -45,8 +62,12 @@ struct te_renderer {
     // Size of this array is @ref worlds_render_info_array_size.
     te_world_render_info* worlds_render_info;
 
+    te_renderer_frame_stats frame_stats;
+
     // Size of the array @ref worlds_render_info.
     unsigned int worlds_render_info_array_size;
+
+    unsigned int fps_limit;
 };
 
 #if defined(DEBUG)
@@ -88,9 +109,16 @@ renderer_create(struct te_window* window) {
     renderer->shader_manager = prv_shader_manager_create();
     renderer->texture_manager = prv_texture_manager_create();
     renderer->font_manager = prv_font_manager_create(renderer);
+
     renderer->worlds_render_info_array_size = 2;
     renderer->worlds_render_info =
         malloc(sizeof(te_world_render_info) * renderer->worlds_render_info_array_size);
+
+    renderer->frame_stats.frame_count = 0;
+    renderer->frame_stats.time_sec_since_update = 0.0f;
+    renderer->frame_stats.fps = 0;
+
+    renderer->fps_limit = 0;
 
     // Create GL context.
     renderer->gl_context = SDL_GL_CreateContext(prv_window_get_sdl_window(window));
@@ -146,8 +174,10 @@ renderer_create(struct te_window* window) {
     renderer_set_fps_limit(renderer, refresh_rate);
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    debug_console_register_command(
-        (te_debug_console_command){.name = "set_fps_limit", .arg_uint = debug_command_set_fps_limit});
+    te_debug_console_command fps_command = {0};
+    fps_command.name = "set_fps_limit";
+    fps_command.arg_uint = debug_command_set_fps_limit;
+    debug_console_register_command(fps_command);
 #endif
 
     return renderer;
@@ -169,9 +199,7 @@ renderer_destroy(te_renderer* renderer) {
 
 void
 renderer_set_fps_limit(te_renderer* renderer, unsigned int limit) {
-    (void)renderer;
-    (void)limit;
-    // TODO
+    renderer->fps_limit = limit;
 }
 
 te_window*
@@ -192,6 +220,54 @@ renderer_get_texture_manager(te_renderer* renderer) {
 struct te_font_manager*
 renderer_get_font_manager(te_renderer* renderer) {
     return renderer->font_manager;
+}
+
+unsigned int
+renderer_get_fps(te_renderer* renderer) {
+    return renderer->frame_stats.fps;
+}
+
+void
+prv_renderer_calc_frame_stats(te_renderer* renderer, float delta_time_sec) {
+    // Update FPS stat.
+    {
+        te_renderer_frame_stats* stats = &renderer->frame_stats;
+
+        renderer->frame_stats.frame_count += 1;
+        stats->time_sec_since_update += delta_time_sec;
+
+        if (stats->time_sec_since_update >= 1.0f) {
+            stats->fps = stats->frame_count;
+            stats->frame_count = 0;
+            stats->time_sec_since_update = 0.0f;
+        }
+    }
+
+#if defined(ENGINE_DEBUG_TOOLS)
+    prv_debug_console_get_stats()->fps = renderer->frame_stats.fps;
+#endif
+
+    // FPS limit.
+    if (renderer->fps_limit > 0) {
+        // Should use perf counters and high precision timers here but this already works fine.
+        const float target_time_ms = 1000.0f / (float)renderer->fps_limit;
+        const float time_to_sleep_ms = target_time_ms - delta_time_sec;
+        if (time_to_sleep_ms >= 1.0) {
+#if defined(WIN32)
+            timeBeginPeriod(1);
+            Sleep((unsigned long)time_to_sleep_ms);
+            timeEndPeriod(1);
+#elif defined(__linux__)
+            struct timespec tim;
+            struct timespec tim2;
+            tim.tv_sec = 0;
+            tim.tv_nsec = (long)floor(time_to_sleep_ms * 1000000.0f * 0.965f);
+            nanosleep(&tim, &tim2);
+#else
+#error "unsupported OS"
+#endif
+        }
+    }
 }
 
 void
@@ -274,6 +350,8 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 #endif
 
     SDL_GL_SwapWindow(prv_window_get_sdl_window(renderer->window));
+
+    prv_renderer_calc_frame_stats(renderer, delta_time_sec);
 }
 
 void

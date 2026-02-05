@@ -12,6 +12,7 @@ set(PROJECT_SOURCES
     src/io/filesystem.c
     src/misc/globals.c
     src/misc/error.c
+    src/misc/memory_usage.c
     src/game_manager.c
     src/world.c
     src/debug_console.c
@@ -35,6 +36,7 @@ set(PROJECT_SOURCES
     include/io/filesystem.h
     include/misc/globals.h
     include/misc/error.h
+    include/misc/memory_usage.h
     include/game_manager.h
     include/render/renderer.h
     include/render/shader_manager.h

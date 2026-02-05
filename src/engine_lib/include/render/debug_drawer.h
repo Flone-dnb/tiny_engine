@@ -17,6 +17,8 @@ void debug_drawer_draw_text(const char* text, float time_sec);
 void debug_drawer_draw_text_color(const char* text, float time_sec, vec3 color);
 void debug_drawer_draw_text_at_pos(const char* text, float time_sec, vec3 color, vec2 pos);
 
+float debug_drawer_get_default_text_height();
+
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API
 // ------------------------------------------------------------------------------------------------
