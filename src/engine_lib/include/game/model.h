@@ -86,3 +86,5 @@ void prv_model_on_spawned(te_model* model, struct te_world* world);
 
 // Called by world before the model is despawned.
 void prv_model_on_despawned(te_model* model);
+
+void prv_model_set_vertex_attributes();

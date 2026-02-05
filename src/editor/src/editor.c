@@ -3,6 +3,8 @@
 #include "editor_camera.h"
 #include "game/model.h"
 #include "game_manager.h"
+#include "render/font_manager.h"
+#include "render/renderer.h"
 #include "window.h"
 #include "world.h"
 
@@ -32,6 +34,12 @@ editor_destroy(te_editor* editor) {
 
 void
 editor_on_game_started(void* game_instance, te_game_manager* game_manager) {
+    // Load font.
+    te_renderer* renderer = game_manager_get_renderer(game_manager);
+    te_font_manager* font_manager = renderer_get_font_manager(renderer);
+    font_manager_load_font(font_manager, "engine/font/font.ttf");
+
+    // Create default game world.
     te_editor* editor = game_instance;
     editor_create_game_world(editor, game_manager);
 }
@@ -85,6 +93,13 @@ editor_on_keyboard_button_released(void* game_instance, struct te_game_manager* 
 
     te_editor* editor = game_instance;
     editor_camera_on_keyboard_button_released(editor->editor_camera, button);
+}
+
+void
+editor_on_keyboard_input_text(void* game_instance, struct te_game_manager* game_manager, const char* text) {
+    (void)game_instance;
+    (void)game_manager;
+    (void)text;
 }
 
 void

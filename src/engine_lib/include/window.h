@@ -25,6 +25,11 @@ typedef struct te_window_callbacks {
     void (*on_keyboard_button_released)(void* game_instance, struct te_game_manager* game_manager,
                                         enum te_keyboard_button button, te_keyboard_modifiers modifiers);
 
+    // Called when a text input event is received. Generally happens when typing text in a "text edit" widget.
+    // Text is a UTF-8 encoded string. Do not free the text pointer.
+    void (*on_keyboard_input_text)(void* game_instance, struct te_game_manager* game_manager,
+                                   const char* text);
+
     void (*on_gamepad_button_pressed)(void* game_instance, struct te_game_manager* game_manager,
                                       enum te_gamepad_button button);
 
@@ -102,3 +107,6 @@ union SDL_Event;
 
 bool prv_window_process_event(te_window* window, union SDL_Event event);
 struct SDL_Window* prv_window_get_sdl_window(te_window* window);
+
+// Returns user's main game system.
+void* prv_window_get_game_instance(te_window* window);

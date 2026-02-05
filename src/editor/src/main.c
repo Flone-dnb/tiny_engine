@@ -22,7 +22,7 @@ main(void) {
 
     te_window* window = window_create("tiny engine editor");
 
-    if (sizeof(te_window_callbacks) != sizeof(void*) * 17) {
+    if (sizeof(te_window_callbacks) != sizeof(void*) * 18) {
         show_error_and_abort("add new callbacks here");
     }
     te_window_callbacks callbacks;
@@ -30,6 +30,7 @@ main(void) {
     callbacks.on_game_tick = &editor_on_game_tick;
     callbacks.on_keyboard_button_pressed = &editor_on_keyboard_button_pressed;
     callbacks.on_keyboard_button_released = &editor_on_keyboard_button_released;
+    callbacks.on_keyboard_input_text = &editor_on_keyboard_input_text;
     callbacks.on_gamepad_button_pressed = &editor_on_gamepad_button_pressed;
     callbacks.on_gamepad_button_released = &editor_on_gamepad_button_released;
     callbacks.on_gamepad_axis_moved = &editor_on_gamepad_axis_moved;

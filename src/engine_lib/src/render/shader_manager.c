@@ -291,3 +291,14 @@ shader_manager_mark_unused_shader(te_shader_manager* manager, unsigned int prog_
         manager->shader_count -= 1;
     }
 }
+
+int
+get_uniform_location(unsigned int prog_id, const char* name) {
+    const int location = glGetUniformLocation(prog_id, name);
+    if (location < 0) {
+        log_info_fmt("missing uniform variable named \"%s\", maybe it was optimized out due to being unused",
+                     name);
+        show_error_and_abort("unable to find a uniform variable, see log for details");
+    }
+    return location;
+}

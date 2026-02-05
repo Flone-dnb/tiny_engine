@@ -3,12 +3,15 @@
 #include <stdlib.h>
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_video.h"
+#include "debug_console.h"
 #include "game/camera.h"
 #include "game_manager.h"
 #include "glad/glad.h"
 #include "io/log.h"
 #include "limits.h"
 #include "misc/error.h"
+#include "render/debug_drawer.h"
+#include "render/font_manager.h"
 #include "render/model_renderer.h"
 #include "render/shader_manager.h"
 #include "render/texture_manager.h"
@@ -36,6 +39,7 @@ struct te_renderer {
     // Created by the renderer.
     te_shader_manager* shader_manager;
     te_texture_manager* texture_manager;
+    te_font_manager* font_manager;
 
     // Preallocated array to keep active cameras while submitting a new frame.
     // Size of this array is @ref worlds_render_info_array_size.
@@ -43,9 +47,6 @@ struct te_renderer {
 
     // Size of the array @ref worlds_render_info.
     unsigned int worlds_render_info_array_size;
-
-    // GL depth function used.
-    unsigned int gl_depth_func;
 };
 
 #if defined(DEBUG)
@@ -71,13 +72,22 @@ debugMessageCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLs
 }
 #endif
 
+#if defined(ENGINE_DEBUG_TOOLS)
+// Callback for the renderer's debug console command.
+void
+debug_command_set_fps_limit(te_game_manager* game_manager, unsigned int new_limit) {
+    te_renderer* renderer = game_manager_get_renderer(game_manager);
+    renderer_set_fps_limit(renderer, new_limit);
+}
+#endif
+
 te_renderer*
 renderer_create(struct te_window* window) {
     te_renderer* renderer = malloc(sizeof(te_renderer));
     renderer->window = window;
-    renderer->gl_depth_func = GL_LEQUAL; // less/equal is needed for main pass (after z prepass)
     renderer->shader_manager = prv_shader_manager_create();
     renderer->texture_manager = prv_texture_manager_create();
+    renderer->font_manager = prv_font_manager_create(renderer);
     renderer->worlds_render_info_array_size = 2;
     renderer->worlds_render_info =
         malloc(sizeof(te_world_render_info) * renderer->worlds_render_info_array_size);
@@ -123,7 +133,7 @@ renderer_create(struct te_window* window) {
 
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(renderer->gl_depth_func);
+    glDepthFunc(GL_LEQUAL);
 
     // Disable VSync.
     if (!SDL_GL_SetSwapInterval(0)) {
@@ -135,6 +145,11 @@ renderer_create(struct te_window* window) {
     log_info_fmt("setting FPS limit to %u (display's refresh rate)", refresh_rate);
     renderer_set_fps_limit(renderer, refresh_rate);
 
+#if defined(ENGINE_DEBUG_TOOLS)
+    debug_console_register_command(
+        (te_debug_console_command){.name = "set_fps_limit", .arg_uint = debug_command_set_fps_limit});
+#endif
+
     return renderer;
 }
 
@@ -142,6 +157,7 @@ void
 renderer_destroy(te_renderer* renderer) {
     prv_texture_manager_destroy(renderer->texture_manager);
     prv_shader_manager_destroy(renderer->shader_manager);
+    prv_font_manager_destroy(renderer->font_manager);
     free(renderer->worlds_render_info);
 
     if (!SDL_GL_DestroyContext(renderer->gl_context)) {
@@ -158,6 +174,11 @@ renderer_set_fps_limit(te_renderer* renderer, unsigned int limit) {
     // TODO
 }
 
+te_window*
+renderer_get_window(te_renderer* renderer) {
+    return renderer->window;
+}
+
 te_shader_manager*
 renderer_get_shader_manager(te_renderer* renderer) {
     return renderer->shader_manager;
@@ -168,8 +189,13 @@ renderer_get_texture_manager(te_renderer* renderer) {
     return renderer->texture_manager;
 }
 
+struct te_font_manager*
+renderer_get_font_manager(te_renderer* renderer) {
+    return renderer->font_manager;
+}
+
 void
-prv_renderer_draw_frame(te_renderer* renderer) {
+prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     // Make sure there was no GL error during the last frame.
     GLenum gl_error = glGetError();
     if (gl_error != GL_NO_ERROR) {
@@ -242,11 +268,15 @@ prv_renderer_draw_frame(te_renderer* renderer) {
         }
     }
 
+#if defined(ENGINE_DEBUG_TOOLS)
+    prv_debug_console_draw(delta_time_sec);
+    prv_debug_drawer_draw(renderer, delta_time_sec);
+#endif
+
     SDL_GL_SwapWindow(prv_window_get_sdl_window(renderer->window));
 }
 
 void
 prv_renderer_on_window_size_changed(te_renderer* renderer) {
-    (void)renderer; // <- unused for now
-    // TODO: update font size
+    prv_font_manager_on_window_size_changed(renderer->font_manager);
 }

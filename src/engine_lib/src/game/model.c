@@ -347,17 +347,13 @@ prv_model_on_spawned(te_model* model, te_world* world) {
 
         // Position.
         glBindAttribLocation(model->shader_prog_id, 0, "pos");
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), NULL);
         glEnableVertexAttribArray(0);
 
         // Normal.
         glBindAttribLocation(model->shader_prog_id, 1, "normal");
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)sizeof(vec3));
         glEnableVertexAttribArray(1);
 
-        // UV.
         glBindAttribLocation(model->shader_prog_id, 2, "uv");
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)(sizeof(vec3) * 2));
         glEnableVertexAttribArray(2);
 
         free(vertices);
@@ -391,6 +387,18 @@ prv_model_on_spawned(te_model* model, te_world* world) {
             glm_vec2_copy(model->tex_tiling, data->tex_tiling);
         }
     }
+}
+
+void
+prv_model_set_vertex_attributes() {
+    // Position.
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), NULL);
+
+    // Normal.
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)sizeof(vec3));
+
+    // UV.
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)(sizeof(vec3) * 2));
 }
 
 void

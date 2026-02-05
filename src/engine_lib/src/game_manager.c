@@ -3,8 +3,11 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include "debug_console.h"
 #include "misc/error.h"
+#include "render/debug_drawer.h"
 #include "render/renderer.h"
+#include "window.h"
 #include "world.h"
 
 // Stores all core systems such as game world, physics, audio, renderer and etc.
@@ -29,7 +32,15 @@ prv_game_manager_create(struct te_window* window) {
     game_manager->worlds = NULL;
     game_manager->world_count = 0;
 
+#if defined(ENGINE_DEBUG_TOOLS)
+    prv_debug_console_init();
+#endif
+
     game_manager->renderer = renderer_create(window);
+
+#if defined(ENGINE_DEBUG_TOOLS)
+    prv_debug_drawer_init(game_manager->renderer);
+#endif
 
     return game_manager;
 }
@@ -41,6 +52,12 @@ prv_game_manager_destroy(te_game_manager* game_manager) {
         prv_world_destroy(game_manager->worlds[i]);
     }
     free(game_manager->worlds);
+
+#if defined(ENGINE_DEBUG_TOOLS)
+    // Destroy before renderer.
+    prv_debug_console_deinit();
+    prv_debug_drawer_deinit(game_manager->renderer);
+#endif
 
     renderer_destroy(game_manager->renderer);
 
@@ -120,6 +137,11 @@ game_manager_get_worlds(te_game_manager* game_manager, unsigned int* world_count
     return game_manager->worlds;
 }
 
+void*
+game_manager_get_game_instance(te_game_manager* game_manager) {
+    return prv_window_get_game_instance(game_manager->window);
+}
+
 void
 prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
     (void)game_manager;
@@ -128,8 +150,8 @@ prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
 }
 
 void
-prv_game_manager_draw_frame(te_game_manager* game_manager) {
-    prv_renderer_draw_frame(game_manager->renderer);
+prv_game_manager_draw_frame(te_game_manager* game_manager, float delta_time_sec) {
+    prv_renderer_draw_frame(game_manager->renderer, delta_time_sec);
 }
 
 void

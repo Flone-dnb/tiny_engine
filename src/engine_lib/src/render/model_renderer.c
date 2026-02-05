@@ -1,9 +1,10 @@
 #include "model_renderer.h"
 
 #include <string.h>
+#include "game/model.h"
 #include "glad/glad.h"
-#include "io/log.h"
 #include "misc/error.h"
+#include "render/shader_manager.h"
 
 #define INVALID_DATA_INDEX 0xffffffff
 
@@ -86,17 +87,6 @@ model_renderer_destroy(te_model_renderer* renderer) {
     free(renderer->handle_to_data);
     free(renderer->render_data);
     free(renderer);
-}
-
-int
-get_uniform_location(unsigned int prog_id, const char* name) {
-    const int location = glGetUniformLocation(prog_id, name);
-    if (CGLM_UNLIKELY(location < 0)) {
-        log_info_fmt("missing uniform variable named \"%s\", maybe it was optimized out due to being unused",
-                     name);
-        show_error_and_abort("unable to find a uniform variable, see log for details");
-    }
-    return location;
 }
 
 void
@@ -311,6 +301,8 @@ model_renderer_draw(te_model_renderer* renderer, ivec4 gl_viewport, mat4 view_pr
 
             glBindBuffer(GL_ARRAY_BUFFER, data->vbo);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data->ebo);
+
+            prv_model_set_vertex_attributes();
 
             glDrawElements(GL_TRIANGLES, data->index_count, GL_UNSIGNED_SHORT, NULL);
         }

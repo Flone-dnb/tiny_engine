@@ -20,6 +20,8 @@ void editor_on_keyboard_button_pressed(void* game_instance, struct te_game_manag
                                        enum te_keyboard_button button, te_keyboard_modifiers modifiers);
 void editor_on_keyboard_button_released(void* game_instance, struct te_game_manager* game_manager,
                                         enum te_keyboard_button button, te_keyboard_modifiers modifiers);
+void editor_on_keyboard_input_text(void* game_instance, struct te_game_manager* game_manager,
+                                   const char* text);
 void editor_on_gamepad_button_pressed(void* game_instance, struct te_game_manager* game_manager,
                                       enum te_gamepad_button button);
 void editor_on_gamepad_button_released(void* game_instance, struct te_game_manager* game_manager,

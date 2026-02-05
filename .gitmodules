@@ -7,3 +7,9 @@
 [submodule "ext/stb"]
 	path = ext/stb
 	url = https://github.com/nothings/stb.git
+[submodule "ext/freetype"]
+	path = ext/freetype
+	url = https://gitlab.freedesktop.org/freetype/freetype.git
+[submodule "ext/hashmap.c"]
+	path = ext/hashmap.c
+	url = https://github.com/tidwall/hashmap.c.git

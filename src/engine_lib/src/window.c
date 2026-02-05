@@ -3,6 +3,7 @@
 #include <SDL3/SDL_error.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include "debug_console.h"
 #include "game_manager.h"
 #include "io/filesystem.h"
 #include "io/log.h"
@@ -217,7 +218,7 @@ window_process_events(te_window* window, te_window_callbacks* window_callbacks, 
         }
 
         // Draw.
-        prv_game_manager_draw_frame(window->game_manager);
+        prv_game_manager_draw_frame(window->game_manager, delta_time_sec);
     }
 
     log_info("window is closing");
@@ -310,10 +311,15 @@ prv_window_process_event(te_window* window, union SDL_Event event) {
                 break;
             }
 #if defined(IS_ARM64)
-            if (window->connected_gamepad != nullptr) {
-                // In some cases while using retro-handhelds (they have built in gamepad) gamepad buttons trigger
+            if (window->connected_gamepad != NULL) {
+                // In some cases while using retro-handhelds (which have built in gamepad) gamepad buttons trigger
                 // keyboard input before the actual gamepad button input.
                 break;
+            }
+#endif
+#if defined(ENGINE_DEBUG_TOOLS)
+            if (prv_debug_console_is_shown()) {
+                break; // don't trigger user callbacks
             }
 #endif
             window->had_gamepad_input_curr_frame = false;
@@ -331,9 +337,25 @@ prv_window_process_event(te_window* window, union SDL_Event event) {
                 break;
             }
 #if defined(IS_ARM64)
-            if (window->connected_gamepad != nullptr) {
+            if (window->connected_gamepad != NULL) {
                 // Same as in "pressed" event.
                 break;
+            }
+#endif
+#if defined(ENGINE_DEBUG_TOOLS)
+            if (prv_debug_console_is_shown()) {
+                if ((enum te_keyboard_button)event.key.scancode == TE_KB_TILDE) {
+                    prv_debug_console_hide();
+                    SDL_StopTextInput(window->sdl_window);
+                } else {
+                    prv_debug_console_on_keyboard_input(window->game_manager,
+                                                        (enum te_keyboard_button)event.key.scancode);
+                    break; // don't trigger user callbacks
+                }
+            } else if (!prv_debug_console_is_shown()
+                       && (enum te_keyboard_button)event.key.scancode == TE_KB_TILDE) {
+                prv_debug_console_show();
+                SDL_StartTextInput(window->sdl_window);
             }
 #endif
             window->had_gamepad_input_curr_frame = false;
@@ -343,6 +365,26 @@ prv_window_process_event(te_window* window, union SDL_Event event) {
             window->user_callbacks->on_keyboard_button_released(window->game_instance, window->game_manager,
                                                                 (enum te_keyboard_button)event.key.scancode,
                                                                 mods);
+            break;
+        }
+        case (SDL_EVENT_TEXT_INPUT): {
+#if defined(IS_ARM64)
+            if (window->connected_gamepad != NULL) {
+                // Same as in "pressed" event.
+                break;
+            }
+#endif
+#if defined(ENGINE_DEBUG_TOOLS)
+            if (prv_debug_console_is_shown()) {
+                if (event.text.text[0] == '`') {
+                    break; // "on button released" will handle it
+                }
+                prv_debug_console_on_keyboard_input_text(event.text.text);
+                break; // don't trigger user callbacks
+            }
+#endif
+            window->user_callbacks->on_keyboard_input_text(window->game_instance, window->game_manager,
+                                                           event.text.text);
             break;
         }
         case (SDL_EVENT_GAMEPAD_AXIS_MOTION): {
@@ -428,4 +470,9 @@ prv_window_process_event(te_window* window, union SDL_Event event) {
 SDL_Window*
 prv_window_get_sdl_window(te_window* window) {
     return window->sdl_window;
+}
+
+void*
+prv_window_get_game_instance(te_window* window) {
+    return window->game_instance;
 }

@@ -80,6 +80,16 @@ camera_destroy(camera);
 
 Other game objects include things like models (AKA meshes), their usage is similar.
 
+# Debug tools
+
+Debug tools include things like `debug_drawer` (for rendering debug shapes) and `debug_console` (for registering new dev cheat commands and performance stats). In order to show/hide `debug_console` press the tilde (~) button on your keyboard.
+
+Debug console can also show various statistics such as FPS, RAM usage, number of drawn meshes, various GPU metrics and etc. In order to view such statistics use the commands `show_stats` and `hide_stats`. Note that with `show_stats` you might want to also use the command `set_fps_limit 0` to make sure your GPU is running at max power (not being limited).
+
+Debug tools are disabled in the "Release" build mode but if you need them in your release builds you can enable them if you pass -DENGINE_FORCE_ENABLE_DEBUG_TOOLS=ON while configuring cmake, cmake will then print a warning that you enabled debug tools in release build.
+
+Note that in case you created a custom game object and want it to (for example) draw something when used in the editor you can use `ifdef ENGINE_EDITOR` macro for code that will only run in the editor.
+
 # Texture import
 
 There's no texture import, just copy your image somewhere inside of the `res` directory.
@@ -91,6 +101,20 @@ model_set_texture(model, "game/texture/sometex.png"); // located at `res/game/..
 ```
 
 When you import a GLTF/GLB file textures will be automatically imported (copied) to the `res` directory and the connection between imported meshes and their assigned textures will be saved in the imported files.
+
+# Loading font
+
+In order to load a font you need to have a .ttf file to load (there is a default .ttf in the res/engine/font). To load the font file you need to do the following at the start of your game:
+
+```Cpp
+void on_game_started(void* game_instance, te_game_manager* game_manager) {
+    te_renderer* renderer = game_manager_get_renderer(game_manager);
+    te_font_manager* font_manager = renderer_get_font_manager(renderer);
+    font_manager_load_font(font_manager, "game/myfont.ttf");  // located at "res/game/myfont.ttf"
+
+    // ... create world, game objects, etc. ...
+}
+```
 
 # Building your game for retro handhelds (ARM64 Linux devices)
 

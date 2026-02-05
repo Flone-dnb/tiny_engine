@@ -14,6 +14,9 @@ unsigned int shader_manager_request_shader(te_shader_manager* manager, const cha
 // Decrements shader usage counter.
 void shader_manager_mark_unused_shader(te_shader_manager* manager, unsigned int prog_id);
 
+// Helper function that uses glGetUniformLocation and shows an error if the specified uniform is not found.
+int get_uniform_location(unsigned int prog_id, const char* name);
+
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API
 // ------------------------------------------------------------------------------------------------

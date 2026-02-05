@@ -26,6 +26,9 @@ struct te_renderer* game_manager_get_renderer(te_game_manager* game_manager);
 // Do not free/destroy returned pointer.
 struct te_world** game_manager_get_worlds(te_game_manager* game_manager, unsigned int* world_count);
 
+// Returns user's main game system that was specified after window creation.
+void* game_manager_get_game_instance(te_game_manager* game_manager);
+
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API
 // ------------------------------------------------------------------------------------------------
@@ -37,7 +40,7 @@ void prv_game_manager_destroy(te_game_manager* game_manager);
 void prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec);
 
 // Called by window to render a new frame.
-void prv_game_manager_draw_frame(te_game_manager* game_manager);
+void prv_game_manager_draw_frame(te_game_manager* game_manager, float delta_time_sec);
 
 // Called by window after its size was changed.
 void prv_game_manager_on_window_size_changed(te_game_manager* game_manager);
