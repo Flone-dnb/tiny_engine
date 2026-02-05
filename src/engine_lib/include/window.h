@@ -105,7 +105,7 @@ unsigned int window_get_display_refresh_rate(te_window* window);
 
 union SDL_Event;
 
-bool prv_window_process_event(te_window* window, union SDL_Event event);
+bool prv_window_process_event(te_window* window, union SDL_Event event, float delta_time_sec);
 struct SDL_Window* prv_window_get_sdl_window(te_window* window);
 
 // Returns user's main game system.

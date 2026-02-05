@@ -90,6 +90,8 @@ Debug tools are disabled in the "Release" build mode but if you need them in you
 
 Note that in case you created a custom game object and want it to (for example) draw something when used in the editor you can use `ifdef ENGINE_EDITOR` macro for code that will only run in the editor.
 
+In case your only input device is a gamepad you can click both the "start" button and the "menu" button (sometimes called the "back" button) to toggle debug stats command and disable fps limit while the stats are visible.
+
 # Texture import
 
 There's no texture import, just copy your image somewhere inside of the `res` directory.

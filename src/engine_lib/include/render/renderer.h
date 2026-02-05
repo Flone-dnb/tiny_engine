@@ -32,6 +32,9 @@ struct te_font_manager* renderer_get_font_manager(te_renderer* renderer);
 
 unsigned int renderer_get_fps(te_renderer* renderer);
 
+// Returns 0 if not set.
+unsigned int renderer_get_fps_limit(te_renderer* renderer);
+
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API
 // ------------------------------------------------------------------------------------------------

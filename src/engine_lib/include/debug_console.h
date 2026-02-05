@@ -22,18 +22,23 @@ typedef struct te_debug_console_command {
 
 void debug_console_register_command(te_debug_console_command command);
 
+// Function to programmatically toggle "show_stats" command.
+void debug_console_show_stats(void);
+void debug_console_hide_stats(void);
+bool debug_console_is_stats_shown(void);
+
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API
 // ------------------------------------------------------------------------------------------------
 
 // Must be called before game is started and after game is finished.
-void prv_debug_console_init();
-void prv_debug_console_deinit();
+void prv_debug_console_init(struct te_game_manager* game_manager);
+void prv_debug_console_deinit(void);
 
-void prv_debug_console_show();
-void prv_debug_console_hide();
+void prv_debug_console_show(void);
+void prv_debug_console_hide(void);
 
-bool prv_debug_console_is_shown();
+bool prv_debug_console_is_shown(void);
 
 void prv_debug_console_on_keyboard_input(struct te_game_manager* game_manager,
                                          enum te_keyboard_button button);
@@ -52,6 +57,6 @@ typedef struct te_debug_stats {
 } te_debug_stats;
 
 // Returns always valid pointer to update debug stats.
-te_debug_stats* prv_debug_console_get_stats();
+te_debug_stats* prv_debug_console_get_stats(void);
 
 #endif

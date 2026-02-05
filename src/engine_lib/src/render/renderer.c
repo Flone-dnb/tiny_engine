@@ -2,10 +2,10 @@
 
 #include <stdlib.h>
 #include "SDL3/SDL_error.h"
-#include "SDL3/SDL_timer.h"
 #include "SDL3/SDL_video.h"
 #include "debug_console.h"
 #include "game/camera.h"
+#include "game_manager.h"
 #if defined(ENGINE_DEBUG_TOOLS)
 #include "game_manager.h"
 #endif
@@ -21,7 +21,8 @@
 #include "window.h"
 #include "world.h"
 #if defined(WIN32)
-// TODO
+#define NOMINMAX
+#include <Windows.h>
 #elif defined(__linux__)
 #include "time.h"
 #endif
@@ -225,6 +226,11 @@ renderer_get_font_manager(te_renderer* renderer) {
 unsigned int
 renderer_get_fps(te_renderer* renderer) {
     return renderer->frame_stats.fps;
+}
+
+unsigned int
+renderer_get_fps_limit(te_renderer* renderer) {
+    return renderer->fps_limit;
 }
 
 void

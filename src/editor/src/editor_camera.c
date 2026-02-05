@@ -177,7 +177,7 @@ editor_camera_on_gamepad_disconnected(te_editor_camera* editor_camera) {
 void
 editor_camera_on_game_tick(te_editor_camera* editor_camera, float delta_time_sec) {
     if (editor_camera->gamepad_look[0] != 0.0f || editor_camera->gamepad_look[1] != 0.0f) {
-        const float mult = 0.1f;
+        const float mult = 2000.0f * delta_time_sec;
         editor_camera_apply_look_input(editor_camera, editor_camera->gamepad_look[0] * mult,
                                        editor_camera->gamepad_look[1] * mult);
     }

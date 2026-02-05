@@ -5,9 +5,11 @@
 
 #include <stdint.h>
 #include <string.h>
+#include "game_manager.h"
 #include "hashmap.c/hashmap.h"
 #include "misc/memory_usage.h"
 #include "render/debug_drawer.h"
+#include "render/renderer.h"
 
 // Command hash for hashmap.
 uint64_t
@@ -27,6 +29,8 @@ debug_console_command_compare(const void* a, const void* b, void* udata) {
 
 // Groups debug console data.
 struct te_debug_console {
+    te_game_manager* game_manager;
+
     struct hashmap* commands;
 
     // Current user input. Non-NULL because preallocated.
@@ -39,7 +43,7 @@ struct te_debug_console {
 
     te_debug_stats stats;
 
-    // Copy of @ref stats displayed for @ref time_sec_to_update_state.
+    // Copy of @ref stats displayed for @ref time_sec_to_update_stats.
     te_debug_stats displayed_stats;
 
     vec2 screen_pos;
@@ -66,20 +70,19 @@ struct te_debug_console {
 static te_debug_console console;
 
 void
-prv_debug_console_show_stats(struct te_game_manager* game_manager) {
-    (void)game_manager;
+prv_debug_console_show_stats() {
     console.show_stats = true;
     console.displayed_stats = console.stats;
 }
 
 void
-prv_debug_console_hide_stats(struct te_game_manager* game_manager) {
-    (void)game_manager;
+prv_debug_console_hide_stats() {
     console.show_stats = false;
 }
 
 void
-prv_debug_console_init() {
+prv_debug_console_init(te_game_manager* game_manager) {
+    console.game_manager = game_manager;
     console.commands = hashmap_new(sizeof(te_debug_console_command), 4, 0, 0, debug_console_command_hash,
                                    debug_console_command_compare, NULL, NULL);
     console.input_total_len = 65;
@@ -110,7 +113,7 @@ prv_debug_console_init() {
 }
 
 void
-prv_debug_console_deinit() {
+prv_debug_console_deinit(void) {
     hashmap_free(console.commands);
     console.commands = NULL;
 
@@ -127,19 +130,34 @@ debug_console_register_command(te_debug_console_command command) {
 }
 
 void
-prv_debug_console_show() {
+debug_console_show_stats(void) {
+    prv_debug_console_show_stats();
+}
+
+void
+debug_console_hide_stats(void) {
+    prv_debug_console_hide_stats();
+}
+
+bool
+debug_console_is_stats_shown(void) {
+    return console.show_stats;
+}
+
+void
+prv_debug_console_show(void) {
     console.is_shown = true;
 }
 
 void
-prv_debug_console_hide() {
+prv_debug_console_hide(void) {
     console.is_shown = false;
     console.input_valid_len = 0;
     console.message_sec_left = 0.0f;
 }
 
 bool
-prv_debug_console_is_shown() {
+prv_debug_console_is_shown(void) {
     return console.is_shown;
 }
 
@@ -258,7 +276,9 @@ prv_debug_console_draw(float delta_time_sec) {
         vec2 screen_pos;
         glm_vec2_copy((vec2){0.01f, 0.7f}, screen_pos);
 
-        prv_debug_console_draw_stat(screen_pos, "FPS: %u", stats->fps);
+        const unsigned int fps_limit =
+            renderer_get_fps_limit(game_manager_get_renderer(console.game_manager));
+        prv_debug_console_draw_stat(screen_pos, "FPS: %u (limit: %u)", stats->fps, fps_limit);
 
 #if defined(ENGINE_ASAN_ENABLED)
         prv_debug_console_draw_stat(screen_pos, "RAM used (MB): %zu (%zu/%zu) (ASan enabled)",
@@ -288,7 +308,7 @@ prv_debug_console_draw(float delta_time_sec) {
 }
 
 te_debug_stats*
-prv_debug_console_get_stats() {
+prv_debug_console_get_stats(void) {
     return &console.stats;
 }
 

@@ -34,7 +34,7 @@ prv_game_manager_create(struct te_window* window) {
     game_manager->world_count = 0;
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    prv_debug_console_init();
+    prv_debug_console_init(game_manager);
 #endif
 
     game_manager->renderer = renderer_create(window);

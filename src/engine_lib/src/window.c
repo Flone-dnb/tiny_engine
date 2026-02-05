@@ -9,6 +9,9 @@
 #include "io/log.h"
 #include "io/paths.h"
 #include "misc/error.h"
+#if defined(ENGINE_DEBUG_TOOLS)
+#include "render/renderer.h"
+#endif
 #define SDL_MAIN_HANDLED
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_init.h"
@@ -40,6 +43,12 @@ struct te_window {
 
     // Refresh rate of the used display.
     unsigned int display_refresh_rate;
+
+#if defined(ENGINE_DEBUG_TOOLS)
+    // You can "show_stats" debug command by pressing both "menu" and "start" on gamepad.
+    float debug_stats_time_since_menu;
+    float debug_stats_time_since_start;
+#endif
 
     // true` if gamepad input was received on this frame. Used to determine when the input device changes.
     bool had_gamepad_input_curr_frame;
@@ -127,6 +136,10 @@ window_create(const char* window_title) {
     window->width = (unsigned int)display_width;
     window->height = (unsigned int)display_height;
     window->display_refresh_rate = display_refresh_rate;
+#if defined(ENGINE_DEBUG_TOOLS)
+    window->debug_stats_time_since_menu = 10.0f;
+    window->debug_stats_time_since_start = 10.0f;
+#endif
     window->had_gamepad_input_curr_frame = false;
     window->had_gamepad_input_prev_frame = false;
     window->quit_requested = false;
@@ -187,12 +200,13 @@ window_process_events(te_window* window, te_window_callbacks* window_callbacks, 
     // Used to calculate delta time.
     size_t current_time_counter = SDL_GetPerformanceCounter();
     size_t prev_time_counter = 0;
+    float delta_time_sec = 0.0f;
 
     while (!window->quit_requested) {
         // Process available window events.
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
-            const bool received_quit_event = prv_window_process_event(window, event);
+            const bool received_quit_event = prv_window_process_event(window, event, delta_time_sec);
 
             // Use `OR` instead of assignment because the user can call `window_close`.
             window->quit_requested |= received_quit_event;
@@ -203,7 +217,7 @@ window_process_events(te_window* window, te_window_callbacks* window_callbacks, 
         current_time_counter = SDL_GetPerformanceCounter();
         const double delta_time_ms = (double)((current_time_counter - prev_time_counter) * 1000)
                                      / (double)(SDL_GetPerformanceFrequency());
-        const float delta_time_sec = (float)(delta_time_ms * 0.001);
+        delta_time_sec = (float)(delta_time_ms * 0.001);
 
         // Tick.
         {
@@ -288,7 +302,7 @@ window_close(te_window* window) {
 }
 
 bool
-prv_window_process_event(te_window* window, union SDL_Event event) {
+prv_window_process_event(te_window* window, union SDL_Event event, float delta_time_sec) {
     switch (event.type) {
         case (SDL_EVENT_MOUSE_MOTION): {
             window->user_callbacks->on_mouse_moved(window->game_instance, window->game_manager,
@@ -407,6 +421,26 @@ prv_window_process_event(te_window* window, union SDL_Event event) {
             break;
         }
         case (SDL_EVENT_GAMEPAD_BUTTON_UP): {
+#if defined(ENGINE_DEBUG_TOOLS)
+            if ((enum te_gamepad_button)event.gbutton.button == TE_GB_BACK) {
+                window->debug_stats_time_since_menu = 0.0f;
+            } else if ((enum te_gamepad_button)event.gbutton.button == TE_GB_START) {
+                window->debug_stats_time_since_start = 0.0f;
+            }
+            if (window->debug_stats_time_since_menu < 0.1f && window->debug_stats_time_since_start < 0.1f) {
+                if (!debug_console_is_stats_shown()) {
+                    renderer_set_fps_limit(game_manager_get_renderer(window->game_manager), 0);
+                    debug_console_show_stats();
+                } else {
+                    renderer_set_fps_limit(game_manager_get_renderer(window->game_manager),
+                                           window_get_display_refresh_rate(window));
+                    debug_console_hide_stats();
+                }
+                window->debug_stats_time_since_menu = 10.0f;
+                window->debug_stats_time_since_start = 10.0f;
+            }
+#endif
+
             window->had_gamepad_input_curr_frame = true;
             window->user_callbacks->on_gamepad_button_released(window->game_instance, window->game_manager,
                                                                (enum te_gamepad_button)event.gbutton.button);
@@ -456,6 +490,11 @@ prv_window_process_event(te_window* window, union SDL_Event event) {
                 SDL_CloseGamepad(window->connected_gamepad);
                 window->connected_gamepad = NULL;
                 window->user_callbacks->on_gamepad_disconnected(window->game_instance, window->game_manager);
+
+#if defined(ENGINE_DEBUG_TOOLS)
+                window->debug_stats_time_since_menu = 10.0f;
+                window->debug_stats_time_since_start = 10.0f;
+#endif
             }
             break;
         }
@@ -463,6 +502,13 @@ prv_window_process_event(te_window* window, union SDL_Event event) {
             return true;
         }
     }
+
+#if defined(ENGINE_DEBUG_TOOLS)
+    if (window->connected_gamepad != NULL) {
+        window->debug_stats_time_since_menu += delta_time_sec;
+        window->debug_stats_time_since_start += delta_time_sec;
+    }
+#endif
 
     return false;
 }
