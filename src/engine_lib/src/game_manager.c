@@ -21,8 +21,6 @@ struct te_game_manager {
     // Game worlds. Size of this array is @ref world_count.
     te_world** worlds;
 
-    te_debug_stats debug_stats;
-
     // Number of elements in the @ref worlds array.
     unsigned int world_count;
 };
@@ -177,10 +175,3 @@ void
 prv_game_manager_on_window_size_changed(te_game_manager* game_manager) {
     prv_renderer_on_window_size_changed(game_manager->renderer);
 }
-
-#if defined(ENGINE_DEBUG_TOOLS)
-te_debug_stats*
-prv_game_manager_get_debug_stats(te_game_manager* game_manager) {
-    return &game_manager->debug_stats;
-}
-#endif

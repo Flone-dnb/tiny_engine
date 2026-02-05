@@ -29,7 +29,9 @@ debug_console_command_compare(const void* a, const void* b, void* udata) {
 struct te_debug_console {
     struct hashmap* commands;
 
-    // Current user input. Non-NULL because preallocated. Size of this array is @ref input_len.
+    // Current user input. Non-NULL because preallocated.
+    // Actually valid char count is @ref input_valid_len.
+    // Size of this array is @ref input_total_len.
     char* input;
 
     // Result of the user input, displayed if @ref message_sec_left is > 0.
