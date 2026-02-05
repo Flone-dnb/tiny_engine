@@ -303,6 +303,8 @@ window_close(te_window* window) {
 
 bool
 prv_window_process_event(te_window* window, union SDL_Event event, float delta_time_sec) {
+    (void)delta_time_sec;
+
     switch (event.type) {
         case (SDL_EVENT_MOUSE_MOTION): {
             window->user_callbacks->on_mouse_moved(window->game_instance, window->game_manager,
