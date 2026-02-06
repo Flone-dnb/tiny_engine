@@ -70,13 +70,15 @@ struct te_debug_console {
 static te_debug_console console;
 
 void
-prv_debug_console_show_stats() {
+prv_debug_console_show_stats(struct te_game_manager* game_manager) {
+    (void)game_manager;
     console.show_stats = true;
     console.displayed_stats = console.stats;
 }
 
 void
-prv_debug_console_hide_stats() {
+prv_debug_console_hide_stats(struct te_game_manager* game_manager) {
+    (void)game_manager;
     console.show_stats = false;
 }
 
@@ -131,12 +133,12 @@ debug_console_register_command(te_debug_console_command command) {
 
 void
 debug_console_show_stats(void) {
-    prv_debug_console_show_stats();
+    prv_debug_console_show_stats(console.game_manager);
 }
 
 void
 debug_console_hide_stats(void) {
-    prv_debug_console_hide_stats();
+    prv_debug_console_hide_stats(console.game_manager);
 }
 
 bool

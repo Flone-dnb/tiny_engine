@@ -40,8 +40,14 @@ filesystem_ensure_dirs_exist(const char* file_path) {
 bool
 filesystem_does_path_exists(const char* path) {
 #if defined(WIN32)
-    DWORD attributes = GetFileAttributes(path);
-    return (attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY));
+    FILE* fp = fopen(path, "r");
+    if (fp == NULL) {
+        DWORD attrib = GetFileAttributes(path);
+        return (attrib != INVALID_FILE_ATTRIBUTES && (attrib & FILE_ATTRIBUTE_DIRECTORY));
+    } else {
+        fclose(fp);
+        return true;
+    }
 #elif __linux__
     struct stat buffer;
     return stat(path, &buffer) == 0;

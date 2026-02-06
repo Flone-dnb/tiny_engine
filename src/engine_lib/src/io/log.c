@@ -54,9 +54,8 @@ prv_log(enum te_log_category category, const char* message, char* filepath, int 
     snprintf(&log_prefix[0], 511, "[%s] [%s] [%s:%d]", time_str, category_str, filepath + filename_start,
              line);
 
-    // Open log file.
+    // Open log file (not checking if directories exist because we checked this at game start).
     const char* path_to_log_file = paths_get_log_file();
-    filesystem_ensure_dirs_exist(path_to_log_file);
     FILE* log_file = fopen(path_to_log_file, "a");
     if (log_file == NULL) {
         printf("failed to open log file");

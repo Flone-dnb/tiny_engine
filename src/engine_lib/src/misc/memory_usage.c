@@ -4,8 +4,8 @@
 #include <string.h>
 #if defined(_WIN32)
 #define NOMINMAX
-#include <psapi.h>
 #include <windows.h>
+#include <psapi.h>
 #elif defined(__linux__)
 #include <stdio.h>
 #include <sys/sysinfo.h>
@@ -40,7 +40,7 @@ memory_usage_get_process_used_memory(void) {
 size_t
 memory_usage_get_total_memory(void) {
 #if defined(_WIN32)
-    MEMORYSTATUSEX mem_info{};
+    MEMORYSTATUSEX mem_info = {0};
     mem_info.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&mem_info);
     return (size_t)mem_info.ullTotalPhys;
@@ -58,7 +58,7 @@ memory_usage_get_total_memory(void) {
 size_t
 memory_usage_get_total_used_memory(void) {
 #if defined(_WIN32)
-    MEMORYSTATUSEX mem_info{};
+    MEMORYSTATUSEX mem_info = {0};
     mem_info.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&mem_info);
     return (size_t)(mem_info.ullTotalPhys - mem_info.ullAvailPhys);

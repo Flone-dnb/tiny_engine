@@ -71,6 +71,7 @@ window_create(const char* window_title) {
 
     // Destroy old log file.
     filesystem_remove_file(paths_get_log_file());
+    filesystem_ensure_dirs_exist(paths_get_log_file());
 
     // Initialize SDL.
     {
