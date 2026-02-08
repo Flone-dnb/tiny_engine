@@ -55,8 +55,10 @@ aabb_shape_convert_to_world(te_aabb_shape* aabb, mat4 world_mat) {
     up[3] = 0.0f;
     glm_vec4_scale(up, aabb->extents[1], up);
 
+    glm_mat4_mulv(world_mat, center, center);
+
     te_aabb_shape result;
-    glm_mat4_mulv(world_mat, center, result.center);
+    glm_vec3_copy(center, result.center);
 
     // Calculate OBB directions in world space
     // (directions are considered to point from OBB's center).
