@@ -1,9 +1,10 @@
 #pragma once
 
-#include "cglm/cglm.h"
+#include "cglm/mat4.h"
+#include "cglm/vec3.h"
+#include "cglm/vec4.h"
 
 typedef struct te_camera te_camera;
-struct te_world;
 
 te_camera* camera_create();
 void camera_destroy(te_camera* camera);
@@ -63,6 +64,9 @@ void camera_get_proj_mat(te_camera* camera, mat4 out);
 
 // Returns NULL if the camera is not spawned in a world.
 struct te_world* camera_get_world(te_camera* camera);
+
+// Always valid pointer. Do not free/destroy returned pointer. Valid while the camera exists.
+struct te_frustum_shape* camera_get_frustum(te_camera* camera);
 
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API

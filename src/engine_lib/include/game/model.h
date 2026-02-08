@@ -1,6 +1,7 @@
 #pragma once
 
-#include "cglm/cglm.h"
+#include "cglm/vec2.h"
+#include "cglm/vec3.h"
 
 typedef struct te_model te_model;
 struct te_world;

@@ -278,10 +278,12 @@ prv_debug_console_draw(float delta_time_sec) {
         vec2 screen_pos;
         glm_vec2_copy((vec2){0.01f, 0.7f}, screen_pos);
 
+        // FPS.
         const unsigned int fps_limit =
             renderer_get_fps_limit(game_manager_get_renderer(console.game_manager));
         prv_debug_console_draw_stat(screen_pos, "FPS: %u (limit: %u)", stats->fps, fps_limit);
 
+        // RAM.
 #if defined(ENGINE_ASAN_ENABLED)
         prv_debug_console_draw_stat(screen_pos, "RAM used (MB): %zu (%zu/%zu) (ASan enabled)",
                                     stats->process_mem, stats->total_used_mem, stats->total_mem);
@@ -289,6 +291,9 @@ prv_debug_console_draw(float delta_time_sec) {
         prv_debug_console_draw_stat(screen_pos, "RAM used (MB): %zu (%zu/%zu)", stats->process_mem,
                                     stats->total_used_mem, stats->total_mem);
 #endif
+
+        // Rendered model count.
+        prv_debug_console_draw_stat(screen_pos, "rendered model count: %u", stats->rendered_model_count);
     }
 
     if (!console.is_shown) {

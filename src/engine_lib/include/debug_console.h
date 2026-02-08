@@ -54,6 +54,8 @@ typedef struct te_debug_stats {
     unsigned int process_mem;
     unsigned int total_mem;
     unsigned int total_used_mem;
+
+    unsigned int rendered_model_count;
 } te_debug_stats;
 
 // Returns always valid pointer to update debug stats.

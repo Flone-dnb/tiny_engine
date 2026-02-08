@@ -41,6 +41,8 @@ typedef struct te_world_render_info {
     // Do not free/destroy this pointer.
     te_world* world;
 
+    struct te_frustum_shape* camera_frustum;
+
     // View projection matrix of the camera.
     mat4 view_proj_mat;
 
@@ -250,7 +252,11 @@ prv_renderer_calc_frame_stats(te_renderer* renderer, float delta_time_sec) {
     }
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    prv_debug_console_get_stats()->fps = renderer->frame_stats.fps;
+    te_debug_stats* stats = prv_debug_console_get_stats();
+    stats->fps = renderer->frame_stats.fps;
+
+    // Reset some stats to accumulate on the next frame.
+    stats->rendered_model_count = 0;
 #endif
 
     // FPS limit.
@@ -333,6 +339,8 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         info->gl_viewport[2] = (int)viewport_width;
         info->gl_viewport[3] = (int)viewport_height;
 
+        info->camera_frustum = camera_get_frustum(camera);
+
         active_world_count += 1;
     }
 
@@ -346,7 +354,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
             te_world_render_info* info = &renderer->worlds_render_info[world_idx];
             te_model_renderer* model_renderer = world_get_model_renderer(info->world);
 
-            model_renderer_draw(model_renderer, info->gl_viewport, info->view_proj_mat);
+            model_renderer_draw(model_renderer, info->gl_viewport, info->view_proj_mat, info->camera_frustum);
         }
     }
 

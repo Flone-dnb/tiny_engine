@@ -1,10 +1,15 @@
 #include "game/camera.h"
 
+#include "cglm/cam.h"
 #include "math_funcs.h"
 #include "misc/error.h"
 #include "misc/globals.h"
+#include "shape/frustum_shape.h"
 
 struct te_camera {
+    // May be outdated, see @ref is_view_mat_outdated and @ref is_proj_mat_outdated.
+    te_frustum_shape frustum;
+
     // Not NULL if spawned. Do not free/destroy this pointer.
     struct te_world* world;
 
@@ -206,6 +211,18 @@ camera_get_up(te_camera* camera, vec3 out) {
 }
 
 void
+prv_camera_recalc_frustum(te_camera* camera) {
+#if defined(DEBUG)
+    if (camera->is_directions_outdated) {
+        show_error_and_abort("expected directions to be up to date to recalculate camera's frustum");
+    }
+#endif
+    camera->frustum = frustum_shape_create(camera->location, camera->forward, camera->up, camera->near_clip,
+                                           camera->far_clip, camera->vertical_fov,
+                                           (float)camera->render_width / (float)camera->render_height);
+}
+
+void
 camera_get_view_mat(te_camera* camera, mat4 out) {
     if (camera->is_view_mat_outdated) {
         vec3 forward;
@@ -214,6 +231,7 @@ camera_get_view_mat(te_camera* camera, mat4 out) {
         camera_get_up(camera, up);
 
         glm_look_rh(camera->location, forward, up, camera->view_mat);
+        prv_camera_recalc_frustum(camera);
 
         camera->is_view_mat_outdated = false;
     }
@@ -233,6 +251,7 @@ camera_get_proj_mat(te_camera* camera, mat4 out) {
         glm_perspective_rh_no(glm_rad(camera->vertical_fov),
                               (float)camera->render_width / (float)camera->render_height, camera->near_clip,
                               camera->far_clip, camera->proj_mat);
+        prv_camera_recalc_frustum(camera);
 
         camera->is_proj_mat_outdated = false;
     }
@@ -243,6 +262,42 @@ camera_get_proj_mat(te_camera* camera, mat4 out) {
 struct te_world*
 camera_get_world(te_camera* camera) {
     return camera->world;
+}
+
+struct te_frustum_shape*
+camera_get_frustum(te_camera* camera) {
+#if defined(DEBUG)
+    if (camera->render_width == 0 || camera->render_height == 0) {
+        show_error_and_abort("expected render target width/height to be set at this point");
+    }
+#endif
+
+    const bool was_outdated = camera->is_view_mat_outdated || camera->is_proj_mat_outdated;
+
+    if (camera->is_view_mat_outdated) {
+        vec3 forward;
+        vec3 up;
+        camera_get_forward(camera, forward);
+        camera_get_up(camera, up);
+
+        glm_look_rh(camera->location, forward, up, camera->view_mat);
+
+        camera->is_view_mat_outdated = false;
+    }
+
+    if (camera->is_proj_mat_outdated) {
+        glm_perspective_rh_no(glm_rad(camera->vertical_fov),
+                              (float)camera->render_width / (float)camera->render_height, camera->near_clip,
+                              camera->far_clip, camera->proj_mat);
+
+        camera->is_proj_mat_outdated = false;
+    }
+
+    if (was_outdated) {
+        prv_camera_recalc_frustum(camera);
+    }
+
+    return &camera->frustum;
 }
 
 void

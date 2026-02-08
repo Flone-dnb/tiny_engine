@@ -11,6 +11,7 @@
 #include "render/renderer.h"
 #include "render/shader_manager.h"
 #include "render/texture_manager.h"
+#include "shape/aabb_shape.h"
 #include "world.h"
 
 // Vertex of a model.
@@ -23,6 +24,9 @@ typedef struct te_model_vertex {
 
 // 3D model.
 struct te_model {
+    // AABB in model space.
+    te_aabb_shape aabb_local;
+
     // Path (relative to the `res` directory) to the file that stores mesh geometry.
     // NULL if instead a default model should be used.
     char* path_to_geo;
@@ -130,7 +134,9 @@ model_set_location(te_model* model, vec3 location) {
         // Update render data.
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             world_get_model_renderer(model->world), model->render_data_handle);
+
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
+        data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
     }
 }
 
@@ -142,7 +148,9 @@ model_set_rotation(te_model* model, vec3 rotation) {
         // Update render data.
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             world_get_model_renderer(model->world), model->render_data_handle);
+
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
+        data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
     }
 }
 
@@ -154,7 +162,9 @@ model_set_scale(te_model* model, vec3 scale) {
         // Update render data.
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             world_get_model_renderer(model->world), model->render_data_handle);
+
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
+        data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
     }
 }
 
@@ -310,6 +320,8 @@ model_get_world(te_model* model) {
 void prv_model_generate_cube(te_model_vertex** vertices, unsigned short** indices, unsigned int* vertex_count,
                              unsigned int* index_count);
 
+te_aabb_shape prv_model_calc_aabb(te_model_vertex* vertices, unsigned int vertex_count);
+
 void
 prv_model_on_spawned(te_model* model, te_world* world) {
     model->world = world;
@@ -356,6 +368,9 @@ prv_model_on_spawned(te_model* model, te_world* world) {
         glBindAttribLocation(model->shader_prog_id, 2, "uv");
         glEnableVertexAttribArray(2);
 
+        // Calculate local AABB.
+        model->aabb_local = prv_model_calc_aabb(vertices, vertex_count);
+
         free(vertices);
         free(indices);
     }
@@ -379,6 +394,7 @@ prv_model_on_spawned(te_model* model, te_world* world) {
         glm_vec2_copy((vec2){-1.0f, -1.0f}, data->tex_tiling);
         glm_vec2_copy(model->uv_offset, data->uv_offset);
         data->index_count = (int)index_count;
+        data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
         if (model->tex_path != NULL) {
             te_texture_manager* texture_manager =
                 renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(model->world)));
@@ -435,6 +451,30 @@ prv_model_on_despawned(te_model* model) {
     model->world = NULL;
     model->render_data_handle = 0xffffffff;
     model->shader_prog_id = 0xffffffff;
+}
+
+te_aabb_shape
+prv_model_calc_aabb(te_model_vertex* vertices, unsigned int vertex_count) {
+    vec3 min;
+    vec3 max;
+    glm_vec3_copy((vec3){FLT_MAX, FLT_MAX, FLT_MAX}, min);
+    glm_vec3_copy((vec3){FLT_MIN, FLT_MIN, FLT_MIN}, max);
+
+    for (unsigned int i = 0; i < vertex_count; i++) {
+        glm_vec3_minv(min, vertices[i].pos, min);
+        glm_vec3_maxv(max, vertices[i].pos, max);
+    }
+
+    te_aabb_shape aabb;
+    aabb.center[0] = (min[0] + max[0]) * 0.5f;
+    aabb.center[1] = (min[1] + max[1]) * 0.5f;
+    aabb.center[2] = (min[2] + max[2]) * 0.5f;
+
+    aabb.extents[0] = max[0] - aabb.center[0];
+    aabb.extents[1] = max[1] - aabb.center[1];
+    aabb.extents[2] = max[2] - aabb.center[2];
+
+    return aabb;
 }
 
 void

@@ -28,6 +28,11 @@ set(PROJECT_SOURCES
     include/math_funcs.h
     include/window.h
     include/debug_console.h
+    include/shape/plane_shape.h
+    include/shape/sphere_shape.h
+    include/shape/cone_shape.h
+    include/shape/aabb_shape.h
+    include/shape/frustum_shape.h
     include/input/keyboard_button.h
     include/input/mouse_button.h
     include/input/gamepad_button.h

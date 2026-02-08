@@ -1,6 +1,7 @@
 #include "editor_camera.h"
 
 #include <stdbool.h>
+#include "cglm/vec2.h"
 #include "game/camera.h"
 #include "math_funcs.h"
 #include "misc/globals.h"

@@ -1,10 +1,12 @@
 #include "model_renderer.h"
 
 #include <string.h>
+#include "debug_console.h"
 #include "game/model.h"
 #include "glad/glad.h"
 #include "misc/error.h"
 #include "render/shader_manager.h"
+#include "shape/frustum_shape.h"
 
 #define INVALID_DATA_INDEX 0xffffffff
 
@@ -23,6 +25,7 @@ typedef struct te_shader_group {
     int uniform_color;
     int uniform_tiling;
     int uniform_uv_offset;
+    int uniform_skin_mats; // -1 if not using skinning
 } te_shader_group;
 
 struct te_model_renderer {
@@ -97,6 +100,7 @@ model_renderer_init_uniforms(te_shader_group* group) {
     group->uniform_color = get_uniform_location(group->prog_id, "color");
     group->uniform_tiling = get_uniform_location(group->prog_id, "tiling");
     group->uniform_uv_offset = get_uniform_location(group->prog_id, "uv_offset");
+    group->uniform_skin_mats = -1;
 }
 
 unsigned int
@@ -276,7 +280,12 @@ model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int han
 }
 
 void
-model_renderer_draw(te_model_renderer* renderer, ivec4 gl_viewport, mat4 view_proj_mat) {
+model_renderer_draw(te_model_renderer* renderer, ivec4 gl_viewport, mat4 view_proj_mat,
+                    te_frustum_shape* camera_frustum) {
+#if defined(ENGINE_DEBUG_TOOLS)
+    te_debug_stats* debug_stats = prv_debug_console_get_stats();
+#endif
+
     glViewport(gl_viewport[0], gl_viewport[1], gl_viewport[2], gl_viewport[3]);
 
     unsigned int render_data_idx = 0;
@@ -290,6 +299,12 @@ model_renderer_draw(te_model_renderer* renderer, ivec4 gl_viewport, mat4 view_pr
 
         for (unsigned int unused = 0; unused < group->count; unused++, render_data_idx++) {
             te_model_render_data* data = &renderer->render_data[render_data_idx];
+
+            // Frustum culling (don't cull skeletal meshes due to animations).
+            if (group->uniform_skin_mats == -1
+                && !frustum_shape_is_aabb_inside(camera_frustum, &data->aabb_world)) {
+                continue;
+            }
 
             glUniformMatrix4fv(group->uniform_world_mat, 1, GL_FALSE, data->world_mat[0]);
             glUniformMatrix3fv(group->uniform_normal_mat, 1, GL_FALSE, data->normal_mat[0]);
@@ -305,6 +320,9 @@ model_renderer_draw(te_model_renderer* renderer, ivec4 gl_viewport, mat4 view_pr
             prv_model_set_vertex_attributes();
 
             glDrawElements(GL_TRIANGLES, data->index_count, GL_UNSIGNED_SHORT, NULL);
+#if defined(ENGINE_DEBUG_TOOLS)
+            debug_stats->rendered_model_count += 1;
+#endif
         }
     }
 }
