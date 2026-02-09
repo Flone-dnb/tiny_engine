@@ -46,7 +46,7 @@ struct te_model {
     // Color in RGBA format in range [0.0; 1.0].
     vec4 color;
 
-    vec3 location;
+    vec3 position;
 
     // Rotation in degrees.
     vec3 rotation;
@@ -87,7 +87,7 @@ model_create(const char* path_to_geo) {
 
     glm_vec4_one(model->color);
 
-    glm_vec3_zero(model->location);
+    glm_vec3_zero(model->position);
     glm_vec3_zero(model->rotation);
     glm_vec3_one(model->scale);
 
@@ -107,7 +107,7 @@ model_destroy(te_model* model) {
 void
 prv_model_calc_world_normal_matrices(te_model* model, mat4 world, mat3 normal) {
     mat4 translate_mat;
-    glm_translate_make(translate_mat, model->location);
+    glm_translate_make(translate_mat, model->position);
 
     mat4 rot_mat;
     math_make_rotation_mat(model->rotation, rot_mat);
@@ -127,8 +127,8 @@ prv_model_calc_world_normal_matrices(te_model* model, mat4 world, mat3 normal) {
 }
 
 void
-model_set_location(te_model* model, vec3 location) {
-    glm_vec3_copy(location, model->location);
+model_set_position(te_model* model, vec3 position) {
+    glm_vec3_copy(position, model->position);
 
     if (model->world != NULL) {
         // Update render data.
@@ -278,8 +278,8 @@ model_set_custom_frag_shader(te_model* model, const char* frag_relative_path) {
 }
 
 void
-model_get_location(te_model* model, vec3 out) {
-    glm_vec3_copy(model->location, out);
+model_get_position(te_model* model, vec3 out) {
+    glm_vec3_copy(model->position, out);
 }
 
 void

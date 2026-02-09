@@ -50,8 +50,8 @@ editor_camera_destroy(te_editor_camera* editor_camera) {
 
 void
 editor_camera_spawn(te_editor_camera* editor_camera, struct te_world* world) {
-    // Set initial location/rotation.
-    camera_set_location(editor_camera->camera, (vec3){0.0f, 2.0f, 4.0f});
+    // Set initial position/rotation.
+    camera_set_position(editor_camera->camera, (vec3){0.0f, 2.0f, 4.0f});
     camera_set_rotation(editor_camera->camera, (vec3){0.0f, 0.0f, 0.0f});
 
     world_spawn_camera(world, editor_camera->camera);
@@ -205,12 +205,12 @@ editor_camera_on_game_tick(te_editor_camera* editor_camera, float delta_time_sec
     glm_vec3_scale(right, movement[1], right);
     glm_vec3_scale(up, movement[2], up);
 
-    vec3 location;
-    camera_get_location(editor_camera->camera, location);
+    vec3 position;
+    camera_get_position(editor_camera->camera, position);
 
-    glm_vec3_add(location, forward, location);
-    glm_vec3_add(location, right, location);
-    glm_vec3_add(location, up, location);
+    glm_vec3_add(position, forward, position);
+    glm_vec3_add(position, right, position);
+    glm_vec3_add(position, up, position);
 
-    camera_set_location(editor_camera->camera, location);
+    camera_set_position(editor_camera->camera, position);
 }

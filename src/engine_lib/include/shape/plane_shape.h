@@ -10,10 +10,10 @@ typedef struct te_plane_shape {
 } te_plane_shape;
 
 static inline te_plane_shape
-plane_shape_create(vec3 normal, vec3 location) {
+plane_shape_create(vec3 normal, vec3 position) {
     te_plane_shape plane;
     glm_vec3_copy(normal, plane.normal);
-    plane.distance = glm_vec3_dot(normal, location);
+    plane.distance = glm_vec3_dot(normal, position);
 
     return plane;
 }

@@ -9,8 +9,8 @@ typedef struct te_camera te_camera;
 te_camera* camera_create();
 void camera_destroy(te_camera* camera);
 
-// Sets location of the camera.
-void camera_set_location(te_camera* camera, vec3 location);
+// Sets position of the camera.
+void camera_set_position(te_camera* camera, vec3 position);
 
 // Sets rotation (in degrees) of the camera.
 void camera_set_rotation(te_camera* camera, vec3 rotation);
@@ -28,8 +28,8 @@ void camera_set_far_clip(te_camera* camera, float far_clip);
 // Position of the top-left corner of the viewport rectangle in XY and size in ZW (in range [0; 1]).
 void camera_set_viewport(te_camera* camera, vec4 viewport);
 
-// Returns location of the camera.
-void camera_get_location(te_camera* camera, vec3 out);
+// Returns position of the camera.
+void camera_get_position(te_camera* camera, vec3 out);
 
 // Returns rotation of the camera (in degrees).
 void camera_get_rotation(te_camera* camera, vec3 out);

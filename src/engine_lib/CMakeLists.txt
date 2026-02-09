@@ -25,6 +25,7 @@ set(PROJECT_SOURCES
     src/render/debug_drawer.c
     src/game/camera.c
     src/game/model.c
+    src/widget/widget.c
     include/math_funcs.h
     include/window.h
     include/debug_console.h
@@ -51,6 +52,7 @@ set(PROJECT_SOURCES
     include/world.h
     include/game/camera.h
     include/game/model.h
+    include/widget/widget.h
 )
 
 # Define targets (one without any specific macros and another for compilation with editor).

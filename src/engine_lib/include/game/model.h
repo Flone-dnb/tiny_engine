@@ -13,8 +13,8 @@ struct te_world;
 te_model* model_create(const char* path_to_geo);
 void model_destroy(te_model* model);
 
-// Sets location of the model.
-void model_set_location(te_model* model, vec3 location);
+// Sets position of the model.
+void model_set_position(te_model* model, vec3 position);
 
 // Sets rotation (in degrees) of the model.
 void model_set_rotation(te_model* model, vec3 rotation);
@@ -51,8 +51,8 @@ void model_set_custom_vert_shader(te_model* model, const char* vert_relative_pat
 // to the model's object.
 void model_set_custom_frag_shader(te_model* model, const char* frag_relative_path);
 
-// Returns location of the model.
-void model_get_location(te_model* model, vec3 out);
+// Returns position of the model.
+void model_get_position(te_model* model, vec3 out);
 
 // Returns rotation of the model (in degrees).
 void model_get_rotation(te_model* model, vec3 out);

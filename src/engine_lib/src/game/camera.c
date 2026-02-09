@@ -25,7 +25,7 @@ struct te_camera {
     // Position of the top-left corner of the viewport rectangle in XY and size in ZW (in range [0; 1]).
     vec4 viewport;
 
-    vec3 location;
+    vec3 position;
 
     // Rotation in degrees.
     vec3 rotation;
@@ -64,7 +64,7 @@ camera_create() {
     te_camera* camera = malloc(sizeof(te_camera));
 
     camera->world = NULL;
-    glm_vec3_zero(camera->location);
+    glm_vec3_zero(camera->position);
     glm_vec3_zero(camera->rotation);
     glm_vec3_zero(camera->forward);
     glm_vec3_zero(camera->right);
@@ -91,8 +91,8 @@ camera_destroy(te_camera* camera) {
 }
 
 void
-camera_set_location(te_camera* camera, vec3 location) {
-    glm_vec3_copy(location, camera->location);
+camera_set_position(te_camera* camera, vec3 position) {
+    glm_vec3_copy(position, camera->position);
     camera->is_view_mat_outdated = true;
 }
 
@@ -128,8 +128,8 @@ camera_set_viewport(te_camera* camera, vec4 viewport) {
 }
 
 void
-camera_get_location(te_camera* camera, vec3 out) {
-    glm_vec3_copy(camera->location, out);
+camera_get_position(te_camera* camera, vec3 out) {
+    glm_vec3_copy(camera->position, out);
 }
 
 void
@@ -220,7 +220,7 @@ prv_camera_recalc_frustum(te_camera* camera) {
         show_error_and_abort("expected directions to be up to date to recalculate camera's frustum");
     }
 #endif
-    camera->frustum = frustum_shape_create(camera->location, camera->forward, camera->up, camera->near_clip,
+    camera->frustum = frustum_shape_create(camera->position, camera->forward, camera->up, camera->near_clip,
                                            camera->far_clip, camera->vertical_fov,
                                            (float)camera->render_width / (float)camera->render_height);
 }
@@ -234,7 +234,7 @@ camera_get_view_proj_mat(te_camera* camera) {
             camera_get_forward(camera, forward);
             camera_get_up(camera, up);
 
-            glm_look_rh(camera->location, forward, up, camera->view_mat);
+            glm_look_rh(camera->position, forward, up, camera->view_mat);
             camera->is_view_mat_outdated = false;
         }
 
@@ -277,7 +277,7 @@ camera_get_frustum(te_camera* camera) {
             camera_get_forward(camera, forward);
             camera_get_up(camera, up);
 
-            glm_look_rh(camera->location, forward, up, camera->view_mat);
+            glm_look_rh(camera->position, forward, up, camera->view_mat);
 
             camera->is_view_mat_outdated = false;
         }
