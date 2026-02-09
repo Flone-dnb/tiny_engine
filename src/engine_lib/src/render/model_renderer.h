@@ -58,5 +58,5 @@ void model_renderer_remove_model(te_model_renderer* renderer, unsigned int handl
 te_model_render_data* model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int handle);
 
 // Draws models to the currently set framebuffer.
-void model_renderer_draw(te_model_renderer* renderer, ivec4 gl_viewport, mat4 view_proj_mat,
+void model_renderer_draw(te_model_renderer* renderer, ivec4* gl_viewport, mat4* view_proj_mat,
                          struct te_frustum_shape* camera_frustum);

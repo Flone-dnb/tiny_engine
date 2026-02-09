@@ -19,6 +19,9 @@ struct te_camera {
     // Projection matrix. May be outdated, see @ref is_proj_mat_outdated.
     mat4 proj_mat;
 
+    // @ref view_mat and @ref proj_mat multiplied. May be outdated.
+    mat4 view_proj_mat;
+
     // Position of the top-left corner of the viewport rectangle in XY and size in ZW (in range [0; 1]).
     vec4 viewport;
 
@@ -222,41 +225,36 @@ prv_camera_recalc_frustum(te_camera* camera) {
                                            (float)camera->render_width / (float)camera->render_height);
 }
 
-void
-camera_get_view_mat(te_camera* camera, mat4 out) {
-    if (camera->is_view_mat_outdated) {
-        vec3 forward;
-        vec3 up;
-        camera_get_forward(camera, forward);
-        camera_get_up(camera, up);
+mat4*
+camera_get_view_proj_mat(te_camera* camera) {
+    if (camera->is_view_mat_outdated || camera->is_proj_mat_outdated) {
+        if (camera->is_view_mat_outdated) {
+            vec3 forward;
+            vec3 up;
+            camera_get_forward(camera, forward);
+            camera_get_up(camera, up);
 
-        glm_look_rh(camera->location, forward, up, camera->view_mat);
-        prv_camera_recalc_frustum(camera);
+            glm_look_rh(camera->location, forward, up, camera->view_mat);
+            camera->is_view_mat_outdated = false;
+        }
 
-        camera->is_view_mat_outdated = false;
-    }
-
-    glm_mat4_copy(camera->view_mat, out);
-}
-
-void
-camera_get_proj_mat(te_camera* camera, mat4 out) {
 #if defined(DEBUG)
-    if (camera->render_width == 0 || camera->render_height == 0) {
-        show_error_and_abort("expected render target width/height to be set at this point");
-    }
+        if (camera->render_width == 0 || camera->render_height == 0) {
+            show_error_and_abort("expected render target width/height to be set at this point");
+        }
 #endif
+        if (camera->is_proj_mat_outdated) {
+            glm_perspective_rh_no(glm_rad(camera->vertical_fov),
+                                  (float)camera->render_width / (float)camera->render_height,
+                                  camera->near_clip, camera->far_clip, camera->proj_mat);
+            camera->is_proj_mat_outdated = false;
+        }
 
-    if (camera->is_proj_mat_outdated) {
-        glm_perspective_rh_no(glm_rad(camera->vertical_fov),
-                              (float)camera->render_width / (float)camera->render_height, camera->near_clip,
-                              camera->far_clip, camera->proj_mat);
         prv_camera_recalc_frustum(camera);
-
-        camera->is_proj_mat_outdated = false;
+        glm_mat4_mul(camera->proj_mat, camera->view_mat, camera->view_proj_mat);
     }
 
-    glm_mat4_copy(camera->proj_mat, out);
+    return &camera->view_proj_mat;
 }
 
 struct te_world*
@@ -272,28 +270,26 @@ camera_get_frustum(te_camera* camera) {
     }
 #endif
 
-    const bool was_outdated = camera->is_view_mat_outdated || camera->is_proj_mat_outdated;
+    if (camera->is_view_mat_outdated || camera->is_proj_mat_outdated) {
+        if (camera->is_view_mat_outdated) {
+            vec3 forward;
+            vec3 up;
+            camera_get_forward(camera, forward);
+            camera_get_up(camera, up);
 
-    if (camera->is_view_mat_outdated) {
-        vec3 forward;
-        vec3 up;
-        camera_get_forward(camera, forward);
-        camera_get_up(camera, up);
+            glm_look_rh(camera->location, forward, up, camera->view_mat);
 
-        glm_look_rh(camera->location, forward, up, camera->view_mat);
+            camera->is_view_mat_outdated = false;
+        }
 
-        camera->is_view_mat_outdated = false;
-    }
+        if (camera->is_proj_mat_outdated) {
+            glm_perspective_rh_no(glm_rad(camera->vertical_fov),
+                                  (float)camera->render_width / (float)camera->render_height,
+                                  camera->near_clip, camera->far_clip, camera->proj_mat);
 
-    if (camera->is_proj_mat_outdated) {
-        glm_perspective_rh_no(glm_rad(camera->vertical_fov),
-                              (float)camera->render_width / (float)camera->render_height, camera->near_clip,
-                              camera->far_clip, camera->proj_mat);
+            camera->is_proj_mat_outdated = false;
+        }
 
-        camera->is_proj_mat_outdated = false;
-    }
-
-    if (was_outdated) {
         prv_camera_recalc_frustum(camera);
     }
 

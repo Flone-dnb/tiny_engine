@@ -56,11 +56,9 @@ float camera_get_far_clip(te_camera* camera);
 // Position of the top-left corner of the viewport rectangle in XY and size in ZW (in range [0; 1]).
 void camera_get_viewport(te_camera* camera, vec4 out);
 
-// Returns camara's view matrix.
-void camera_get_view_mat(te_camera* camera, mat4 out);
-
-// Returns camera's projection matrix.
-void camera_get_proj_mat(te_camera* camera, mat4 out);
+// Returns camera's view projection matrix.
+// Do not free/destroy returned pointer, valid while the camera exists.
+mat4* camera_get_view_proj_mat(te_camera* camera);
 
 // Returns NULL if the camera is not spawned in a world.
 struct te_world* camera_get_world(te_camera* camera);

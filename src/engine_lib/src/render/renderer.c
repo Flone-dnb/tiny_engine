@@ -36,20 +36,6 @@ typedef struct te_renderer_frame_stats {
     unsigned int fps;
 } te_renderer_frame_stats;
 
-// Groups info used during the rendering of a world.
-typedef struct te_world_render_info {
-    // Do not free/destroy this pointer.
-    te_world* world;
-
-    struct te_frustum_shape* camera_frustum;
-
-    // View projection matrix of the camera.
-    mat4 view_proj_mat;
-
-    // OpenGL viewport in pixels (left-bottom origin).
-    ivec4 gl_viewport;
-} te_world_render_info;
-
 struct te_renderer {
     // Always valid pointer, window that owns the renderer. This pointer should not be freed.
     struct te_window* window;
@@ -61,14 +47,7 @@ struct te_renderer {
     te_texture_manager* texture_manager;
     te_font_manager* font_manager;
 
-    // Preallocated array to keep active cameras while submitting a new frame.
-    // Size of this array is @ref worlds_render_info_array_size.
-    te_world_render_info* worlds_render_info;
-
     te_renderer_frame_stats frame_stats;
-
-    // Size of the array @ref worlds_render_info.
-    unsigned int worlds_render_info_array_size;
 
     unsigned int fps_limit;
 };
@@ -112,10 +91,6 @@ renderer_create(struct te_window* window) {
     renderer->shader_manager = prv_shader_manager_create();
     renderer->texture_manager = prv_texture_manager_create();
     renderer->font_manager = prv_font_manager_create(renderer);
-
-    renderer->worlds_render_info_array_size = 2;
-    renderer->worlds_render_info =
-        malloc(sizeof(te_world_render_info) * renderer->worlds_render_info_array_size);
 
     renderer->frame_stats.frame_count = 0;
     renderer->frame_stats.time_sec_since_update = 0.0f;
@@ -191,7 +166,6 @@ renderer_destroy(te_renderer* renderer) {
     prv_texture_manager_destroy(renderer->texture_manager);
     prv_shader_manager_destroy(renderer->shader_manager);
     prv_font_manager_destroy(renderer->font_manager);
-    free(renderer->worlds_render_info);
 
     if (!SDL_GL_DestroyContext(renderer->gl_context)) {
         show_error_and_abort(SDL_GetError());
@@ -295,26 +269,22 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     unsigned int window_height = 0;
     window_get_size(renderer->window, &window_width, &window_height);
 
+    // Rendering to window's framebuffer.
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     // Get worlds.
     te_game_manager* game_manager = window_get_game_manager(renderer->window);
     unsigned int world_count = 0;
     te_world** worlds = game_manager_get_worlds(game_manager, &world_count);
 
-    if (world_count > renderer->worlds_render_info_array_size) {
-        // Expand the array.
-        te_world_render_info* new_worlds = malloc(sizeof(te_world_render_info) * world_count);
-        free(renderer->worlds_render_info);
-        renderer->worlds_render_info = new_worlds;
-        renderer->worlds_render_info_array_size = world_count;
-    }
-
-    // Get active cameras.
-    unsigned int active_world_count = 0;
     for (unsigned int i = 0; i < world_count; i++) {
         te_camera* camera = world_get_active_camera(worlds[i]);
         if (camera == NULL) {
             continue;
         }
+
+        te_model_renderer* model_renderer = world_get_model_renderer(worlds[i]);
 
         // Set aspect ratio to the camera.
         vec4 viewport;
@@ -323,39 +293,16 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         const unsigned int viewport_height = (unsigned int)((float)window_height * viewport[3]);
         prv_camera_set_render_target_size(camera, viewport_width, viewport_height);
 
-        // Save info.
-        te_world_render_info* info = &renderer->worlds_render_info[active_world_count];
+        mat4* view_proj_mat = camera_get_view_proj_mat(camera);
 
-        info->world = worlds[i];
+        ivec4 gl_viewport;
+        gl_viewport[0] = (int)((float)window_width * viewport[0]);
+        gl_viewport[1] = (int)((float)window_height * (1.0f - fmin(1.0f, viewport[1] + viewport[3])));
+        gl_viewport[2] = (int)viewport_width;
+        gl_viewport[3] = (int)viewport_height;
 
-        mat4 view_mat;
-        mat4 proj_mat;
-        camera_get_view_mat(camera, view_mat);
-        camera_get_proj_mat(camera, proj_mat);
-        glm_mat4_mul(proj_mat, view_mat, info->view_proj_mat);
-
-        info->gl_viewport[0] = (int)((float)window_width * viewport[0]);
-        info->gl_viewport[1] = (int)((float)window_height * (1.0f - fmin(1.0f, viewport[1] + viewport[3])));
-        info->gl_viewport[2] = (int)viewport_width;
-        info->gl_viewport[3] = (int)viewport_height;
-
-        info->camera_frustum = camera_get_frustum(camera);
-
-        active_world_count += 1;
-    }
-
-    // Rendering to window's framebuffer.
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    if (active_world_count > 0) {
-        // Draw models.
-        for (unsigned int world_idx = 0; world_idx < active_world_count; world_idx++) {
-            te_world_render_info* info = &renderer->worlds_render_info[world_idx];
-            te_model_renderer* model_renderer = world_get_model_renderer(info->world);
-
-            model_renderer_draw(model_renderer, info->gl_viewport, info->view_proj_mat, info->camera_frustum);
-        }
+        struct te_frustum_shape* camera_frustum = camera_get_frustum(camera);
+        model_renderer_draw(model_renderer, &gl_viewport, view_proj_mat, camera_frustum);
     }
 
 #if defined(ENGINE_DEBUG_TOOLS)

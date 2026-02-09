@@ -280,13 +280,13 @@ model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int han
 }
 
 void
-model_renderer_draw(te_model_renderer* renderer, ivec4 gl_viewport, mat4 view_proj_mat,
+model_renderer_draw(te_model_renderer* renderer, ivec4* gl_viewport, mat4* view_proj_mat,
                     te_frustum_shape* camera_frustum) {
 #if defined(ENGINE_DEBUG_TOOLS)
     te_debug_stats* debug_stats = prv_debug_console_get_stats();
 #endif
 
-    glViewport(gl_viewport[0], gl_viewport[1], gl_viewport[2], gl_viewport[3]);
+    glViewport((*gl_viewport)[0], (*gl_viewport)[1], (*gl_viewport)[2], (*gl_viewport)[3]);
 
     unsigned int render_data_idx = 0;
 
@@ -295,7 +295,7 @@ model_renderer_draw(te_model_renderer* renderer, ivec4 gl_viewport, mat4 view_pr
 
         glUseProgram(group->prog_id);
 
-        glUniformMatrix4fv(group->uniform_view_proj_mat, 1, GL_FALSE, view_proj_mat[0]);
+        glUniformMatrix4fv(group->uniform_view_proj_mat, 1, GL_FALSE, (*view_proj_mat)[0]);
 
         for (unsigned int unused = 0; unused < group->count; unused++, render_data_idx++) {
             te_model_render_data* data = &renderer->render_data[render_data_idx];

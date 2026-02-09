@@ -284,13 +284,12 @@ prv_debug_console_draw(float delta_time_sec) {
         prv_debug_console_draw_stat(screen_pos, "FPS: %u (limit: %u)", stats->fps, fps_limit);
 
         // RAM.
+        const char* ram_fmt = "RAM used (MB): %u (%u/%u)";
 #if defined(ENGINE_ASAN_ENABLED)
-        prv_debug_console_draw_stat(screen_pos, "RAM used (MB): %zu (%zu/%zu) (ASan enabled)",
-                                    stats->process_mem, stats->total_used_mem, stats->total_mem);
-#else
-        prv_debug_console_draw_stat(screen_pos, "RAM used (MB): %zu (%zu/%zu)", stats->process_mem,
-                                    stats->total_used_mem, stats->total_mem);
+        ram_fmt = "RAM used (MB): %u (%u/%u) (ASan enabled)";
 #endif
+        prv_debug_console_draw_stat(screen_pos, ram_fmt, stats->process_mem, stats->total_used_mem,
+                                    stats->total_mem);
 
         // Rendered model count.
         prv_debug_console_draw_stat(screen_pos, "rendered model count: %u", stats->rendered_model_count);
