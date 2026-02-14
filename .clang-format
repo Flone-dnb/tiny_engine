@@ -1,11 +1,6 @@
-# Language part removed. With clang-format >=20.1, the C and Cpp are separately handled,
-# so either there is no language at all, or we need to create 2 formats for C and Cpp, separately
-
 ---
-# Language: Cpp
-# BasedOnStyle:  LLVM
 AccessModifierOffset: -2
-AlignAfterOpenBracket: Align
+AlignAfterOpenBracket: AlwaysBreak
 AlignArrayOfStructures: None
 AlignConsecutiveMacros:
   Enabled: true
@@ -20,7 +15,7 @@ AlignConsecutiveDeclarations: None
 AlignEscapedNewlines: Right
 AlignOperands: Align
 SortIncludes: true
-InsertBraces: true # Control statements must have curly brackets
+InsertBraces: true
 AlignTrailingComments: true
 AllowAllArgumentsOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: true
@@ -68,7 +63,7 @@ BreakConstructorInitializersBeforeComma: false
 BreakConstructorInitializers: BeforeColon
 BreakAfterJavaFieldAnnotations: false
 BreakStringLiterals: true
-ColumnLimit: 110
+ColumnLimit: 120
 CommentPragmas: "^ IWYU pragma:"
 QualifierAlignment: Leave
 CompactNamespaces: false
