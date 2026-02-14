@@ -4,6 +4,7 @@ typedef struct te_world te_world;
 
 struct te_game_manager;
 struct te_model_renderer;
+struct te_widget_renderer;
 struct te_camera;
 struct te_model;
 
@@ -35,9 +36,11 @@ void world_set_active_camera(te_world* world, struct te_camera* camera);
 // Do not free/destroy returned pointer, valid until the camera is not destroyed.
 struct te_camera* world_get_active_camera(te_world* world);
 
-// Returns model renderer.
 // Do not free/destroy returned pointer, valid while the world exists.
 struct te_model_renderer* world_get_model_renderer(te_world* world);
+
+// Do not free/destroy returned pointer, valid while the world exists.
+struct te_widget_renderer* world_get_widget_renderer(te_world* world);
 
 // Returns game manager.
 // Always valid pointer. Do not free/destroy returned pointer.
@@ -50,3 +53,6 @@ struct te_game_manager* world_get_game_manager(te_world* world);
 // Creates a new world. Game manager is expected to call this function because it manages game worlds.
 te_world* prv_world_create(struct te_game_manager* game_manager, const char* name);
 void prv_world_destroy(te_world* world);
+
+// Called to possibly notify widgets.
+void prv_world_on_window_size_changed(te_world* world);

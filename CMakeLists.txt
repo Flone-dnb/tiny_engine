@@ -8,11 +8,6 @@ option(ENGINE_FORCE_ENABLE_DEBUG_TOOLS "Can be useful in Release builds to measu
 #                              PREPARE FOR ADDING ENGINE TARGETS
 # -------------------------------------------------------------------------------------------------
 
-# Make sure we are running a 64-bit system.
-if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-    message(FATAL_ERROR "32 bit systems are not supported")
-endif()
-
 # Prepare variable for build type.
 if(CMAKE_BUILD_TYPE MATCHES "^[Rr]elease")
     set(IS_RELEASE_BUILD ON CACHE BOOL "" FORCE)

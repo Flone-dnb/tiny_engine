@@ -13,6 +13,7 @@ set(PROJECT_SOURCES
     src/misc/globals.c
     src/misc/error.c
     src/misc/memory_usage.c
+    src/misc/char16_funcs.c
     src/game_manager.c
     src/world.c
     src/debug_console.c
@@ -23,9 +24,12 @@ set(PROJECT_SOURCES
     src/render/texture_manager.c
     src/render/font_manager.c
     src/render/debug_drawer.c
+    src/render/widget_renderer.c
+    src/render/widget_renderer.h
     src/game/camera.c
     src/game/model.c
     src/widget/widget.c
+    src/widget/text_widget.c
     include/math_funcs.h
     include/window.h
     include/debug_console.h
@@ -43,6 +47,7 @@ set(PROJECT_SOURCES
     include/misc/globals.h
     include/misc/error.h
     include/misc/memory_usage.h
+    include/misc/char16_funcs.h
     include/game_manager.h
     include/render/renderer.h
     include/render/shader_manager.h
@@ -53,6 +58,7 @@ set(PROJECT_SOURCES
     include/game/camera.h
     include/game/model.h
     include/widget/widget.h
+    include/widget/text_widget.h
 )
 
 # Define targets (one without any specific macros and another for compilation with editor).

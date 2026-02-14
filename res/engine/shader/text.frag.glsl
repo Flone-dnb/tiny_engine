@@ -5,4 +5,4 @@ uniform vec4 text_color;
 
 void main() {
     gl_FragColor = vec4(text_color.r, text_color.g, text_color.b, texture2D(glyph_bitmap, fragment_uv).r * text_color.a);
-}  
+}

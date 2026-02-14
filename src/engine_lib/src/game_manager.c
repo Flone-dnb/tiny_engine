@@ -128,8 +128,9 @@ game_manager_destroy_world(te_game_manager* game_manager, te_world* world) {
 
         te_world** new_worlds = malloc(sizeof(te_world*) * (game_manager->world_count - 1));
         memcpy(new_worlds, game_manager->worlds, sizeof(te_world*) * index);
-        memcpy(new_worlds + index, game_manager->worlds + (index + 1),
-               sizeof(te_world*) * (game_manager->world_count - index - 1));
+        memcpy(
+            new_worlds + index, game_manager->worlds + (index + 1),
+            sizeof(te_world*) * (game_manager->world_count - index - 1));
 
         free(game_manager->worlds);
         game_manager->worlds = new_worlds;
@@ -174,4 +175,8 @@ prv_game_manager_draw_frame(te_game_manager* game_manager, float delta_time_sec)
 void
 prv_game_manager_on_window_size_changed(te_game_manager* game_manager) {
     prv_renderer_on_window_size_changed(game_manager->renderer);
+
+    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+        prv_world_on_window_size_changed(game_manager->worlds[i]);
+    }
 }

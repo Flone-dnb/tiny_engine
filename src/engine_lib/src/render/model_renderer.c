@@ -120,8 +120,9 @@ model_renderer_add_model(te_model_renderer* renderer, unsigned int prog_id) {
         const unsigned int expand_size = 128;
         unsigned int* new_handles =
             malloc(sizeof(unsigned int) * (renderer->handle_to_data_array_size + expand_size));
-        memcpy(new_handles, renderer->handle_to_data,
-               sizeof(unsigned int) * renderer->handle_to_data_array_size);
+        memcpy(
+            new_handles, renderer->handle_to_data,
+            sizeof(unsigned int) * renderer->handle_to_data_array_size);
 
         free(renderer->handle_to_data);
         renderer->handle_to_data = new_handles;
@@ -145,8 +146,8 @@ model_renderer_add_model(te_model_renderer* renderer, unsigned int prog_id) {
         const unsigned int expand_size = 128;
         te_model_render_data* new_data =
             malloc(sizeof(te_model_render_data) * (renderer->render_data_array_size + expand_size));
-        memcpy(new_data, renderer->render_data,
-               sizeof(te_model_render_data) * renderer->render_data_array_size);
+        memcpy(
+            new_data, renderer->render_data, sizeof(te_model_render_data) * renderer->render_data_array_size);
 
         free(renderer->render_data);
         renderer->render_data = new_data;
@@ -199,8 +200,9 @@ model_renderer_add_model(te_model_renderer* renderer, unsigned int prog_id) {
         }
 
         // We already made sure that the render data array will be able to fit a new item (see above).
-        memmove(renderer->render_data + (data_index + 1), renderer->render_data + data_index,
-                sizeof(te_model_render_data) * copy_count);
+        memmove(
+            renderer->render_data + (data_index + 1), renderer->render_data + data_index,
+            sizeof(te_model_render_data) * copy_count);
 
         // Update group.
         renderer->shader_groups[shader_group_index].count += 1;
@@ -251,8 +253,9 @@ model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
             te_shader_group* new_groups =
                 malloc(sizeof(te_shader_group) * (renderer->shader_group_count - 1));
             memcpy(new_groups, renderer->shader_groups, sizeof(te_shader_group) * group_index);
-            memcpy(new_groups + group_index, renderer->shader_groups + (group_index + 1),
-                   sizeof(te_shader_group) * (renderer->shader_group_count - group_index - 1));
+            memcpy(
+                new_groups + group_index, renderer->shader_groups + (group_index + 1),
+                sizeof(te_shader_group) * (renderer->shader_group_count - group_index - 1));
 
             free(renderer->shader_groups);
             renderer->shader_groups = new_groups;
@@ -263,8 +266,9 @@ model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
     }
 
     // Update render data.
-    memmove(renderer->render_data + data_index, renderer->render_data + (data_index + 1),
-            sizeof(te_model_render_data) * (render_data_count_before - data_index - 1));
+    memmove(
+        renderer->render_data + data_index, renderer->render_data + (data_index + 1),
+        sizeof(te_model_render_data) * (render_data_count_before - data_index - 1));
 
     // Mark handle as unused.
     renderer->handle_to_data[handle] = INVALID_DATA_INDEX;
@@ -280,8 +284,8 @@ model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int han
 }
 
 void
-model_renderer_draw(te_model_renderer* renderer, ivec4* gl_viewport, mat4* view_proj_mat,
-                    te_frustum_shape* camera_frustum) {
+model_renderer_draw(
+    te_model_renderer* renderer, ivec4* gl_viewport, mat4* view_proj_mat, te_frustum_shape* camera_frustum) {
 #if defined(ENGINE_DEBUG_TOOLS)
     te_debug_stats* debug_stats = prv_debug_console_get_stats();
 #endif

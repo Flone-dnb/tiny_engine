@@ -5,7 +5,7 @@ typedef struct te_font_manager te_font_manager;
 
 // Font's glyph info.
 typedef struct te_font_glyph {
-    // Width and height in pixels.
+    // Width and height in pixels. May be 0 for some glyphs (for example for space " " character).
     unsigned int width;
     unsigned int height;
 
@@ -37,8 +37,8 @@ te_font_glyph font_manager_get_glyph(te_font_manager* manager, unsigned long cha
 
 // Makes sure the specified characters are in the cache (loads if needed).
 // The specified character code range is inclusive.
-void font_manager_cache_glyphs(te_font_manager* manager, unsigned long char_code_first,
-                               unsigned long char_code_last);
+void font_manager_cache_glyphs(
+    te_font_manager* manager, unsigned long char_code_first, unsigned long char_code_last);
 
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API

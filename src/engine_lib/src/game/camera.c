@@ -5,6 +5,7 @@
 #include "misc/error.h"
 #include "misc/globals.h"
 #include "shape/frustum_shape.h"
+#include "widget/widget.h"
 
 struct te_camera {
     // May be outdated, see @ref is_view_mat_outdated and @ref is_proj_mat_outdated.
@@ -12,6 +13,9 @@ struct te_camera {
 
     // Not NULL if spawned. Do not free/destroy this pointer.
     struct te_world* world;
+
+    // If not NULL must be destroyed on camera destruction.
+    struct te_widget* widget;
 
     // View matrix. May be outdated, see @ref is_view_mat_outdated.
     mat4 view_mat;
@@ -57,6 +61,9 @@ struct te_camera {
 
     // `true` if @ref proj_mat contains outdated value and needs to be recalculated.
     bool is_proj_mat_outdated;
+
+    // `true` if this camera is currently the active camera in @ref world.
+    bool is_active;
 };
 
 te_camera*
@@ -64,6 +71,7 @@ camera_create() {
     te_camera* camera = malloc(sizeof(te_camera));
 
     camera->world = NULL;
+    camera->widget = NULL;
     glm_vec3_zero(camera->position);
     glm_vec3_zero(camera->rotation);
     glm_vec3_zero(camera->forward);
@@ -81,12 +89,17 @@ camera_create() {
     camera->is_view_mat_outdated = true;
     camera->is_proj_mat_outdated = true;
     camera->is_directions_outdated = true;
+    camera->is_active = false;
 
     return camera;
 }
 
 void
 camera_destroy(te_camera* camera) {
+    if (camera->widget != NULL) {
+        widget_destroy(camera->widget);
+    }
+
     free(camera);
 }
 
@@ -220,9 +233,9 @@ prv_camera_recalc_frustum(te_camera* camera) {
         show_error_and_abort("expected directions to be up to date to recalculate camera's frustum");
     }
 #endif
-    camera->frustum = frustum_shape_create(camera->position, camera->forward, camera->up, camera->near_clip,
-                                           camera->far_clip, camera->vertical_fov,
-                                           (float)camera->render_width / (float)camera->render_height);
+    camera->frustum = frustum_shape_create(
+        camera->position, camera->forward, camera->up, camera->near_clip, camera->far_clip, camera->vertical_fov,
+        (float)camera->render_width / (float)camera->render_height);
 }
 
 mat4*
@@ -244,9 +257,9 @@ camera_get_view_proj_mat(te_camera* camera) {
         }
 #endif
         if (camera->is_proj_mat_outdated) {
-            glm_perspective_rh_no(glm_rad(camera->vertical_fov),
-                                  (float)camera->render_width / (float)camera->render_height,
-                                  camera->near_clip, camera->far_clip, camera->proj_mat);
+            glm_perspective_rh_no(
+                glm_rad(camera->vertical_fov), (float)camera->render_width / (float)camera->render_height,
+                camera->near_clip, camera->far_clip, camera->proj_mat);
             camera->is_proj_mat_outdated = false;
         }
 
@@ -283,9 +296,9 @@ camera_get_frustum(te_camera* camera) {
         }
 
         if (camera->is_proj_mat_outdated) {
-            glm_perspective_rh_no(glm_rad(camera->vertical_fov),
-                                  (float)camera->render_width / (float)camera->render_height,
-                                  camera->near_clip, camera->far_clip, camera->proj_mat);
+            glm_perspective_rh_no(
+                glm_rad(camera->vertical_fov), (float)camera->render_width / (float)camera->render_height,
+                camera->near_clip, camera->far_clip, camera->proj_mat);
 
             camera->is_proj_mat_outdated = false;
         }
@@ -310,4 +323,49 @@ prv_camera_set_render_target_size(te_camera* camera, unsigned int width, unsigne
 void
 prv_camera_set_world(te_camera* camera, struct te_world* world) {
     camera->world = world;
+}
+
+void
+prv_camera_on_activated(te_camera* camera) {
+    if (camera->widget != NULL) {
+        prv_widget_on_camera_activated(camera->widget, camera);
+    }
+
+    camera->is_active = true;
+}
+
+void
+prv_camera_on_deactivated(te_camera* camera) {
+    if (camera->widget != NULL) {
+        prv_widget_on_camera_deactivated(camera->widget);
+    }
+
+    camera->is_active = false;
+}
+
+void
+prv_camera_on_window_size_changed(te_camera* camera) {
+    if (camera->widget == NULL) {
+        return;
+    }
+
+    prv_widget_on_window_size_changed(camera->widget);
+}
+
+void
+camera_set_widget(te_camera* camera, te_widget* widget) {
+    if (camera->widget != NULL) {
+        widget_destroy(camera->widget);
+    }
+
+    camera->widget = widget;
+
+    if (camera->is_active) {
+        prv_widget_on_camera_activated(camera->widget, camera);
+    }
+}
+
+te_widget*
+camera_get_widget(te_camera* camera) {
+    return camera->widget;
 }

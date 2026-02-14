@@ -191,8 +191,9 @@ debug_drawer_draw_text_at_pos(const char* text, float time_sec, vec3 color, vec2
             dst->tex_id = 0;
         } else {
             dst->tex_id = src.tex_id;
-            glm_vec2_copy((vec2){(float)src.bearing_x * font_scale, -(float)src.bearing_y * font_scale},
-                          dst->pos_offset);
+            glm_vec2_copy(
+                (vec2){(float)src.bearing_x * font_scale, -(float)src.bearing_y * font_scale},
+                dst->pos_offset);
             glm_vec2_copy((vec2){(float)src.width * font_scale, (float)src.height * font_scale}, dst->size);
         }
     }
@@ -298,8 +299,9 @@ prv_debug_drawer_draw(struct te_renderer* renderer, float delta_time_sec) {
                     te_debug_drawer_text* new_texts =
                         malloc(sizeof(te_debug_drawer_text) * (drawer.text_count - 1));
                     memcpy(new_texts, drawer.texts, sizeof(te_debug_drawer_text) * i);
-                    memcpy(new_texts + i, drawer.texts + (i + 1),
-                           sizeof(te_debug_drawer_text) * (drawer.text_count - i - 1));
+                    memcpy(
+                        new_texts + i, drawer.texts + (i + 1),
+                        sizeof(te_debug_drawer_text) * (drawer.text_count - i - 1));
                     free(drawer.texts);
                     drawer.texts = new_texts;
                 }

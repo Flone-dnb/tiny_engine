@@ -1,0 +1,472 @@
+#include "widget/text_widget.h"
+
+#include <string.h>
+#include "game/camera.h"
+#include "game_manager.h"
+#include "misc/char16_funcs.h"
+#include "misc/error.h"
+#include "render/font_manager.h"
+#include "render/renderer.h"
+#include "render/widget_renderer.h"
+#include "widget/widget.h"
+#include "window.h"
+#include "world.h"
+
+#define INVALID_RENDER_DATA_HANDLE 0xffffffff
+
+struct te_text_widget {
+    te_widget* widget;
+
+    // Always non-NULL.
+    char16_t* text;
+
+    // RGBA color of the text.
+    vec4 color;
+
+    // strlen of @ref text.
+    unsigned int text_len;
+
+    // Height of the text in range [0.0; 1.0] relative to window height.
+    float text_height;
+
+    // Vertical space between lines of text, in range [0.0f; +inf] relative to the height of the text.
+    float line_spacing;
+
+    // Stores invalid value if not being rendered.
+    unsigned int render_data_handle;
+
+    // `true` if entered the "destroy" function.
+    bool is_text_widget_destroy;
+
+    bool is_multiline;
+};
+
+// Widget callbacks:
+static void prv_text_widget_on_pos_changed(void* this);
+static void prv_text_widget_on_size_changed(void* this);
+static void prv_text_widget_on_parent_changed(void* this);
+static void prv_text_widget_on_visibility_changed(void* this, bool visible);
+static void prv_text_widget_on_after_activated(void* this);
+static void prv_text_widget_on_before_deactivated(void* this);
+static void prv_text_widget_on_before_base_destroyed(void* this);
+static void prv_text_widget_on_window_size_changed(void* this);
+
+static void prv_text_widget_register_for_rendering(te_text_widget* text_widget);
+static void prv_text_widget_unregister_from_rendering(te_text_widget* text_widget);
+static void prv_text_widget_update_all_render_data(te_text_widget* text_widget);
+
+te_text_widget*
+text_widget_create(void) {
+    te_text_widget* text_widget = malloc(sizeof(te_text_widget));
+
+    text_widget->text_height = 0.03f;
+    text_widget->line_spacing = 0.1f;
+    text_widget->is_multiline = false;
+    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, text_widget->color);
+
+    text_widget->widget = widget_create(
+        text_widget, prv_text_widget_on_pos_changed, prv_text_widget_on_size_changed, prv_text_widget_on_parent_changed,
+        prv_text_widget_on_before_base_destroyed, prv_text_widget_on_visibility_changed,
+        prv_text_widget_on_after_activated, prv_text_widget_on_before_deactivated,
+        prv_text_widget_on_window_size_changed);
+    text_widget->is_text_widget_destroy = false;
+    text_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
+
+    // Setup some placeholder text.
+    text_widget->text = char16_from_char("hello", 5, &text_widget->text_len);
+    text_widget->text[text_widget->text_len] = 0;
+
+    return text_widget;
+}
+
+void
+text_widget_destroy(te_text_widget* text_widget) {
+    text_widget->is_text_widget_destroy = true;
+
+    if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        prv_text_widget_unregister_from_rendering(text_widget);
+    }
+
+    if (text_widget->widget != NULL) {
+        widget_destroy(text_widget->widget);
+    }
+
+    free(text_widget->text);
+    free(text_widget);
+}
+
+te_widget*
+text_widget_get_widget(te_text_widget* text_widget) {
+    return text_widget->widget;
+}
+
+void
+text_widget_set_text_own(te_text_widget* text_widget, char16_t* text, unsigned int strlen) {
+    if (text == NULL) {
+        show_error_and_abort("text pointer must not be NULL");
+    }
+
+    free(text_widget->text);
+
+    text_widget->text = text;
+    text_widget->text_len = strlen;
+
+    if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        prv_text_widget_update_all_render_data(text_widget);
+    }
+}
+
+void
+text_widget_set_text(te_text_widget* text_widget, const char16_t* text) {
+    if (text == NULL) {
+        show_error_and_abort("text pointer must not be NULL");
+    }
+
+    free(text_widget->text);
+
+    const unsigned int text_len = char16_strlen(text);
+    text_widget->text = malloc(sizeof(char16_t) * (text_len + 1));
+    memcpy(text_widget->text, text, sizeof(char16_t) * text_len);
+    text_widget->text[text_len] = 0;
+#if defined(DEBUG)
+    if (text_len > 0xffffffff) {
+        show_error_and_abort("text too long");
+    }
+#endif
+    text_widget->text_len = (unsigned int)text_len;
+
+    if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        prv_text_widget_update_all_render_data(text_widget);
+    }
+}
+
+char16_t*
+text_widget_get_text(te_text_widget* text_widget) {
+    return text_widget->text;
+}
+
+void
+text_widget_set_color(te_text_widget* text_widget, vec4 color) {
+    glm_vec4_copy(color, text_widget->color);
+
+    if (text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
+        return;
+    }
+
+    // Update render data.
+    te_camera* active_camera = widget_get_active_camera(text_widget->widget);
+    if (active_camera == NULL) {
+        show_error_and_abort("expected the widget to be used on an active camera");
+    }
+    te_widget_renderer* widget_renderer = world_get_widget_renderer(camera_get_world(active_camera));
+
+    te_text_widget_render_data* data =
+        widget_renderer_get_text_widget_render_data_tmp(widget_renderer, text_widget->render_data_handle);
+
+    glm_vec4_copy(text_widget->color, data->color);
+}
+
+void
+text_widget_get_color(te_text_widget* text_widget, vec4 out) {
+    glm_vec4_copy(text_widget->color, out);
+}
+
+void
+text_widget_set_text_height(te_text_widget* text_widget, float height) {
+    text_widget->text_height = glm_clamp(height, 0.001f, 1.0f);
+
+    if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        prv_text_widget_update_all_render_data(text_widget);
+    }
+}
+
+void
+text_widget_set_is_multiline(te_text_widget* text_widget, bool is_multiline) {
+    if (text_widget->is_multiline == is_multiline) {
+        return;
+    }
+
+    text_widget->is_multiline = is_multiline;
+
+    if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        prv_text_widget_update_all_render_data(text_widget);
+    }
+}
+
+bool
+text_widget_is_multiline(te_text_widget* text_widget) {
+    return text_widget->is_multiline;
+}
+
+float
+text_widget_get_text_height(te_text_widget* text_widget) {
+    return text_widget->text_height;
+}
+
+void
+text_widget_set_line_spacing(te_text_widget* text_widget, float spacing) {
+    text_widget->line_spacing = spacing;
+
+    if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        prv_text_widget_update_all_render_data(text_widget);
+    }
+}
+
+float
+text_widget_get_line_spacing(te_text_widget* text_widget) {
+    return text_widget->line_spacing;
+}
+
+static void
+prv_text_widget_register_for_rendering(te_text_widget* text_widget) {
+#if defined(DEBUG)
+    if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        show_error_and_abort("expected the render data handle to be invalid");
+    }
+#endif
+
+    te_camera* active_camera = widget_get_active_camera(text_widget->widget);
+    if (active_camera == NULL) {
+        show_error_and_abort("expected the widget to be used on an active camera");
+    }
+    te_widget_renderer* widget_renderer = world_get_widget_renderer(camera_get_world(active_camera));
+
+    text_widget->render_data_handle = widget_renderer_add_text_widget(widget_renderer);
+    prv_text_widget_update_all_render_data(text_widget);
+}
+
+static void
+prv_text_widget_unregister_from_rendering(te_text_widget* text_widget) {
+#if defined(DEBUG)
+    if (text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
+        show_error_and_abort("expected the render data handle to be valid");
+    }
+#endif
+
+    te_camera* active_camera = widget_get_active_camera(text_widget->widget);
+    if (active_camera == NULL) {
+        show_error_and_abort("expected the widget to be used on an active camera");
+    }
+    te_widget_renderer* widget_renderer = world_get_widget_renderer(camera_get_world(active_camera));
+
+    widget_renderer_remove_text_widget(widget_renderer, text_widget->render_data_handle);
+    text_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
+}
+
+static void
+prv_text_widget_on_pos_changed(void* this) {
+    te_text_widget* text_widget = this;
+
+    if (text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
+        return;
+    }
+
+    // Update render data.
+    te_camera* active_camera = widget_get_active_camera(text_widget->widget);
+    if (active_camera == NULL) {
+        show_error_and_abort("expected the widget to be used on an active camera");
+    }
+    te_world* world = camera_get_world(active_camera);
+    te_widget_renderer* widget_renderer = world_get_widget_renderer(world);
+
+    unsigned int window_width;
+    unsigned int window_height;
+    window_get_size(game_manager_get_window(world_get_game_manager(world)), &window_width, &window_height);
+
+    te_text_widget_render_data* data =
+        widget_renderer_get_text_widget_render_data_tmp(widget_renderer, text_widget->render_data_handle);
+
+    widget_get_screen_position(text_widget->widget, data->pos_pix);
+    glm_vec2_mul(data->pos_pix, (vec2){(float)window_width, (float)window_height}, data->pos_pix);
+}
+
+static void
+prv_text_widget_on_size_changed(void* this) {
+    te_text_widget* text_widget = this;
+
+    if (text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
+        return;
+    }
+
+    prv_text_widget_update_all_render_data(text_widget);
+}
+
+static void
+prv_text_widget_on_parent_changed(void* this) {
+    te_text_widget* text_widget = this;
+
+    if (text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
+        return;
+    }
+
+    prv_text_widget_update_all_render_data(text_widget);
+}
+
+static void
+prv_text_widget_on_visibility_changed(void* this, bool visible) {
+    te_text_widget* text_widget = this;
+
+    if (widget_get_active_camera(text_widget->widget) == NULL) {
+        return;
+    }
+
+    if (visible && text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
+        prv_text_widget_register_for_rendering(text_widget);
+    } else if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        prv_text_widget_unregister_from_rendering(text_widget);
+    }
+}
+
+static void
+prv_text_widget_on_after_activated(void* this) {
+    te_text_widget* text_widget = this;
+
+    if (!widget_is_visible(text_widget->widget)) {
+        return;
+    }
+
+    prv_text_widget_register_for_rendering(text_widget);
+}
+
+static void
+prv_text_widget_on_before_deactivated(void* this) {
+    te_text_widget* text_widget = this;
+
+    if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        prv_text_widget_unregister_from_rendering(text_widget);
+    }
+}
+
+static void
+prv_text_widget_on_before_base_destroyed(void* this) {
+    te_text_widget* text_widget = this;
+
+    if (text_widget->is_text_widget_destroy) {
+        return;
+    }
+
+    // Destroy was called on the base (widget) component, possibly due to
+    // parent being destroyed, cleanup our data.
+    if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        prv_text_widget_unregister_from_rendering(text_widget);
+    }
+    text_widget->widget = NULL;
+    text_widget_destroy(text_widget);
+}
+
+static void
+prv_text_widget_on_window_size_changed(void* this) {
+    te_text_widget* text_widget = this;
+
+    if (text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
+        return;
+    }
+
+    prv_text_widget_update_all_render_data(text_widget);
+}
+
+static void
+prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
+    te_camera* active_camera = widget_get_active_camera(text_widget->widget);
+    if (active_camera == NULL) {
+        show_error_and_abort("expected the camera to be active");
+    }
+    if (text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
+        show_error_and_abort("expected render data handle to be valid");
+    }
+    te_world* world = camera_get_world(active_camera);
+    te_widget_renderer* widget_renderer = world_get_widget_renderer(world);
+    te_game_manager* game_manager = world_get_game_manager(world);
+    te_font_manager* font_manager = renderer_get_font_manager(game_manager_get_renderer(game_manager));
+
+    te_text_widget_render_data* data =
+        widget_renderer_get_text_widget_render_data_tmp(widget_renderer, text_widget->render_data_handle);
+
+    glm_vec4_copy(text_widget->color, data->color);
+
+    unsigned int window_width;
+    unsigned int window_height;
+    window_get_size(game_manager_get_window(game_manager), &window_width, &window_height);
+
+    widget_get_screen_position(text_widget->widget, data->pos_pix);
+    glm_vec2_mul(data->pos_pix, (vec2){(float)window_width, (float)window_height}, data->pos_pix);
+
+    // Update glyphs (calculating in pixels).
+    const float glyph_scale = text_widget->text_height / prv_font_manager_get_font_height_to_load();
+    const float glyph_height = prv_font_manager_get_font_height_to_load() * glyph_scale * (float)window_height;
+    const float line_spacing = text_widget->line_spacing * glyph_height;
+
+    vec2 size;
+    widget_get_screen_size(text_widget->widget, size);
+    glm_vec2_mul(size, (vec2){(float)window_width, (float)window_height}, size);
+
+    // Count how much glyphs with non 0 width there are (i.e. displayable glyphs).
+    data->glyph_count = 0;
+    for (unsigned int i = 0; i < text_widget->text_len; i++) {
+        te_font_glyph glyph = font_manager_get_glyph(font_manager, (unsigned long)text_widget->text[i]);
+        data->glyph_count += glyph.width > 0;
+    }
+    free(data->glyphs);
+    data->glyphs = malloc(sizeof(te_text_widget_glyph) * data->glyph_count);
+
+    // Offset from the widget's pivot.
+    vec2 offset;
+    glm_vec2_copy((vec2){0.0f, 0.0f}, offset);
+
+    // Switch to the first row of the text.
+    offset[1] += glyph_height;
+
+    for (unsigned int char_idx = 0, glyph_idx = 0; char_idx < text_widget->text_len; char_idx++) {
+        if (text_widget->is_multiline && text_widget->text[char_idx] == '\n') {
+            offset[1] += glyph_height + line_spacing;
+            offset[0] = 0.0f;
+
+            if (offset[1] > size[1]) {
+                // Reached vertical limit.
+                break;
+            }
+
+            continue; // don't render \n
+        }
+
+        te_font_glyph src_glyph = font_manager_get_glyph(font_manager, (unsigned long)text_widget->text[char_idx]);
+        const float distance_to_next_glyph = (float)(src_glyph.advance >> 6) * glyph_scale;
+
+        if (offset[0] + distance_to_next_glyph > size[0]) {
+            if (text_widget->is_multiline) {
+                // Handle word wrap.
+                offset[1] += glyph_height + line_spacing;
+                offset[0] = 0.0f;
+
+                if (offset[1] > size[1]) {
+                    // Reached vertical limit.
+                    break;
+                }
+            } else {
+                // Reached horizontal limit.
+                break;
+            }
+        }
+
+        if (src_glyph.width != 0) {
+            te_text_widget_glyph* dst_glyph = &data->glyphs[glyph_idx];
+
+            dst_glyph->tex_id = src_glyph.tex_id;
+
+            glm_vec2_copy(
+                (vec2){(float)src_glyph.width * glyph_scale, (float)src_glyph.height * glyph_scale},
+                dst_glyph->size_pix);
+
+            glm_vec2_copy(offset, dst_glyph->offset_pix);
+            glm_vec2_add(
+                dst_glyph->offset_pix,
+                (vec2){(float)src_glyph.bearing_x * glyph_scale, -(float)src_glyph.bearing_y * glyph_scale},
+                dst_glyph->offset_pix);
+
+            glyph_idx += 1;
+        }
+
+        // Switch to the next glyph.
+        offset[0] += distance_to_next_glyph;
+    }
+}

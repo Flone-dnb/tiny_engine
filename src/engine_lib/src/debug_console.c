@@ -1,12 +1,12 @@
 #include "debug_console.h"
-#include <stdio.h>
-#include "misc/error.h"
-#if defined(ENGINE_DEBUG_TOOLS)
 
+#if defined(ENGINE_DEBUG_TOOLS)
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include "game_manager.h"
 #include "hashmap.c/hashmap.h"
+#include "misc/error.h"
 #include "misc/memory_usage.h"
 #include "render/debug_drawer.h"
 #include "render/renderer.h"
@@ -85,8 +85,9 @@ prv_debug_console_hide_stats(struct te_game_manager* game_manager) {
 void
 prv_debug_console_init(te_game_manager* game_manager) {
     console.game_manager = game_manager;
-    console.commands = hashmap_new(sizeof(te_debug_console_command), 4, 0, 0, debug_console_command_hash,
-                                   debug_console_command_compare, NULL, NULL);
+    console.commands = hashmap_new(
+        sizeof(te_debug_console_command), 4, 0, 0, debug_console_command_hash, debug_console_command_compare, NULL,
+        NULL);
     console.input_total_len = 65;
     console.input = malloc(sizeof(char) * console.input_total_len);
     console.input_valid_len = 0;
@@ -241,7 +242,7 @@ prv_debug_console_draw_stat(vec2 screen_pos, const char* fmt, ...) {
     va_start(args_copy, fmt);
 
     int len = vsnprintf(NULL, 0, fmt, args);
-    if (CGLM_UNLIKELY(len <= 0)) {
+    if (len <= 0) {
         va_end(args);
         va_end(args_copy);
         show_error_and_abort("snprintf error");
@@ -279,8 +280,7 @@ prv_debug_console_draw(float delta_time_sec) {
         glm_vec2_copy((vec2){0.01f, 0.7f}, screen_pos);
 
         // FPS.
-        const unsigned int fps_limit =
-            renderer_get_fps_limit(game_manager_get_renderer(console.game_manager));
+        const unsigned int fps_limit = renderer_get_fps_limit(game_manager_get_renderer(console.game_manager));
         prv_debug_console_draw_stat(screen_pos, "FPS: %u (limit: %u)", stats->fps, fps_limit);
 
         // RAM.
@@ -288,8 +288,7 @@ prv_debug_console_draw(float delta_time_sec) {
 #if defined(ENGINE_ASAN_ENABLED)
         ram_fmt = "RAM used (MB): %u (%u/%u) (ASan enabled)";
 #endif
-        prv_debug_console_draw_stat(screen_pos, ram_fmt, stats->process_mem, stats->total_used_mem,
-                                    stats->total_mem);
+        prv_debug_console_draw_stat(screen_pos, ram_fmt, stats->process_mem, stats->total_used_mem, stats->total_mem);
 
         // Rendered model count.
         prv_debug_console_draw_stat(screen_pos, "rendered model count: %u", stats->rendered_model_count);
@@ -306,8 +305,7 @@ prv_debug_console_draw(float delta_time_sec) {
     }
 
     if (console.input_valid_len == 0) {
-        debug_drawer_draw_text_at_pos("type a command...", 0.0f, (vec3){1.0f, 1.0f, 1.0f},
-                                      console.screen_pos);
+        debug_drawer_draw_text_at_pos("type a command...", 0.0f, (vec3){1.0f, 1.0f, 1.0f}, console.screen_pos);
     } else {
         debug_drawer_draw_text_at_pos(console.input, 0.0f, (vec3){1.0f, 1.0f, 1.0f}, console.screen_pos);
     }

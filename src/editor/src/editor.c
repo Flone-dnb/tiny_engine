@@ -1,10 +1,17 @@
 #include "editor.h"
 
+#include <stdio.h>
 #include "editor_camera.h"
+#include "game/camera.h"
 #include "game/model.h"
 #include "game_manager.h"
+#include "misc/char16_funcs.h"
+#include "misc/error.h"
+#include "misc/memory_usage.h"
 #include "render/font_manager.h"
 #include "render/renderer.h"
+#include "widget/text_widget.h"
+#include "widget/widget.h"
 #include "window.h"
 #include "world.h"
 
@@ -12,15 +19,23 @@ struct te_editor {
     // Always valid pointer. Must be destroyed during the editor's destruction.
     te_editor_camera* editor_camera;
 
+    // Non NULL if @ref game_world is valid. Displays FPS and RAM in the corner of the viewport.
+    te_text_widget* game_world_stats_widget;
+
     // Not NULL if game world exists.
     te_world* game_world;
+
+    // Time (in seconds) since @ref game_world_stats_widget was updated.
+    float time_since_stats_update_sec;
 };
 
 te_editor*
 editor_create() {
     te_editor* editor = malloc(sizeof(te_editor));
     editor->editor_camera = editor_camera_create();
+    editor->game_world_stats_widget = NULL;
     editor->game_world = NULL;
+    editor->time_since_stats_update_sec = 10.0f;
 
     return editor;
 }
@@ -52,6 +67,7 @@ editor_destroy_game_world(te_editor* editor, te_game_manager* game_manager) {
     // Destroy world.
     game_manager_destroy_world(game_manager, editor->game_world);
     editor->game_world = NULL;
+    editor->game_world_stats_widget = NULL;
 }
 
 void
@@ -63,21 +79,68 @@ editor_create_game_world(te_editor* editor, te_game_manager* game_manager) {
     editor->game_world = game_manager_create_world(game_manager, "game");
     editor_camera_spawn(editor->editor_camera, editor->game_world);
 
+    // Sample models.
     te_model* model = model_create(NULL);
     world_spawn_model(editor->game_world, model);
+
+    // Prepare stats widget.
+    editor->game_world_stats_widget = text_widget_create();
+    widget_set_relative_position(text_widget_get_widget(editor->game_world_stats_widget), (vec2){0.01f, 0.01f});
+    widget_set_relative_size(text_widget_get_widget(editor->game_world_stats_widget), (vec2){0.4f, 0.2f});
+    text_widget_set_is_multiline(editor->game_world_stats_widget, true);
+    editor->time_since_stats_update_sec = 10.0f;
+
+    unsigned int text_len;
+    char16_t* stats_text = char16_from_char("", 0, &text_len);
+    text_widget_set_text_own(editor->game_world_stats_widget, stats_text, text_len);
+
+    // Set widget.
+    camera_set_widget(
+        editor_camera_get_camera(editor->editor_camera), text_widget_get_widget(editor->game_world_stats_widget));
 }
 
 void
-editor_on_game_tick(void* game_instance, struct te_game_manager* game_manager, float delta_time_sec) {
+editor_on_game_tick(void* game_instance, te_game_manager* game_manager, float delta_time_sec) {
     (void)game_manager;
 
     te_editor* editor = game_instance;
     editor_camera_on_game_tick(editor->editor_camera, delta_time_sec);
+
+    // Update stats.
+    editor->time_since_stats_update_sec += delta_time_sec;
+    if (editor->game_world_stats_widget != NULL && editor->time_since_stats_update_sec >= 2.0f) {
+        editor->time_since_stats_update_sec = 0.0f;
+
+        const unsigned int fps = renderer_get_fps(game_manager_get_renderer(game_manager));
+
+        const unsigned int process_mem = (unsigned int)(memory_usage_get_process_used_memory() / 1024 / 1024);
+        const unsigned int total_used_mem = (unsigned int)(memory_usage_get_total_used_memory() / 1024 / 1024);
+        const unsigned int total_mem = (unsigned int)(memory_usage_get_total_memory() / 1024 / 1024);
+
+        const char* fmt = "FPS: %u\nRAM used (MB): %u (%u/%u)";
+#if defined(ENGINE_ASAN_ENABLED)
+        fmt = "FPS: %u\nRAM used (MB): %u (%u/%u) (ASan enabled)";
+#endif
+
+        int len = snprintf(NULL, 0, fmt, fps, process_mem, total_used_mem, total_mem);
+        if (len < 0) {
+            show_error_and_abort("snprintf error");
+        }
+        char* src_text = malloc(sizeof(char) * (size_t)(len + 1));
+        snprintf(src_text, (size_t)len + 1, fmt, fps, process_mem, total_used_mem, total_mem);
+
+        unsigned int text_len;
+        char16_t* stats_text = char16_from_char(src_text, (unsigned int)len, &text_len);
+        text_widget_set_text_own(editor->game_world_stats_widget, stats_text, text_len);
+
+        free(src_text);
+    }
 }
 
 void
-editor_on_keyboard_button_pressed(void* game_instance, struct te_game_manager* game_manager,
-                                  enum te_keyboard_button button, te_keyboard_modifiers modifiers) {
+editor_on_keyboard_button_pressed(
+    void* game_instance, struct te_game_manager* game_manager, enum te_keyboard_button button,
+    te_keyboard_modifiers modifiers) {
     (void)game_manager;
     (void)modifiers;
 
@@ -86,8 +149,9 @@ editor_on_keyboard_button_pressed(void* game_instance, struct te_game_manager* g
 }
 
 void
-editor_on_keyboard_button_released(void* game_instance, struct te_game_manager* game_manager,
-                                   enum te_keyboard_button button, te_keyboard_modifiers modifiers) {
+editor_on_keyboard_button_released(
+    void* game_instance, struct te_game_manager* game_manager, enum te_keyboard_button button,
+    te_keyboard_modifiers modifiers) {
     (void)game_manager;
     (void)modifiers;
 
@@ -103,24 +167,24 @@ editor_on_keyboard_input_text(void* game_instance, struct te_game_manager* game_
 }
 
 void
-editor_on_gamepad_button_pressed(void* game_instance, struct te_game_manager* game_manager,
-                                 enum te_gamepad_button button) {
+editor_on_gamepad_button_pressed(
+    void* game_instance, struct te_game_manager* game_manager, enum te_gamepad_button button) {
     (void)game_instance;
     (void)game_manager;
     (void)button;
 }
 
 void
-editor_on_gamepad_button_released(void* game_instance, struct te_game_manager* game_manager,
-                                  enum te_gamepad_button button) {
+editor_on_gamepad_button_released(
+    void* game_instance, struct te_game_manager* game_manager, enum te_gamepad_button button) {
     (void)game_instance;
     (void)game_manager;
     (void)button;
 }
 
 void
-editor_on_gamepad_axis_moved(void* game_instance, struct te_game_manager* game_manager,
-                             enum te_gamepad_axis axis, float new_pos) {
+editor_on_gamepad_axis_moved(
+    void* game_instance, struct te_game_manager* game_manager, enum te_gamepad_axis axis, float new_pos) {
     (void)game_manager;
 
     te_editor* editor = game_instance;
@@ -128,8 +192,7 @@ editor_on_gamepad_axis_moved(void* game_instance, struct te_game_manager* game_m
 }
 
 void
-editor_on_mouse_button_pressed(void* game_instance, struct te_game_manager* game_manager,
-                               enum te_mouse_button button) {
+editor_on_mouse_button_pressed(void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button) {
     te_editor* editor = game_instance;
 
     if (button == TE_MB_RIGHT) {
@@ -146,8 +209,8 @@ editor_on_mouse_button_pressed(void* game_instance, struct te_game_manager* game
 }
 
 void
-editor_on_mouse_button_released(void* game_instance, struct te_game_manager* game_manager,
-                                enum te_mouse_button button) {
+editor_on_mouse_button_released(
+    void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button) {
     te_editor* editor = game_instance;
 
     if (button == TE_MB_RIGHT) {
@@ -164,8 +227,7 @@ editor_on_mouse_button_released(void* game_instance, struct te_game_manager* gam
 }
 
 void
-editor_on_mouse_moved(void* game_instance, struct te_game_manager* game_manager, float x_offset,
-                      float y_offset) {
+editor_on_mouse_moved(void* game_instance, struct te_game_manager* game_manager, float x_offset, float y_offset) {
     (void)game_manager;
 
     te_editor* editor = game_instance;
@@ -180,8 +242,7 @@ editor_on_mouse_scroll_moved(void* game_instance, struct te_game_manager* game_m
 }
 
 void
-editor_on_gamepad_connected(void* game_instance, struct te_game_manager* game_manager,
-                            const char* gamepad_name) {
+editor_on_gamepad_connected(void* game_instance, struct te_game_manager* game_manager, const char* gamepad_name) {
     (void)game_manager;
     (void)gamepad_name;
 
@@ -198,8 +259,7 @@ editor_on_gamepad_disconnected(void* game_instance, struct te_game_manager* game
 }
 
 void
-editor_on_input_source_changed(void* game_instance, struct te_game_manager* game_manager,
-                               bool is_gamepad_current) {
+editor_on_input_source_changed(void* game_instance, struct te_game_manager* game_manager, bool is_gamepad_current) {
     (void)game_instance;
     (void)game_manager;
     (void)is_gamepad_current;

@@ -18,6 +18,7 @@
 #include "render/model_renderer.h"
 #include "render/shader_manager.h"
 #include "render/texture_manager.h"
+#include "render/widget_renderer.h"
 #include "window.h"
 #include "world.h"
 #if defined(WIN32)
@@ -54,8 +55,9 @@ struct te_renderer {
 
 #if defined(DEBUG)
 void GLAPIENTRY
-debugMessageCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
-                     const GLchar* message, const void* userParam) {
+debugMessageCallback(
+    GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message,
+    const void* userParam) {
     (void)id;
     (void)length;
     (void)userParam;
@@ -285,8 +287,9 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         }
 
         te_model_renderer* model_renderer = world_get_model_renderer(worlds[i]);
+        te_widget_renderer* widget_renderer = world_get_widget_renderer(worlds[i]);
 
-        // Set aspect ratio to the camera.
+        // Set camera's aspect ratio.
         vec4 viewport;
         camera_get_viewport(camera, viewport);
         const unsigned int viewport_width = (unsigned int)((float)window_width * viewport[2]);
@@ -301,8 +304,12 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         gl_viewport[2] = (int)viewport_width;
         gl_viewport[3] = (int)viewport_height;
 
+        // Draw models.
         struct te_frustum_shape* camera_frustum = camera_get_frustum(camera);
         model_renderer_draw(model_renderer, &gl_viewport, view_proj_mat, camera_frustum);
+
+        // Draw widgets.
+        widget_renderer_draw(widget_renderer);
     }
 
 #if defined(ENGINE_DEBUG_TOOLS)

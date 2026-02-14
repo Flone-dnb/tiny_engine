@@ -5,8 +5,10 @@
 
 #include "game/camera.h"
 #include "game/model.h"
+#include "game_manager.h"
 #include "misc/error.h"
 #include "render/model_renderer.h"
+#include "render/widget_renderer.h"
 
 // World represents several objects: audio system, cameras, game objects and etc.
 struct te_world {
@@ -27,6 +29,9 @@ struct te_world {
 
     // Renders models of the world.
     te_model_renderer* model_renderer;
+
+    // Renders widgets of the world.
+    te_widget_renderer* widget_renderer;
 
     // World name.
     char* name;
@@ -63,6 +68,7 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
     world->spawned_models = malloc(sizeof(te_model*) * world->spawned_models_array_size);
 
     world->model_renderer = model_renderer_create();
+    world->widget_renderer = widget_renderer_create(game_manager_get_renderer(game_manager));
     world->is_being_destroyed = false;
 
     // Copy name.
@@ -80,6 +86,7 @@ prv_world_destroy(te_world* world) {
 
     // Despawn and destroy world objects.
     {
+        // Models.
         while (world->spawned_model_count > 0) {
             te_model* model = world->spawned_models[world->spawned_model_count - 1];
             world->spawned_model_count -= 1;
@@ -88,6 +95,10 @@ prv_world_destroy(te_world* world) {
         }
         free(world->spawned_models);
 
+        // Cameras.
+        if (world->active_camera != NULL) {
+            prv_camera_on_deactivated(world->active_camera);
+        }
         while (world->spawned_camera_count > 0) {
             te_camera* camera = world->spawned_cameras[world->spawned_camera_count - 1];
             world->spawned_camera_count -= 1;
@@ -98,8 +109,18 @@ prv_world_destroy(te_world* world) {
 
     free(world->name);
     model_renderer_destroy(world->model_renderer);
+    widget_renderer_destroy(world->widget_renderer);
 
     free(world);
+}
+
+void
+prv_world_on_window_size_changed(te_world* world) {
+    if (world->active_camera == NULL) {
+        return;
+    }
+
+    prv_camera_on_window_size_changed(world->active_camera);
 }
 
 const char*
@@ -109,12 +130,24 @@ world_get_name(te_world* world) {
 
 void
 world_set_active_camera(te_world* world, te_camera* camera) {
+    if (world->active_camera == camera) {
+        return;
+    }
+
     if (camera_get_world(camera) != world) {
         show_error_and_abort(
             "in order to make a camera active in the world you first need to spawn the camera in the world");
     }
 
+    if (world->active_camera != NULL) {
+        prv_camera_on_deactivated(world->active_camera);
+    }
+
     world->active_camera = camera;
+
+    if (world->active_camera != NULL) {
+        prv_camera_on_activated(world->active_camera);
+    }
 }
 
 te_camera*
@@ -125,6 +158,11 @@ world_get_active_camera(te_world* world) {
 te_model_renderer*
 world_get_model_renderer(te_world* world) {
     return world->model_renderer;
+}
+
+te_widget_renderer*
+world_get_widget_renderer(te_world* world) {
+    return world->widget_renderer;
 }
 
 struct te_game_manager*
@@ -173,8 +211,9 @@ world_despawn_model(te_world* world, te_model* model) {
     }
 
     // Remove from array (shift other elements).
-    memcpy(world->spawned_models + model_idx, world->spawned_models + (model_idx + 1),
-           sizeof(te_model*) * (world->spawned_model_count - model_idx - 1));
+    memcpy(
+        world->spawned_models + model_idx, world->spawned_models + (model_idx + 1),
+        sizeof(te_model*) * (world->spawned_model_count - model_idx - 1));
     world->spawned_model_count -= 1;
 
     prv_model_on_despawned(model);
@@ -201,16 +240,22 @@ world_spawn_camera(te_world* world, te_camera* camera) {
 
 void
 world_despawn_camera(te_world* world, te_camera* camera) {
+#if defined(DEBUG)
+    if (camera == NULL) {
+        show_error_and_abort("NULL camera specified to despawn");
+    }
+#endif
+
     if (camera_get_world(camera) != world) {
         show_error_and_abort(
             "the specified camera cannot be despawned from this world as it's not spawned in this world");
     }
 
-    prv_camera_set_world(camera, NULL);
-
     if (world->active_camera == camera) {
+        prv_camera_on_deactivated(world->active_camera);
         world->active_camera = NULL;
     }
+    prv_camera_set_world(camera, NULL);
 
     if (world->spawned_camera_count == 1) {
         free(world->spawned_cameras);
