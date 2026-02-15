@@ -317,6 +317,10 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 
             debug_stats->gpu_time_draw_debug_ms = prv_renderer_get_query_time_ms(renderer->gl_query_draw_debug);
 
+            // Reset world-dependant GPU metrics.
+            debug_stats->gpu_time_draw_models_ms = 0.0f;
+            debug_stats->gpu_time_draw_widgets_ms = 0.0f;
+
             {
                 GLint64 start_time = 0;
                 GLint64 end_time = 0;
@@ -330,11 +334,9 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         }
     }
 
-    // Reset world-dependant metrics.
+    // Reset world-dependant CPU metrics.
     debug_stats->cpu_time_submit_models_ms = 0.0f;
     debug_stats->cpu_time_submit_widgets_ms = 0.0f;
-    debug_stats->gpu_time_draw_models_ms = 0.0f;
-    debug_stats->gpu_time_draw_widgets_ms = 0.0f;
 
     const Uint64 cpu_frame_start_counter = SDL_GetPerformanceCounter();
 #endif
