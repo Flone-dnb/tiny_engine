@@ -118,6 +118,14 @@ void on_game_started(void* game_instance, te_game_manager* game_manager) {
 }
 ```
 
+# Widgets
+
+UI elements are called widgets, you can find them in the "src/engine_lib/include/widgets" directory.
+
+All widgets contain a `te_widget` object inside of them, it implement base widget functionality such as: position, size, being able to attach to other widgets (thus creating a widget hierarchy) and so no. You can get `te_widget*` by using "..._get_widget" function.
+
+In order to display a widget (and all of its attached child widgets) you need to set the root widget to an active camera.
+
 # Building your game for retro handhelds (ARM64 Linux devices)
 
 ## Setup
