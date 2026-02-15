@@ -101,11 +101,6 @@ widgets_render_data_add_widget(te_widgets_render_data* data) {
     return handle;
 }
 
-static void*
-widgets_render_data_get_data_tmp(te_widgets_render_data* data, unsigned int handle) {
-    return &data->render_data[data->handle_to_data[handle]];
-}
-
 static void
 widgets_render_data_remove_widget(te_widgets_render_data* data, unsigned int handle) {
 #if defined(DEBUG)
@@ -244,7 +239,8 @@ widget_renderer_add_text_widget(te_widget_renderer* renderer) {
     const unsigned int handle = widgets_render_data_add_widget(renderer->text_widget_data);
 
     // Init data.
-    te_text_widget_render_data* data = widgets_render_data_get_data_tmp(renderer->text_widget_data, handle);
+    te_text_widget_render_data* render_data = renderer->text_widget_data->render_data;
+    te_text_widget_render_data* data = &render_data[renderer->text_widget_data->handle_to_data[handle]];
     memset(data, 0, sizeof(te_text_widget_render_data));
 
     return handle;
@@ -252,13 +248,15 @@ widget_renderer_add_text_widget(te_widget_renderer* renderer) {
 
 te_text_widget_render_data*
 widget_renderer_get_text_widget_render_data_tmp(te_widget_renderer* renderer, unsigned int handle) {
-    return widgets_render_data_get_data_tmp(renderer->text_widget_data, handle);
+    te_text_widget_render_data* render_data = renderer->text_widget_data->render_data;
+    return &render_data[renderer->text_widget_data->handle_to_data[handle]];
 }
 
 void
 widget_renderer_remove_text_widget(te_widget_renderer* renderer, unsigned int handle) {
     // Cleanup.
-    te_text_widget_render_data* data = widgets_render_data_get_data_tmp(renderer->text_widget_data, handle);
+    te_text_widget_render_data* render_data = renderer->text_widget_data->render_data;
+    te_text_widget_render_data* data = &render_data[renderer->text_widget_data->handle_to_data[handle]];
     free(data->glyphs);
 
     widgets_render_data_remove_widget(renderer->text_widget_data, handle);
