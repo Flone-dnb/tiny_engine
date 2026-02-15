@@ -247,11 +247,9 @@ prv_debug_console_draw_stat(vec2 screen_pos, const char* fmt, ...) {
         va_end(args_copy);
         show_error_and_abort("snprintf error");
     }
-    len += 1;
 
     char* text = malloc(sizeof(char) * ((unsigned int)len + 1));
-    vsnprintf(text, (unsigned int)len, fmt, args_copy);
-    text[len] = 0;
+    vsnprintf(text, (unsigned int)len + 1, fmt, args_copy);
 
     debug_drawer_draw_text_at_pos(text, 0.0f, (vec3){1.0f, 1.0f, 1.0f}, screen_pos);
     screen_pos[1] += debug_drawer_get_default_text_height();

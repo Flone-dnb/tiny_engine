@@ -130,17 +130,15 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
 
             if (shader_code[src] == '\n') {
                 // Append line number.
-                snprintf(line_text, 16, "%u. ", line_num);
-                const size_t line_len = strlen(line_text);
-                memcpy(fmt_code + dst, line_text, line_len);
-                dst += line_len;
+                unsigned int len = (unsigned int)snprintf(line_text, 16, "%u. ", line_num);
+                memcpy(fmt_code + dst, line_text, len);
+                dst += len;
 
                 line_num += 1;
             }
         }
 
-        log_info_fmt("failed to compile shader \"%s\", error: %s, see full source code below:", path,
-                     comp_error_msg);
+        log_info_fmt("failed to compile shader \"%s\", error: %s, see full source code below:", path, comp_error_msg);
         log_info(fmt_code);
         free(fmt_code);
 
@@ -154,8 +152,8 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
 }
 
 unsigned int
-shader_manager_request_shader(te_shader_manager* manager, const char* vert_relative_path,
-                              const char* frag_relative_path) {
+shader_manager_request_shader(
+    te_shader_manager* manager, const char* vert_relative_path, const char* frag_relative_path) {
     const size_t vert_relative_path_len = strlen(vert_relative_path);
     const size_t frag_relative_path_len = strlen(frag_relative_path);
 
@@ -283,8 +281,9 @@ shader_manager_mark_unused_shader(te_shader_manager* manager, unsigned int prog_
     } else {
         te_shader_program* new_shaders = malloc(sizeof(te_shader_program) * (manager->shader_count - 1));
         memcpy(new_shaders, manager->shaders, sizeof(te_shader_program) * index);
-        memcpy(new_shaders + index, manager->shaders + (index + 1),
-               sizeof(te_shader_program) * (manager->shader_count - index - 1));
+        memcpy(
+            new_shaders + index, manager->shaders + (index + 1),
+            sizeof(te_shader_program) * (manager->shader_count - index - 1));
 
         free(manager->shaders);
         manager->shaders = new_shaders;
@@ -296,8 +295,7 @@ int
 get_uniform_location(unsigned int prog_id, const char* name) {
     const int location = glGetUniformLocation(prog_id, name);
     if (location < 0) {
-        log_info_fmt("missing uniform variable named \"%s\", maybe it was optimized out due to being unused",
-                     name);
+        log_info_fmt("missing uniform variable named \"%s\", maybe it was optimized out due to being unused", name);
         show_error_and_abort("unable to find a uniform variable, see log for details");
     }
     return location;
