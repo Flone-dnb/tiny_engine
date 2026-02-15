@@ -15,6 +15,7 @@
 #include "misc/error.h"
 #include "render/debug_drawer.h"
 #include "render/font_manager.h"
+#include "render/gpu_section.h"
 #include "render/model_renderer.h"
 #include "render/shader_manager.h"
 #include "render/texture_manager.h"
@@ -120,15 +121,15 @@ renderer_create(struct te_window* window) {
 
 #if defined(DEBUG)
     if (GLAD_GL_KHR_debug != 1) {
-        show_error_and_abort(
-            "the GPU does not support GL_KHR_DEBUG extension which is required for debug builds");
-    }
-    glEnable(GL_DEBUG_OUTPUT);
-    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-    glDebugMessageCallback(debugMessageCallback, NULL);
+        log_warn("the GPU does not support GL_KHR_DEBUG extension, some debugging features are disabled");
+    } else {
+        glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glDebugMessageCallback(debugMessageCallback, NULL);
 
-    // Enable all error messages
-    glDebugMessageControl(GL_DONT_CARE, GL_DEBUG_TYPE_ERROR, GL_DONT_CARE, 0, NULL, GL_TRUE);
+        // Enable all error messages
+        glDebugMessageControl(GL_DONT_CARE, GL_DEBUG_TYPE_ERROR, GL_DONT_CARE, 0, NULL, GL_TRUE);
+    }
 #endif
 
     // Enable back face culling.
@@ -304,12 +305,17 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         gl_viewport[2] = (int)viewport_width;
         gl_viewport[3] = (int)viewport_height;
 
-        // Draw models.
         struct te_frustum_shape* camera_frustum = camera_get_frustum(camera);
+
+        // Draw models.
+        GPU_SECTION_START("models")
         model_renderer_draw(model_renderer, &gl_viewport, view_proj_mat, camera_frustum);
+        GPU_SECTION_END
 
         // Draw widgets.
+        GPU_SECTION_START("widgets")
         widget_renderer_draw(widget_renderer);
+        GPU_SECTION_END
     }
 
 #if defined(ENGINE_DEBUG_TOOLS)
