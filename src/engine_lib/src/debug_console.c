@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "game_manager.h"
+#include "glad/glad.h"
 #include "hashmap.c/hashmap.h"
 #include "misc/error.h"
 #include "misc/memory_usage.h"
@@ -86,8 +87,7 @@ void
 prv_debug_console_init(te_game_manager* game_manager) {
     console.game_manager = game_manager;
     console.commands = hashmap_new(
-        sizeof(te_debug_console_command), 4, 0, 0, debug_console_command_hash, debug_console_command_compare, NULL,
-        NULL);
+        sizeof(te_debug_console_command), 4, 0, 0, debug_console_command_hash, debug_console_command_compare, NULL, NULL);
     console.input_total_len = 65;
     console.input = malloc(sizeof(char) * console.input_total_len);
     console.input_valid_len = 0;
@@ -275,7 +275,7 @@ prv_debug_console_draw(float delta_time_sec) {
     if (console.show_stats) {
         te_debug_stats* stats = &console.displayed_stats;
         vec2 screen_pos;
-        glm_vec2_copy((vec2){0.01f, 0.7f}, screen_pos);
+        glm_vec2_copy((vec2){0.01f, 0.5f}, screen_pos);
 
         // FPS.
         const unsigned int fps_limit = renderer_get_fps_limit(game_manager_get_renderer(console.game_manager));
@@ -290,6 +290,28 @@ prv_debug_console_draw(float delta_time_sec) {
 
         // Rendered model count.
         prv_debug_console_draw_stat(screen_pos, "rendered model count: %u", stats->rendered_model_count);
+
+        // CPU stats.
+        prv_debug_console_draw_stat(screen_pos, "%s: %.2f", "CPU time to submit a frame (ms)", stats->cpu_time_frame_ms);
+        prv_debug_console_draw_stat(screen_pos, "- %s: %.2f", "models", stats->cpu_time_submit_models_ms);
+        prv_debug_console_draw_stat(screen_pos, "- %s: %.2f", "widgets", stats->cpu_time_submit_widgets_ms);
+        prv_debug_console_draw_stat(screen_pos, "- %s: %.2f", "debug", stats->cpu_time_submit_debug_ms);
+        prv_debug_console_draw_stat(screen_pos, "- %s: %.2f", "swap", stats->cpu_time_swap_ms);
+
+        // GPU stats.
+        if (GLAD_GL_EXT_disjoint_timer_query != 1) {
+            prv_debug_console_draw_stat(screen_pos, "%s", "GL_EXT_disjoint_timer_query not supported");
+        } else {
+            prv_debug_console_draw_stat(screen_pos, "CPU is ahead of the GPU on %u frame(s)", stats->cpu_ahead_gpu_frame_count);
+            prv_debug_console_draw_stat(screen_pos, "%s: %.2f", "GPU time to draw a frame (ms)", stats->gpu_time_frame_ms);
+            prv_debug_console_draw_stat(screen_pos, "- %s: %.2f", "models", stats->gpu_time_draw_models_ms);
+            prv_debug_console_draw_stat(screen_pos, "- %s: %.2f", "widgets", stats->gpu_time_draw_widgets_ms);
+            prv_debug_console_draw_stat(screen_pos, "- %s: %.2f", "debug", stats->gpu_time_draw_debug_ms);
+
+            if (fps_limit > 0) {
+                prv_debug_console_draw_stat(screen_pos, "%s", "! FPS LIMIT AFFECTS GPU STATS !");
+            }
+        }
     }
 
     if (!console.is_shown) {

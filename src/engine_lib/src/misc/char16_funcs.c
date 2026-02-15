@@ -49,7 +49,7 @@ char16_from_char(const char* src, unsigned int src_strlen, unsigned int* dst_str
     size_t rc = (size_t)-1;
     const char* curr = src;
     const char* end = src + src_strlen;
-    while (1) {
+    while (dst_len < src_strlen) {
         rc = mbrtoc16(&temp, curr, (size_t)(end - curr + 1), &state);
         if (rc == (size_t)-3 || rc == (size_t)-2) {
             continue;

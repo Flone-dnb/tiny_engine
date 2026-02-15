@@ -27,6 +27,7 @@ set(PROJECT_SOURCES
     src/render/widget_renderer.c
     src/render/widget_renderer.h
     src/render/gpu_section.h
+    src/render/gpu_time_section.h
     src/game/camera.c
     src/game/model.c
     src/widget/widget.c

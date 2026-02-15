@@ -11,7 +11,7 @@
 #include "window.h"
 
 // Fixed text height for drawing text, in range [0.0; 1.0].
-static float debug_drawer_default_text_height = 0.03f;
+static float debug_drawer_default_text_height = 0.0275f;
 
 // Prepared data to render a glyph.
 typedef struct te_debug_drawer_glyph {
@@ -90,10 +90,8 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
         drawer.text_shader.uniform_in_pos = get_uniform_location(drawer.text_shader.prog_id, "in_pos");
         drawer.text_shader.uniform_in_size = get_uniform_location(drawer.text_shader.prog_id, "in_size");
         drawer.text_shader.uniform_clip_rect = get_uniform_location(drawer.text_shader.prog_id, "clip_rect");
-        drawer.text_shader.uniform_window_size =
-            get_uniform_location(drawer.text_shader.prog_id, "window_size");
-        drawer.text_shader.uniform_text_color =
-            get_uniform_location(drawer.text_shader.prog_id, "text_color");
+        drawer.text_shader.uniform_window_size = get_uniform_location(drawer.text_shader.prog_id, "window_size");
+        drawer.text_shader.uniform_text_color = get_uniform_location(drawer.text_shader.prog_id, "text_color");
     }
 
     // Create quad geometry.
@@ -183,17 +181,15 @@ debug_drawer_draw_text_at_pos(const char* text, float time_sec, vec3 color, vec2
         te_font_glyph src = font_manager_get_glyph(font_manager, (unsigned long)new_item->text[i]);
         te_debug_drawer_glyph* dst = &new_item->glyphs[i];
 
-        dst->distance_to_next_glyph =
-            (float)(src.advance >> 6) // bitshift by 6 to get value in pixels (2^6 = 64)
-            * font_scale;
+        dst->distance_to_next_glyph = (float)(src.advance >> 6) // bitshift by 6 to get value in pixels (2^6 = 64)
+                                      * font_scale;
 
         if (src.width == 0) {
             dst->tex_id = 0;
         } else {
             dst->tex_id = src.tex_id;
             glm_vec2_copy(
-                (vec2){(float)src.bearing_x * font_scale, -(float)src.bearing_y * font_scale},
-                dst->pos_offset);
+                (vec2){(float)src.bearing_x * font_scale, -(float)src.bearing_y * font_scale}, dst->pos_offset);
             glm_vec2_copy((vec2){(float)src.width * font_scale, (float)src.height * font_scale}, dst->size);
         }
     }
@@ -296,8 +292,7 @@ prv_debug_drawer_draw(struct te_renderer* renderer, float delta_time_sec) {
                     free(drawer.texts);
                     drawer.texts = NULL;
                 } else {
-                    te_debug_drawer_text* new_texts =
-                        malloc(sizeof(te_debug_drawer_text) * (drawer.text_count - 1));
+                    te_debug_drawer_text* new_texts = malloc(sizeof(te_debug_drawer_text) * (drawer.text_count - 1));
                     memcpy(new_texts, drawer.texts, sizeof(te_debug_drawer_text) * i);
                     memcpy(
                         new_texts + i, drawer.texts + (i + 1),

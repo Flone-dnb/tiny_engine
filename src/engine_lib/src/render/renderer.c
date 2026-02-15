@@ -2,13 +2,11 @@
 
 #include <stdlib.h>
 #include "SDL3/SDL_error.h"
+#include "SDL3/SDL_timer.h"
 #include "SDL3/SDL_video.h"
 #include "debug_console.h"
 #include "game/camera.h"
 #include "game_manager.h"
-#if defined(ENGINE_DEBUG_TOOLS)
-#include "game_manager.h"
-#endif
 #include "glad/glad.h"
 #include "io/log.h"
 #include "limits.h"
@@ -16,6 +14,7 @@
 #include "render/debug_drawer.h"
 #include "render/font_manager.h"
 #include "render/gpu_section.h"
+#include "render/gpu_time_section.h"
 #include "render/model_renderer.h"
 #include "render/shader_manager.h"
 #include "render/texture_manager.h"
@@ -52,13 +51,21 @@ struct te_renderer {
     te_renderer_frame_stats frame_stats;
 
     unsigned int fps_limit;
+
+#if defined(ENGINE_DEBUG_TOOLS)
+    // GPU time query IDs.
+    unsigned int gl_timestamp_frame_start;
+    unsigned int gl_timestamp_frame_end;
+    unsigned int gl_query_draw_models;
+    unsigned int gl_query_draw_widgets;
+    unsigned int gl_query_draw_debug;
+#endif
 };
 
 #if defined(DEBUG)
 void GLAPIENTRY
 debugMessageCallback(
-    GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message,
-    const void* userParam) {
+    GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
     (void)id;
     (void)length;
     (void)userParam;
@@ -114,8 +121,25 @@ renderer_create(struct te_window* window) {
 
 #if defined(ENGINE_DEBUG_TOOLS)
     if (GLAD_GL_EXT_disjoint_timer_query != 1) {
-        show_error_and_abort("the GPU does not support OpenGL extension "
-                             "GL_EXT_disjoint_timer_query which is required for debug builds");
+        log_warn("the GPU does not support GL_EXT_disjoint_timer_query extension, GPU time metrics are disabled");
+    } else {
+        glGenQueriesEXT(1, &renderer->gl_timestamp_frame_start);
+        glGenQueriesEXT(1, &renderer->gl_timestamp_frame_end);
+        glGenQueriesEXT(1, &renderer->gl_query_draw_models);
+        glGenQueriesEXT(1, &renderer->gl_query_draw_widgets);
+        glGenQueriesEXT(1, &renderer->gl_query_draw_debug);
+
+        // Init timers.
+
+        glQueryCounterEXT(renderer->gl_timestamp_frame_start, GL_TIMESTAMP_EXT);
+        glQueryCounterEXT(renderer->gl_timestamp_frame_end, GL_TIMESTAMP_EXT);
+
+        GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_models);
+        GPU_TIME_SECTION_END;
+        GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_widgets);
+        GPU_TIME_SECTION_END;
+        GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_debug);
+        GPU_TIME_SECTION_END;
     }
 #endif
 
@@ -169,6 +193,16 @@ renderer_destroy(te_renderer* renderer) {
     prv_texture_manager_destroy(renderer->texture_manager);
     prv_shader_manager_destroy(renderer->shader_manager);
     prv_font_manager_destroy(renderer->font_manager);
+
+#if defined(ENGINE_DEBUG_TOOLS)
+    if (GLAD_GL_EXT_disjoint_timer_query == 1) {
+        glDeleteQueriesEXT(1, &renderer->gl_timestamp_frame_start);
+        glDeleteQueriesEXT(1, &renderer->gl_timestamp_frame_end);
+        glDeleteQueriesEXT(1, &renderer->gl_query_draw_models);
+        glDeleteQueriesEXT(1, &renderer->gl_query_draw_widgets);
+        glDeleteQueriesEXT(1, &renderer->gl_query_draw_debug);
+    }
+#endif
 
     if (!SDL_GL_DestroyContext(renderer->gl_context)) {
         show_error_and_abort(SDL_GetError());
@@ -259,6 +293,15 @@ prv_renderer_calc_frame_stats(te_renderer* renderer, float delta_time_sec) {
     }
 }
 
+#if defined(ENGINE_DEBUG_TOOLS)
+static float
+prv_renderer_get_query_time_ms(unsigned int query) {
+    GLuint64 time_elapsed = 0;
+    glGetQueryObjectui64vEXT(query, GL_QUERY_RESULT_EXT, &time_elapsed);
+    return (float)(time_elapsed) / 1000000.0f; // nanoseconds to milliseconds
+}
+#endif
+
 void
 prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     // Make sure there was no GL error during the last frame.
@@ -266,6 +309,41 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     if (gl_error != GL_NO_ERROR) {
         show_gl_error_and_abort(gl_error);
     }
+
+#if defined(ENGINE_DEBUG_TOOLS)
+    te_debug_stats* debug_stats = prv_debug_console_get_stats();
+    bool record_new_queries = true;
+
+    if (GLAD_GL_EXT_disjoint_timer_query == 1) {
+        // Check if the GPU finished commands.
+        GLuint available = 0;
+        glGetQueryObjectuivEXT(renderer->gl_timestamp_frame_end, GL_QUERY_RESULT_AVAILABLE_EXT, &available);
+        if (available == GL_FALSE) {
+            // Don't do new queries on this frame, we will wait for the current queries to be finished.
+            record_new_queries = false;
+            debug_stats->cpu_ahead_gpu_frame_count += 1;
+        } else {
+            debug_stats->cpu_ahead_gpu_frame_count = 0;
+
+            debug_stats->gpu_time_draw_models_ms = prv_renderer_get_query_time_ms(renderer->gl_query_draw_models);
+            debug_stats->gpu_time_draw_widgets_ms = prv_renderer_get_query_time_ms(renderer->gl_query_draw_widgets);
+            debug_stats->gpu_time_draw_debug_ms = prv_renderer_get_query_time_ms(renderer->gl_query_draw_debug);
+
+            {
+                GLint64 start_time = 0;
+                GLint64 end_time = 0;
+                glGetQueryObjecti64vEXT(renderer->gl_timestamp_frame_start, GL_QUERY_RESULT_EXT, &start_time);
+                glGetQueryObjecti64vEXT(renderer->gl_timestamp_frame_end, GL_QUERY_RESULT_EXT, &end_time);
+                debug_stats->gpu_time_frame_ms = (float)(end_time - start_time) / 1000000.0f; // nanoseconds to milliseconds
+            }
+
+            // Mark frame start.
+            glQueryCounterEXT(renderer->gl_timestamp_frame_start, GL_TIMESTAMP_EXT);
+        }
+    }
+
+    const Uint64 cpu_frame_start_counter = SDL_GetPerformanceCounter();
+#endif
 
     // Get window size (for later).
     unsigned int window_width = 0;
@@ -308,22 +386,79 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         struct te_frustum_shape* camera_frustum = camera_get_frustum(camera);
 
         // Draw models.
-        GPU_SECTION_START("models")
-        model_renderer_draw(model_renderer, &gl_viewport, view_proj_mat, camera_frustum);
-        GPU_SECTION_END
+        {
+            GPU_SECTION_BEGIN("models");
+            const Uint64 cpu_start_counter = SDL_GetPerformanceCounter();
+            if (record_new_queries) {
+                GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_models);
+            }
+
+            model_renderer_draw(model_renderer, &gl_viewport, view_proj_mat, camera_frustum);
+
+            if (record_new_queries) {
+                GPU_TIME_SECTION_END;
+            }
+            debug_stats->cpu_time_submit_models_ms =
+                (float)(SDL_GetPerformanceCounter() - cpu_start_counter) * 1000.0f / (float)(SDL_GetPerformanceFrequency());
+            GPU_SECTION_END;
+        }
 
         // Draw widgets.
-        GPU_SECTION_START("widgets")
-        widget_renderer_draw(widget_renderer);
-        GPU_SECTION_END
+        {
+            GPU_SECTION_BEGIN("widgets");
+            const Uint64 cpu_start_counter = SDL_GetPerformanceCounter();
+            if (record_new_queries) {
+                GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_widgets);
+            }
+
+            widget_renderer_draw(widget_renderer);
+
+            if (record_new_queries) {
+                GPU_TIME_SECTION_END;
+            }
+            debug_stats->cpu_time_submit_widgets_ms =
+                (float)(SDL_GetPerformanceCounter() - cpu_start_counter) * 1000.0f / (float)(SDL_GetPerformanceFrequency());
+            GPU_SECTION_END;
+        }
     }
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    prv_debug_console_draw(delta_time_sec);
-    prv_debug_drawer_draw(renderer, delta_time_sec);
+    // Draw debug.
+    GPU_SECTION_BEGIN("debug");
+    if (record_new_queries) {
+        GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_debug);
+    }
+    {
+        const Uint64 cpu_start_counter = SDL_GetPerformanceCounter();
+
+        prv_debug_console_draw(delta_time_sec);
+        prv_debug_drawer_draw(renderer, delta_time_sec);
+
+        debug_stats->cpu_time_submit_debug_ms =
+            (float)(SDL_GetPerformanceCounter() - cpu_start_counter) * 1000.0f / (float)(SDL_GetPerformanceFrequency());
+    }
+    if (record_new_queries) {
+        GPU_TIME_SECTION_END;
+    }
+    GPU_SECTION_END;
+
+    if (GLAD_GL_EXT_disjoint_timer_query == 1 && record_new_queries) {
+        glQueryCounterEXT(renderer->gl_timestamp_frame_end, GL_TIMESTAMP_EXT);
+    }
+
+    // Get CPU time before swap as it might block the current thread.
+    debug_stats->cpu_time_frame_ms =
+        (float)(SDL_GetPerformanceCounter() - cpu_frame_start_counter) * 1000.0f / (float)(SDL_GetPerformanceFrequency());
+
+    const Uint64 cpu_swap_start_counter = SDL_GetPerformanceCounter();
 #endif
 
     SDL_GL_SwapWindow(prv_window_get_sdl_window(renderer->window));
+
+#if defined(ENGINE_DEBUG_TOOLS)
+    debug_stats->cpu_time_swap_ms =
+        (float)(SDL_GetPerformanceCounter() - cpu_swap_start_counter) * 1000.0f / (float)(SDL_GetPerformanceFrequency());
+#endif
 
     prv_renderer_calc_frame_stats(renderer, delta_time_sec);
 }

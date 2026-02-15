@@ -40,8 +40,7 @@ void prv_debug_console_hide(void);
 
 bool prv_debug_console_is_shown(void);
 
-void prv_debug_console_on_keyboard_input(struct te_game_manager* game_manager,
-                                         enum te_keyboard_button button);
+void prv_debug_console_on_keyboard_input(struct te_game_manager* game_manager, enum te_keyboard_button button);
 void prv_debug_console_on_keyboard_input_text(const char* text);
 
 void prv_debug_console_draw(float delta_time_sec);
@@ -56,6 +55,18 @@ typedef struct te_debug_stats {
     unsigned int total_used_mem;
 
     unsigned int rendered_model_count;
+    unsigned int cpu_ahead_gpu_frame_count;
+
+    float cpu_time_frame_ms;
+    float cpu_time_submit_models_ms;
+    float cpu_time_submit_widgets_ms;
+    float cpu_time_submit_debug_ms;
+    float cpu_time_swap_ms;
+
+    float gpu_time_frame_ms;
+    float gpu_time_draw_models_ms;
+    float gpu_time_draw_widgets_ms;
+    float gpu_time_draw_debug_ms;
 } te_debug_stats;
 
 // Returns always valid pointer to update debug stats.
