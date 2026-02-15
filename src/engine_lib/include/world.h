@@ -56,3 +56,8 @@ void prv_world_destroy(te_world* world);
 
 // Called to possibly notify widgets.
 void prv_world_on_window_size_changed(te_world* world);
+
+#if defined(ENGINE_DEBUG_TOOLS)
+unsigned int prv_world_get_gl_query_draw_models(te_world* world);
+unsigned int prv_world_get_gl_query_draw_widgets(te_world* world);
+#endif

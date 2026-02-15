@@ -9,6 +9,10 @@
 #include "misc/error.h"
 #include "render/model_renderer.h"
 #include "render/widget_renderer.h"
+#if defined(ENGINE_DEBUG_TOOLS)
+#include "glad/glad.h"
+#include "render/gpu_time_section.h"
+#endif
 
 // World represents several objects: audio system, cameras, game objects and etc.
 struct te_world {
@@ -47,6 +51,12 @@ struct te_world {
 
     // `true` if the world is currently being destroyed.
     bool is_being_destroyed;
+
+#if defined(ENGINE_DEBUG_TOOLS)
+    // GPU time query IDs.
+    unsigned int gl_query_draw_models;
+    unsigned int gl_query_draw_widgets;
+#endif
 };
 
 te_world*
@@ -76,6 +86,19 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
     world->name = malloc(sizeof(char) * (name_len + 1));
     memcpy(world->name, name, name_len);
     world->name[name_len] = 0;
+
+#if defined(ENGINE_DEBUG_TOOLS)
+    if (GLAD_GL_EXT_disjoint_timer_query == 1) {
+        glGenQueriesEXT(1, &world->gl_query_draw_models);
+        glGenQueriesEXT(1, &world->gl_query_draw_widgets);
+
+        // Init timers.
+        GPU_TIME_SECTION_BEGIN(world->gl_query_draw_models);
+        GPU_TIME_SECTION_END;
+        GPU_TIME_SECTION_BEGIN(world->gl_query_draw_widgets);
+        GPU_TIME_SECTION_END;
+    }
+#endif
 
     return world;
 }
@@ -111,6 +134,13 @@ prv_world_destroy(te_world* world) {
     model_renderer_destroy(world->model_renderer);
     widget_renderer_destroy(world->widget_renderer);
 
+#if defined(ENGINE_DEBUG_TOOLS)
+    if (GLAD_GL_EXT_disjoint_timer_query == 1) {
+        glDeleteQueriesEXT(1, &world->gl_query_draw_models);
+        glDeleteQueriesEXT(1, &world->gl_query_draw_widgets);
+    }
+#endif
+
     free(world);
 }
 
@@ -135,8 +165,7 @@ world_set_active_camera(te_world* world, te_camera* camera) {
     }
 
     if (camera_get_world(camera) != world) {
-        show_error_and_abort(
-            "in order to make a camera active in the world you first need to spawn the camera in the world");
+        show_error_and_abort("in order to make a camera active in the world you first need to spawn the camera in the world");
     }
 
     if (world->active_camera != NULL) {
@@ -247,8 +276,7 @@ world_despawn_camera(te_world* world, te_camera* camera) {
 #endif
 
     if (camera_get_world(camera) != world) {
-        show_error_and_abort(
-            "the specified camera cannot be despawned from this world as it's not spawned in this world");
+        show_error_and_abort("the specified camera cannot be despawned from this world as it's not spawned in this world");
     }
 
     if (world->active_camera == camera) {
@@ -285,3 +313,15 @@ world_despawn_camera(te_world* world, te_camera* camera) {
         world->spawned_camera_count -= 1;
     }
 }
+
+#if defined(ENGINE_DEBUG_TOOLS)
+unsigned int
+prv_world_get_gl_query_draw_models(te_world* world) {
+    return world->gl_query_draw_models;
+}
+
+unsigned int
+prv_world_get_gl_query_draw_widgets(te_world* world) {
+    return world->gl_query_draw_widgets;
+}
+#endif

@@ -56,8 +56,6 @@ struct te_renderer {
     // GPU time query IDs.
     unsigned int gl_timestamp_frame_start;
     unsigned int gl_timestamp_frame_end;
-    unsigned int gl_query_draw_models;
-    unsigned int gl_query_draw_widgets;
     unsigned int gl_query_draw_debug;
 #endif
 };
@@ -125,8 +123,6 @@ renderer_create(struct te_window* window) {
     } else {
         glGenQueriesEXT(1, &renderer->gl_timestamp_frame_start);
         glGenQueriesEXT(1, &renderer->gl_timestamp_frame_end);
-        glGenQueriesEXT(1, &renderer->gl_query_draw_models);
-        glGenQueriesEXT(1, &renderer->gl_query_draw_widgets);
         glGenQueriesEXT(1, &renderer->gl_query_draw_debug);
 
         // Init timers.
@@ -134,10 +130,6 @@ renderer_create(struct te_window* window) {
         glQueryCounterEXT(renderer->gl_timestamp_frame_start, GL_TIMESTAMP_EXT);
         glQueryCounterEXT(renderer->gl_timestamp_frame_end, GL_TIMESTAMP_EXT);
 
-        GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_models);
-        GPU_TIME_SECTION_END;
-        GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_widgets);
-        GPU_TIME_SECTION_END;
         GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_debug);
         GPU_TIME_SECTION_END;
     }
@@ -198,8 +190,6 @@ renderer_destroy(te_renderer* renderer) {
     if (GLAD_GL_EXT_disjoint_timer_query == 1) {
         glDeleteQueriesEXT(1, &renderer->gl_timestamp_frame_start);
         glDeleteQueriesEXT(1, &renderer->gl_timestamp_frame_end);
-        glDeleteQueriesEXT(1, &renderer->gl_query_draw_models);
-        glDeleteQueriesEXT(1, &renderer->gl_query_draw_widgets);
         glDeleteQueriesEXT(1, &renderer->gl_query_draw_debug);
     }
 #endif
@@ -325,8 +315,6 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         } else {
             debug_stats->cpu_ahead_gpu_frame_count = 0;
 
-            debug_stats->gpu_time_draw_models_ms = prv_renderer_get_query_time_ms(renderer->gl_query_draw_models);
-            debug_stats->gpu_time_draw_widgets_ms = prv_renderer_get_query_time_ms(renderer->gl_query_draw_widgets);
             debug_stats->gpu_time_draw_debug_ms = prv_renderer_get_query_time_ms(renderer->gl_query_draw_debug);
 
             {
@@ -341,6 +329,12 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
             glQueryCounterEXT(renderer->gl_timestamp_frame_start, GL_TIMESTAMP_EXT);
         }
     }
+
+    // Reset world-dependant metrics.
+    debug_stats->cpu_time_submit_models_ms = 0.0f;
+    debug_stats->cpu_time_submit_widgets_ms = 0.0f;
+    debug_stats->gpu_time_draw_models_ms = 0.0f;
+    debug_stats->gpu_time_draw_widgets_ms = 0.0f;
 
     const Uint64 cpu_frame_start_counter = SDL_GetPerformanceCounter();
 #endif
@@ -365,6 +359,15 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
             continue;
         }
 
+#if defined(ENGINE_DEBUG_TOOLS)
+        if (GLAD_GL_EXT_disjoint_timer_query == 1 && record_new_queries) {
+            // Save results of the previous GPU metrics.
+            debug_stats->gpu_time_draw_models_ms += prv_renderer_get_query_time_ms(prv_world_get_gl_query_draw_models(worlds[i]));
+            debug_stats->gpu_time_draw_widgets_ms +=
+                prv_renderer_get_query_time_ms(prv_world_get_gl_query_draw_widgets(worlds[i]));
+        }
+#endif
+
         te_model_renderer* model_renderer = world_get_model_renderer(worlds[i]);
         te_widget_renderer* widget_renderer = world_get_widget_renderer(worlds[i]);
 
@@ -387,38 +390,46 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 
         // Draw models.
         {
+#if defined(ENGINE_DEBUG_TOOLS)
             GPU_SECTION_BEGIN("models");
             const Uint64 cpu_start_counter = SDL_GetPerformanceCounter();
             if (record_new_queries) {
-                GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_models);
+                GPU_TIME_SECTION_BEGIN(prv_world_get_gl_query_draw_models(worlds[i]));
             }
+#endif
 
             model_renderer_draw(model_renderer, &gl_viewport, view_proj_mat, camera_frustum);
 
+#if defined(ENGINE_DEBUG_TOOLS)
             if (record_new_queries) {
                 GPU_TIME_SECTION_END;
             }
-            debug_stats->cpu_time_submit_models_ms =
+            debug_stats->cpu_time_submit_models_ms +=
                 (float)(SDL_GetPerformanceCounter() - cpu_start_counter) * 1000.0f / (float)(SDL_GetPerformanceFrequency());
             GPU_SECTION_END;
+#endif
         }
 
         // Draw widgets.
         {
+#if defined(ENGINE_DEBUG_TOOLS)
             GPU_SECTION_BEGIN("widgets");
             const Uint64 cpu_start_counter = SDL_GetPerformanceCounter();
             if (record_new_queries) {
-                GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_widgets);
+                GPU_TIME_SECTION_BEGIN(prv_world_get_gl_query_draw_widgets(worlds[i]));
             }
+#endif
 
             widget_renderer_draw(widget_renderer);
 
+#if defined(ENGINE_DEBUG_TOOLS)
             if (record_new_queries) {
                 GPU_TIME_SECTION_END;
             }
-            debug_stats->cpu_time_submit_widgets_ms =
+            debug_stats->cpu_time_submit_widgets_ms +=
                 (float)(SDL_GetPerformanceCounter() - cpu_start_counter) * 1000.0f / (float)(SDL_GetPerformanceFrequency());
             GPU_SECTION_END;
+#endif
         }
     }
 
