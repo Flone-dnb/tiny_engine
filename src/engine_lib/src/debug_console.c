@@ -75,6 +75,7 @@ prv_debug_console_show_stats(struct te_game_manager* game_manager) {
     (void)game_manager;
     console.show_stats = true;
     console.displayed_stats = console.stats;
+    console.time_sec_to_update_stats = 0.0f;
 }
 
 void
@@ -243,15 +244,13 @@ prv_debug_console_draw_stat(vec2 screen_pos, const char* fmt, ...) {
 
     int len = vsnprintf(NULL, 0, fmt, args);
     if (len <= 0) {
-        va_end(args);
-        va_end(args_copy);
         show_error_and_abort("snprintf error");
     }
 
     char* text = malloc(sizeof(char) * ((unsigned int)len + 1));
     vsnprintf(text, (unsigned int)len + 1, fmt, args_copy);
 
-    debug_drawer_draw_text_at_pos(text, 0.0f, (vec3){1.0f, 1.0f, 1.0f}, screen_pos);
+    debug_drawer_draw_text_color_pos(text, console.time_sec_to_update_stats, (vec3){1.0f, 1.0f, 1.0f}, screen_pos);
     screen_pos[1] += debug_drawer_get_default_text_height();
 
     free(text);
@@ -262,9 +261,11 @@ prv_debug_console_draw_stat(vec2 screen_pos, const char* fmt, ...) {
 void
 prv_debug_console_draw(float delta_time_sec) {
     console.time_sec_to_update_stats -= delta_time_sec;
-    if (console.time_sec_to_update_stats <= 0.0f) {
+
+    const bool update_stats = console.time_sec_to_update_stats <= 0.0f;
+    if (update_stats) {
         console.displayed_stats = console.stats;
-        console.time_sec_to_update_stats = 1.0f;
+        console.time_sec_to_update_stats = 2.0f;
 
         te_debug_stats* stats = &console.displayed_stats;
         stats->process_mem = (unsigned int)(memory_usage_get_process_used_memory() / 1024 / 1024);
@@ -272,7 +273,7 @@ prv_debug_console_draw(float delta_time_sec) {
         stats->total_mem = (unsigned int)(memory_usage_get_total_memory() / 1024 / 1024);
     }
 
-    if (console.show_stats) {
+    if (console.show_stats && update_stats) {
         te_debug_stats* stats = &console.displayed_stats;
         vec2 screen_pos;
         glm_vec2_copy((vec2){0.01f, 0.5f}, screen_pos);
@@ -309,7 +310,7 @@ prv_debug_console_draw(float delta_time_sec) {
             prv_debug_console_draw_stat(screen_pos, "- %s: %.2f", "debug", stats->gpu_time_draw_debug_ms);
 
             if (fps_limit > 0) {
-                prv_debug_console_draw_stat(screen_pos, "%s", "! FPS LIMIT AFFECTS GPU STATS !");
+                prv_debug_console_draw_stat(screen_pos, "%s", "! FPS LIMIT AFFECTS STATS !");
             }
         }
     }
@@ -320,14 +321,14 @@ prv_debug_console_draw(float delta_time_sec) {
 
     if (console.message_sec_left > 0.0f) {
         console.message_sec_left -= delta_time_sec;
-        debug_drawer_draw_text_at_pos(console.message, 0.0f, (vec3){1.0f, 1.0f, 1.0f}, console.screen_pos);
+        debug_drawer_draw_text_color_pos(console.message, 0.0f, (vec3){1.0f, 1.0f, 1.0f}, console.screen_pos);
         return;
     }
 
     if (console.input_valid_len == 0) {
-        debug_drawer_draw_text_at_pos("type a command...", 0.0f, (vec3){1.0f, 1.0f, 1.0f}, console.screen_pos);
+        debug_drawer_draw_text_color_pos("type a command...", 0.0f, (vec3){1.0f, 1.0f, 1.0f}, console.screen_pos);
     } else {
-        debug_drawer_draw_text_at_pos(console.input, 0.0f, (vec3){1.0f, 1.0f, 1.0f}, console.screen_pos);
+        debug_drawer_draw_text_color_pos(console.input, 0.0f, (vec3){1.0f, 1.0f, 1.0f}, console.screen_pos);
     }
 }
 
