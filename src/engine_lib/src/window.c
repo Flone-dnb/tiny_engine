@@ -199,8 +199,8 @@ window_process_events(te_window* window, te_window_callbacks* window_callbacks, 
     }
 
     // Used to calculate delta time.
-    size_t current_time_counter = SDL_GetPerformanceCounter();
-    size_t prev_time_counter = 0;
+    Uint64 current_time_counter = SDL_GetPerformanceCounter();
+    Uint64 prev_time_counter = 0;
     float delta_time_sec = 0.0f;
 
     while (!window->quit_requested) {
