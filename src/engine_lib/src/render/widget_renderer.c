@@ -16,7 +16,7 @@ typedef struct te_widgets_render_data {
     // Max size of this array is @ref array_size but the actual number of valid
     // (used) elements might be different (see @ref render_data_count). When some widget's render data is removed all next
     // elements are shifted to the left to make sure the array does not have any "holes".
-    // This array does not shrink but the number of used (valid) elements may decrease.
+    // This array does not shrink.
     void* render_data;
 
     // Index into this array using a widget's handle to get index into @ref render_data.
@@ -73,7 +73,7 @@ widgets_render_data_add_widget(te_widgets_render_data* data) {
     }
     if (!found) {
         // Expand array.
-        const unsigned int expand_size = 8;
+        const unsigned int expand_size = 4;
 
         unsigned int* new_handles = malloc(sizeof(unsigned int) * (data->array_size + expand_size));
         memcpy(new_handles, data->handle_to_data, sizeof(unsigned int) * data->array_size);
@@ -120,17 +120,29 @@ widgets_render_data_remove_widget(te_widgets_render_data* data, unsigned int han
     data->handle_to_data[handle] = INVALID_DATA_INDEX;
 
     if (data->render_data_count > 1) {
-        void* new_data = malloc(data->sizeof_render_data * (data->render_data_count - 1));
-        memcpy(new_data, data->render_data, data->sizeof_render_data * render_data_index);
-        memcpy(
-            new_data + render_data_index, data->render_data + (render_data_index + 1),
+        // Remove "hole" from the array.
+        char* render_data = data->render_data; // <- cast from void*
+        memmove(
+            render_data + data->sizeof_render_data * render_data_index,
+            render_data + data->sizeof_render_data * (render_data_index + 1),
             data->sizeof_render_data * (data->render_data_count - render_data_index - 1));
+    }
 
-        free(data->render_data);
-        data->render_data = new_data;
+    // Shift render data indices after the removed one.
+    for (unsigned int i = 0; i < data->array_size; i++) {
+        if (data->handle_to_data[i] == INVALID_DATA_INDEX || data->handle_to_data[i] < render_data_index) {
+            continue;
+        }
+        data->handle_to_data[i] -= 1;
     }
 
     data->render_data_count -= 1;
+}
+
+void*
+widgets_render_data_get_widget_data(te_widgets_render_data* data, unsigned int handle) {
+    char* render_data = data->render_data; // <- cast from void*
+    return render_data + data->sizeof_render_data * data->handle_to_data[handle];
 }
 
 unsigned int
@@ -183,8 +195,8 @@ widget_renderer_create(te_renderer* renderer) {
         te_text_shader_data* shader = &widget_renderer->text_shader;
         te_shader_manager* shader_manager = renderer_get_shader_manager(renderer);
 
-        shader->prog_id = shader_manager_request_shader(
-            shader_manager, "engine/shader/quad.vert.glsl", "engine/shader/text.frag.glsl");
+        shader->prog_id =
+            shader_manager_request_shader(shader_manager, "engine/shader/quad.vert.glsl", "engine/shader/text.frag.glsl");
 
         shader->uniform_in_pos = get_uniform_location(shader->prog_id, "in_pos");
         shader->uniform_in_size = get_uniform_location(shader->prog_id, "in_size");
@@ -239,8 +251,7 @@ widget_renderer_add_text_widget(te_widget_renderer* renderer) {
     const unsigned int handle = widgets_render_data_add_widget(renderer->text_widget_data);
 
     // Init data.
-    te_text_widget_render_data* render_data = renderer->text_widget_data->render_data;
-    te_text_widget_render_data* data = &render_data[renderer->text_widget_data->handle_to_data[handle]];
+    te_text_widget_render_data* data = widgets_render_data_get_widget_data(renderer->text_widget_data, handle);
     memset(data, 0, sizeof(te_text_widget_render_data));
 
     return handle;
@@ -248,15 +259,13 @@ widget_renderer_add_text_widget(te_widget_renderer* renderer) {
 
 te_text_widget_render_data*
 widget_renderer_get_text_widget_render_data_tmp(te_widget_renderer* renderer, unsigned int handle) {
-    te_text_widget_render_data* render_data = renderer->text_widget_data->render_data;
-    return &render_data[renderer->text_widget_data->handle_to_data[handle]];
+    return widgets_render_data_get_widget_data(renderer->text_widget_data, handle);
 }
 
 void
 widget_renderer_remove_text_widget(te_widget_renderer* renderer, unsigned int handle) {
     // Cleanup.
-    te_text_widget_render_data* render_data = renderer->text_widget_data->render_data;
-    te_text_widget_render_data* data = &render_data[renderer->text_widget_data->handle_to_data[handle]];
+    te_text_widget_render_data* data = widgets_render_data_get_widget_data(renderer->text_widget_data, handle);
     free(data->glyphs);
 
     widgets_render_data_remove_widget(renderer->text_widget_data, handle);

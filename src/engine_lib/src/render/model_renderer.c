@@ -83,8 +83,7 @@ model_renderer_create() {
 void
 model_renderer_destroy(te_model_renderer* renderer) {
     if (renderer->shader_group_count > 0) {
-        show_error_and_abort(
-            "model renderer is being destroyed but there are still some models/handles active (not removed)");
+        show_error_and_abort("model renderer is being destroyed but there are still some models/handles active (not removed)");
     }
 
     free(renderer->handle_to_data);
@@ -118,17 +117,13 @@ model_renderer_add_model(te_model_renderer* renderer, unsigned int prog_id) {
     if (!found) {
         // Expand handle array.
         const unsigned int expand_size = 128;
-        unsigned int* new_handles =
-            malloc(sizeof(unsigned int) * (renderer->handle_to_data_array_size + expand_size));
-        memcpy(
-            new_handles, renderer->handle_to_data,
-            sizeof(unsigned int) * renderer->handle_to_data_array_size);
+        unsigned int* new_handles = malloc(sizeof(unsigned int) * (renderer->handle_to_data_array_size + expand_size));
+        memcpy(new_handles, renderer->handle_to_data, sizeof(unsigned int) * renderer->handle_to_data_array_size);
 
         free(renderer->handle_to_data);
         renderer->handle_to_data = new_handles;
 
-        for (unsigned int i = renderer->handle_to_data_array_size;
-             i < renderer->handle_to_data_array_size + expand_size; i++) {
+        for (unsigned int i = renderer->handle_to_data_array_size; i < renderer->handle_to_data_array_size + expand_size; i++) {
             renderer->handle_to_data[i] = INVALID_DATA_INDEX;
         }
 
@@ -144,10 +139,8 @@ model_renderer_add_model(te_model_renderer* renderer, unsigned int prog_id) {
     if ((render_data_count_before + 1) > renderer->render_data_array_size) {
         // Expand the array.
         const unsigned int expand_size = 128;
-        te_model_render_data* new_data =
-            malloc(sizeof(te_model_render_data) * (renderer->render_data_array_size + expand_size));
-        memcpy(
-            new_data, renderer->render_data, sizeof(te_model_render_data) * renderer->render_data_array_size);
+        te_model_render_data* new_data = malloc(sizeof(te_model_render_data) * (renderer->render_data_array_size + expand_size));
+        memcpy(new_data, renderer->render_data, sizeof(te_model_render_data) * renderer->render_data_array_size);
 
         free(renderer->render_data);
         renderer->render_data = new_data;
@@ -250,8 +243,7 @@ model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
             free(renderer->shader_groups);
             renderer->shader_groups = NULL;
         } else {
-            te_shader_group* new_groups =
-                malloc(sizeof(te_shader_group) * (renderer->shader_group_count - 1));
+            te_shader_group* new_groups = malloc(sizeof(te_shader_group) * (renderer->shader_group_count - 1));
             memcpy(new_groups, renderer->shader_groups, sizeof(te_shader_group) * group_index);
             memcpy(
                 new_groups + group_index, renderer->shader_groups + (group_index + 1),
@@ -272,6 +264,14 @@ model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
 
     // Mark handle as unused.
     renderer->handle_to_data[handle] = INVALID_DATA_INDEX;
+
+    // Shift render data indices after the removed one.
+    for (unsigned int i = 0; i < renderer->handle_to_data_array_size; i++) {
+        if (renderer->handle_to_data[i] == INVALID_DATA_INDEX || renderer->handle_to_data[i] < data_index) {
+            continue;
+        }
+        renderer->handle_to_data[i] -= 1;
+    }
 }
 
 te_model_render_data*
@@ -284,8 +284,7 @@ model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int han
 }
 
 void
-model_renderer_draw(
-    te_model_renderer* renderer, ivec4* gl_viewport, mat4* view_proj_mat, te_frustum_shape* camera_frustum) {
+model_renderer_draw(te_model_renderer* renderer, ivec4* gl_viewport, mat4* view_proj_mat, te_frustum_shape* camera_frustum) {
 #if defined(ENGINE_DEBUG_TOOLS)
     te_debug_stats* debug_stats = prv_debug_console_get_stats();
 #endif
@@ -305,8 +304,7 @@ model_renderer_draw(
             te_model_render_data* data = &renderer->render_data[render_data_idx];
 
             // Frustum culling (don't cull skeletal meshes due to animations).
-            if (group->uniform_skin_mats == -1
-                && !frustum_shape_is_aabb_inside(camera_frustum, &data->aabb_world)) {
+            if (group->uniform_skin_mats == -1 && !frustum_shape_is_aabb_inside(camera_frustum, &data->aabb_world)) {
                 continue;
             }
 

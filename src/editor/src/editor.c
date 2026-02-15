@@ -95,8 +95,7 @@ editor_create_game_world(te_editor* editor, te_game_manager* game_manager) {
     text_widget_set_text_own(editor->game_world_stats_widget, stats_text, text_len);
 
     // Set widget.
-    camera_set_widget(
-        editor_camera_get_camera(editor->editor_camera), text_widget_get_widget(editor->game_world_stats_widget));
+    camera_set_widget(editor_camera_get_camera(editor->editor_camera), text_widget_get_widget(editor->game_world_stats_widget));
 }
 
 void
@@ -139,8 +138,7 @@ editor_on_game_tick(void* game_instance, te_game_manager* game_manager, float de
 
 void
 editor_on_keyboard_button_pressed(
-    void* game_instance, struct te_game_manager* game_manager, enum te_keyboard_button button,
-    te_keyboard_modifiers modifiers) {
+    void* game_instance, struct te_game_manager* game_manager, enum te_keyboard_button button, te_keyboard_modifiers modifiers) {
     (void)game_manager;
     (void)modifiers;
 
@@ -150,8 +148,7 @@ editor_on_keyboard_button_pressed(
 
 void
 editor_on_keyboard_button_released(
-    void* game_instance, struct te_game_manager* game_manager, enum te_keyboard_button button,
-    te_keyboard_modifiers modifiers) {
+    void* game_instance, struct te_game_manager* game_manager, enum te_keyboard_button button, te_keyboard_modifiers modifiers) {
     (void)game_manager;
     (void)modifiers;
 
@@ -167,16 +164,14 @@ editor_on_keyboard_input_text(void* game_instance, struct te_game_manager* game_
 }
 
 void
-editor_on_gamepad_button_pressed(
-    void* game_instance, struct te_game_manager* game_manager, enum te_gamepad_button button) {
+editor_on_gamepad_button_pressed(void* game_instance, struct te_game_manager* game_manager, enum te_gamepad_button button) {
     (void)game_instance;
     (void)game_manager;
     (void)button;
 }
 
 void
-editor_on_gamepad_button_released(
-    void* game_instance, struct te_game_manager* game_manager, enum te_gamepad_button button) {
+editor_on_gamepad_button_released(void* game_instance, struct te_game_manager* game_manager, enum te_gamepad_button button) {
     (void)game_instance;
     (void)game_manager;
     (void)button;
@@ -209,8 +204,7 @@ editor_on_mouse_button_pressed(void* game_instance, struct te_game_manager* game
 }
 
 void
-editor_on_mouse_button_released(
-    void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button) {
+editor_on_mouse_button_released(void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button) {
     te_editor* editor = game_instance;
 
     if (button == TE_MB_RIGHT) {
