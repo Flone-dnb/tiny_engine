@@ -38,6 +38,8 @@ set(RELATIVE_EXT_PATH "../../ext") # relative to a subdirectory target (from the
 function(tiny_engine_configure_target TARGET_NAME)
     # Set C standard.
     set_property(TARGET ${TARGET_NAME} PROPERTY C_STANDARD 99)
+    set_property(TARGET ${TARGET_NAME} PROPERTY C_STANDARD_REQUIRED ON)
+    target_compile_features(${TARGET_NAME} PUBLIC c_std_99)
 
     # More warnings.
     if(MSVC)

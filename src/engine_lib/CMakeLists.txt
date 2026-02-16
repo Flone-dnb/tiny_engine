@@ -10,6 +10,7 @@ set(PROJECT_SOURCES
     src/io/log.c
     src/io/paths.c
     src/io/filesystem.c
+    src/io/config.c
     src/misc/globals.c
     src/misc/error.c
     src/misc/memory_usage.c
@@ -46,6 +47,7 @@ set(PROJECT_SOURCES
     include/io/log.h
     include/io/paths.h
     include/io/filesystem.h
+    include/io/config.h
     include/misc/globals.h
     include/misc/error.h
     include/misc/memory_usage.h

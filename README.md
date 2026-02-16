@@ -7,7 +7,7 @@ Supported platforms: Windows (x64), Linux (x64 and ARM64).
 # Roadmap
 
 - [X] Forward renderer using OpenGL ES 2.0
-- [ ] Config management (settings, input, progress)
+- [X] Config management
 - [ ] Type reflection
 - [ ] GLTF/GLB import
 - [ ] GUI
@@ -16,7 +16,6 @@ Supported platforms: Windows (x64), Linux (x64 and ARM64).
 - [ ] Simple physics engine
 - [ ] Skeletal animations
 - [ ] Minimal scripting
-- [ ] Shadow mapping 
 - [ ] Particle effects
 
 # Documentation

@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "io/log.h"
+#include "misc/error.h"
 
 #if defined(WIN32)
 #define NOMINMAX
@@ -65,4 +67,36 @@ filesystem_remove_file(const char* path) {
 #else
 #error "unsupported OS"
 #endif
+}
+
+void
+filesystem_rename_file(const char* old_path, const char* new_path) {
+    if (rename(old_path, new_path) != 0) {
+        log_error_fmt("failed to rename file from \"%s\" to \"%s\"", old_path, new_path);
+        show_error_and_abort("failed to rename a file, see log for more details");
+    }
+}
+
+void
+filesystem_copy_file(const char* src, const char* dst) {
+    FILE* sp = fopen(src, "r");
+    if (sp == NULL) {
+        log_error_fmt("failed to open the file for reading \"%s\"", src);
+        show_error_and_abort("failed to open a file, see log for more details");
+    }
+
+    FILE* dp = fopen(dst, "w");
+    if (dp == NULL) {
+        fclose(sp);
+        log_error_fmt("failed to open the file for writing \"%s\"", src);
+        show_error_and_abort("failed to open a file, see log for more details");
+    }
+
+    int ch;
+    while ((ch = fgetc(sp)) != EOF) {
+        fputc(ch, dp);
+    }
+
+    fclose(sp);
+    fclose(dp);
 }
