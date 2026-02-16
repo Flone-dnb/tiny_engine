@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
-#include <uchar.h>
+#include <wchar.h>
 #include "cglm/vec4.h"
 
 typedef struct te_text_widget te_text_widget;
@@ -15,12 +15,12 @@ void text_widget_destroy(te_text_widget* text_widget);
 struct te_widget* text_widget_get_widget(te_text_widget* text_widget);
 
 // Text will be copied to the widget's data.
-void text_widget_set_text(te_text_widget* text_widget, const char16_t* text);
+void text_widget_set_text(te_text_widget* text_widget, const wchar_t* text);
 // Do not free returned string pointer, valid while the text is not changed and the widget is not destroyed.
-char16_t* text_widget_get_text(te_text_widget* text_widget);
+wchar_t* text_widget_get_text(te_text_widget* text_widget);
 
 // Moves the ownership of the text to the widget.
-void text_widget_set_text_own(te_text_widget* text_widget, char16_t* text, unsigned int strlen);
+void text_widget_set_text_own(te_text_widget* text_widget, wchar_t* text, unsigned int strlen);
 
 // Sets RGBA color of the text.
 void text_widget_set_color(te_text_widget* text_widget, vec4 color);

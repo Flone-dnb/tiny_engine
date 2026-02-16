@@ -3,8 +3,8 @@
 #include <string.h>
 #include "game/camera.h"
 #include "game_manager.h"
-#include "misc/char16_funcs.h"
 #include "misc/error.h"
+#include "misc/wchar_funcs.h"
 #include "render/font_manager.h"
 #include "render/renderer.h"
 #include "render/widget_renderer.h"
@@ -18,7 +18,7 @@ struct te_text_widget {
     te_widget* widget;
 
     // Always non-NULL.
-    char16_t* text;
+    wchar_t* text;
 
     // RGBA color of the text.
     vec4 color;
@@ -66,14 +66,13 @@ text_widget_create(void) {
 
     text_widget->widget = widget_create(
         text_widget, prv_text_widget_on_pos_changed, prv_text_widget_on_size_changed, prv_text_widget_on_parent_changed,
-        prv_text_widget_on_before_base_destroyed, prv_text_widget_on_visibility_changed,
-        prv_text_widget_on_after_activated, prv_text_widget_on_before_deactivated,
-        prv_text_widget_on_window_size_changed);
+        prv_text_widget_on_before_base_destroyed, prv_text_widget_on_visibility_changed, prv_text_widget_on_after_activated,
+        prv_text_widget_on_before_deactivated, prv_text_widget_on_window_size_changed);
     text_widget->is_text_widget_destroy = false;
     text_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
 
     // Setup some placeholder text.
-    text_widget->text = char16_from_char("hello", 5, &text_widget->text_len);
+    text_widget->text = wchar_from_char("hello", &text_widget->text_len);
     text_widget->text[text_widget->text_len] = 0;
 
     return text_widget;
@@ -101,7 +100,7 @@ text_widget_get_widget(te_text_widget* text_widget) {
 }
 
 void
-text_widget_set_text_own(te_text_widget* text_widget, char16_t* text, unsigned int strlen) {
+text_widget_set_text_own(te_text_widget* text_widget, wchar_t* text, unsigned int strlen) {
     if (text == NULL) {
         show_error_and_abort("text pointer must not be NULL");
     }
@@ -117,16 +116,16 @@ text_widget_set_text_own(te_text_widget* text_widget, char16_t* text, unsigned i
 }
 
 void
-text_widget_set_text(te_text_widget* text_widget, const char16_t* text) {
+text_widget_set_text(te_text_widget* text_widget, const wchar_t* text) {
     if (text == NULL) {
         show_error_and_abort("text pointer must not be NULL");
     }
 
     free(text_widget->text);
 
-    const unsigned int text_len = char16_strlen(text);
-    text_widget->text = malloc(sizeof(char16_t) * (text_len + 1));
-    memcpy(text_widget->text, text, sizeof(char16_t) * text_len);
+    const unsigned int text_len = (unsigned int)wcslen(text);
+    text_widget->text = malloc(sizeof(wchar_t) * (text_len + 1));
+    memcpy(text_widget->text, text, sizeof(wchar_t) * text_len);
     text_widget->text[text_len] = 0;
 #if defined(DEBUG)
     if (text_len > 0xffffffff) {
@@ -140,7 +139,7 @@ text_widget_set_text(te_text_widget* text_widget, const char16_t* text) {
     }
 }
 
-char16_t*
+wchar_t*
 text_widget_get_text(te_text_widget* text_widget) {
     return text_widget->text;
 }
@@ -454,8 +453,7 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
             dst_glyph->tex_id = src_glyph.tex_id;
 
             glm_vec2_copy(
-                (vec2){(float)src_glyph.width * glyph_scale, (float)src_glyph.height * glyph_scale},
-                dst_glyph->size_pix);
+                (vec2){(float)src_glyph.width * glyph_scale, (float)src_glyph.height * glyph_scale}, dst_glyph->size_pix);
 
             glm_vec2_copy(offset, dst_glyph->offset_pix);
             glm_vec2_add(

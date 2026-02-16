@@ -5,9 +5,9 @@
 #include "game/camera.h"
 #include "game/model.h"
 #include "game_manager.h"
-#include "misc/char16_funcs.h"
 #include "misc/error.h"
 #include "misc/memory_usage.h"
+#include "misc/wchar_funcs.h"
 #include "render/font_manager.h"
 #include "render/renderer.h"
 #include "widget/text_widget.h"
@@ -91,7 +91,7 @@ editor_create_game_world(te_editor* editor, te_game_manager* game_manager) {
     editor->time_since_stats_update_sec = 10.0f;
 
     unsigned int text_len;
-    char16_t* stats_text = char16_from_char("", 0, &text_len);
+    wchar_t* stats_text = wchar_from_char("", &text_len);
     text_widget_set_text_own(editor->game_world_stats_widget, stats_text, text_len);
 
     // Set widget.
@@ -129,7 +129,7 @@ editor_on_game_tick(void* game_instance, te_game_manager* game_manager, float de
         snprintf(src_text, (size_t)len + 1, fmt, fps, process_mem, total_used_mem, total_mem);
 
         unsigned int text_len;
-        char16_t* stats_text = char16_from_char(src_text, (unsigned int)len, &text_len);
+        wchar_t* stats_text = wchar_from_char(src_text, &text_len);
         text_widget_set_text_own(editor->game_world_stats_widget, stats_text, text_len);
 
         free(src_text);
