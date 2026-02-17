@@ -158,16 +158,23 @@ widget_set_parent(te_widget* widget, te_widget* parent) {
 
     widget->parent = parent;
     prv_widget_recalc_screen_pos_size(widget);
-    widget->on_parent_changed(widget->owner);
 
-    if (widget->active_camera == NULL && widget->parent->active_camera != NULL) {
-        prv_widget_on_camera_activated(widget, widget->parent->active_camera);
-    } else if (widget->active_camera != NULL && (widget->parent->active_camera != widget->active_camera)) {
-        prv_widget_on_camera_deactivated(widget);
-        if (widget->parent->active_camera != NULL) {
+    if (widget->parent == NULL) {
+        if (widget->active_camera != NULL) {
+            prv_widget_on_camera_deactivated(widget);
+        }
+    } else {
+        if (widget->active_camera == NULL && widget->parent->active_camera != NULL) {
             prv_widget_on_camera_activated(widget, widget->parent->active_camera);
+        } else if (widget->active_camera != NULL && (widget->parent->active_camera != widget->active_camera)) {
+            prv_widget_on_camera_deactivated(widget);
+            if (widget->parent->active_camera != NULL) {
+                prv_widget_on_camera_activated(widget, widget->parent->active_camera);
+            }
         }
     }
+
+    widget->on_parent_changed(widget->owner);
 }
 
 static void
