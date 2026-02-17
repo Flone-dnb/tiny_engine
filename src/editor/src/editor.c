@@ -110,23 +110,25 @@ editor_on_game_tick(void* game_instance, te_game_manager* game_manager, float de
     if (editor->game_world_stats_widget != NULL && editor->time_since_stats_update_sec >= 2.0f) {
         editor->time_since_stats_update_sec = 0.0f;
 
-        const unsigned int fps = renderer_get_fps(game_manager_get_renderer(game_manager));
+        te_renderer* renderer = game_manager_get_renderer(game_manager);
+        const unsigned int fps = renderer_get_fps(renderer);
+        const unsigned int fps_limit = renderer_get_fps_limit(renderer);
 
         const unsigned int process_mem = (unsigned int)(memory_usage_get_process_used_memory() / 1024 / 1024);
         const unsigned int total_used_mem = (unsigned int)(memory_usage_get_total_used_memory() / 1024 / 1024);
         const unsigned int total_mem = (unsigned int)(memory_usage_get_total_memory() / 1024 / 1024);
 
-        const char* fmt = "FPS: %u\nRAM used (MB): %u (%u/%u)";
+        const char* fmt = "FPS: %u (limit: %u)\nRAM used (MB): %u (%u/%u)";
 #if defined(ENGINE_ASAN_ENABLED)
-        fmt = "FPS: %u\nRAM used (MB): %u (%u/%u) (ASan enabled)";
+        fmt = "FPS: %u (limit: %u)\nRAM used (MB): %u (%u/%u) (ASan enabled)";
 #endif
 
-        int len = snprintf(NULL, 0, fmt, fps, process_mem, total_used_mem, total_mem);
+        int len = snprintf(NULL, 0, fmt, fps, fps_limit, process_mem, total_used_mem, total_mem);
         if (len < 0) {
             show_error_and_abort("snprintf error");
         }
         char* src_text = malloc(sizeof(char) * (size_t)(len + 1));
-        snprintf(src_text, (size_t)len + 1, fmt, fps, process_mem, total_used_mem, total_mem);
+        snprintf(src_text, (size_t)len + 1, fmt, fps, fps_limit, process_mem, total_used_mem, total_mem);
 
         unsigned int text_len;
         wchar_t* stats_text = wchar_from_char(src_text, &text_len);
