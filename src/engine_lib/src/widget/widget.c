@@ -164,12 +164,16 @@ widget_set_parent(te_widget* widget, te_widget* parent) {
             prv_widget_on_camera_deactivated(widget);
         }
     } else {
-        if (widget->active_camera == NULL && widget->parent->active_camera != NULL) {
-            prv_widget_on_camera_activated(widget, widget->parent->active_camera);
-        } else if (widget->active_camera != NULL && (widget->parent->active_camera != widget->active_camera)) {
-            prv_widget_on_camera_deactivated(widget);
+        if (widget->active_camera == NULL) {
             if (widget->parent->active_camera != NULL) {
                 prv_widget_on_camera_activated(widget, widget->parent->active_camera);
+            }
+        } else {
+            if (widget->parent->active_camera == NULL) {
+                prv_widget_on_camera_deactivated(widget);
+            } else if (widget->active_camera != widget->parent->active_camera) {
+                // Just change the camera, don't trigger any callbacks.
+                widget->active_camera = widget->parent->active_camera;
             }
         }
     }
@@ -254,6 +258,8 @@ widget_get_active_camera(te_widget* widget) {
 
 void
 prv_widget_on_camera_activated(te_widget* widget, struct te_camera* active_camera) {
+    // Activate from top to bottom (in the hierarchy) so that widgets will be placed in the renderer
+    // in the order from top to bottom (in the hierarchy) for top widgets to be rendered first and bottom widgets last.
     widget->active_camera = active_camera;
     widget->on_after_activated(widget->owner);
 
