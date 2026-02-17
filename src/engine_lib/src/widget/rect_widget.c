@@ -1,0 +1,336 @@
+#include "widget/rect_widget.h"
+
+#include <string.h>
+#include "game/camera.h"
+#include "game_manager.h"
+#include "misc/error.h"
+#include "render/renderer.h"
+#include "render/texture_manager.h"
+#include "render/widget_renderer.h"
+#include "widget/widget.h"
+#include "window.h"
+#include "world.h"
+
+#define INVALID_RENDER_DATA_HANDLE  0xffffffff
+#define RECT_WIDGET_TEX_LOAD_OPTION TE_TLO_NO_MIPMAPS
+
+struct te_rect_widget {
+    te_widget* widget;
+
+    // NULL if texture is not set, otherwise path (relative to the `res` directory) to the texture file.
+    char* tex_relative_path;
+
+    vec4 color;
+
+    // Stores invalid value if not being rendered.
+    unsigned int render_data_handle;
+
+    // `true` if entered the "destroy" function.
+    bool is_rect_widget_destroy;
+};
+
+// Widget callbacks:
+static void prv_rect_widget_on_pos_changed(void* this);
+static void prv_rect_widget_on_size_changed(void* this);
+static void prv_rect_widget_on_parent_changed(void* this);
+static void prv_rect_widget_on_after_activated(void* this);
+static void prv_rect_widget_on_before_deactivated(void* this);
+static void prv_rect_widget_on_before_base_destroyed(void* this);
+static void prv_rect_widget_on_window_size_changed(void* this);
+
+static void prv_rect_widget_register_for_rendering(te_rect_widget* rect_widget);
+static void prv_rect_widget_unregister_from_rendering(te_rect_widget* rect_widget);
+static void prv_rect_widget_update_non_tex_render_data(te_rect_widget* rect_widget);
+
+te_rect_widget*
+rect_widget_create(void) {
+    te_rect_widget* rect_widget = malloc(sizeof(te_rect_widget));
+
+    rect_widget->widget = widget_create(
+        rect_widget, prv_rect_widget_on_pos_changed, prv_rect_widget_on_size_changed, prv_rect_widget_on_parent_changed,
+        prv_rect_widget_on_before_base_destroyed, prv_rect_widget_on_after_activated, prv_rect_widget_on_before_deactivated,
+        prv_rect_widget_on_window_size_changed);
+    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, rect_widget->color);
+    rect_widget->tex_relative_path = NULL;
+    rect_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
+    rect_widget->is_rect_widget_destroy = false;
+
+    return rect_widget;
+}
+
+void
+rect_widget_destroy(te_rect_widget* rect_widget) {
+    rect_widget->is_rect_widget_destroy = true;
+
+    if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        prv_rect_widget_unregister_from_rendering(rect_widget);
+    }
+
+    if (rect_widget->widget != NULL) { // may be null if we got here from base destroy
+        widget_destroy(rect_widget->widget);
+    }
+
+    free(rect_widget->tex_relative_path);
+    free(rect_widget);
+}
+
+te_widget*
+rect_widget_get_widget(te_rect_widget* rect_widget) {
+    return rect_widget->widget;
+}
+
+void
+rect_widget_set_color(te_rect_widget* rect_widget, vec4 color) {
+    glm_vec4_copy(color, rect_widget->color);
+
+    if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        // Update render data.
+        te_camera* active_camera = widget_get_active_camera(rect_widget->widget);
+        if (active_camera == NULL) {
+            show_error_and_abort("expected the widget to be used on an active camera");
+        }
+        te_widget_renderer* widget_renderer = world_get_widget_renderer(camera_get_world(active_camera));
+
+        te_rect_widget_render_data* data =
+            widget_renderer_get_rect_widget_render_data_tmp(widget_renderer, rect_widget->render_data_handle);
+        glm_vec4_copy(rect_widget->color, data->color);
+    }
+}
+
+void
+rect_widget_get_color(te_rect_widget* rect_widget, vec4 out) {
+    glm_vec4_copy(rect_widget->color, out);
+}
+
+void
+rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) {
+    free(rect_widget->tex_relative_path);
+
+    if (relative_path == NULL) {
+        // Remove current texture.
+        rect_widget->tex_relative_path = NULL;
+        if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+            // Get widget renderer.
+            te_camera* active_camera = widget_get_active_camera(rect_widget->widget);
+            if (active_camera == NULL) {
+                show_error_and_abort("expected the widget to be used on an active camera");
+            }
+            te_world* world = camera_get_world(active_camera);
+            te_widget_renderer* widget_renderer = world_get_widget_renderer(world);
+
+            te_rect_widget_render_data* data =
+                widget_renderer_get_rect_widget_render_data_tmp(widget_renderer, rect_widget->render_data_handle);
+
+            if (data->tex_id > 0) {
+                // Mark texture as unused.
+                te_texture_manager* texture_manager =
+                    renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(world)));
+                texture_manager_mark_unused_texture(texture_manager, data->tex_id);
+            }
+
+            data->tex_id = 0;
+        }
+    } else {
+        // Set new texture.
+        const size_t len = strlen(relative_path);
+        rect_widget->tex_relative_path = malloc(sizeof(char) * (len + 1));
+        memcpy(rect_widget->tex_relative_path, relative_path, sizeof(char) * len);
+        rect_widget->tex_relative_path[len] = 0;
+
+        if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+            // Get widget renderer.
+            te_camera* active_camera = widget_get_active_camera(rect_widget->widget);
+            if (active_camera == NULL) {
+                show_error_and_abort("expected the widget to be used on an active camera");
+            }
+            te_world* world = camera_get_world(active_camera);
+            te_widget_renderer* widget_renderer = world_get_widget_renderer(world);
+
+            te_rect_widget_render_data* data =
+                widget_renderer_get_rect_widget_render_data_tmp(widget_renderer, rect_widget->render_data_handle);
+
+            te_texture_manager* texture_manager =
+                renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(world)));
+            if (data->tex_id > 0) {
+                texture_manager_mark_unused_texture(texture_manager, data->tex_id);
+            }
+
+            // Load new texture.
+            data->tex_id = texture_manager_request_texture(texture_manager, relative_path, RECT_WIDGET_TEX_LOAD_OPTION);
+        }
+    }
+}
+
+const char*
+rect_widget_get_texture(te_rect_widget* rect_widget) {
+    return rect_widget->tex_relative_path;
+}
+
+static void
+prv_rect_widget_register_for_rendering(te_rect_widget* rect_widget) {
+#if defined(DEBUG)
+    if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        show_error_and_abort("expected the render data handle to be invalid");
+    }
+#endif
+
+    // Get renderer.
+    te_camera* active_camera = widget_get_active_camera(rect_widget->widget);
+    if (active_camera == NULL) {
+        show_error_and_abort("expected the widget to be used on an active camera");
+    }
+    te_world* world = camera_get_world(active_camera);
+    te_game_manager* game_manager = world_get_game_manager(world);
+    te_widget_renderer* widget_renderer = world_get_widget_renderer(world);
+
+    rect_widget->render_data_handle = widget_renderer_add_rect_widget(widget_renderer);
+
+    te_rect_widget_render_data* data =
+        widget_renderer_get_rect_widget_render_data_tmp(widget_renderer, rect_widget->render_data_handle);
+
+    // Setup texture.
+    data->tex_id = 0;
+    if (rect_widget->tex_relative_path != NULL) {
+        te_texture_manager* texture_manager = renderer_get_texture_manager(game_manager_get_renderer(game_manager));
+        data->tex_id =
+            texture_manager_request_texture(texture_manager, rect_widget->tex_relative_path, RECT_WIDGET_TEX_LOAD_OPTION);
+    }
+
+    prv_rect_widget_update_non_tex_render_data(rect_widget);
+}
+
+void
+prv_rect_widget_unregister_from_rendering(te_rect_widget* rect_widget) {
+#if defined(DEBUG)
+    if (rect_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
+        show_error_and_abort("expected the render data handle to be valid");
+    }
+#endif
+
+    // Get renderer.
+    te_camera* active_camera = widget_get_active_camera(rect_widget->widget);
+    if (active_camera == NULL) {
+        show_error_and_abort("expected the widget to be used on an active camera");
+    }
+    te_world* world = camera_get_world(active_camera);
+    te_widget_renderer* widget_renderer = world_get_widget_renderer(world);
+
+    // Cleanup data.
+    te_rect_widget_render_data* data =
+        widget_renderer_get_rect_widget_render_data_tmp(widget_renderer, rect_widget->render_data_handle);
+    if (data->tex_id > 0) {
+        te_texture_manager* texture_manager =
+            renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(world)));
+        texture_manager_mark_unused_texture(texture_manager, data->tex_id);
+    }
+
+    widget_renderer_remove_rect_widget(widget_renderer, rect_widget->render_data_handle);
+    rect_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
+}
+
+void
+prv_rect_widget_update_non_tex_render_data(te_rect_widget* rect_widget) {
+#if defined(DEBUG)
+    if (rect_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
+        show_error_and_abort("expected the render data handle to be valid");
+    }
+#endif
+
+    // Get renderer.
+    te_camera* active_camera = widget_get_active_camera(rect_widget->widget);
+    if (active_camera == NULL) {
+        show_error_and_abort("expected the widget to be used on an active camera");
+    }
+    te_world* world = camera_get_world(active_camera);
+    te_game_manager* game_manager = world_get_game_manager(world);
+    te_widget_renderer* widget_renderer = world_get_widget_renderer(world);
+
+    // Update data.
+    te_rect_widget_render_data* data =
+        widget_renderer_get_rect_widget_render_data_tmp(widget_renderer, rect_widget->render_data_handle);
+
+    glm_vec4_copy(rect_widget->color, data->color);
+
+    unsigned int window_width;
+    unsigned int window_height;
+    window_get_size(game_manager_get_window(game_manager), &window_width, &window_height);
+
+    widget_get_screen_position(rect_widget->widget, data->pos_pix);
+    widget_get_screen_size(rect_widget->widget, data->size_pix);
+    glm_vec2_mul(data->pos_pix, (vec2){(float)window_width, (float)window_height}, data->pos_pix);
+    glm_vec2_mul(data->size_pix, (vec2){(float)window_width, (float)window_height}, data->size_pix);
+}
+
+void
+prv_rect_widget_on_pos_changed(void* this) {
+    te_rect_widget* rect_widget = this;
+
+    if (rect_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
+        return;
+    }
+
+    prv_rect_widget_update_non_tex_render_data(rect_widget);
+}
+
+void
+prv_rect_widget_on_size_changed(void* this) {
+    te_rect_widget* rect_widget = this;
+
+    if (rect_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
+        return;
+    }
+
+    prv_rect_widget_update_non_tex_render_data(rect_widget);
+}
+
+void
+prv_rect_widget_on_parent_changed(void* this) {
+    te_rect_widget* rect_widget = this;
+
+    if (rect_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
+        return;
+    }
+
+    prv_rect_widget_update_non_tex_render_data(rect_widget);
+}
+
+void
+prv_rect_widget_on_after_activated(void* this) {
+    te_rect_widget* rect_widget = this;
+
+    prv_rect_widget_register_for_rendering(rect_widget);
+}
+
+void
+prv_rect_widget_on_before_deactivated(void* this) {
+    te_rect_widget* rect_widget = this;
+
+    if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        prv_rect_widget_unregister_from_rendering(rect_widget);
+    }
+}
+
+void
+prv_rect_widget_on_before_base_destroyed(void* this) {
+    te_rect_widget* rect_widget = this;
+
+    if (rect_widget->is_rect_widget_destroy) {
+        return;
+    }
+
+    // Destroy was called on the base (widget) component, possibly due to
+    // parent being destroyed, cleanup our data.
+    rect_widget->widget = NULL;
+    rect_widget_destroy(rect_widget);
+}
+
+void
+prv_rect_widget_on_window_size_changed(void* this) {
+    te_rect_widget* rect_widget = this;
+
+    if (rect_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
+        return;
+    }
+
+    prv_rect_widget_update_non_tex_render_data(rect_widget);
+}

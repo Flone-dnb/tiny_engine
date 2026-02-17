@@ -15,8 +15,8 @@ struct te_camera;
 te_widget* widget_create(
     void* owner, void (*on_pos_changed)(void* owner), void (*on_size_changed)(void* owner),
     void (*on_parent_changed)(void* owner), void (*on_before_base_destroyed)(void* owner),
-    void (*on_visibility_changed)(void* owner, bool is_visible), void (*on_after_activated)(void* owner),
-    void (*on_before_deactivated)(void* owner), void (*on_window_size_changed)(void* owner));
+    void (*on_after_activated)(void* owner), void (*on_before_deactivated)(void* owner),
+    void (*on_window_size_changed)(void* owner));
 void widget_destroy(te_widget* widget);
 
 // Sets or changes the current parent of a widget.
@@ -25,9 +25,6 @@ void widget_destroy(te_widget* widget);
 // If a widget is being destroyed it will also destroy all child widgets.
 void widget_set_parent(te_widget* widget, te_widget* parent);
 te_widget* widget_get_parent(te_widget* widget);
-
-void widget_set_is_visible(te_widget* widget, bool visible);
-bool widget_is_visible(te_widget* widget);
 
 // Sets position of the widget in range [0.0; 1.0] relative to the window's top-left corner.
 // If the widget has a parent then this position becomes relative to the parent's position/size.

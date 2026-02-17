@@ -12,6 +12,7 @@ void text_widget_destroy(te_text_widget* text_widget);
 
 // Returns component used to adjust common widget properties (pos, size)
 // and attach widget to other widgets.
+// You can destroy returned object and it will cause this widget to be destroyed.
 struct te_widget* text_widget_get_widget(te_text_widget* text_widget);
 
 // Text will be copied to the widget's data.

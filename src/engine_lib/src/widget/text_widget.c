@@ -45,7 +45,6 @@ struct te_text_widget {
 static void prv_text_widget_on_pos_changed(void* this);
 static void prv_text_widget_on_size_changed(void* this);
 static void prv_text_widget_on_parent_changed(void* this);
-static void prv_text_widget_on_visibility_changed(void* this, bool visible);
 static void prv_text_widget_on_after_activated(void* this);
 static void prv_text_widget_on_before_deactivated(void* this);
 static void prv_text_widget_on_before_base_destroyed(void* this);
@@ -66,8 +65,8 @@ text_widget_create(void) {
 
     text_widget->widget = widget_create(
         text_widget, prv_text_widget_on_pos_changed, prv_text_widget_on_size_changed, prv_text_widget_on_parent_changed,
-        prv_text_widget_on_before_base_destroyed, prv_text_widget_on_visibility_changed, prv_text_widget_on_after_activated,
-        prv_text_widget_on_before_deactivated, prv_text_widget_on_window_size_changed);
+        prv_text_widget_on_before_base_destroyed, prv_text_widget_on_after_activated, prv_text_widget_on_before_deactivated,
+        prv_text_widget_on_window_size_changed);
     text_widget->is_text_widget_destroy = false;
     text_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
 
@@ -86,7 +85,7 @@ text_widget_destroy(te_text_widget* text_widget) {
         prv_text_widget_unregister_from_rendering(text_widget);
     }
 
-    if (text_widget->widget != NULL) {
+    if (text_widget->widget != NULL) { // may be null if we got here from base destroy
         widget_destroy(text_widget->widget);
     }
 
@@ -302,27 +301,8 @@ prv_text_widget_on_parent_changed(void* this) {
 }
 
 static void
-prv_text_widget_on_visibility_changed(void* this, bool visible) {
-    te_text_widget* text_widget = this;
-
-    if (widget_get_active_camera(text_widget->widget) == NULL) {
-        return;
-    }
-
-    if (visible && text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
-        prv_text_widget_register_for_rendering(text_widget);
-    } else if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
-        prv_text_widget_unregister_from_rendering(text_widget);
-    }
-}
-
-static void
 prv_text_widget_on_after_activated(void* this) {
     te_text_widget* text_widget = this;
-
-    if (!widget_is_visible(text_widget->widget)) {
-        return;
-    }
 
     prv_text_widget_register_for_rendering(text_widget);
 }
@@ -346,9 +326,6 @@ prv_text_widget_on_before_base_destroyed(void* this) {
 
     // Destroy was called on the base (widget) component, possibly due to
     // parent being destroyed, cleanup our data.
-    if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
-        prv_text_widget_unregister_from_rendering(text_widget);
-    }
     text_widget->widget = NULL;
     text_widget_destroy(text_widget);
 }
@@ -366,12 +343,15 @@ prv_text_widget_on_window_size_changed(void* this) {
 
 static void
 prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
+#if defined(DEBUG)
+    if (text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
+        show_error_and_abort("expected the render data handle to be valid");
+    }
+#endif
+
     te_camera* active_camera = widget_get_active_camera(text_widget->widget);
     if (active_camera == NULL) {
         show_error_and_abort("expected the camera to be active");
-    }
-    if (text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
-        show_error_and_abort("expected render data handle to be valid");
     }
     te_world* world = camera_get_world(active_camera);
     te_widget_renderer* widget_renderer = world_get_widget_renderer(world);

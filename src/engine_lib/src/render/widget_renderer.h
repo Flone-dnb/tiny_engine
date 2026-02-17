@@ -31,16 +31,33 @@ typedef struct te_text_widget_render_data {
     unsigned int glyph_count;
 } te_text_widget_render_data;
 
+// Data needed to render a rect widget.
+typedef struct te_rect_widget_render_data {
+    // Position and size in pixels.
+    vec2 pos_pix;
+    vec2 size_pix;
+
+    // RGBA color.
+    vec4 color;
+
+    // 0 if not used
+    unsigned int tex_id;
+} te_rect_widget_render_data;
+
 te_widget_renderer* widget_renderer_create(struct te_renderer* renderer);
 void widget_renderer_destroy(te_widget_renderer* widget_renderer);
 
 // Draws widgets on the currently set framebuffer.
 void widget_renderer_draw(te_widget_renderer* widget_renderer);
 
+unsigned int widget_renderer_add_text_widget(te_widget_renderer* renderer);
+void widget_renderer_remove_text_widget(te_widget_renderer* renderer, unsigned int handle);
+
+unsigned int widget_renderer_add_rect_widget(te_widget_renderer* renderer);
+void widget_renderer_remove_rect_widget(te_widget_renderer* renderer, unsigned int handle);
+
 // Never store/save pointer to render data because on the next frame
 // the pointer may end up pointing to an invalid memory. Only use "get_render_data" function to quickly
 // update some render data. Suffix "_tmp" is used because of this.
-unsigned int widget_renderer_add_text_widget(te_widget_renderer* renderer);
-te_text_widget_render_data*
-widget_renderer_get_text_widget_render_data_tmp(te_widget_renderer* renderer, unsigned int handle);
-void widget_renderer_remove_text_widget(te_widget_renderer* renderer, unsigned int handle);
+te_text_widget_render_data* widget_renderer_get_text_widget_render_data_tmp(te_widget_renderer* renderer, unsigned int handle);
+te_rect_widget_render_data* widget_renderer_get_rect_widget_render_data_tmp(te_widget_renderer* renderer, unsigned int handle);

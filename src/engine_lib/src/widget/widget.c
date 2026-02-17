@@ -21,7 +21,6 @@ struct te_widget {
     void (*on_size_changed)(void* owner);
     void (*on_parent_changed)(void* owner);
     void (*on_before_base_destroyed)(void* owner);
-    void (*on_visibility_changed)(void* owner, bool is_visible);
     void (*on_after_activated)(void* owner);
     void (*on_before_deactivated)(void* owner);
     void (*on_window_size_changed)(void* owner);
@@ -37,16 +36,14 @@ struct te_widget {
     vec2 screen_size;
 
     unsigned int child_widget_count;
-
-    bool is_visible;
 };
 
 te_widget*
 widget_create(
     void* owner, void (*on_pos_changed)(void* owner), void (*on_size_changed)(void* owner),
     void (*on_parent_changed)(void* owner), void (*on_before_base_destroyed)(void* owner),
-    void (*on_visibility_changed)(void* owner, bool is_visible), void (*on_after_activated)(void* owner),
-    void (*on_before_deactivated)(void* owner), void (*on_window_size_changed)(void* owner)) {
+    void (*on_after_activated)(void* owner), void (*on_before_deactivated)(void* owner),
+    void (*on_window_size_changed)(void* owner)) {
     te_widget* widget = malloc(sizeof(te_widget));
 
     widget->owner = owner;
@@ -56,12 +53,10 @@ widget_create(
     widget->on_size_changed = on_size_changed;
     widget->on_parent_changed = on_parent_changed;
     widget->on_before_base_destroyed = on_before_base_destroyed;
-    widget->on_visibility_changed = on_visibility_changed;
     widget->on_after_activated = on_after_activated;
     widget->on_before_deactivated = on_before_deactivated;
     widget->on_window_size_changed = on_window_size_changed;
     widget->child_widget_count = 0;
-    widget->is_visible = true;
 
     glm_vec2_zero(widget->relative_pos);
     glm_vec2_copy((vec2){0.1f, 0.05f}, widget->relative_size);
@@ -176,27 +171,6 @@ widget_set_parent(te_widget* widget, te_widget* parent) {
 }
 
 static void
-prv_widget_change_visibility_recursive(te_widget* widget, bool visible) {
-    widget->is_visible = visible;
-
-    widget->on_visibility_changed(widget->owner, visible);
-
-    for (unsigned int i = 0; i < widget->child_widget_count; i++) {
-        prv_widget_change_visibility_recursive(widget->child_widgets[i], visible);
-    }
-}
-
-void
-widget_set_is_visible(te_widget* widget, bool visible) {
-    prv_widget_change_visibility_recursive(widget, visible);
-}
-
-bool
-widget_is_visible(te_widget* widget) {
-    return widget->is_visible;
-}
-
-static void
 prv_widget_on_parent_pos_changed(te_widget* widget) {
     prv_widget_recalc_screen_pos_size(widget);
 
@@ -222,7 +196,7 @@ prv_widget_on_parent_size_changed(te_widget* widget) {
 
 void
 widget_set_relative_position(te_widget* widget, vec2 position) {
-    glm_vec2_copy(position, widget->relative_pos);
+    glm_vec2_copy(position, widget->relative_pos); // don't check for [0.0; 1.0]
     prv_widget_recalc_screen_pos_size(widget);
 
     // Notify child widgets.
