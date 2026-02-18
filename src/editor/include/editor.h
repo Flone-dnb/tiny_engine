@@ -11,6 +11,7 @@ typedef struct te_editor te_editor;
 te_editor* editor_create();
 void editor_destroy(te_editor* editor);
 
+// Destroys previous game world (if existed).
 void editor_create_game_world(te_editor* editor, struct te_game_manager* game_manager);
 
 // window callbacks -------------------------------------------------------------------------------

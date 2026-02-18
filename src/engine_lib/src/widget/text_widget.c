@@ -1,7 +1,6 @@
 #include "widget/text_widget.h"
 
 #include <string.h>
-#include "game/camera.h"
 #include "game_manager.h"
 #include "misc/error.h"
 #include "misc/wchar_funcs.h"
@@ -44,7 +43,6 @@ struct te_text_widget {
 // Widget callbacks:
 static void prv_text_widget_on_pos_changed(void* this);
 static void prv_text_widget_on_size_changed(void* this);
-static void prv_text_widget_on_parent_changed(void* this);
 static void prv_text_widget_on_after_activated(void* this);
 static void prv_text_widget_on_before_deactivated(void* this);
 static void prv_text_widget_on_before_base_destroyed(void* this);
@@ -64,9 +62,9 @@ text_widget_create(void) {
     glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, text_widget->color);
 
     text_widget->widget = widget_create(
-        text_widget, prv_text_widget_on_pos_changed, prv_text_widget_on_size_changed, prv_text_widget_on_parent_changed,
-        prv_text_widget_on_before_base_destroyed, prv_text_widget_on_after_activated, prv_text_widget_on_before_deactivated,
-        prv_text_widget_on_window_size_changed);
+        text_widget, prv_text_widget_on_pos_changed, prv_text_widget_on_size_changed,
+        prv_text_widget_on_before_base_destroyed, prv_text_widget_on_after_activated,
+        prv_text_widget_on_before_deactivated, prv_text_widget_on_window_size_changed);
     text_widget->is_text_widget_destroy = false;
     text_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
 
@@ -91,6 +89,20 @@ text_widget_destroy(te_text_widget* text_widget) {
 
     free(text_widget->text);
     free(text_widget);
+}
+
+static void
+prv_text_widget_on_before_base_destroyed(void* this) {
+    te_text_widget* text_widget = this;
+
+    if (text_widget->is_text_widget_destroy) {
+        return;
+    }
+
+    // Destroy was called on the base (widget) component, possibly due to
+    // parent being destroyed, cleanup our data.
+    text_widget->widget = NULL;
+    text_widget_destroy(text_widget);
 }
 
 te_widget*
@@ -151,15 +163,13 @@ text_widget_set_color(te_text_widget* text_widget, vec4 color) {
         return;
     }
 
-    // Update render data.
-    te_camera* active_camera = widget_get_active_camera(text_widget->widget);
-    if (active_camera == NULL) {
-        show_error_and_abort("expected the widget to be used on an active camera");
+    te_world* world = widget_get_world(text_widget->widget);
+    if (world == NULL) {
+        show_error_and_abort("expected the widget to be spawned");
     }
-    te_widget_renderer* widget_renderer = world_get_widget_renderer(camera_get_world(active_camera));
 
     te_text_widget_render_data* data =
-        widget_renderer_get_text_widget_render_data_tmp(widget_renderer, text_widget->render_data_handle);
+        widget_renderer_get_text_widget_render_data_tmp(world_get_widget_renderer(world), text_widget->render_data_handle);
 
     glm_vec4_copy(text_widget->color, data->color);
 }
@@ -223,13 +233,12 @@ prv_text_widget_register_for_rendering(te_text_widget* text_widget) {
     }
 #endif
 
-    te_camera* active_camera = widget_get_active_camera(text_widget->widget);
-    if (active_camera == NULL) {
-        show_error_and_abort("expected the widget to be used on an active camera");
+    te_world* world = widget_get_world(text_widget->widget);
+    if (world == NULL) {
+        show_error_and_abort("expected the widget to be spawned");
     }
-    te_widget_renderer* widget_renderer = world_get_widget_renderer(camera_get_world(active_camera));
 
-    text_widget->render_data_handle = widget_renderer_add_text_widget(widget_renderer);
+    text_widget->render_data_handle = widget_renderer_add_text_widget(world_get_widget_renderer(world));
     prv_text_widget_update_all_render_data(text_widget);
 }
 
@@ -241,11 +250,11 @@ prv_text_widget_unregister_from_rendering(te_text_widget* text_widget) {
     }
 #endif
 
-    te_camera* active_camera = widget_get_active_camera(text_widget->widget);
-    if (active_camera == NULL) {
-        show_error_and_abort("expected the widget to be used on an active camera");
+    te_world* world = widget_get_world(text_widget->widget);
+    if (world == NULL) {
+        show_error_and_abort("expected the widget to be spawned");
     }
-    te_widget_renderer* widget_renderer = world_get_widget_renderer(camera_get_world(active_camera));
+    te_widget_renderer* widget_renderer = world_get_widget_renderer(world);
 
     widget_renderer_remove_text_widget(widget_renderer, text_widget->render_data_handle);
     text_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
@@ -259,20 +268,17 @@ prv_text_widget_on_pos_changed(void* this) {
         return;
     }
 
-    // Update render data.
-    te_camera* active_camera = widget_get_active_camera(text_widget->widget);
-    if (active_camera == NULL) {
-        show_error_and_abort("expected the widget to be used on an active camera");
+    te_world* world = widget_get_world(text_widget->widget);
+    if (world == NULL) {
+        show_error_and_abort("expected the widget to be spawned");
     }
-    te_world* world = camera_get_world(active_camera);
-    te_widget_renderer* widget_renderer = world_get_widget_renderer(world);
 
     unsigned int window_width;
     unsigned int window_height;
     window_get_size(game_manager_get_window(world_get_game_manager(world)), &window_width, &window_height);
 
     te_text_widget_render_data* data =
-        widget_renderer_get_text_widget_render_data_tmp(widget_renderer, text_widget->render_data_handle);
+        widget_renderer_get_text_widget_render_data_tmp(world_get_widget_renderer(world), text_widget->render_data_handle);
 
     widget_get_screen_position(text_widget->widget, data->pos_pix);
     glm_vec2_mul(data->pos_pix, (vec2){(float)window_width, (float)window_height}, data->pos_pix);
@@ -280,17 +286,6 @@ prv_text_widget_on_pos_changed(void* this) {
 
 static void
 prv_text_widget_on_size_changed(void* this) {
-    te_text_widget* text_widget = this;
-
-    if (text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
-        return;
-    }
-
-    prv_text_widget_update_all_render_data(text_widget);
-}
-
-static void
-prv_text_widget_on_parent_changed(void* this) {
     te_text_widget* text_widget = this;
 
     if (text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
@@ -317,20 +312,6 @@ prv_text_widget_on_before_deactivated(void* this) {
 }
 
 static void
-prv_text_widget_on_before_base_destroyed(void* this) {
-    te_text_widget* text_widget = this;
-
-    if (text_widget->is_text_widget_destroy) {
-        return;
-    }
-
-    // Destroy was called on the base (widget) component, possibly due to
-    // parent being destroyed, cleanup our data.
-    text_widget->widget = NULL;
-    text_widget_destroy(text_widget);
-}
-
-static void
 prv_text_widget_on_window_size_changed(void* this) {
     te_text_widget* text_widget = this;
 
@@ -349,17 +330,15 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
     }
 #endif
 
-    te_camera* active_camera = widget_get_active_camera(text_widget->widget);
-    if (active_camera == NULL) {
-        show_error_and_abort("expected the camera to be active");
+    te_world* world = widget_get_world(text_widget->widget);
+    if (world == NULL) {
+        show_error_and_abort("expected the widget to be spawned");
     }
-    te_world* world = camera_get_world(active_camera);
-    te_widget_renderer* widget_renderer = world_get_widget_renderer(world);
     te_game_manager* game_manager = world_get_game_manager(world);
     te_font_manager* font_manager = renderer_get_font_manager(game_manager_get_renderer(game_manager));
 
     te_text_widget_render_data* data =
-        widget_renderer_get_text_widget_render_data_tmp(widget_renderer, text_widget->render_data_handle);
+        widget_renderer_get_text_widget_render_data_tmp(world_get_widget_renderer(world), text_widget->render_data_handle);
 
     glm_vec4_copy(text_widget->color, data->color);
 

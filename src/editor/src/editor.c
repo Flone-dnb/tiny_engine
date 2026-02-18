@@ -59,8 +59,8 @@ editor_on_game_started(void* game_instance, te_game_manager* game_manager) {
     editor_create_game_world(editor, game_manager);
 }
 
-void
-editor_destroy_game_world(te_editor* editor, te_game_manager* game_manager) {
+static void
+prv_editor_destroy_game_world(te_editor* editor, te_game_manager* game_manager) {
     // Despawn editor camera because we manage its destruction manually.
     editor_camera_despawn(editor->editor_camera, editor->game_world);
 
@@ -73,7 +73,7 @@ editor_destroy_game_world(te_editor* editor, te_game_manager* game_manager) {
 void
 editor_create_game_world(te_editor* editor, te_game_manager* game_manager) {
     if (editor->game_world != NULL) {
-        editor_destroy_game_world(editor, game_manager);
+        prv_editor_destroy_game_world(editor, game_manager);
     }
 
     editor->game_world = game_manager_create_world(game_manager, "game");
@@ -94,8 +94,8 @@ editor_create_game_world(te_editor* editor, te_game_manager* game_manager) {
     wchar_t* stats_text = wchar_from_char("", &text_len);
     text_widget_set_text_own(editor->game_world_stats_widget, stats_text, text_len);
 
-    // Set widget.
-    camera_set_widget(editor_camera_get_camera(editor->editor_camera), text_widget_get_widget(editor->game_world_stats_widget));
+    // Spawn stats widget.
+    world_spawn_widget(editor->game_world, text_widget_get_widget(editor->game_world_stats_widget));
 }
 
 void
@@ -288,6 +288,6 @@ editor_on_window_close(void* game_instance, struct te_game_manager* game_manager
     te_editor* editor = game_instance;
 
     if (editor->game_world != NULL) {
-        editor_destroy_game_world(editor, game_manager);
+        prv_editor_destroy_game_world(editor, game_manager);
     }
 }

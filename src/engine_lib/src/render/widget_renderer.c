@@ -267,7 +267,14 @@ widget_renderer_create(te_renderer* renderer) {
 
 void
 widget_renderer_destroy(te_widget_renderer* widget_renderer) {
+    if (widgets_render_data_count(widget_renderer->text_widget_data) > 0) {
+        show_error_and_abort("widget renderer is being destroyed but there are still some text widgets rendering");
+    }
     widgets_render_data_destroy(widget_renderer->text_widget_data);
+
+    if (widgets_render_data_count(widget_renderer->rect_widget_data) > 0) {
+        show_error_and_abort("widget renderer is being destroyed but there are still some rect widgets rendering");
+    }
     widgets_render_data_destroy(widget_renderer->rect_widget_data);
 
     shader_manager_mark_unused_shader(

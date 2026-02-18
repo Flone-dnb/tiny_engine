@@ -7,24 +7,27 @@ struct te_model_renderer;
 struct te_widget_renderer;
 struct te_camera;
 struct te_model;
+struct te_widget;
 
 // Returns world's name.
 // Do not free/destroy returned pointer.
 const char* world_get_name(te_world* world);
 
-// Spawns the model in the world.
-//
 // The model will be automatically despawned and destroyed when the world is being destroyed
-// but you can despawn the model earlier using @ref world_despawn_model.
+// but you can despawn the model earlier to manually manage its destruction.
 void world_spawn_model(te_world* world, struct te_model* model);
 void world_despawn_model(te_world* world, struct te_model* model);
 
-// Spawns the camera in the world.
-//
 // The camera will be automatically despawned and destroyed when the world is being destroyed
-// but you can despawn the camera earlier using @ref world_despawn_camera.
+// but you can despawn the camera earlier to manually manage its destruction.
 void world_spawn_camera(te_world* world, struct te_camera* camera);
 void world_despawn_camera(te_world* world, struct te_camera* camera);
+
+// The widget will be automatically despawned and destroyed when the world is being destroyed
+// but you can despawn the widget earlier to manually manage its destruction.
+// Also spawns/despawns all child widgets of the specified widget.
+void world_spawn_widget(te_world* world, struct te_widget* widget);
+void world_despawn_widget(te_world* world, struct te_widget* widget);
 
 // Sets the camera to view the world.
 // Specify NULL to remove active camera.

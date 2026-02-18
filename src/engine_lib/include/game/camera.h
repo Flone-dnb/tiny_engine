@@ -5,7 +5,6 @@
 #include "cglm/vec4.h"
 
 typedef struct te_camera te_camera;
-struct te_widget;
 
 te_camera* camera_create();
 void camera_destroy(te_camera* camera);
@@ -38,18 +37,6 @@ void camera_get_forward(te_camera* camera, vec3 out);
 void camera_get_right(te_camera* camera, vec3 out);
 void camera_get_up(te_camera* camera, vec3 out);
 
-// Moves the ownership of the widget to the camera (when camera is destroyed
-// the widget and all attached child widgets are also destroyed).
-// When camera is active the specified widget is displayed.
-//
-// Specify NULL as widget to remove (but not destroy) the widget. In this case you would need
-// to manage widget's destruction.
-// If setting a new widget (while some other non-NULL widget was previously set) destroys the old widget.
-//
-// Returns NULL if no widget was set.
-void camera_set_widget(te_camera* camera, struct te_widget* widget);
-struct te_widget* camera_get_widget(te_camera* camera);
-
 // Returns camera's view projection matrix.
 // Do not free/destroy returned pointer, valid while the camera exists.
 mat4* camera_get_view_proj_mat(te_camera* camera);
@@ -70,9 +57,3 @@ void prv_camera_set_render_target_size(te_camera* camera, unsigned int width, un
 
 // Sets world the camera is spawned in (specify NULL to mark despawn).
 void prv_camera_set_world(te_camera* camera, struct te_world* world);
-
-// Called when the camera becomes the active camera in the world.
-void prv_camera_on_activated(te_camera* camera);
-void prv_camera_on_deactivated(te_camera* camera);
-
-void prv_camera_on_window_size_changed(te_camera* camera);

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "widget/widget.h"
 #include "game/camera.h"
 #include "game/model.h"
 #include "game_manager.h"
@@ -31,6 +32,10 @@ struct te_world {
     // NULL if nothing spawned, size of this array is @ref spawned_camera_count.
     te_camera** spawned_cameras;
 
+    // NULL if nothing spawned, size of this array is @ref spawned_widget_count.
+    // Each widget here can have child widgets, this array only stores root widgets.
+    te_widget** spawned_widgets;
+
     // Renders models of the world.
     te_model_renderer* model_renderer;
 
@@ -40,14 +45,17 @@ struct te_world {
     // World name.
     char* name;
 
-    // Number of spawned models in @ref spawned_models.
+    // Number of spawned models (valid elements) in @ref spawned_models.
     unsigned int spawned_model_count;
 
-    // Size of the array @ref spawned_models.
+    // Total number of elements that @ref spawned_models can hold.
     unsigned int spawned_models_array_size;
 
     // Size of the array @ref spawned_cameras.
     unsigned int spawned_camera_count;
+
+    // Size of the array @ref spawned_widgets.
+    unsigned int spawned_widget_count;
 
     // `true` if the world is currently being destroyed.
     bool is_being_destroyed;
@@ -70,8 +78,12 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
     world->game_manager = game_manager;
 
     world->active_camera = NULL;
+    
     world->spawned_cameras = NULL;
     world->spawned_camera_count = 0;
+
+    world->spawned_widgets = NULL;
+    world->spawned_widget_count = 0;
 
     world->spawned_model_count = 0;
     world->spawned_models_array_size = 128;
@@ -119,15 +131,21 @@ prv_world_destroy(te_world* world) {
         free(world->spawned_models);
 
         // Cameras.
-        if (world->active_camera != NULL) {
-            prv_camera_on_deactivated(world->active_camera);
-        }
         while (world->spawned_camera_count > 0) {
             te_camera* camera = world->spawned_cameras[world->spawned_camera_count - 1];
             world->spawned_camera_count -= 1;
             camera_destroy(camera);
         }
         free(world->spawned_cameras);
+
+        // Widgets.
+        while (world->spawned_widget_count > 0) {
+            te_widget* widget = world->spawned_widgets[world->spawned_widget_count - 1];
+            world->spawned_widget_count -= 1;
+            prv_widget_on_despawned(widget);
+            widget_destroy(widget);
+        }
+        free(world->spawned_widgets);
     }
 
     free(world->name);
@@ -150,7 +168,9 @@ prv_world_on_window_size_changed(te_world* world) {
         return;
     }
 
-    prv_camera_on_window_size_changed(world->active_camera);
+    for (unsigned int i = 0; i < world->spawned_widget_count; i++) {
+        prv_widget_on_window_size_changed(world->spawned_widgets[i]);
+    }
 }
 
 const char*
@@ -168,15 +188,7 @@ world_set_active_camera(te_world* world, te_camera* camera) {
         show_error_and_abort("in order to make a camera active in the world you first need to spawn the camera in the world");
     }
 
-    if (world->active_camera != NULL) {
-        prv_camera_on_deactivated(world->active_camera);
-    }
-
     world->active_camera = camera;
-
-    if (world->active_camera != NULL) {
-        prv_camera_on_activated(world->active_camera);
-    }
 }
 
 te_camera*
@@ -205,6 +217,16 @@ world_spawn_model(te_world* world, te_model* model) {
         return;
     }
 
+    te_world* old_model_world = model_get_world(model);
+    if (old_model_world != NULL) {
+        if (old_model_world == world) {
+            show_error_and_abort("the model is already spawned in this world");
+        } else {
+            show_error_and_abort("the specified model cannot be spawned in this world because the model "
+                                 "must be first despawned from the world it currently resides in");
+        }
+    }
+
     if (world->spawned_model_count == world->spawned_models_array_size) {
         // Expand array.
         const unsigned int grow_size = 128;
@@ -224,6 +246,10 @@ world_spawn_model(te_world* world, te_model* model) {
 
 void
 world_despawn_model(te_world* world, te_model* model) {
+    if (model_get_world(model) != world) {
+        show_error_and_abort("the specified model cannot be despawned from this world as it's not spawned in this world");
+    }
+
     // Find model.
     unsigned int model_idx = 0;
     bool found = false;
@@ -250,9 +276,24 @@ world_despawn_model(te_world* world, te_model* model) {
 
 void
 world_spawn_camera(te_world* world, te_camera* camera) {
-    if (camera_get_world(camera) != NULL) {
-        show_error_and_abort("the specified camera cannot be spawned in this world because the camera "
-                             "must be first despawned from the world it currently resides in");
+    if (world->is_being_destroyed) {
+        return;
+    }
+
+#if defined(DEBUG)
+    if (camera == NULL) {
+        show_error_and_abort("NULL camera specified to spawn");
+    }
+#endif
+
+    te_world* old_camera_world = camera_get_world(camera);
+    if (old_camera_world != NULL) {
+        if (old_camera_world == world) {
+            show_error_and_abort("the camera is already spawned in this world");
+        } else {
+            show_error_and_abort("the specified camera cannot be spawned in this world because the camera "
+                                 "must be first despawned from the world it currently resides in");
+        }
     }
 
     te_camera** new_cameras = malloc(sizeof(te_camera*) * (world->spawned_camera_count + 1));
@@ -280,7 +321,6 @@ world_despawn_camera(te_world* world, te_camera* camera) {
     }
 
     if (world->active_camera == camera) {
-        prv_camera_on_deactivated(world->active_camera);
         world->active_camera = NULL;
     }
     prv_camera_set_world(camera, NULL);
@@ -306,11 +346,75 @@ world_despawn_camera(te_world* world, te_camera* camera) {
 
         te_camera** new_cameras = malloc(sizeof(te_camera*) * (world->spawned_model_count - 1));
         memcpy(new_cameras, world->spawned_cameras, sizeof(te_camera*) * i);
-        memcpy(new_cameras + i, world->spawned_cameras + (i + 1), world->spawned_camera_count - i - 1);
+        memcpy(new_cameras + i, world->spawned_cameras + (i + 1), sizeof(te_camera*) * (world->spawned_camera_count - i - 1));
 
         free(world->spawned_cameras);
         world->spawned_cameras = new_cameras;
         world->spawned_camera_count -= 1;
+    }
+}
+
+void
+world_spawn_widget(te_world* world, struct te_widget* widget) {
+    if (world->is_being_destroyed) {
+        return;
+    }
+
+    te_world* old_widget_world = widget_get_world(widget);
+    if (old_widget_world != NULL) {
+        if (old_widget_world == world) {
+            show_error_and_abort("the widget is already spawned in this world");
+        }
+        else {
+            show_error_and_abort("the specified widget cannot be spawned in this world because the widget "
+                                 "must be first despawned from the world it currently resides in");
+        }
+    }
+
+    te_widget** new_widgets = malloc(sizeof(te_widget*) * (world->spawned_widget_count + 1));
+    memcpy(new_widgets, world->spawned_widgets, sizeof(te_widget*) * world->spawned_widget_count);
+
+    free(world->spawned_widgets);
+    world->spawned_widgets = new_widgets;
+
+    world->spawned_widgets[world->spawned_widget_count] = widget;
+    world->spawned_widget_count += 1;
+
+    prv_widget_on_spawned(widget, world);
+}
+
+void
+world_despawn_widget(te_world* world, te_widget* widget) {
+    if (widget_get_world(widget) != world) {
+        show_error_and_abort("the specified widget cannot be despawned from this world as it's not spawned in this world");
+    }
+
+    if (world->spawned_widget_count == 1) {
+        free(world->spawned_widgets);
+        world->spawned_widgets = NULL;
+        world->spawned_widget_count = 0;
+    } else {
+        unsigned int i = 0;
+        bool found = false;
+        for (; i < world->spawned_widget_count; i++) {
+            if (world->spawned_widgets[i] != widget) {
+                continue;
+            }
+
+            found = true;
+            break;
+        }
+        if (!found) {
+            show_error_and_abort("unable to find the specified widget");
+        }
+
+        te_widget** new_widgets = malloc(sizeof(te_widget*) * (world->spawned_widget_count - 1));
+        memcpy(new_widgets, world->spawned_widgets, sizeof(te_widget*) * i);
+        memcpy(new_widgets + i, world->spawned_widgets + (i + 1), sizeof(te_widget*) * (world->spawned_widget_count - i - 1));
+
+        free(world->spawned_widgets);
+        world->spawned_widgets = new_widgets;
+        world->spawned_widget_count -= 1;
     }
 }
 
