@@ -1,5 +1,8 @@
 #pragma once
 
+#include <stdbool.h>
+#include "input/mouse_button.h"
+
 typedef struct te_game_manager te_game_manager;
 
 struct te_renderer;
@@ -44,3 +47,12 @@ void prv_game_manager_draw_frame(te_game_manager* game_manager, float delta_time
 
 // Called by window after its size was changed.
 void prv_game_manager_on_window_size_changed(te_game_manager* game_manager);
+
+// Transfers the event to UI.
+// Returns `true` if the event was handled by some widget.
+bool prv_game_manager_on_mouse_button_pressed(te_game_manager* game_manager, enum te_mouse_button button);
+bool prv_game_manager_on_mouse_button_released(te_game_manager* game_manager, enum te_mouse_button button);
+void prv_game_manager_on_mouse_moved(te_game_manager* game_manager);
+
+// Called by window after user input device was changed (keyboard+mouse/gamepad).
+void prv_game_manager_on_input_source_changed(te_game_manager* game_manager);

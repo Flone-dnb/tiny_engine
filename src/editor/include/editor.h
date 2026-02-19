@@ -26,8 +26,10 @@ void editor_on_gamepad_button_pressed(void* game_instance, struct te_game_manage
 void editor_on_gamepad_button_released(void* game_instance, struct te_game_manager* game_manager, enum te_gamepad_button button);
 void
 editor_on_gamepad_axis_moved(void* game_instance, struct te_game_manager* game_manager, enum te_gamepad_axis axis, float new_pos);
-void editor_on_mouse_button_pressed(void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button);
-void editor_on_mouse_button_released(void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button);
+void editor_on_mouse_button_pressed(
+    void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button, bool was_handled_by_widget);
+void editor_on_mouse_button_released(
+    void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button, bool was_handled_by_widget);
 void editor_on_mouse_moved(void* game_instance, struct te_game_manager* game_manager, float x_offset, float y_offset);
 void editor_on_mouse_scroll_moved(void* game_instance, struct te_game_manager* game_manager, float offset);
 void editor_on_gamepad_connected(void* game_instance, struct te_game_manager* game_manager, const char* gamepad_name);

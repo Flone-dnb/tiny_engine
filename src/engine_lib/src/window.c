@@ -227,6 +227,8 @@ window_process_events(te_window* window, te_window_callbacks* window_callbacks, 
 
             if (window->had_gamepad_input_prev_frame != window->had_gamepad_input_curr_frame) {
                 window->had_gamepad_input_prev_frame = window->had_gamepad_input_curr_frame;
+
+                prv_game_manager_on_input_source_changed(window->game_manager);
                 window->user_callbacks->on_input_source_changed(
                     window->game_instance, window->game_manager, window->had_gamepad_input_curr_frame);
             }
@@ -291,6 +293,12 @@ window_get_size(te_window* window, unsigned int* width, unsigned int* height) {
     *height = window->height;
 }
 
+void
+window_get_cursor_position(te_window* window, float* x, float* y) {
+    (void)window;
+    SDL_GetMouseState(x, y);
+}
+
 unsigned int
 window_get_display_refresh_rate(te_window* window) {
     return window->display_refresh_rate;
@@ -307,18 +315,23 @@ prv_window_process_event(te_window* window, union SDL_Event event, float delta_t
 
     switch (event.type) {
         case (SDL_EVENT_MOUSE_MOTION): {
+            prv_game_manager_on_mouse_moved(window->game_manager);
             window->user_callbacks->on_mouse_moved(
                 window->game_instance, window->game_manager, event.motion.xrel, event.motion.yrel);
             break;
         }
         case (SDL_EVENT_MOUSE_BUTTON_DOWN): {
+            const bool is_handled =
+                prv_game_manager_on_mouse_button_pressed(window->game_manager, (enum te_mouse_button)event.button.button);
             window->user_callbacks->on_mouse_button_pressed(
-                window->game_instance, window->game_manager, (enum te_mouse_button)event.button.button);
+                window->game_instance, window->game_manager, (enum te_mouse_button)event.button.button, is_handled);
             break;
         }
         case (SDL_EVENT_MOUSE_BUTTON_UP): {
+            const bool is_handled =
+                prv_game_manager_on_mouse_button_released(window->game_manager, (enum te_mouse_button)event.button.button);
             window->user_callbacks->on_mouse_button_released(
-                window->game_instance, window->game_manager, (enum te_mouse_button)event.button.button);
+                window->game_instance, window->game_manager, (enum te_mouse_button)event.button.button, is_handled);
             break;
         }
         case (SDL_EVENT_KEY_DOWN): {

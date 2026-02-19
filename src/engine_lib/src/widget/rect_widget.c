@@ -31,8 +31,8 @@ struct te_rect_widget {
 // Widget callbacks:
 static void prv_rect_widget_on_pos_changed(void* this);
 static void prv_rect_widget_on_size_changed(void* this);
-static void prv_rect_widget_on_after_activated(void* this);
-static void prv_rect_widget_on_before_deactivated(void* this);
+static void prv_rect_widget_on_after_spawned(void* this);
+static void prv_rect_widget_on_before_despawned(void* this);
 static void prv_rect_widget_on_before_base_destroyed(void* this);
 static void prv_rect_widget_on_window_size_changed(void* this);
 
@@ -45,9 +45,8 @@ rect_widget_create(void) {
     te_rect_widget* rect_widget = malloc(sizeof(te_rect_widget));
 
     rect_widget->widget = widget_create(
-        rect_widget, prv_rect_widget_on_pos_changed, prv_rect_widget_on_size_changed,
-        prv_rect_widget_on_before_base_destroyed, prv_rect_widget_on_after_activated,
-        prv_rect_widget_on_before_deactivated, prv_rect_widget_on_window_size_changed);
+        rect_widget, prv_rect_widget_on_pos_changed, prv_rect_widget_on_size_changed, prv_rect_widget_on_before_base_destroyed,
+        prv_rect_widget_on_after_spawned, prv_rect_widget_on_before_despawned, prv_rect_widget_on_window_size_changed);
     glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, rect_widget->color);
     rect_widget->tex_relative_path = NULL;
     rect_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
@@ -60,11 +59,10 @@ void
 rect_widget_destroy(te_rect_widget* rect_widget) {
     rect_widget->is_rect_widget_destroy = true;
 
-    if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
-        prv_rect_widget_unregister_from_rendering(rect_widget);
-    }
-
     if (rect_widget->widget != NULL) { // may be null if we got here from base destroy
+        if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+            prv_rect_widget_unregister_from_rendering(rect_widget);
+        }
         widget_destroy(rect_widget->widget);
     }
 
@@ -72,12 +70,15 @@ rect_widget_destroy(te_rect_widget* rect_widget) {
     free(rect_widget);
 }
 
-void
+static void
 prv_rect_widget_on_before_base_destroyed(void* this) {
     te_rect_widget* rect_widget = this;
-
     if (rect_widget->is_rect_widget_destroy) {
         return;
+    }
+
+    if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        prv_rect_widget_unregister_from_rendering(rect_widget);
     }
 
     // Destroy was called on the base (widget) component, possibly due to
@@ -201,7 +202,7 @@ prv_rect_widget_register_for_rendering(te_rect_widget* rect_widget) {
     prv_rect_widget_update_non_tex_render_data(rect_widget);
 }
 
-void
+static void
 prv_rect_widget_unregister_from_rendering(te_rect_widget* rect_widget) {
 #if defined(DEBUG)
     if (rect_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
@@ -228,7 +229,7 @@ prv_rect_widget_unregister_from_rendering(te_rect_widget* rect_widget) {
     rect_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
 }
 
-void
+static void
 prv_rect_widget_update_non_tex_render_data(te_rect_widget* rect_widget) {
 #if defined(DEBUG)
     if (rect_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
@@ -257,7 +258,7 @@ prv_rect_widget_update_non_tex_render_data(te_rect_widget* rect_widget) {
     glm_vec2_mul(data->size_pix, (vec2){(float)window_width, (float)window_height}, data->size_pix);
 }
 
-void
+static void
 prv_rect_widget_on_pos_changed(void* this) {
     te_rect_widget* rect_widget = this;
 
@@ -268,7 +269,7 @@ prv_rect_widget_on_pos_changed(void* this) {
     prv_rect_widget_update_non_tex_render_data(rect_widget);
 }
 
-void
+static void
 prv_rect_widget_on_size_changed(void* this) {
     te_rect_widget* rect_widget = this;
 
@@ -279,23 +280,19 @@ prv_rect_widget_on_size_changed(void* this) {
     prv_rect_widget_update_non_tex_render_data(rect_widget);
 }
 
-void
-prv_rect_widget_on_after_activated(void* this) {
+static void
+prv_rect_widget_on_after_spawned(void* this) {
     te_rect_widget* rect_widget = this;
-
     prv_rect_widget_register_for_rendering(rect_widget);
 }
 
-void
-prv_rect_widget_on_before_deactivated(void* this) {
+static void
+prv_rect_widget_on_before_despawned(void* this) {
     te_rect_widget* rect_widget = this;
-
-    if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
-        prv_rect_widget_unregister_from_rendering(rect_widget);
-    }
+    prv_rect_widget_unregister_from_rendering(rect_widget);
 }
 
-void
+static void
 prv_rect_widget_on_window_size_changed(void* this) {
     te_rect_widget* rect_widget = this;
 

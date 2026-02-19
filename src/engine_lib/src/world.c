@@ -3,13 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "widget/widget.h"
 #include "game/camera.h"
 #include "game/model.h"
 #include "game_manager.h"
 #include "misc/error.h"
 #include "render/model_renderer.h"
 #include "render/widget_renderer.h"
+#include "widget/widget.h"
+#include "window.h"
 #if defined(ENGINE_DEBUG_TOOLS)
 #include "glad/glad.h"
 #include "render/gpu_time_section.h"
@@ -36,11 +37,18 @@ struct te_world {
     // Each widget here can have child widgets, this array only stores root widgets.
     te_widget** spawned_widgets;
 
+    // Spawned widgets (from @ref spawned_widgets) that receive input (for example buttons).
+    // Size of this array is @ref interactable_widget_count.
+    te_widget** interactable_widgets;
+
     // Renders models of the world.
     te_model_renderer* model_renderer;
 
     // Renders widgets of the world.
     te_widget_renderer* widget_renderer;
+
+    // May be NULL. Item from array @ref interactable_widgets that currently hovered.
+    te_widget* hovered_interactable_widget;
 
     // World name.
     char* name;
@@ -56,6 +64,9 @@ struct te_world {
 
     // Size of the array @ref spawned_widgets.
     unsigned int spawned_widget_count;
+
+    // Size of the array @ref interactable_widgets.
+    unsigned int interactable_widget_count;
 
     // `true` if the world is currently being destroyed.
     bool is_being_destroyed;
@@ -78,12 +89,16 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
     world->game_manager = game_manager;
 
     world->active_camera = NULL;
-    
+
     world->spawned_cameras = NULL;
     world->spawned_camera_count = 0;
 
     world->spawned_widgets = NULL;
     world->spawned_widget_count = 0;
+
+    world->interactable_widgets = NULL;
+    world->hovered_interactable_widget = NULL;
+    world->interactable_widget_count = 0;
 
     world->spawned_model_count = 0;
     world->spawned_models_array_size = 128;
@@ -146,6 +161,11 @@ prv_world_destroy(te_world* world) {
             widget_destroy(widget);
         }
         free(world->spawned_widgets);
+        if (world->interactable_widget_count > 0) {
+            show_error_and_abort(
+                "all widgets of a world were destroyed but there are still some interactable widgets registered");
+        }
+        free(world->interactable_widgets);
     }
 
     free(world->name);
@@ -364,8 +384,7 @@ world_spawn_widget(te_world* world, struct te_widget* widget) {
     if (old_widget_world != NULL) {
         if (old_widget_world == world) {
             show_error_and_abort("the widget is already spawned in this world");
-        }
-        else {
+        } else {
             show_error_and_abort("the specified widget cannot be spawned in this world because the widget "
                                  "must be first despawned from the world it currently resides in");
         }
@@ -415,6 +434,156 @@ world_despawn_widget(te_world* world, te_widget* widget) {
         free(world->spawned_widgets);
         world->spawned_widgets = new_widgets;
         world->spawned_widget_count -= 1;
+    }
+}
+
+void
+prv_world_add_interactable_widget(te_world* world, te_widget* widget) {
+    te_widget** new_widgets = malloc(sizeof(te_widget*) * (world->interactable_widget_count + 1));
+    memcpy(new_widgets, world->interactable_widgets, sizeof(te_widget*) * world->interactable_widget_count);
+
+    free(world->interactable_widgets);
+    world->interactable_widgets = new_widgets;
+
+    world->interactable_widgets[world->interactable_widget_count] = widget;
+    world->interactable_widget_count += 1;
+}
+
+void
+prv_world_remove_interactable_widget(te_world* world, te_widget* widget) {
+    if (widget == world->hovered_interactable_widget) {
+        world->hovered_interactable_widget = NULL;
+    }
+
+    if (world->interactable_widget_count == 1) {
+        free(world->interactable_widgets);
+        world->interactable_widgets = NULL;
+        world->interactable_widget_count = 0;
+    } else {
+        unsigned int i = 0;
+        bool found = false;
+        for (; i < world->interactable_widget_count; i++) {
+            if (world->interactable_widgets[i] != widget) {
+                continue;
+            }
+
+            found = true;
+            break;
+        }
+        if (!found) {
+            show_error_and_abort("unable to find the specified widget");
+        }
+
+        te_widget** new_widgets = malloc(sizeof(te_widget*) * (world->interactable_widget_count - 1));
+        memcpy(new_widgets, world->interactable_widgets, sizeof(te_widget*) * i);
+        memcpy(
+            new_widgets + i, world->interactable_widgets + (i + 1),
+            sizeof(te_widget*) * (world->interactable_widget_count - i - 1));
+
+        free(world->interactable_widgets);
+        world->interactable_widgets = new_widgets;
+        world->interactable_widget_count -= 1;
+    }
+}
+
+void
+prv_world_interactable_widget_pos_size_changed(te_world* world) {
+    te_window* window = game_manager_get_window(world->game_manager);
+
+    vec2 cursor_pos;
+    window_get_cursor_position(window, &cursor_pos[0], &cursor_pos[1]);
+
+    unsigned int window_width;
+    unsigned int window_height;
+    window_get_size(window, &window_width, &window_height);
+
+    glm_vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
+
+    prv_world_on_mouse_moved(world, cursor_pos);
+}
+
+void
+prv_world_on_mouse_moved(te_world* world, float cursor_pos[2]) {
+    vec2 pos;
+    vec2 size;
+    for (unsigned int i = 0; i < world->interactable_widget_count; i++) {
+        widget_get_screen_position(world->interactable_widgets[i], pos);
+        if (pos[0] > cursor_pos[0] || pos[1] > cursor_pos[1]) {
+            continue;
+        }
+
+        widget_get_screen_size(world->interactable_widgets[i], size);
+        if (cursor_pos[0] > pos[0] + size[0] || cursor_pos[1] > pos[1] + size[1]) {
+            continue;
+        }
+
+        if (world->hovered_interactable_widget == NULL) {
+            world->hovered_interactable_widget = world->interactable_widgets[i];
+            prv_widget_on_cursor_entered(world->hovered_interactable_widget);
+        } else if (world->hovered_interactable_widget != world->interactable_widgets[i]) {
+            prv_widget_on_cursor_left(world->hovered_interactable_widget);
+
+            world->hovered_interactable_widget = world->interactable_widgets[i];
+            prv_widget_on_cursor_entered(world->hovered_interactable_widget);
+        }
+
+        return;
+    }
+
+    if (world->hovered_interactable_widget != NULL) {
+        prv_widget_on_cursor_left(world->hovered_interactable_widget);
+        world->hovered_interactable_widget = NULL;
+    }
+}
+
+bool
+prv_world_on_mouse_button_pressed(te_world* world, enum te_mouse_button button, float cursor_pos[2]) {
+    vec2 pos;
+    vec2 size;
+    for (unsigned int i = 0; i < world->interactable_widget_count; i++) {
+        widget_get_screen_position(world->interactable_widgets[i], pos);
+        if (pos[0] > cursor_pos[0] || pos[1] > cursor_pos[1]) {
+            continue;
+        }
+
+        widget_get_screen_size(world->interactable_widgets[i], size);
+        if (cursor_pos[0] > pos[0] + size[0] || cursor_pos[1] > pos[1] + size[1]) {
+            continue;
+        }
+
+        prv_widget_on_mouse_button_pressed(world->interactable_widgets[i], button, cursor_pos);
+        return true;
+    }
+
+    return false;
+}
+
+bool
+prv_world_on_mouse_button_released(te_world* world, enum te_mouse_button button, float cursor_pos[2]) {
+    vec2 pos;
+    vec2 size;
+    for (unsigned int i = 0; i < world->interactable_widget_count; i++) {
+        widget_get_screen_position(world->interactable_widgets[i], pos);
+        if (pos[0] > cursor_pos[0] || pos[1] > cursor_pos[1]) {
+            continue;
+        }
+
+        widget_get_screen_size(world->interactable_widgets[i], size);
+        if (cursor_pos[0] > pos[0] + size[0] || cursor_pos[1] > pos[1] + size[1]) {
+            continue;
+        }
+
+        prv_widget_on_mouse_button_released(world->interactable_widgets[i], button, cursor_pos);
+        return true;
+    }
+
+    return false;
+}
+
+void prv_world_on_input_source_changed(te_world* world) {
+    if (world->hovered_interactable_widget != NULL) {
+        prv_widget_on_cursor_left(world->hovered_interactable_widget);
+        world->hovered_interactable_widget = NULL;
     }
 }
 

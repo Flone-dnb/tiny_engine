@@ -1,6 +1,5 @@
 #include "widget/widget.h"
 
-#include <stdbool.h>
 #include <string.h>
 #include "misc/error.h"
 
@@ -17,6 +16,7 @@ struct te_widget {
     // Size of this array is @ref child_widget_count.
     te_widget** child_widgets;
 
+    // Always non-NULL.
     void (*on_pos_changed)(void* owner);
     void (*on_size_changed)(void* owner);
     void (*on_parent_changed)(void* owner);
@@ -24,6 +24,12 @@ struct te_widget {
     void (*on_after_spawned)(void* owner);
     void (*on_before_despawned)(void* owner);
     void (*on_window_size_changed)(void* owner);
+
+    // May be NULL, used by interactable widgets.
+    void (*on_cursor_entered)(void* owner);
+    void (*on_cursor_left)(void* owner);
+    void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, vec2 cursor_pos);
+    void (*on_mouse_button_released)(void* owner, enum te_mouse_button button, vec2 cursor_pos);
 
     // If @ref parent is NULL equal to screen pos/size, otherwise
     // stores pos/size relative to the parent.
@@ -36,6 +42,9 @@ struct te_widget {
     vec2 screen_size;
 
     unsigned int child_widget_count;
+
+    // `false` if this widget (and its child widgets) should not be serialized.
+    bool allow_serialization;
 };
 
 te_widget*
@@ -56,6 +65,12 @@ widget_create(
     widget->on_before_despawned = on_before_despawned;
     widget->on_window_size_changed = on_window_size_changed;
     widget->child_widget_count = 0;
+    widget->allow_serialization = true;
+
+    widget->on_cursor_entered = NULL;
+    widget->on_cursor_left = NULL;
+    widget->on_mouse_button_pressed = NULL;
+    widget->on_mouse_button_released = NULL;
 
     glm_vec2_zero(widget->relative_pos);
     glm_vec2_copy((vec2){0.1f, 0.05f}, widget->relative_size);
@@ -68,7 +83,7 @@ widget_create(
 
 void
 widget_destroy(te_widget* widget) {
-    if (widget->world != NULL){
+    if (widget->world != NULL) {
         show_error_and_abort("can't destroy a spawned widget, despawn it first");
     }
 
@@ -115,7 +130,7 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
         // This is because world need to register/unregister widgets from its internal arrays.
         // This can be reworked later if needed.
         show_error_and_abort("widgets can only be attached to widgets from the same world, "
-            "if parent widget is spawned then spawn the child widget first and then attach");
+                             "if parent widget is spawned then spawn the child widget first and then attach");
     }
     if (new_parent == widget->parent) {
         return;
@@ -171,6 +186,17 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
 
     widget->on_pos_changed(widget->owner);
     widget->on_size_changed(widget->owner);
+}
+
+te_widget*
+widget_get_parent(te_widget* widget) {
+    return widget->parent;
+}
+
+te_widget**
+widget_get_child_widgets_tmp(te_widget* widget, unsigned int* count) {
+    (*count) = widget->child_widget_count;
+    return widget->child_widgets;
 }
 
 static void
@@ -245,7 +271,22 @@ widget_get_screen_size(te_widget* widget, vec2 size) {
 
 struct te_world*
 widget_get_world(te_widget* widget) {
+#if defined(DEBUG)
+    if (widget == NULL) {
+        show_error_and_abort("invalid widget specified");
+    }
+#endif
     return widget->world;
+}
+
+void
+widget_set_is_serialization_allowed(te_widget* widget, bool allow) {
+    widget->allow_serialization = allow;
+}
+
+bool
+widget_is_serialization_allowed(te_widget* widget) {
+    return widget->allow_serialization;
 }
 
 void
@@ -283,4 +324,51 @@ prv_widget_on_window_size_changed(te_widget* widget) {
     }
 
     widget->on_window_size_changed(widget->owner);
+}
+
+void
+prv_widget_set_input_callbacks(
+    te_widget* widget, void (*on_cursor_entered)(void* owner), void (*on_cursor_left)(void* owner),
+    void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, vec2 cursor_pos),
+    void (*on_mouse_button_released)(void* owner, enum te_mouse_button button, vec2 cursor_pos)) {
+    widget->on_cursor_entered = on_cursor_entered;
+    widget->on_cursor_left = on_cursor_left;
+    widget->on_mouse_button_pressed = on_mouse_button_pressed;
+    widget->on_mouse_button_released = on_mouse_button_released;
+}
+
+void
+prv_widget_on_mouse_button_pressed(te_widget* widget, enum te_mouse_button button, vec2 cursor_pos) {
+    if (widget->on_mouse_button_pressed == NULL) {
+        show_error_and_abort("interactable widget received input but input callbacks were not set");
+    }
+
+    widget->on_mouse_button_pressed(widget->owner, button, cursor_pos);
+}
+
+void
+prv_widget_on_mouse_button_released(te_widget* widget, enum te_mouse_button button, vec2 cursor_pos) {
+    if (widget->on_mouse_button_released == NULL) {
+        show_error_and_abort("interactable widget received input but input callbacks were not set");
+    }
+
+    widget->on_mouse_button_released(widget->owner, button, cursor_pos);
+}
+
+void
+prv_widget_on_cursor_entered(te_widget* widget) {
+    if (widget->on_cursor_entered == NULL) {
+        show_error_and_abort("interactable widget received input but input callbacks were not set");
+    }
+
+    widget->on_cursor_entered(widget->owner);
+}
+
+void
+prv_widget_on_cursor_left(te_widget* widget) {
+    if (widget->on_cursor_left == NULL) {
+        show_error_and_abort("interactable widget received input but input callbacks were not set");
+    }
+
+    widget->on_cursor_left(widget->owner);
 }

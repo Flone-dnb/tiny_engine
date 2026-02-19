@@ -1,6 +1,5 @@
 #include "game_manager.h"
 
-#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include "debug_console.h"
@@ -129,8 +128,7 @@ game_manager_destroy_world(te_game_manager* game_manager, te_world* world) {
         te_world** new_worlds = malloc(sizeof(te_world*) * (game_manager->world_count - 1));
         memcpy(new_worlds, game_manager->worlds, sizeof(te_world*) * index);
         memcpy(
-            new_worlds + index, game_manager->worlds + (index + 1),
-            sizeof(te_world*) * (game_manager->world_count - index - 1));
+            new_worlds + index, game_manager->worlds + (index + 1), sizeof(te_world*) * (game_manager->world_count - index - 1));
 
         free(game_manager->worlds);
         game_manager->worlds = new_worlds;
@@ -178,5 +176,65 @@ prv_game_manager_on_window_size_changed(te_game_manager* game_manager) {
 
     for (unsigned int i = 0; i < game_manager->world_count; i++) {
         prv_world_on_window_size_changed(game_manager->worlds[i]);
+    }
+}
+
+bool
+prv_game_manager_on_mouse_button_pressed(te_game_manager* game_manager, enum te_mouse_button button) {
+    vec2 cursor_pos;
+    window_get_cursor_position(game_manager->window, &cursor_pos[0], &cursor_pos[1]);
+
+    unsigned int window_width;
+    unsigned int window_height;
+    window_get_size(game_manager->window, &window_width, &window_height);
+
+    glm_vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
+
+    bool is_handled = false;
+    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+        is_handled |= prv_world_on_mouse_button_pressed(game_manager->worlds[i], button, cursor_pos);
+    }
+
+    return is_handled;
+}
+
+bool
+prv_game_manager_on_mouse_button_released(te_game_manager* game_manager, enum te_mouse_button button) {
+    vec2 cursor_pos;
+    window_get_cursor_position(game_manager->window, &cursor_pos[0], &cursor_pos[1]);
+
+    unsigned int window_width;
+    unsigned int window_height;
+    window_get_size(game_manager->window, &window_width, &window_height);
+
+    glm_vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
+
+    bool is_handled = false;
+    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+        is_handled |= prv_world_on_mouse_button_released(game_manager->worlds[i], button, cursor_pos);
+    }
+
+    return is_handled;
+}
+
+void
+prv_game_manager_on_mouse_moved(te_game_manager* game_manager) {
+    vec2 cursor_pos;
+    window_get_cursor_position(game_manager->window, &cursor_pos[0], &cursor_pos[1]);
+
+    unsigned int window_width;
+    unsigned int window_height;
+    window_get_size(game_manager->window, &window_width, &window_height);
+
+    glm_vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
+
+    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+        prv_world_on_mouse_moved(game_manager->worlds[i], cursor_pos);
+    }
+}
+
+void prv_game_manager_on_input_source_changed(te_game_manager* game_manager) {
+    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+        prv_world_on_input_source_changed(game_manager->worlds[i]);
     }
 }

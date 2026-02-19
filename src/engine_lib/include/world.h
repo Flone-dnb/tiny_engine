@@ -1,5 +1,7 @@
 #pragma once
 
+#include "input/mouse_button.h"
+
 typedef struct te_world te_world;
 
 struct te_game_manager;
@@ -59,6 +61,21 @@ void prv_world_destroy(te_world* world);
 
 // Called to possibly notify widgets.
 void prv_world_on_window_size_changed(te_world* world);
+
+// Called by spawned widgets that receive input (for example buttons).
+// Note: these functions are not called from the base te_widget type (base type does not implement such functionality).
+void prv_world_add_interactable_widget(te_world* world, struct te_widget* widget);
+void prv_world_remove_interactable_widget(te_world* world, struct te_widget* widget);
+void prv_world_interactable_widget_pos_size_changed(te_world* world);
+
+// Cursor pos in range [0.0; 1.0] relative to the window.
+// Returns `true` if was handled by some widget.
+void prv_world_on_mouse_moved(te_world* world, float cursor_pos[2]);
+bool prv_world_on_mouse_button_pressed(te_world* world, enum te_mouse_button button, float cursor_pos[2]);
+bool prv_world_on_mouse_button_released(te_world* world, enum te_mouse_button button, float cursor_pos[2]);
+
+// Called by game manager after user input device was changed (keyboard+mouse/gamepad).
+void prv_world_on_input_source_changed(te_world* world);
 
 #if defined(ENGINE_DEBUG_TOOLS)
 unsigned int prv_world_get_gl_query_draw_models(te_world* world);

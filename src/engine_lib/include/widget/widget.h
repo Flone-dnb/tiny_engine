@@ -1,6 +1,8 @@
 #pragma once
 
+#include <stdbool.h>
 #include "cglm/vec2.h"
+#include "input/mouse_button.h"
 
 // Core component of any widget. This type handles hierarchy functionality.
 // Widgets store (own) this object inside of them.
@@ -25,6 +27,11 @@ void widget_destroy(te_widget* widget);
 void widget_set_parent(te_widget* widget, te_widget* new_parent);
 te_widget* widget_get_parent(te_widget* widget);
 
+// Returns a pointer to an array of child widgets.
+// Do not free/destroy returned pointer. Never store/save returned pointer as it may become invalid
+// when a new child is attached/detached thus the function has "_tmp" suffix.
+te_widget** widget_get_child_widgets_tmp(te_widget* widget, unsigned int* count);
+
 // Sets position of the widget in range [0.0; 1.0] relative to the window's top-left corner.
 // If the widget has a parent then this position becomes relative to the parent's position/size.
 void widget_set_relative_position(te_widget* widget, vec2 position);
@@ -43,6 +50,10 @@ void widget_get_screen_size(te_widget* widget, vec2 size);
 // Returns NULL if not spawned.
 struct te_world* widget_get_world(te_widget* widget);
 
+// Return `false` if this widget (and its child widgets) should not be serialized. `true` by default.
+void widget_set_is_serialization_allowed(te_widget* widget, bool allow);
+bool widget_is_serialization_allowed(te_widget* widget);
+
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API
 // ------------------------------------------------------------------------------------------------
@@ -54,3 +65,15 @@ void prv_widget_on_despawned(te_widget* widget);
 
 // Recursively calls this function on all child widgets.
 void prv_widget_on_window_size_changed(te_widget* widget);
+
+// Interactable widgets use this during their construction.
+void prv_widget_set_input_callbacks(
+    te_widget* widget, void (*on_cursor_entered)(void* owner), void (*on_cursor_left)(void* owner),
+    void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, vec2 cursor_pos),
+    void (*on_mouse_button_released)(void* owner, enum te_mouse_button button, vec2 cursor_pos));
+
+// Called by world when the mouse cursor is inside of the widget. Cursor pos is position in range [0.0; 1.0] relative to the window.
+void prv_widget_on_mouse_button_pressed(te_widget* widget, enum te_mouse_button button, vec2 cursor_pos);
+void prv_widget_on_mouse_button_released(te_widget* widget, enum te_mouse_button button, vec2 cursor_pos);
+void prv_widget_on_cursor_entered(te_widget* widget);
+void prv_widget_on_cursor_left(te_widget* widget);

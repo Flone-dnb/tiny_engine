@@ -43,8 +43,8 @@ struct te_text_widget {
 // Widget callbacks:
 static void prv_text_widget_on_pos_changed(void* this);
 static void prv_text_widget_on_size_changed(void* this);
-static void prv_text_widget_on_after_activated(void* this);
-static void prv_text_widget_on_before_deactivated(void* this);
+static void prv_text_widget_on_after_spawned(void* this);
+static void prv_text_widget_on_before_despawned(void* this);
 static void prv_text_widget_on_before_base_destroyed(void* this);
 static void prv_text_widget_on_window_size_changed(void* this);
 
@@ -62,9 +62,8 @@ text_widget_create(void) {
     glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, text_widget->color);
 
     text_widget->widget = widget_create(
-        text_widget, prv_text_widget_on_pos_changed, prv_text_widget_on_size_changed,
-        prv_text_widget_on_before_base_destroyed, prv_text_widget_on_after_activated,
-        prv_text_widget_on_before_deactivated, prv_text_widget_on_window_size_changed);
+        text_widget, prv_text_widget_on_pos_changed, prv_text_widget_on_size_changed, prv_text_widget_on_before_base_destroyed,
+        prv_text_widget_on_after_spawned, prv_text_widget_on_before_despawned, prv_text_widget_on_window_size_changed);
     text_widget->is_text_widget_destroy = false;
     text_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
 
@@ -79,11 +78,10 @@ void
 text_widget_destroy(te_text_widget* text_widget) {
     text_widget->is_text_widget_destroy = true;
 
-    if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
-        prv_text_widget_unregister_from_rendering(text_widget);
-    }
-
     if (text_widget->widget != NULL) { // may be null if we got here from base destroy
+        if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+            prv_text_widget_unregister_from_rendering(text_widget);
+        }
         widget_destroy(text_widget->widget);
     }
 
@@ -94,9 +92,12 @@ text_widget_destroy(te_text_widget* text_widget) {
 static void
 prv_text_widget_on_before_base_destroyed(void* this) {
     te_text_widget* text_widget = this;
-
     if (text_widget->is_text_widget_destroy) {
         return;
+    }
+
+    if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        prv_text_widget_unregister_from_rendering(text_widget);
     }
 
     // Destroy was called on the base (widget) component, possibly due to
@@ -296,19 +297,15 @@ prv_text_widget_on_size_changed(void* this) {
 }
 
 static void
-prv_text_widget_on_after_activated(void* this) {
+prv_text_widget_on_after_spawned(void* this) {
     te_text_widget* text_widget = this;
-
     prv_text_widget_register_for_rendering(text_widget);
 }
 
 static void
-prv_text_widget_on_before_deactivated(void* this) {
+prv_text_widget_on_before_despawned(void* this) {
     te_text_widget* text_widget = this;
-
-    if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
-        prv_text_widget_unregister_from_rendering(text_widget);
-    }
+    prv_text_widget_unregister_from_rendering(text_widget);
 }
 
 static void

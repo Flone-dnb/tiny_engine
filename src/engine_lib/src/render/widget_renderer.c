@@ -349,9 +349,10 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
     // Draw rect widgets.
     const unsigned int rect_widget_count = widgets_render_data_count(widget_renderer->rect_widget_data);
     if (rect_widget_count > 0) {
+        te_quad_shader_data* shader = &widget_renderer->quad_shader;
         GPU_SECTION_BEGIN("rect");
 
-        glUseProgram(widget_renderer->quad_shader.prog_id);
+        glUseProgram(shader->prog_id);
         glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
         glActiveTexture(GL_TEXTURE0); // quad texture
@@ -360,18 +361,18 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
         vec4 clip_rect;
         glm_vec4_copy((vec4){0.0f, 0.0f, 1.0f, 1.0f}, clip_rect);
-        glUniform4fv(widget_renderer->text_shader.uniform_clip_rect, 1, clip_rect);
+        glUniform4fv(shader->uniform_clip_rect, 1, clip_rect);
 
-        glUniform2fv(widget_renderer->text_shader.uniform_window_size, 1, window_size);
+        glUniform2fv(shader->uniform_window_size, 1, window_size);
 
         te_rect_widget_render_data* data = widgets_render_data_get(widget_renderer->rect_widget_data);
         for (unsigned int widget_idx = 0; widget_idx < rect_widget_count; widget_idx++) {
-            glUniform4fv(widget_renderer->quad_shader.uniform_quad_color, 1, data->color);
+            glUniform4fv(shader->uniform_quad_color, 1, data->color);
 
-            glUniform2fv(widget_renderer->quad_shader.uniform_in_pos, 1, data->pos_pix);
-            glUniform2fv(widget_renderer->quad_shader.uniform_in_size, 1, data->size_pix);
+            glUniform2fv(shader->uniform_in_pos, 1, data->pos_pix);
+            glUniform2fv(shader->uniform_in_size, 1, data->size_pix);
 
-            glUniform1i(widget_renderer->quad_shader.uniform_is_using_tex, data->tex_id > 0);
+            glUniform1i(shader->uniform_is_using_tex, data->tex_id > 0);
             glBindTexture(GL_TEXTURE_2D, data->tex_id);
 
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
@@ -383,9 +384,10 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
     // Draw text widgets.
     const unsigned int text_widget_count = widgets_render_data_count(widget_renderer->text_widget_data);
     if (text_widget_count > 0) {
+        te_text_shader_data* shader = &widget_renderer->text_shader;
         GPU_SECTION_BEGIN("text");
 
-        glUseProgram(widget_renderer->text_shader.prog_id);
+        glUseProgram(shader->prog_id);
         glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
         glActiveTexture(GL_TEXTURE0); // glyph's bitmap
@@ -394,20 +396,20 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
         vec4 clip_rect;
         glm_vec4_copy((vec4){0.0f, 0.0f, 1.0f, 1.0f}, clip_rect);
-        glUniform4fv(widget_renderer->text_shader.uniform_clip_rect, 1, clip_rect);
+        glUniform4fv(shader->uniform_clip_rect, 1, clip_rect);
 
-        glUniform2fv(widget_renderer->text_shader.uniform_window_size, 1, window_size);
+        glUniform2fv(shader->uniform_window_size, 1, window_size);
 
         te_text_widget_render_data* data = widgets_render_data_get(widget_renderer->text_widget_data);
         for (unsigned int widget_idx = 0; widget_idx < text_widget_count; widget_idx++) {
-            glUniform4fv(widget_renderer->text_shader.uniform_text_color, 1, data->color);
+            glUniform4fv(shader->uniform_text_color, 1, data->color);
 
             vec2 pos_pix;
             for (unsigned int glyph_idx = 0; glyph_idx < data->glyph_count; glyph_idx++) {
                 glm_vec2_add(data->pos_pix, data->glyphs[glyph_idx].offset_pix, pos_pix);
 
-                glUniform2fv(widget_renderer->text_shader.uniform_in_pos, 1, pos_pix);
-                glUniform2fv(widget_renderer->text_shader.uniform_in_size, 1, data->glyphs[glyph_idx].size_pix);
+                glUniform2fv(shader->uniform_in_pos, 1, pos_pix);
+                glUniform2fv(shader->uniform_in_size, 1, data->glyphs[glyph_idx].size_pix);
 
                 glBindTexture(GL_TEXTURE_2D, data->glyphs[glyph_idx].tex_id);
 

@@ -2,7 +2,6 @@
 
 #include <stdio.h>
 #include "editor_camera.h"
-#include "game/camera.h"
 #include "game/model.h"
 #include "game_manager.h"
 #include "misc/error.h"
@@ -189,7 +188,9 @@ editor_on_gamepad_axis_moved(
 }
 
 void
-editor_on_mouse_button_pressed(void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button) {
+editor_on_mouse_button_pressed(
+    void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button, bool was_handled_by_widget) {
+    (void)was_handled_by_widget;
     te_editor* editor = game_instance;
 
     if (button == TE_MB_RIGHT) {
@@ -206,7 +207,9 @@ editor_on_mouse_button_pressed(void* game_instance, struct te_game_manager* game
 }
 
 void
-editor_on_mouse_button_released(void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button) {
+editor_on_mouse_button_released(
+    void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button, bool was_handled_by_widget) {
+    (void)was_handled_by_widget;
     te_editor* editor = game_instance;
 
     if (button == TE_MB_RIGHT) {
