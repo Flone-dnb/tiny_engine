@@ -233,7 +233,15 @@ prv_game_manager_on_mouse_moved(te_game_manager* game_manager) {
     }
 }
 
-void prv_game_manager_on_input_source_changed(te_game_manager* game_manager) {
+void
+prv_game_manager_on_keyboard_input_text(te_game_manager* game_manager, const char* text) {
+    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+        prv_world_on_keyboard_input_text(game_manager->worlds[i], text);
+    }
+}
+
+void
+prv_game_manager_on_input_source_changed(te_game_manager* game_manager) {
     for (unsigned int i = 0; i < game_manager->world_count; i++) {
         prv_world_on_input_source_changed(game_manager->worlds[i]);
     }

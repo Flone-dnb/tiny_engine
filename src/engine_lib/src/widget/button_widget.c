@@ -36,7 +36,6 @@ struct te_button_widget {
     // `true` if entered the "destroy" function.
     bool is_button_widget_destroy;
     bool is_cursor_inside_widget;
-    bool is_render_data_registered;
 };
 
 // Widget callbacks:
@@ -79,7 +78,6 @@ button_widget_create(void (*on_clicked)(te_button_widget*)) {
     button_widget->tex_pressed_id = 0;
 
     button_widget->is_cursor_inside_widget = false;
-    button_widget->is_render_data_registered = false;
 
     button_widget->rect_widget = rect_widget_create();
     widget_set_parent(rect_widget_get_widget(button_widget->rect_widget), button_widget->widget);
@@ -90,7 +88,7 @@ button_widget_create(void (*on_clicked)(te_button_widget*)) {
 
     prv_widget_set_input_callbacks(
         button_widget->widget, prv_button_widget_on_cursor_entered, prv_button_widget_on_cursor_left,
-        prv_button_widget_on_mouse_button_pressed, prv_button_widget_on_mouse_button_released);
+        prv_button_widget_on_mouse_button_pressed, prv_button_widget_on_mouse_button_released, NULL);
 
     return button_widget;
 }
@@ -100,9 +98,6 @@ button_widget_destroy(te_button_widget* button_widget) {
     button_widget->is_button_widget_destroy = true;
 
     if (button_widget->widget != NULL) { // may be null if we got here from base destroy
-        if (button_widget->is_render_data_registered) {
-            prv_button_widget_unregister_render_data(button_widget);
-        }
         widget_destroy(button_widget->widget);
     }
 
@@ -118,10 +113,6 @@ prv_button_widget_on_before_base_destroyed(void* this) {
     te_button_widget* button_widget = this;
     if (button_widget->is_button_widget_destroy) {
         return;
-    }
-
-    if (button_widget->is_render_data_registered) {
-        prv_button_widget_unregister_render_data(button_widget);
     }
 
     // Destroy was called on the base (widget) component, possibly due to
@@ -145,7 +136,7 @@ prv_button_widget_on_after_spawned(void* this) {
     unsigned int child_count = 0;
     (void)widget_get_child_widgets_tmp(button_widget->widget, &child_count);
     if (child_count != 1) {
-        show_error_and_abort("unexpected child widget count on a button widget");
+        show_error_and_abort("unexpected child widget count on a widget");
     }
 }
 
@@ -158,7 +149,7 @@ prv_button_widget_on_before_despawned(void* this) {
     unsigned int child_count = 0;
     (void)widget_get_child_widgets_tmp(button_widget->widget, &child_count);
     if (child_count != 1) {
-        show_error_and_abort("unexpected child widget count on a button widget");
+        show_error_and_abort("unexpected child widget count on a widget");
     }
 }
 
@@ -184,8 +175,6 @@ prv_button_widget_register_render_data(te_button_widget* button_widget) {
     }
 
     prv_world_add_interactable_widget(world, button_widget->widget);
-
-    button_widget->is_render_data_registered = true;
 }
 
 static void
@@ -210,8 +199,6 @@ prv_button_widget_unregister_render_data(te_button_widget* button_widget) {
     }
 
     prv_world_remove_interactable_widget(world, button_widget->widget);
-
-    button_widget->is_render_data_registered = false;
 }
 
 te_widget*

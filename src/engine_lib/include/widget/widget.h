@@ -12,16 +12,19 @@
 typedef struct te_widget te_widget;
 struct te_world;
 
-// Accepts a few callbacks that will be triggered when the widget is modified.
-// "Pos/size changed" callback will be triggered in both cases: when relative or screen pos/size changes.
+// Specify non-NULL callbacks that will be triggered when the widget is modified.
+// "pos/size changed" callbacks will be triggered in both cases: when relative or screen pos/size changes.
+// "on after spawned" callback is called before any child widget is spawned.
+// "on before despawned" callback is called after all child widgets are despawned.
 te_widget* widget_create(
     void* owner, void (*on_pos_changed)(void* owner), void (*on_size_changed)(void* owner),
     void (*on_before_base_destroyed)(void* owner), void (*on_after_spawned)(void* owner),
     void (*on_before_despawned)(void* owner), void (*on_window_size_changed)(void* owner));
 void widget_destroy(te_widget* widget);
 
-// Sets or changes the current parent of a widget.
-// Specify NULL to remove parent.
+// Sets or changes the current parent of a widget. Specify NULL to remove parent.
+// If the specified parent is spawned in some world but this widget is not spawned the widget will
+// be spawned (added to world) and attached to the specified parent.
 //
 // If a widget is being destroyed it will also destroy all child widgets.
 void widget_set_parent(te_widget* widget, te_widget* new_parent);
@@ -67,13 +70,16 @@ void prv_widget_on_despawned(te_widget* widget);
 void prv_widget_on_window_size_changed(te_widget* widget);
 
 // Interactable widgets use this during their construction.
+// Some callbacks may be NULL.
 void prv_widget_set_input_callbacks(
     te_widget* widget, void (*on_cursor_entered)(void* owner), void (*on_cursor_left)(void* owner),
     void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, vec2 cursor_pos),
-    void (*on_mouse_button_released)(void* owner, enum te_mouse_button button, vec2 cursor_pos));
+    void (*on_mouse_button_released)(void* owner, enum te_mouse_button button, vec2 cursor_pos),
+    void (*on_keyboard_input_text)(void* owner, const char* input_text));
 
 // Called by world when the mouse cursor is inside of the widget. Cursor pos is position in range [0.0; 1.0] relative to the window.
 void prv_widget_on_mouse_button_pressed(te_widget* widget, enum te_mouse_button button, vec2 cursor_pos);
 void prv_widget_on_mouse_button_released(te_widget* widget, enum te_mouse_button button, vec2 cursor_pos);
 void prv_widget_on_cursor_entered(te_widget* widget);
 void prv_widget_on_cursor_left(te_widget* widget);
+bool prv_widget_on_keyboard_input_text(te_widget* widget, const char* text);

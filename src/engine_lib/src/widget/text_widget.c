@@ -79,9 +79,6 @@ text_widget_destroy(te_text_widget* text_widget) {
     text_widget->is_text_widget_destroy = true;
 
     if (text_widget->widget != NULL) { // may be null if we got here from base destroy
-        if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
-            prv_text_widget_unregister_from_rendering(text_widget);
-        }
         widget_destroy(text_widget->widget);
     }
 
@@ -94,10 +91,6 @@ prv_text_widget_on_before_base_destroyed(void* this) {
     te_text_widget* text_widget = this;
     if (text_widget->is_text_widget_destroy) {
         return;
-    }
-
-    if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
-        prv_text_widget_unregister_from_rendering(text_widget);
     }
 
     // Destroy was called on the base (widget) component, possibly due to
@@ -152,7 +145,8 @@ text_widget_set_text(te_text_widget* text_widget, const wchar_t* text) {
 }
 
 wchar_t*
-text_widget_get_text(te_text_widget* text_widget) {
+text_widget_get_text(te_text_widget* text_widget, unsigned int* text_len) {
+    (*text_len) = text_widget->text_len;
     return text_widget->text;
 }
 
@@ -205,6 +199,11 @@ text_widget_set_is_multiline(te_text_widget* text_widget, bool is_multiline) {
 bool
 text_widget_is_multiline(te_text_widget* text_widget) {
     return text_widget->is_multiline;
+}
+
+unsigned int
+prv_text_widget_get_render_data_handle(te_text_widget* text_widget) {
+    return text_widget->render_data_handle;
 }
 
 float
@@ -348,7 +347,7 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
 
     // Update glyphs (calculating in pixels).
     const float glyph_scale = text_widget->text_height / prv_font_manager_get_font_height_to_load();
-    const float glyph_height = prv_font_manager_get_font_height_to_load() * glyph_scale * (float)window_height;
+    const float glyph_height = text_widget->text_height * (float)window_height;
     const float line_spacing = text_widget->line_spacing * glyph_height;
 
     vec2 size;
@@ -372,7 +371,10 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
     offset[1] += glyph_height;
 
     for (unsigned int char_idx = 0, glyph_idx = 0; char_idx < text_widget->text_len; char_idx++) {
-        if (text_widget->is_multiline && text_widget->text[char_idx] == '\n') {
+        te_font_glyph src_glyph = font_manager_get_glyph(font_manager, (unsigned long)text_widget->text[char_idx]);
+        glyph_idx += src_glyph.width > 0;
+
+        if (text_widget->text[char_idx] == '\n' && text_widget->is_multiline) {
             offset[1] += glyph_height + line_spacing;
             offset[0] = 0.0f;
 
@@ -384,7 +386,6 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
             continue; // don't render \n
         }
 
-        te_font_glyph src_glyph = font_manager_get_glyph(font_manager, (unsigned long)text_widget->text[char_idx]);
         const float distance_to_next_glyph = (float)(src_glyph.advance >> 6) * glyph_scale;
 
         if (offset[0] + distance_to_next_glyph > size[0]) {
@@ -404,7 +405,7 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
         }
 
         if (src_glyph.width != 0) {
-            te_text_widget_glyph* dst_glyph = &data->glyphs[glyph_idx];
+            te_text_widget_glyph* dst_glyph = &data->glyphs[glyph_idx - 1];
 
             dst_glyph->tex_id = src_glyph.tex_id;
 
@@ -416,8 +417,6 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
                 dst_glyph->offset_pix,
                 (vec2){(float)src_glyph.bearing_x * glyph_scale, -(float)src_glyph.bearing_y * glyph_scale},
                 dst_glyph->offset_pix);
-
-            glyph_idx += 1;
         }
 
         // Switch to the next glyph.

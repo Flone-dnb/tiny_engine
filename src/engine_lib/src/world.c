@@ -435,6 +435,8 @@ world_despawn_widget(te_world* world, te_widget* widget) {
         world->spawned_widgets = new_widgets;
         world->spawned_widget_count -= 1;
     }
+
+    prv_widget_on_despawned(widget);
 }
 
 void
@@ -580,11 +582,32 @@ prv_world_on_mouse_button_released(te_world* world, enum te_mouse_button button,
     return false;
 }
 
-void prv_world_on_input_source_changed(te_world* world) {
+void
+prv_world_on_keyboard_input_text(te_world* world, const char* text) {
+    for (unsigned int i = 0; i < world->interactable_widget_count; i++) {
+        if (prv_widget_on_keyboard_input_text(world->interactable_widgets[i], text)) {
+            return;
+        }
+    }
+}
+
+void
+prv_world_on_input_source_changed(te_world* world) {
     if (world->hovered_interactable_widget != NULL) {
         prv_widget_on_cursor_left(world->hovered_interactable_widget);
         world->hovered_interactable_widget = NULL;
     }
+}
+
+bool
+prv_world_find_root_widget(te_world* world, te_widget* widget) {
+    for (unsigned int i = 0; i < world->spawned_widget_count; i++) {
+        if (world->spawned_widgets[i] == widget) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 #if defined(ENGINE_DEBUG_TOOLS)

@@ -18,7 +18,7 @@ struct te_widget* text_widget_get_widget(te_text_widget* text_widget);
 // Text will be copied to the widget's data.
 void text_widget_set_text(te_text_widget* text_widget, const wchar_t* text);
 // Do not free returned string pointer, valid while the text is not changed and the widget is not destroyed.
-wchar_t* text_widget_get_text(te_text_widget* text_widget);
+wchar_t* text_widget_get_text(te_text_widget* text_widget, unsigned int* text_len);
 
 // Moves the ownership of the text to the widget.
 void text_widget_set_text_own(te_text_widget* text_widget, wchar_t* text, unsigned int strlen);
@@ -38,3 +38,10 @@ float text_widget_get_line_spacing(te_text_widget* text_widget);
 
 void text_widget_set_is_multiline(te_text_widget* text_widget, bool is_multiline);
 bool text_widget_is_multiline(te_text_widget* text_widget);
+
+// ------------------------------------------------------------------------------------------------
+//                                       PRIVATE API
+// ------------------------------------------------------------------------------------------------
+
+// Returns 0xffffffff if the widget is not being rendered.
+unsigned int prv_text_widget_get_render_data_handle(te_text_widget* text_widget);

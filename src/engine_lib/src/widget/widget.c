@@ -2,6 +2,7 @@
 
 #include <string.h>
 #include "misc/error.h"
+#include "world.h"
 
 struct te_widget {
     // Actual widget that owns this component.
@@ -11,7 +12,7 @@ struct te_widget {
     te_widget* parent;
 
     // Non-NULL if spawned. Do not free/destroy this pointer.
-    struct te_world* world;
+    te_world* world;
 
     // Size of this array is @ref child_widget_count.
     te_widget** child_widgets;
@@ -30,6 +31,7 @@ struct te_widget {
     void (*on_cursor_left)(void* owner);
     void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, vec2 cursor_pos);
     void (*on_mouse_button_released)(void* owner, enum te_mouse_button button, vec2 cursor_pos);
+    void (*on_keyboard_input_text)(void* owner, const char* text);
 
     // If @ref parent is NULL equal to screen pos/size, otherwise
     // stores pos/size relative to the parent.
@@ -71,8 +73,9 @@ widget_create(
     widget->on_cursor_left = NULL;
     widget->on_mouse_button_pressed = NULL;
     widget->on_mouse_button_released = NULL;
+    widget->on_keyboard_input_text = NULL;
 
-    glm_vec2_zero(widget->relative_pos);
+    glm_vec2_copy((vec2){0.1f, 0.1f}, widget->relative_pos);
     glm_vec2_copy((vec2){0.1f, 0.05f}, widget->relative_size);
 
     glm_vec2_copy(widget->relative_pos, widget->screen_pos);
@@ -123,17 +126,11 @@ prv_widget_recalc_screen_pos_size(te_widget* widget) {
 
 void
 widget_set_parent(te_widget* widget, te_widget* new_parent) {
-    if (widget == new_parent) {
-        show_error_and_abort("can't attach a widget to itself");
-    }
-    if (widget->world != new_parent->world) {
-        // This is because world need to register/unregister widgets from its internal arrays.
-        // This can be reworked later if needed.
-        show_error_and_abort("widgets can only be attached to widgets from the same world, "
-                             "if parent widget is spawned then spawn the child widget first and then attach");
-    }
     if (new_parent == widget->parent) {
         return;
+    }
+    if (widget == new_parent) {
+        show_error_and_abort("can't attach a widget to itself");
     }
 
     if (widget->parent != NULL) {
@@ -166,11 +163,17 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
 
             free(widget->parent->child_widgets);
             widget->parent->child_widgets = new_children;
+
+            widget->parent->child_widget_count -= 1;
+        }
+    } else if (widget->world != NULL) {
+        if (prv_world_find_root_widget(widget->world, widget)) {
+            show_error_and_abort("attaching a spawned root widgets to another widget is not allowed");
         }
     }
 
     // Add self to new parent's array of child widgets.
-    {
+    if (new_parent != NULL) {
         te_widget** new_children = malloc(sizeof(te_widget*) * (new_parent->child_widget_count + 1));
         memcpy(new_children, new_parent->child_widgets, sizeof(te_widget*) * new_parent->child_widget_count);
 
@@ -186,6 +189,27 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
 
     widget->on_pos_changed(widget->owner);
     widget->on_size_changed(widget->owner);
+
+    if (widget->world == NULL) {
+        if (new_parent != NULL && new_parent->world != NULL) {
+            // Parent widget is already added to the world so we don't need to notify the world
+            // (world only stores root widgets, not all widgets).
+            prv_widget_on_spawned(widget, new_parent->world);
+        }
+    } else {
+        if (new_parent == NULL) {
+            prv_widget_on_despawned(widget);
+        } else {
+            if (new_parent->world != NULL && widget->world != new_parent->world) {
+                show_error_and_abort("can't attach a widget to another widget because they are spawned in different worlds");
+            }
+            if (new_parent->world == NULL) {
+                // This is a child widget and we also don't need to notify the world
+                // (root widgets don't have parents).
+                prv_widget_on_despawned(widget);
+            }
+        }
+    }
 }
 
 te_widget*
@@ -269,7 +293,7 @@ widget_get_screen_size(te_widget* widget, vec2 size) {
     glm_vec2_copy(widget->screen_size, size);
 }
 
-struct te_world*
+te_world*
 widget_get_world(te_widget* widget) {
 #if defined(DEBUG)
     if (widget == NULL) {
@@ -290,7 +314,7 @@ widget_is_serialization_allowed(te_widget* widget) {
 }
 
 void
-prv_widget_on_spawned(te_widget* widget, struct te_world* world) {
+prv_widget_on_spawned(te_widget* widget, te_world* world) {
     // Spawn from top to bottom (in the hierarchy) so that widgets will be placed in the renderer
     // in the order from top to bottom (in the hierarchy) for top widgets to be rendered first and bottom widgets last.
     widget->world = world;
@@ -303,12 +327,13 @@ prv_widget_on_spawned(te_widget* widget, struct te_world* world) {
 
 void
 prv_widget_on_despawned(te_widget* widget) {
-    widget->on_before_despawned(widget->owner);
-    widget->world = NULL;
-
+    // Despawn children first.
     for (unsigned int i = 0; i < widget->child_widget_count; i++) {
         prv_widget_on_despawned(widget->child_widgets[i]);
     }
+
+    widget->on_before_despawned(widget->owner);
+    widget->world = NULL;
 }
 
 void
@@ -318,7 +343,8 @@ prv_widget_on_window_size_changed(te_widget* widget) {
         return;
     }
 
-    // Start from deepest child widget.
+    // Start from deepest child widget so that when parent widgets are notified
+    // they will have child widgets having already updated data.
     for (unsigned int i = 0; i < widget->child_widget_count; i++) {
         prv_widget_on_window_size_changed(widget->child_widgets[i]);
     }
@@ -330,17 +356,19 @@ void
 prv_widget_set_input_callbacks(
     te_widget* widget, void (*on_cursor_entered)(void* owner), void (*on_cursor_left)(void* owner),
     void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, vec2 cursor_pos),
-    void (*on_mouse_button_released)(void* owner, enum te_mouse_button button, vec2 cursor_pos)) {
+    void (*on_mouse_button_released)(void* owner, enum te_mouse_button button, vec2 cursor_pos),
+    void (*on_keyboard_input_text)(void* owner, const char* input_text)) {
     widget->on_cursor_entered = on_cursor_entered;
     widget->on_cursor_left = on_cursor_left;
     widget->on_mouse_button_pressed = on_mouse_button_pressed;
     widget->on_mouse_button_released = on_mouse_button_released;
+    widget->on_keyboard_input_text = on_keyboard_input_text;
 }
 
 void
 prv_widget_on_mouse_button_pressed(te_widget* widget, enum te_mouse_button button, vec2 cursor_pos) {
     if (widget->on_mouse_button_pressed == NULL) {
-        show_error_and_abort("interactable widget received input but input callbacks were not set");
+        return;
     }
 
     widget->on_mouse_button_pressed(widget->owner, button, cursor_pos);
@@ -349,7 +377,7 @@ prv_widget_on_mouse_button_pressed(te_widget* widget, enum te_mouse_button butto
 void
 prv_widget_on_mouse_button_released(te_widget* widget, enum te_mouse_button button, vec2 cursor_pos) {
     if (widget->on_mouse_button_released == NULL) {
-        show_error_and_abort("interactable widget received input but input callbacks were not set");
+        return;
     }
 
     widget->on_mouse_button_released(widget->owner, button, cursor_pos);
@@ -358,7 +386,7 @@ prv_widget_on_mouse_button_released(te_widget* widget, enum te_mouse_button butt
 void
 prv_widget_on_cursor_entered(te_widget* widget) {
     if (widget->on_cursor_entered == NULL) {
-        show_error_and_abort("interactable widget received input but input callbacks were not set");
+        return;
     }
 
     widget->on_cursor_entered(widget->owner);
@@ -367,8 +395,18 @@ prv_widget_on_cursor_entered(te_widget* widget) {
 void
 prv_widget_on_cursor_left(te_widget* widget) {
     if (widget->on_cursor_left == NULL) {
-        show_error_and_abort("interactable widget received input but input callbacks were not set");
+        return;
     }
 
     widget->on_cursor_left(widget->owner);
+}
+
+bool
+prv_widget_on_keyboard_input_text(te_widget* widget, const char* text) {
+    if (widget->on_keyboard_input_text == NULL) {
+        return false;
+    }
+
+    widget->on_keyboard_input_text(widget->owner, text);
+    return true;
 }

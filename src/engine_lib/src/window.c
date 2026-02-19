@@ -408,6 +408,7 @@ prv_window_process_event(te_window* window, union SDL_Event event, float delta_t
                 break; // don't trigger user callbacks
             }
 #endif
+            prv_game_manager_on_keyboard_input_text(window->game_manager, event.text.text);
             window->user_callbacks->on_keyboard_input_text(window->game_instance, window->game_manager, event.text.text);
             break;
         }

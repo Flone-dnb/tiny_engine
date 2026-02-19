@@ -71,6 +71,7 @@ widgets_render_data_add_widget(te_widgets_render_data* data) {
         }
         handle = i;
         found = true;
+        break;
     }
     if (!found) {
         // Expand array.
@@ -365,8 +366,10 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
         glUniform2fv(shader->uniform_window_size, 1, window_size);
 
-        te_rect_widget_render_data* data = widgets_render_data_get(widget_renderer->rect_widget_data);
         for (unsigned int widget_idx = 0; widget_idx < rect_widget_count; widget_idx++) {
+            te_rect_widget_render_data* data = widgets_render_data_get(widget_renderer->rect_widget_data);
+            data += widget_idx;
+
             glUniform4fv(shader->uniform_quad_color, 1, data->color);
 
             glUniform2fv(shader->uniform_in_pos, 1, data->pos_pix);
@@ -400,8 +403,10 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
         glUniform2fv(shader->uniform_window_size, 1, window_size);
 
-        te_text_widget_render_data* data = widgets_render_data_get(widget_renderer->text_widget_data);
         for (unsigned int widget_idx = 0; widget_idx < text_widget_count; widget_idx++) {
+            te_text_widget_render_data* data = widgets_render_data_get(widget_renderer->text_widget_data);
+            data += widget_idx;
+
             glUniform4fv(shader->uniform_text_color, 1, data->color);
 
             vec2 pos_pix;

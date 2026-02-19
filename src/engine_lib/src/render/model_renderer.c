@@ -113,6 +113,7 @@ model_renderer_add_model(te_model_renderer* renderer, unsigned int prog_id) {
         }
         handle = i;
         found = true;
+        break;
     }
     if (!found) {
         // Expand handle array.
