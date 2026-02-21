@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "cglm/vec2.h"
 #include "debug_console.h"
 #include "io/log.h"
 #include "misc/error.h"
