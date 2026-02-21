@@ -33,7 +33,7 @@ struct te_model_renderer {
     // shader program, then next M elements use another shader program and so on. Information
     // about which render data belongs to which shader is stored in @ref shader_groups.
     //
-    // Size of this array is @ref render_handle_array_size but the actual number of valid
+    // Size of this array is @ref render_handle_arrays_size but the actual number of valid
     // (used) elements might be different. When some model's render data is removed all next
     // elements are shifted to the left to make sure the array does not have any "holes".
     // This array does not shrink but the number of used (valid) elements may decrease.
@@ -48,7 +48,7 @@ struct te_model_renderer {
     //
     // Public API users store indices into this array so items cannot be reordered/moved.
     // This array CAN have "holes" in it (invalid items). Invalid items store INVALID_DATA_INDEX value.
-    // This array does not shrink. Size of this array is @ref render_handle_array_size.
+    // This array does not shrink. Size of this array is @ref render_handle_arrays_size.
     unsigned int* handle_to_data;
 
     // Number of elements in @ref shader_groups.
