@@ -584,11 +584,23 @@ prv_world_on_mouse_button_released(te_world* world, enum te_mouse_button button,
 
 void
 prv_world_on_keyboard_input_text(te_world* world, const char* text) {
-    for (unsigned int i = 0; i < world->interactable_widget_count; i++) {
-        if (prv_widget_on_keyboard_input_text(world->interactable_widgets[i], text)) {
-            return;
-        }
+    if (world->hovered_interactable_widget == NULL) {
+        return;
     }
+
+    prv_widget_on_keyboard_input_text(world->hovered_interactable_widget, text);
+}
+
+void
+prv_world_on_keyboard_input(te_world* world, enum te_keyboard_button button, bool is_repeat) {
+    // Don't care if repeat or not for UI.
+    (void)is_repeat;
+
+    if (world->hovered_interactable_widget == NULL) {
+        return;
+    }
+
+    prv_widget_on_keyboard_input(world->hovered_interactable_widget, button);
 }
 
 void

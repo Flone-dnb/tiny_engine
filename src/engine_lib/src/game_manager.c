@@ -241,6 +241,13 @@ prv_game_manager_on_keyboard_input_text(te_game_manager* game_manager, const cha
 }
 
 void
+prv_game_manager_on_keyboard_input(te_game_manager* game_manager, enum te_keyboard_button button, bool is_repeat) {
+    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+        prv_world_on_keyboard_input(game_manager->worlds[i], button, is_repeat);
+    }
+}
+
+void
 prv_game_manager_on_input_source_changed(te_game_manager* game_manager) {
     for (unsigned int i = 0; i < game_manager->world_count; i++) {
         prv_world_on_input_source_changed(game_manager->worlds[i]);

@@ -361,36 +361,23 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
         data->glyph_count += glyph.width > 0;
     }
     free(data->glyphs);
-    data->glyphs = malloc(sizeof(te_text_widget_glyph) * data->glyph_count);
+    data->glyphs = NULL;
 
-    // Offset from the widget's pivot.
-    vec2 offset;
-    glm_vec2_copy((vec2){0.0f, 0.0f}, offset);
+    if (data->glyph_count > 0) {
+        data->glyphs = malloc(sizeof(te_text_widget_glyph) * data->glyph_count);
 
-    // Switch to the first row of the text.
-    offset[1] += glyph_height;
+        // Offset from the widget's pivot.
+        vec2 offset;
+        glm_vec2_copy((vec2){0.0f, 0.0f}, offset);
 
-    for (unsigned int char_idx = 0, glyph_idx = 0; char_idx < text_widget->text_len; char_idx++) {
-        te_font_glyph src_glyph = font_manager_get_glyph(font_manager, (unsigned long)text_widget->text[char_idx]);
-        glyph_idx += src_glyph.width > 0;
+        // Switch to the first row of the text.
+        offset[1] += glyph_height;
 
-        if (text_widget->text[char_idx] == '\n' && text_widget->is_multiline) {
-            offset[1] += glyph_height + line_spacing;
-            offset[0] = 0.0f;
+        for (unsigned int char_idx = 0, glyph_idx = 0; char_idx < text_widget->text_len; char_idx++) {
+            te_font_glyph src_glyph = font_manager_get_glyph(font_manager, (unsigned long)text_widget->text[char_idx]);
+            glyph_idx += src_glyph.width > 0;
 
-            if (offset[1] > size[1]) {
-                // Reached vertical limit.
-                break;
-            }
-
-            continue; // don't render \n
-        }
-
-        const float distance_to_next_glyph = (float)(src_glyph.advance >> 6) * glyph_scale;
-
-        if (offset[0] + distance_to_next_glyph > size[0]) {
-            if (text_widget->is_multiline) {
-                // Handle word wrap.
+            if (text_widget->text[char_idx] == '\n' && text_widget->is_multiline) {
                 offset[1] += glyph_height + line_spacing;
                 offset[0] = 0.0f;
 
@@ -398,28 +385,45 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
                     // Reached vertical limit.
                     break;
                 }
-            } else {
-                // Reached horizontal limit.
-                break;
+
+                continue; // don't render \n
             }
+
+            const float distance_to_next_glyph = (float)(src_glyph.advance >> 6) * glyph_scale;
+
+            if (offset[0] + distance_to_next_glyph > size[0]) {
+                if (text_widget->is_multiline) {
+                    // Handle word wrap.
+                    offset[1] += glyph_height + line_spacing;
+                    offset[0] = 0.0f;
+
+                    if (offset[1] > size[1]) {
+                        // Reached vertical limit.
+                        break;
+                    }
+                } else {
+                    // Reached horizontal limit.
+                    break;
+                }
+            }
+
+            if (src_glyph.width != 0) {
+                te_text_widget_glyph* dst_glyph = &data->glyphs[glyph_idx - 1];
+
+                dst_glyph->tex_id = src_glyph.tex_id;
+
+                glm_vec2_copy(
+                    (vec2){(float)src_glyph.width * glyph_scale, (float)src_glyph.height * glyph_scale}, dst_glyph->size_pix);
+
+                glm_vec2_copy(offset, dst_glyph->offset_pix);
+                glm_vec2_add(
+                    dst_glyph->offset_pix,
+                    (vec2){(float)src_glyph.bearing_x * glyph_scale, -(float)src_glyph.bearing_y * glyph_scale},
+                    dst_glyph->offset_pix);
+            }
+
+            // Switch to the next glyph.
+            offset[0] += distance_to_next_glyph;
         }
-
-        if (src_glyph.width != 0) {
-            te_text_widget_glyph* dst_glyph = &data->glyphs[glyph_idx - 1];
-
-            dst_glyph->tex_id = src_glyph.tex_id;
-
-            glm_vec2_copy(
-                (vec2){(float)src_glyph.width * glyph_scale, (float)src_glyph.height * glyph_scale}, dst_glyph->size_pix);
-
-            glm_vec2_copy(offset, dst_glyph->offset_pix);
-            glm_vec2_add(
-                dst_glyph->offset_pix,
-                (vec2){(float)src_glyph.bearing_x * glyph_scale, -(float)src_glyph.bearing_y * glyph_scale},
-                dst_glyph->offset_pix);
-        }
-
-        // Switch to the next glyph.
-        offset[0] += distance_to_next_glyph;
     }
 }

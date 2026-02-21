@@ -335,10 +335,7 @@ prv_window_process_event(te_window* window, union SDL_Event event, float delta_t
             break;
         }
         case (SDL_EVENT_KEY_DOWN): {
-            if (event.key.repeat != 0) {
-                // Ignore repeat events.
-                break;
-            }
+            const bool is_repeat = event.key.repeat != 0;
 #if defined(IS_ARM64)
             if (window->connected_gamepad != NULL) {
                 // In some cases while using retro-handhelds (which have built in gamepad) gamepad buttons trigger
@@ -353,10 +350,14 @@ prv_window_process_event(te_window* window, union SDL_Event event, float delta_t
 #endif
             window->had_gamepad_input_curr_frame = false;
 
-            te_keyboard_modifiers mods;
-            mods.mod = event.key.mod;
-            window->user_callbacks->on_keyboard_button_pressed(
-                window->game_instance, window->game_manager, (enum te_keyboard_button)event.key.scancode, mods);
+            prv_game_manager_on_keyboard_input(window->game_manager, (enum te_keyboard_button)event.key.scancode, is_repeat);
+
+            if (!is_repeat) {
+                te_keyboard_modifiers mods;
+                mods.mod = event.key.mod;
+                window->user_callbacks->on_keyboard_button_pressed(
+                    window->game_instance, window->game_manager, (enum te_keyboard_button)event.key.scancode, mods);
+            }
             break;
         }
         case (SDL_EVENT_KEY_UP): {

@@ -26,6 +26,7 @@ struct te_button_widget {
     char* tex_hovered_relative_path;
     char* tex_pressed_relative_path;
 
+    // May be NULL if not set.
     void (*on_clicked)(te_button_widget*);
 
     // Cached textures.
@@ -56,7 +57,7 @@ static void prv_button_widget_register_render_data(te_button_widget* button_widg
 static void prv_button_widget_unregister_render_data(te_button_widget* button_widget);
 
 te_button_widget*
-button_widget_create(void (*on_clicked)(te_button_widget*)) {
+button_widget_create(void) {
     te_button_widget* button_widget = malloc(sizeof(te_button_widget));
 
     button_widget->widget = widget_create(
@@ -67,7 +68,7 @@ button_widget_create(void (*on_clicked)(te_button_widget*)) {
     glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color_hovered);
     glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color_pressed);
 
-    button_widget->on_clicked = on_clicked;
+    button_widget->on_clicked = NULL;
 
     button_widget->tex_relative_path = NULL;
     button_widget->tex_hovered_relative_path = NULL;
@@ -88,7 +89,7 @@ button_widget_create(void (*on_clicked)(te_button_widget*)) {
 
     prv_widget_set_input_callbacks(
         button_widget->widget, prv_button_widget_on_cursor_entered, prv_button_widget_on_cursor_left,
-        prv_button_widget_on_mouse_button_pressed, prv_button_widget_on_mouse_button_released, NULL);
+        prv_button_widget_on_mouse_button_pressed, prv_button_widget_on_mouse_button_released, NULL, NULL);
 
     return button_widget;
 }
@@ -204,6 +205,11 @@ prv_button_widget_unregister_render_data(te_button_widget* button_widget) {
 te_widget*
 button_widget_get_widget(te_button_widget* button_widget) {
     return button_widget->widget;
+}
+
+void
+button_widget_set_on_clicked(te_button_widget* button_widget, void (*on_clicked)(te_button_widget*)) {
+    button_widget->on_clicked = on_clicked;
 }
 
 void
@@ -416,7 +422,9 @@ prv_button_widget_on_mouse_button_released(void* this, enum te_mouse_button butt
         } else {
             button_widget_enter_normal_state(button_widget);
         }
-        button_widget->on_clicked(button_widget);
+        if (button_widget->on_clicked != NULL) {
+            button_widget->on_clicked(button_widget);
+        }
     }
 }
 

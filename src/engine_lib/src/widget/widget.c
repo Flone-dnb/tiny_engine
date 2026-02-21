@@ -32,6 +32,7 @@ struct te_widget {
     void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, vec2 cursor_pos);
     void (*on_mouse_button_released)(void* owner, enum te_mouse_button button, vec2 cursor_pos);
     void (*on_keyboard_input_text)(void* owner, const char* text);
+    void (*on_keyboard_input)(void* owner, enum te_keyboard_button button);
 
     // If @ref parent is NULL equal to screen pos/size, otherwise
     // stores pos/size relative to the parent.
@@ -74,6 +75,7 @@ widget_create(
     widget->on_mouse_button_pressed = NULL;
     widget->on_mouse_button_released = NULL;
     widget->on_keyboard_input_text = NULL;
+    widget->on_keyboard_input = NULL;
 
     glm_vec2_copy((vec2){0.1f, 0.1f}, widget->relative_pos);
     glm_vec2_copy((vec2){0.1f, 0.05f}, widget->relative_size);
@@ -357,12 +359,14 @@ prv_widget_set_input_callbacks(
     te_widget* widget, void (*on_cursor_entered)(void* owner), void (*on_cursor_left)(void* owner),
     void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, vec2 cursor_pos),
     void (*on_mouse_button_released)(void* owner, enum te_mouse_button button, vec2 cursor_pos),
-    void (*on_keyboard_input_text)(void* owner, const char* input_text)) {
+    void (*on_keyboard_input_text)(void* owner, const char* input_text),
+    void (*on_keyboard_input)(void* owner, enum te_keyboard_button button)) {
     widget->on_cursor_entered = on_cursor_entered;
     widget->on_cursor_left = on_cursor_left;
     widget->on_mouse_button_pressed = on_mouse_button_pressed;
     widget->on_mouse_button_released = on_mouse_button_released;
     widget->on_keyboard_input_text = on_keyboard_input_text;
+    widget->on_keyboard_input = on_keyboard_input;
 }
 
 void
@@ -401,12 +405,22 @@ prv_widget_on_cursor_left(te_widget* widget) {
     widget->on_cursor_left(widget->owner);
 }
 
-bool
+void
+prv_widget_on_keyboard_input(te_widget* widget, enum te_keyboard_button button) {
+    if (widget->on_keyboard_input == NULL) {
+        return;
+    }
+
+    widget->on_keyboard_input(widget->owner, button);
+    return;
+}
+
+void
 prv_widget_on_keyboard_input_text(te_widget* widget, const char* text) {
     if (widget->on_keyboard_input_text == NULL) {
-        return false;
+        return;
     }
 
     widget->on_keyboard_input_text(widget->owner, text);
-    return true;
+    return;
 }

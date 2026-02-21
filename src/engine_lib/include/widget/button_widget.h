@@ -5,13 +5,15 @@
 typedef struct te_button_widget te_button_widget;
 struct te_widget;
 
-te_button_widget* button_widget_create(void (*on_clicked)(te_button_widget*));
+te_button_widget* button_widget_create(void);
 void button_widget_destroy(te_button_widget* button_widget);
 
 // Returns component used to adjust common widget properties (pos, size)
 // and attach widget to other widgets.
 // You can destroy returned object and it will cause this widget to be destroyed.
 struct te_widget* button_widget_get_widget(te_button_widget* button_widget);
+
+void button_widget_set_on_clicked(te_button_widget* button_widget, void (*on_clicked)(te_button_widget*));
 
 // Sets RGBA colors for 3 states: normal, hovered and pressed.
 void button_widget_set_color(te_button_widget* button_widget, vec4 color);

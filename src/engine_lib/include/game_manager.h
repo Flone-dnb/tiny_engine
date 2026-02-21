@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include "input/keyboard_button.h"
 #include "input/mouse_button.h"
 
 typedef struct te_game_manager te_game_manager;
@@ -54,6 +55,7 @@ bool prv_game_manager_on_mouse_button_pressed(te_game_manager* game_manager, enu
 bool prv_game_manager_on_mouse_button_released(te_game_manager* game_manager, enum te_mouse_button button);
 void prv_game_manager_on_mouse_moved(te_game_manager* game_manager);
 void prv_game_manager_on_keyboard_input_text(te_game_manager* game_manager, const char* text);
+void prv_game_manager_on_keyboard_input(te_game_manager* game_manager, enum te_keyboard_button button, bool is_repeat);
 
 // Called by window after user input device was changed (keyboard+mouse/gamepad).
 void prv_game_manager_on_input_source_changed(te_game_manager* game_manager);

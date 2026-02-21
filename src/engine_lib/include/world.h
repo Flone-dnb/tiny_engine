@@ -1,5 +1,6 @@
 #pragma once
 
+#include "input/keyboard_button.h"
 #include "input/mouse_button.h"
 
 typedef struct te_world te_world;
@@ -74,6 +75,7 @@ void prv_world_on_mouse_moved(te_world* world, float cursor_pos[2]);
 bool prv_world_on_mouse_button_pressed(te_world* world, enum te_mouse_button button, float cursor_pos[2]);
 bool prv_world_on_mouse_button_released(te_world* world, enum te_mouse_button button, float cursor_pos[2]);
 void prv_world_on_keyboard_input_text(te_world* world, const char* text);
+void prv_world_on_keyboard_input(te_world* world, enum te_keyboard_button button, bool is_repeat);
 
 // Called by game manager after user input device was changed (keyboard+mouse/gamepad).
 void prv_world_on_input_source_changed(te_world* world);
