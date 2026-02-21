@@ -36,8 +36,13 @@ typedef struct te_model_render_data {
     unsigned int ebo;
 } te_model_render_data;
 
-te_model_renderer* model_renderer_create();
+// Capacity is the initial (reserved) size for data arrays where 1 item is used by 1 model.
+// Expand size determines how much to expand data arrays if reached capacity.
+te_model_renderer* model_renderer_create(unsigned int capacity, unsigned int expand_size);
 void model_renderer_destroy(te_model_renderer* renderer);
+
+// Returns `true` if at least 1 model needs to be rendered.
+bool model_renderer_has_models(te_model_renderer* renderer);
 
 // Adds a new model to be rendered.
 // Returns handle to update model's render data using @ref model_renderer_get_render_data_tmp.
@@ -58,6 +63,4 @@ void model_renderer_remove_model(te_model_renderer* renderer, unsigned int handl
 te_model_render_data* model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int handle);
 
 // Draws models to the currently set framebuffer.
-void model_renderer_draw(
-    te_model_renderer* renderer, ivec4* gl_viewport, mat4* view_proj_mat,
-    struct te_frustum_shape* camera_frustum);
+void model_renderer_draw(te_model_renderer* renderer, mat4* view_proj_mat, struct te_frustum_shape* camera_frustum);

@@ -15,6 +15,9 @@ void main(void) {
     if (tiling.x > 0.0) {
 	out_color *= texture2D(model_texture, (frag_uv + uv_offset) * tiling);
     }
+    if (out_color.a < 0.1) {
+	discard;
+    }
 
     // TODO: dummy normal usage (before lighting is implemented)
     if (frag_normal.x < -50.0){

@@ -49,10 +49,7 @@ struct te_model {
     vec4 color;
 
     vec3 position;
-
-    // Rotation in degrees.
-    vec3 rotation;
-
+    vec3 rotation; // in degrees
     vec3 scale;
 
     vec2 tex_tiling;
@@ -63,6 +60,8 @@ struct te_model {
 
     // Stores invalid value if not spawned (see @ref world). OpenGL ID of the shader program used.
     unsigned int shader_prog_id;
+
+    bool is_opaque;
 };
 
 te_model*
@@ -75,6 +74,7 @@ model_create(const char* path_to_geo) {
     model->tex_relative_path = NULL;
     model->custom_vert_relative_path = NULL;
     model->custom_frag_relative_path = NULL;
+    model->is_opaque = true;
     glm_vec2_one(model->tex_tiling);
     glm_vec2_zero(model->uv_offset);
 
@@ -128,14 +128,28 @@ prv_model_calc_world_normal_matrices(te_model* model, mat4 world, mat3 normal) {
     glm_mat4_pick3(normal_mat, normal);
 }
 
+te_model_renderer*
+prv_model_get_renderer(te_model* model) {
+#if defined(DEBUG)
+    if (model->world == NULL) {
+        show_error_and_abort("expected world to be valid");
+    }
+#endif
+
+    if (model->is_opaque) {
+        return world_get_opaque_model_renderer(model->world);
+    } else {
+        return world_get_transparent_model_renderer(model->world);
+    }
+}
+
 void
 model_set_position(te_model* model, vec3 position) {
     glm_vec3_copy(position, model->position);
 
     if (model->world != NULL) {
         // Update render data.
-        te_model_render_data* data = model_renderer_get_render_data_tmp(
-            world_get_model_renderer(model->world), model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
 
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
@@ -148,8 +162,7 @@ model_set_rotation(te_model* model, vec3 rotation) {
 
     if (model->world != NULL) {
         // Update render data.
-        te_model_render_data* data = model_renderer_get_render_data_tmp(
-            world_get_model_renderer(model->world), model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
 
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
@@ -162,8 +175,7 @@ model_set_scale(te_model* model, vec3 scale) {
 
     if (model->world != NULL) {
         // Update render data.
-        te_model_render_data* data = model_renderer_get_render_data_tmp(
-            world_get_model_renderer(model->world), model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
 
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
@@ -176,8 +188,7 @@ model_set_color(te_model* model, vec4 color) {
 
     if (model->world != NULL) {
         // Update render data.
-        te_model_render_data* data = model_renderer_get_render_data_tmp(
-            world_get_model_renderer(model->world), model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
         glm_vec4_copy(model->color, data->color);
     }
 }
@@ -191,8 +202,8 @@ model_set_texture(te_model* model, const char* relative_path) {
         model->tex_relative_path = NULL;
         if (model->world != NULL) {
             // Update render data.
-            te_model_render_data* data = model_renderer_get_render_data_tmp(
-                world_get_model_renderer(model->world), model->render_data_handle);
+            te_model_render_data* data =
+                model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
 
             if (data->tex_id > 0) {
                 te_texture_manager* texture_manager =
@@ -212,8 +223,8 @@ model_set_texture(te_model* model, const char* relative_path) {
 
         if (model->world != NULL) {
             // Update render data.
-            te_model_render_data* data = model_renderer_get_render_data_tmp(
-                world_get_model_renderer(model->world), model->render_data_handle);
+            te_model_render_data* data =
+                model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
 
             te_texture_manager* texture_manager =
                 renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(model->world)));
@@ -232,8 +243,7 @@ model_set_texture_tiling(te_model* model, vec2 tex_tiling) {
 
     if (model->world != NULL && model->tex_relative_path != NULL) {
         // Update render data.
-        te_model_render_data* data = model_renderer_get_render_data_tmp(
-            world_get_model_renderer(model->world), model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
         glm_vec2_copy(model->tex_tiling, data->tex_tiling);
     }
 }
@@ -244,8 +254,7 @@ model_set_uv_offset(te_model* model, vec2 uv_offset) {
 
     if (model->world != NULL) {
         // Update render data.
-        te_model_render_data* data = model_renderer_get_render_data_tmp(
-            world_get_model_renderer(model->world), model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
         glm_vec2_copy(model->uv_offset, data->uv_offset);
     }
 }
@@ -276,6 +285,11 @@ model_set_custom_frag_shader(te_model* model, const char* frag_relative_path) {
     model->custom_frag_relative_path = malloc(sizeof(char) * (len + 1));
     memcpy(model->custom_frag_relative_path, frag_relative_path, sizeof(char) * len);
     model->custom_frag_relative_path[len] = 0;
+}
+
+bool
+model_is_transparency_enabled(te_model* model) {
+    return !model->is_opaque;
 }
 
 void
@@ -318,25 +332,27 @@ model_get_world(te_model* model) {
     return model->world;
 }
 
-void prv_model_generate_cube(te_model_vertex** vertices, unsigned short** indices, unsigned int* vertex_count,
-                             unsigned int* index_count);
+void prv_model_generate_cube(
+    te_model_vertex** vertices, unsigned short** indices, unsigned int* vertex_count, unsigned int* index_count);
 
 te_aabb_shape prv_model_calc_aabb(te_model_vertex* vertices, unsigned int vertex_count);
 
-void
-prv_model_on_spawned(te_model* model, te_world* world) {
-    model->world = world;
+static void
+prv_model_add_to_model_renderer(te_model* model) {
+#if defined(DEBUG)
+    if (model->world == NULL) {
+        show_error_and_abort("expected world to be valid");
+    }
+#endif
 
     // Get shader program.
     {
         te_shader_manager* shader_manager =
-            renderer_get_shader_manager(game_manager_get_renderer(world_get_game_manager(world)));
+            renderer_get_shader_manager(game_manager_get_renderer(world_get_game_manager(model->world)));
         model->shader_prog_id = shader_manager_request_shader(
             shader_manager,
-            model->custom_vert_relative_path == NULL ? "engine/shader/model.vert.glsl"
-                                                     : model->custom_vert_relative_path,
-            model->custom_frag_relative_path == NULL ? "engine/shader/model.frag.glsl"
-                                                     : model->custom_frag_relative_path);
+            model->custom_vert_relative_path == NULL ? "engine/shader/model.vert.glsl" : model->custom_vert_relative_path,
+            model->custom_frag_relative_path == NULL ? "engine/shader/model.frag.glsl" : model->custom_frag_relative_path);
     }
 
     // Load geometry.
@@ -377,15 +393,12 @@ prv_model_on_spawned(te_model* model, te_world* world) {
     }
 
     // Add to rendering.
-    {
-        te_model_renderer* model_renderer = world_get_model_renderer(world);
-        model->render_data_handle = model_renderer_add_model(model_renderer, model->shader_prog_id);
-    }
+    te_model_renderer* model_renderer = prv_model_get_renderer(model);
+    model->render_data_handle = model_renderer_add_model(model_renderer, model->shader_prog_id);
 
     // Init render data.
     {
-        te_model_render_data* data = model_renderer_get_render_data_tmp(
-            world_get_model_renderer(model->world), model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(model_renderer, model->render_data_handle);
 
         glm_vec4_copy(model->color, data->color);
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
@@ -405,31 +418,24 @@ prv_model_on_spawned(te_model* model, te_world* world) {
     }
 }
 
-void
-prv_model_set_vertex_attributes() {
-    // Position.
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), NULL);
+static void
+prv_model_remove_from_model_renderer(te_model* model) {
+#if defined(DEBUG)
+    if (model->world == NULL) {
+        show_error_and_abort("expected world to be valid");
+    }
+#endif
 
-    // Normal.
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)sizeof(vec3));
-
-    // UV.
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)(sizeof(vec3) * 2));
-}
-
-void
-prv_model_on_despawned(te_model* model) {
     te_renderer* renderer = game_manager_get_renderer(world_get_game_manager(model->world));
     te_texture_manager* texture_manager = renderer_get_texture_manager(renderer);
     te_shader_manager* shader_manager = renderer_get_shader_manager(renderer);
-    te_model_renderer* model_renderer = world_get_model_renderer(model->world);
+    te_model_renderer* model_renderer = prv_model_get_renderer(model);
 
     unsigned int tex_id = 0;
     unsigned int vbo = 0;
     unsigned int ebo = 0;
     {
-        te_model_render_data* data = model_renderer_get_render_data_tmp(
-            world_get_model_renderer(model->world), model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(model_renderer, model->render_data_handle);
         tex_id = data->tex_id;
         vbo = data->vbo;
         ebo = data->ebo;
@@ -448,9 +454,43 @@ prv_model_on_despawned(te_model* model) {
     glDeleteBuffers(1, &vbo);
     glDeleteBuffers(1, &ebo);
 
-    model->world = NULL;
     model->render_data_handle = 0xffffffff;
     model->shader_prog_id = 0xffffffff;
+}
+
+void
+prv_model_on_spawned(te_model* model, te_world* world) {
+    model->world = world;
+    prv_model_add_to_model_renderer(model);
+}
+
+void
+prv_model_on_despawned(te_model* model) {
+    prv_model_remove_from_model_renderer(model);
+    model->world = NULL;
+}
+
+void
+model_enable_transparency(te_model* model, bool enable) {
+    if (model->world == NULL) {
+        model->is_opaque = !enable;
+    } else {
+        prv_model_remove_from_model_renderer(model);
+        model->is_opaque = !enable;
+        prv_model_add_to_model_renderer(model);
+    }
+}
+
+void
+prv_model_set_vertex_attributes() {
+    // Position.
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), NULL);
+
+    // Normal.
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)sizeof(vec3));
+
+    // UV.
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)(sizeof(vec3) * 2));
 }
 
 te_aabb_shape
@@ -478,8 +518,8 @@ prv_model_calc_aabb(te_model_vertex* vertices, unsigned int vertex_count) {
 }
 
 void
-prv_model_generate_cube(te_model_vertex** vertices, unsigned short** indices, unsigned int* vertex_count,
-                        unsigned int* index_count) {
+prv_model_generate_cube(
+    te_model_vertex** vertices, unsigned short** indices, unsigned int* vertex_count, unsigned int* index_count) {
     const float half = 0.5f;
 
     (*vertex_count) = 24;

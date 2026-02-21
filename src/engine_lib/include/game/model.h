@@ -23,10 +23,12 @@ void model_set_rotation(te_model* model, vec3 rotation);
 void model_set_scale(te_model* model, vec3 scale);
 
 // Sets color of the model in the RGBA format in range [0.0; 1.0].
+// Note that alpha will be ignored if @ref model_enable_transparency is disabled.
 void model_set_color(te_model* model, vec4 color);
 
 // Sets path (relative to the `res` directory) to texture to use.
 // The path string will be copied and stored in the model. Specify NULL to remove texture.
+// Note that alpha will be ignored if @ref model_enable_transparency is disabled.
 void model_set_texture(te_model* model, const char* relative_path);
 
 // Sets texture tiling multiplier.
@@ -51,13 +53,14 @@ void model_set_custom_vert_shader(te_model* model, const char* vert_relative_pat
 // to the model's object.
 void model_set_custom_frag_shader(te_model* model, const char* frag_relative_path);
 
-// Returns position of the model.
+// Transparency is disabled by default.
+// Note that this option should only be used for semi-transparent 2D planes
+// (such as grass planes) because there's no sorting for transparent geometry.
+void model_enable_transparency(te_model* model, bool enable);
+bool model_is_transparency_enabled(te_model* model);
+
 void model_get_position(te_model* model, vec3 out);
-
-// Returns rotation of the model (in degrees).
-void model_get_rotation(te_model* model, vec3 out);
-
-// Returns scale of the model.
+void model_get_rotation(te_model* model, vec3 out); // in degrees
 void model_get_scale(te_model* model, vec3 out);
 
 // Returns RGBA color of the model.

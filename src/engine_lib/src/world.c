@@ -42,7 +42,8 @@ struct te_world {
     te_widget** interactable_widgets;
 
     // Renders models of the world.
-    te_model_renderer* model_renderer;
+    te_model_renderer* opaque_model_renderer;
+    te_model_renderer* transparent_model_renderer;
 
     // Renders widgets of the world.
     te_widget_renderer* widget_renderer;
@@ -104,7 +105,8 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
     world->spawned_models_array_size = 128;
     world->spawned_models = malloc(sizeof(te_model*) * world->spawned_models_array_size);
 
-    world->model_renderer = model_renderer_create();
+    world->opaque_model_renderer = model_renderer_create(128, 128);
+    world->transparent_model_renderer = model_renderer_create(4, 4);
     world->widget_renderer = widget_renderer_create(game_manager_get_renderer(game_manager));
     world->is_being_destroyed = false;
 
@@ -169,7 +171,8 @@ prv_world_destroy(te_world* world) {
     }
 
     free(world->name);
-    model_renderer_destroy(world->model_renderer);
+    model_renderer_destroy(world->opaque_model_renderer);
+    model_renderer_destroy(world->transparent_model_renderer);
     widget_renderer_destroy(world->widget_renderer);
 
 #if defined(ENGINE_DEBUG_TOOLS)
@@ -217,8 +220,13 @@ world_get_active_camera(te_world* world) {
 }
 
 te_model_renderer*
-world_get_model_renderer(te_world* world) {
-    return world->model_renderer;
+world_get_opaque_model_renderer(te_world* world) {
+    return world->opaque_model_renderer;
+}
+
+struct te_model_renderer*
+world_get_transparent_model_renderer(te_world* world) {
+    return world->transparent_model_renderer;
 }
 
 te_widget_renderer*

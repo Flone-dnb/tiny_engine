@@ -56,13 +56,17 @@ struct te_model_renderer {
 
     // Total number of elements that @ref render_data and @ref handle_to_data can store.
     unsigned int render_handle_arrays_size;
+
+    // Determines how much to expand data arrays if reached the limit of @ref render_handle_arrays_size.
+    unsigned int expand_size;
 };
 
 te_model_renderer*
-model_renderer_create() {
+model_renderer_create(unsigned int capacity, unsigned int expand_size) {
     te_model_renderer* renderer = malloc(sizeof(te_model_renderer));
 
-    renderer->render_handle_arrays_size = 128;
+    renderer->expand_size = expand_size;
+    renderer->render_handle_arrays_size = capacity;
     renderer->render_data = malloc(sizeof(te_model_render_data) * renderer->render_handle_arrays_size);
 
     renderer->handle_to_data = malloc(sizeof(unsigned int) * renderer->render_handle_arrays_size);
@@ -85,6 +89,11 @@ model_renderer_destroy(te_model_renderer* renderer) {
     free(renderer->handle_to_data);
     free(renderer->render_data);
     free(renderer);
+}
+
+bool
+model_renderer_has_models(te_model_renderer* renderer) {
+    return renderer->shader_group_count > 0;
 }
 
 void
@@ -113,28 +122,27 @@ model_renderer_add_model(te_model_renderer* renderer, unsigned int prog_id) {
     }
     if (!found) {
         // Expand handle array.
-        const unsigned int expand_size = 128;
-
-        unsigned int* new_handles = malloc(sizeof(unsigned int) * (renderer->render_handle_arrays_size + expand_size));
+        unsigned int* new_handles = malloc(sizeof(unsigned int) * (renderer->render_handle_arrays_size + renderer->expand_size));
         memcpy(new_handles, renderer->handle_to_data, sizeof(unsigned int) * renderer->render_handle_arrays_size);
 
         free(renderer->handle_to_data);
         renderer->handle_to_data = new_handles;
 
-        for (unsigned int i = renderer->render_handle_arrays_size; i < renderer->render_handle_arrays_size + expand_size; i++) {
+        for (unsigned int i = renderer->render_handle_arrays_size;
+             i < renderer->render_handle_arrays_size + renderer->expand_size; i++) {
             renderer->handle_to_data[i] = INVALID_DATA_INDEX;
         }
         handle = renderer->render_handle_arrays_size;
 
         // Expand render data array.
         te_model_render_data* new_data =
-            malloc(sizeof(te_model_render_data) * (renderer->render_handle_arrays_size + expand_size));
+            malloc(sizeof(te_model_render_data) * (renderer->render_handle_arrays_size + renderer->expand_size));
         memcpy(new_data, renderer->render_data, sizeof(te_model_render_data) * renderer->render_handle_arrays_size);
 
         free(renderer->render_data);
         renderer->render_data = new_data;
 
-        renderer->render_handle_arrays_size += expand_size;
+        renderer->render_handle_arrays_size += renderer->expand_size;
     }
 
     // Find shader group.
@@ -279,12 +287,10 @@ model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int han
 }
 
 void
-model_renderer_draw(te_model_renderer* renderer, ivec4* gl_viewport, mat4* view_proj_mat, te_frustum_shape* camera_frustum) {
+model_renderer_draw(te_model_renderer* renderer, mat4* view_proj_mat, te_frustum_shape* camera_frustum) {
 #if defined(ENGINE_DEBUG_TOOLS)
     te_debug_stats* debug_stats = prv_debug_console_get_stats();
 #endif
-
-    glViewport((*gl_viewport)[0], (*gl_viewport)[1], (*gl_viewport)[2], (*gl_viewport)[3]);
 
     unsigned int render_data_idx = 0;
 

@@ -43,7 +43,8 @@ void world_set_active_camera(te_world* world, struct te_camera* camera);
 struct te_camera* world_get_active_camera(te_world* world);
 
 // Do not free/destroy returned pointer, valid while the world exists.
-struct te_model_renderer* world_get_model_renderer(te_world* world);
+struct te_model_renderer* world_get_opaque_model_renderer(te_world* world);
+struct te_model_renderer* world_get_transparent_model_renderer(te_world* world);
 
 // Do not free/destroy returned pointer, valid while the world exists.
 struct te_widget_renderer* world_get_widget_renderer(te_world* world);

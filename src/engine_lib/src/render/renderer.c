@@ -370,7 +370,8 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         }
 #endif
 
-        te_model_renderer* model_renderer = world_get_model_renderer(worlds[i]);
+        te_model_renderer* opaque_model_renderer = world_get_opaque_model_renderer(worlds[i]);
+        te_model_renderer* transparent_model_renderer = world_get_transparent_model_renderer(worlds[i]);
         te_widget_renderer* widget_renderer = world_get_widget_renderer(worlds[i]);
 
         // Set camera's aspect ratio.
@@ -381,6 +382,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         prv_camera_set_render_target_size(camera, viewport_width, viewport_height);
 
         mat4* view_proj_mat = camera_get_view_proj_mat(camera);
+        struct te_frustum_shape* camera_frustum = camera_get_frustum(camera);
 
         ivec4 gl_viewport;
         gl_viewport[0] = (int)((float)window_width * viewport[0]);
@@ -388,19 +390,35 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         gl_viewport[2] = (int)viewport_width;
         gl_viewport[3] = (int)viewport_height;
 
-        struct te_frustum_shape* camera_frustum = camera_get_frustum(camera);
+        glViewport(gl_viewport[0], gl_viewport[1], gl_viewport[2], gl_viewport[3]);
 
         // Draw models.
         {
 #if defined(ENGINE_DEBUG_TOOLS)
-            GPU_SECTION_BEGIN("models");
             const Uint64 cpu_start_counter = SDL_GetPerformanceCounter();
             if (record_new_queries) {
                 GPU_TIME_SECTION_BEGIN(prv_world_get_gl_query_draw_models(worlds[i]));
             }
 #endif
 
-            model_renderer_draw(model_renderer, &gl_viewport, view_proj_mat, camera_frustum);
+            GPU_SECTION_BEGIN("opaque models");
+            model_renderer_draw(opaque_model_renderer, view_proj_mat, camera_frustum);
+            GPU_SECTION_END;
+
+            if (model_renderer_has_models(transparent_model_renderer)) {
+                GPU_SECTION_BEGIN("transparent models");
+
+                glDisable(GL_CULL_FACE);
+
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                model_renderer_draw(transparent_model_renderer, view_proj_mat, camera_frustum);
+                glDisable(GL_BLEND);
+
+                glEnable(GL_CULL_FACE);
+
+                GPU_SECTION_END;
+            }
 
 #if defined(ENGINE_DEBUG_TOOLS)
             if (record_new_queries) {
@@ -408,7 +426,6 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
             }
             debug_stats->cpu_time_submit_models_ms +=
                 (float)(SDL_GetPerformanceCounter() - cpu_start_counter) * 1000.0f / (float)(SDL_GetPerformanceFrequency());
-            GPU_SECTION_END;
 #endif
         }
 
