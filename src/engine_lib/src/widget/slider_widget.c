@@ -15,7 +15,7 @@ struct te_slider_widget {
     te_rect_widget* handle_rect;
 
     // May be NULL if not set.
-    void (*on_value_changed)(float new_value);
+    void (*on_value_changed)(te_slider_widget* slider_widget, float new_value);
 
     vec4 background_color;
     vec4 handle_color;
@@ -29,6 +29,7 @@ struct te_slider_widget {
 
     // `true` if entered the "destroy" function.
     bool is_slider_widget_destroy;
+
     bool is_handle_grabbed;
 };
 
@@ -131,7 +132,8 @@ prv_slider_widget_snap_to_nearest(float value, float step_size) {
 }
 
 void
-slider_widget_set_on_value_changed(te_slider_widget* slider_widget, void (*on_value_changed)(float new_value)) {
+slider_widget_set_on_value_changed(
+    te_slider_widget* slider_widget, void (*on_value_changed)(te_slider_widget* slider_widget, float new_value)) {
     slider_widget->on_value_changed = on_value_changed;
 }
 
@@ -313,7 +315,7 @@ prv_slider_widget_update_value(te_slider_widget* slider_widget, vec2 cursor_pos)
         rect_widget_get_widget(slider_widget->handle_rect), (vec2){slider_widget->value - TE_SLIDER_HANDLE_WIDTH / 2.0f, 0.0f});
 
     if (slider_widget->on_value_changed != NULL) {
-        slider_widget->on_value_changed(slider_widget->value);
+        slider_widget->on_value_changed(slider_widget, slider_widget->value);
     }
 }
 

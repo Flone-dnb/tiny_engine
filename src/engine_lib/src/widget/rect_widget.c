@@ -115,6 +115,10 @@ rect_widget_get_color(te_rect_widget* rect_widget, vec4 out) {
 
 void
 rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) {
+    if (rect_widget->tex_relative_path == NULL && relative_path == NULL) {
+        return;
+    }
+
     free(rect_widget->tex_relative_path);
 
     if (relative_path == NULL) {

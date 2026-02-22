@@ -14,7 +14,8 @@ void slider_widget_destroy(te_slider_widget* slider_widget);
 struct te_widget* slider_widget_get_widget(te_slider_widget* slider_widget);
 
 // Sets a callback that will be triggered after the slider's handle is moved by the user input.
-void slider_widget_set_on_value_changed(te_slider_widget* slider_widget, void (*on_value_changed)(float new_value));
+void slider_widget_set_on_value_changed(
+    te_slider_widget* slider_widget, void (*on_value_changed)(te_slider_widget* slider_widget, float new_value));
 
 // Sets slider's handle position in range [0.0; 1.0].
 void slider_widget_set_value(te_slider_widget* slider_widget, float value);

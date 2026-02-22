@@ -37,6 +37,7 @@ set(PROJECT_SOURCES
     src/widget/button_widget.c
     src/widget/text_edit_widget.c
     src/widget/slider_widget.c
+    src/widget/checkbox_widget.c
     include/math_funcs.h
     include/window.h
     include/debug_console.h
@@ -71,6 +72,7 @@ set(PROJECT_SOURCES
     include/widget/button_widget.h
     include/widget/text_edit_widget.h
     include/widget/slider_widget.h
+    include/widget/checkbox_widget.h
 )
 
 # Define targets (one without any specific macros and another for compilation with editor).
