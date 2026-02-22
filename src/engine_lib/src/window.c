@@ -345,6 +345,10 @@ prv_window_process_event(te_window* window, union SDL_Event event, float delta_t
 #endif
 #if defined(ENGINE_DEBUG_TOOLS)
             if (prv_debug_console_is_shown()) {
+                if ((enum te_keyboard_button)event.key.scancode == TE_KB_TILDE) {
+                    break; // key up event is used to show/hide console
+                }
+                prv_debug_console_on_keyboard_input(window->game_manager, (enum te_keyboard_button)event.key.scancode);
                 break; // don't trigger user callbacks
             }
 #endif
@@ -377,7 +381,7 @@ prv_window_process_event(te_window* window, union SDL_Event event, float delta_t
                     prv_debug_console_hide();
                     SDL_StopTextInput(window->sdl_window);
                 } else {
-                    prv_debug_console_on_keyboard_input(window->game_manager, (enum te_keyboard_button)event.key.scancode);
+                    // input is handled in key down event
                     break; // don't trigger user callbacks
                 }
             } else if (!prv_debug_console_is_shown() && (enum te_keyboard_button)event.key.scancode == TE_KB_TILDE) {

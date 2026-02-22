@@ -78,9 +78,17 @@ editor_create_game_world(te_editor* editor, te_game_manager* game_manager) {
     editor->game_world = game_manager_create_world(game_manager, "game");
     editor_camera_spawn(editor->editor_camera, editor->game_world);
 
-    // Sample models.
-    te_model* model = model_create(NULL);
-    world_spawn_model(editor->game_world, model);
+    // Prepare a sample scene.
+    {
+        te_model* floor = model_create(NULL);
+        model_set_scale(floor, (vec3){5.0f, 1.0f, 5.0f});
+        model_set_color(floor, (vec4){1.0f, 0.5f, 0.0f, 1.0f});
+        world_spawn_model(editor->game_world, floor);
+
+        te_model* box = model_create(NULL);
+        model_set_position(box, (vec3){0.0f, 1.0f, -1.0f});
+        world_spawn_model(editor->game_world, box);
+    }
 
     // Prepare stats widget.
     editor->game_world_stats_widget = text_widget_create();
