@@ -50,7 +50,7 @@ static void prv_text_edit_widget_on_before_despawned(void* this);
 
 // Interactable callbacks:
 static void prv_text_edit_widget_on_mouse_button_pressed(void* this, enum te_mouse_button button, vec2 cursor_pos);
-static void prv_text_edit_widget_on_cursor_left(void* this);
+static void prv_text_edit_widget_on_cursor_left(void* this, vec2 cursor_pos);
 static void prv_text_edit_widget_on_keyboard_input_text(void* this, const char* input_text);
 static void prv_text_edit_widget_on_keyboard_input(void* this, enum te_keyboard_button button);
 
@@ -78,7 +78,7 @@ text_edit_widget_create(void) {
 
     prv_widget_set_input_callbacks(
         text_edit_widget->widget, NULL, prv_text_edit_widget_on_cursor_left, prv_text_edit_widget_on_mouse_button_pressed, NULL,
-        prv_text_edit_widget_on_keyboard_input_text, prv_text_edit_widget_on_keyboard_input);
+        NULL, prv_text_edit_widget_on_keyboard_input_text, prv_text_edit_widget_on_keyboard_input);
 
     text_edit_widget->on_text_changed = NULL;
 
@@ -138,7 +138,7 @@ prv_text_edit_widget_on_after_spawned(void* this) {
     text_widget_set_color(text_edit_widget->text_widget, text_edit_widget->text_color);
     text_widget_set_text_height(text_edit_widget->text_widget, text_edit_widget->text_height);
 
-    // Self check: make sure we only have 1 child widget.
+    // Self check:
     unsigned int child_count = 0;
     (void)widget_get_child_widgets_tmp(text_edit_widget->widget, &child_count);
     if (child_count != 1) {
@@ -176,7 +176,7 @@ void
 prv_text_edit_widget_on_before_despawned(void* this) {
     te_text_edit_widget* text_edit_widget = this;
 
-    // Self check: make sure we only have up to 2 child widgets.
+    // Self check:
     unsigned int child_count = 0;
     (void)widget_get_child_widgets_tmp(text_edit_widget->widget, &child_count);
     if (child_count > 2) {
@@ -277,10 +277,11 @@ prv_text_edit_widget_on_mouse_button_pressed(void* this, enum te_mouse_button bu
     if (text_edit_widget->rect_cursor_widget == NULL) {
         // Create text cursor.
         text_edit_widget->rect_cursor_widget = rect_widget_create();
-        widget_set_is_serialization_allowed(rect_widget_get_widget(text_edit_widget->rect_cursor_widget), false);
+        te_widget* rect = rect_widget_get_widget(text_edit_widget->rect_cursor_widget);
+        widget_set_is_serialization_allowed(rect, false);
 
         // Attach and spawn.
-        widget_set_parent(rect_widget_get_widget(text_edit_widget->rect_cursor_widget), text_edit_widget->widget);
+        widget_set_parent(rect, text_edit_widget->widget);
 
         // Enable text input events.
         SDL_StartTextInput(prv_window_get_sdl_window(window));
@@ -308,7 +309,8 @@ prv_text_edit_widget_on_mouse_button_pressed(void* this, enum te_mouse_button bu
 }
 
 void
-prv_text_edit_widget_on_cursor_left(void* this) {
+prv_text_edit_widget_on_cursor_left(void* this, vec2 cursor_pos) {
+    (void)cursor_pos;
     te_text_edit_widget* text_edit_widget = this;
 
     if (text_edit_widget->rect_cursor_widget != NULL) {

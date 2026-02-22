@@ -27,10 +27,11 @@ struct te_widget {
     void (*on_window_size_changed)(void* owner);
 
     // May be NULL, used by interactable widgets.
-    void (*on_cursor_entered)(void* owner);
-    void (*on_cursor_left)(void* owner);
+    void (*on_cursor_entered)(void* owner, vec2 cursor_pos);
+    void (*on_cursor_left)(void* owner, vec2 cursor_pos);
     void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, vec2 cursor_pos);
     void (*on_mouse_button_released)(void* owner, enum te_mouse_button button, vec2 cursor_pos);
+    void (*on_hovered_cursor_moved)(void* owner, vec2 cursor_pos);
     void (*on_keyboard_input_text)(void* owner, const char* text);
     void (*on_keyboard_input)(void* owner, enum te_keyboard_button button);
 
@@ -74,6 +75,7 @@ widget_create(
     widget->on_cursor_left = NULL;
     widget->on_mouse_button_pressed = NULL;
     widget->on_mouse_button_released = NULL;
+    widget->on_hovered_cursor_moved = NULL;
     widget->on_keyboard_input_text = NULL;
     widget->on_keyboard_input = NULL;
 
@@ -356,15 +358,18 @@ prv_widget_on_window_size_changed(te_widget* widget) {
 
 void
 prv_widget_set_input_callbacks(
-    te_widget* widget, void (*on_cursor_entered)(void* owner), void (*on_cursor_left)(void* owner),
+    te_widget* widget, void (*on_cursor_entered)(void* owner, vec2 cursor_pos),
+    void (*on_cursor_left)(void* owner, vec2 cursor_pos),
     void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, vec2 cursor_pos),
     void (*on_mouse_button_released)(void* owner, enum te_mouse_button button, vec2 cursor_pos),
+    void (*on_hovered_cursor_moved)(void* owner, vec2 cursor_pos),
     void (*on_keyboard_input_text)(void* owner, const char* input_text),
     void (*on_keyboard_input)(void* owner, enum te_keyboard_button button)) {
     widget->on_cursor_entered = on_cursor_entered;
     widget->on_cursor_left = on_cursor_left;
     widget->on_mouse_button_pressed = on_mouse_button_pressed;
     widget->on_mouse_button_released = on_mouse_button_released;
+    widget->on_hovered_cursor_moved = on_hovered_cursor_moved;
     widget->on_keyboard_input_text = on_keyboard_input_text;
     widget->on_keyboard_input = on_keyboard_input;
 }
@@ -388,21 +393,30 @@ prv_widget_on_mouse_button_released(te_widget* widget, enum te_mouse_button butt
 }
 
 void
-prv_widget_on_cursor_entered(te_widget* widget) {
+prv_widget_on_cursor_entered(te_widget* widget, vec2 cursor_pos) {
     if (widget->on_cursor_entered == NULL) {
         return;
     }
 
-    widget->on_cursor_entered(widget->owner);
+    widget->on_cursor_entered(widget->owner, cursor_pos);
 }
 
 void
-prv_widget_on_cursor_left(te_widget* widget) {
+prv_widget_on_cursor_left(te_widget* widget, vec2 cursor_pos) {
     if (widget->on_cursor_left == NULL) {
         return;
     }
 
-    widget->on_cursor_left(widget->owner);
+    widget->on_cursor_left(widget->owner, cursor_pos);
+}
+
+void
+prv_widget_on_hovered_cursor_moved(te_widget* widget, vec2 cursor_pos) {
+    if (widget->on_hovered_cursor_moved == NULL) {
+        return;
+    }
+
+    widget->on_hovered_cursor_moved(widget->owner, cursor_pos);
 }
 
 void

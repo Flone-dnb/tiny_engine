@@ -529,19 +529,23 @@ prv_world_on_mouse_moved(te_world* world, float cursor_pos[2]) {
 
         if (world->hovered_interactable_widget == NULL) {
             world->hovered_interactable_widget = world->interactable_widgets[i];
-            prv_widget_on_cursor_entered(world->hovered_interactable_widget);
-        } else if (world->hovered_interactable_widget != world->interactable_widgets[i]) {
-            prv_widget_on_cursor_left(world->hovered_interactable_widget);
+            prv_widget_on_cursor_entered(world->hovered_interactable_widget, cursor_pos);
+        } else {
+            if (world->hovered_interactable_widget != world->interactable_widgets[i]) {
+                prv_widget_on_cursor_left(world->hovered_interactable_widget, cursor_pos);
 
-            world->hovered_interactable_widget = world->interactable_widgets[i];
-            prv_widget_on_cursor_entered(world->hovered_interactable_widget);
+                world->hovered_interactable_widget = world->interactable_widgets[i];
+                prv_widget_on_cursor_entered(world->hovered_interactable_widget, cursor_pos);
+            } else {
+                prv_widget_on_hovered_cursor_moved(world->hovered_interactable_widget, cursor_pos);
+            }
         }
 
         return;
     }
 
     if (world->hovered_interactable_widget != NULL) {
-        prv_widget_on_cursor_left(world->hovered_interactable_widget);
+        prv_widget_on_cursor_left(world->hovered_interactable_widget, cursor_pos);
         world->hovered_interactable_widget = NULL;
     }
 }
@@ -614,7 +618,18 @@ prv_world_on_keyboard_input(te_world* world, enum te_keyboard_button button, boo
 void
 prv_world_on_input_source_changed(te_world* world) {
     if (world->hovered_interactable_widget != NULL) {
-        prv_widget_on_cursor_left(world->hovered_interactable_widget);
+        te_window* window = game_manager_get_window(world->game_manager);
+
+        vec2 cursor_pos;
+        window_get_cursor_position(window, &cursor_pos[0], &cursor_pos[1]);
+
+        unsigned int window_width;
+        unsigned int window_height;
+        window_get_size(window, &window_width, &window_height);
+
+        glm_vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
+
+        prv_widget_on_cursor_left(world->hovered_interactable_widget, cursor_pos);
         world->hovered_interactable_widget = NULL;
     }
 }

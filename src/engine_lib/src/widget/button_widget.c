@@ -50,8 +50,8 @@ static void prv_button_widget_on_before_despawned(void* this);
 // Interactable callbacks:
 static void prv_button_widget_on_mouse_button_pressed(void* this, enum te_mouse_button button, vec2 cursor_pos);
 static void prv_button_widget_on_mouse_button_released(void* this, enum te_mouse_button button, vec2 cursor_pos);
-static void prv_button_widget_on_cursor_entered(void* this);
-static void prv_button_widget_on_cursor_left(void* this);
+static void prv_button_widget_on_cursor_entered(void* this, vec2 cursor_pos);
+static void prv_button_widget_on_cursor_left(void* this, vec2 cursor_pos);
 
 static void prv_button_widget_register_render_data(te_button_widget* button_widget);
 static void prv_button_widget_unregister_render_data(te_button_widget* button_widget);
@@ -89,7 +89,7 @@ button_widget_create(void) {
 
     prv_widget_set_input_callbacks(
         button_widget->widget, prv_button_widget_on_cursor_entered, prv_button_widget_on_cursor_left,
-        prv_button_widget_on_mouse_button_pressed, prv_button_widget_on_mouse_button_released, NULL, NULL);
+        prv_button_widget_on_mouse_button_pressed, prv_button_widget_on_mouse_button_released, NULL, NULL, NULL);
 
     return button_widget;
 }
@@ -133,7 +133,7 @@ prv_button_widget_on_after_spawned(void* this) {
         rect_widget_set_texture(button_widget->rect_widget, button_widget->tex_relative_path);
     }
 
-    // Self check: make sure we only have 1 child widget.
+    // Self check:
     unsigned int child_count = 0;
     (void)widget_get_child_widgets_tmp(button_widget->widget, &child_count);
     if (child_count != 1) {
@@ -146,7 +146,7 @@ prv_button_widget_on_before_despawned(void* this) {
     te_button_widget* button_widget = this;
     prv_button_widget_unregister_render_data(button_widget);
 
-    // Self check: make sure we only have 1 child widget.
+    // Self check:
     unsigned int child_count = 0;
     (void)widget_get_child_widgets_tmp(button_widget->widget, &child_count);
     if (child_count != 1) {
@@ -429,7 +429,8 @@ prv_button_widget_on_mouse_button_released(void* this, enum te_mouse_button butt
 }
 
 static void
-prv_button_widget_on_cursor_entered(void* this) {
+prv_button_widget_on_cursor_entered(void* this, vec2 cursor_pos) {
+    (void)cursor_pos;
     te_button_widget* button_widget = this;
 
     button_widget_enter_hovered_state(button_widget);
@@ -437,7 +438,8 @@ prv_button_widget_on_cursor_entered(void* this) {
 }
 
 static void
-prv_button_widget_on_cursor_left(void* this) {
+prv_button_widget_on_cursor_left(void* this, vec2 cursor_pos) {
+    (void)cursor_pos;
     te_button_widget* button_widget = this;
 
     button_widget_enter_normal_state(button_widget);
