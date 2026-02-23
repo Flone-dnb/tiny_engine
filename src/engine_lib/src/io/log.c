@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "io/filesystem.h"
 #include "io/paths.h"
 #include "misc/error.h"
+#include "render/debug_drawer.h"
 
 static unsigned int error_count_logged = 0;
 static unsigned int warn_count_logged = 0;
@@ -51,8 +51,7 @@ prv_log(enum te_log_category category, const char* message, char* filepath, int 
 
     // Create log prefix.
     char log_prefix[512] = {0};
-    snprintf(&log_prefix[0], 511, "[%s] [%s] [%s:%d]", time_str, category_str, filepath + filename_start,
-             line);
+    snprintf(&log_prefix[0], 511, "[%s] [%s] [%s:%d]", time_str, category_str, filepath + filename_start, line);
 
     // Open log file (not checking if directories exist because we checked this at game start).
     const char* path_to_log_file = paths_get_log_file();
@@ -66,6 +65,14 @@ prv_log(enum te_log_category category, const char* message, char* filepath, int 
 #if defined(DEBUG)
     // Also print to the terminal in debug builds.
     printf("%s %s\n", log_prefix, message);
+#endif
+
+#if defined(ENGINE_DEBUG_TOOLS)
+    if (category == LOG_WARN) {
+        debug_drawer_draw_text_color(message, 5.0f, (vec3){1.0f, 1.0f, 0.0f});
+    } else if (category == LOG_ERROR) {
+        debug_drawer_draw_text_color(message, 5.0f, (vec3){1.0f, 0.0f, 0.0f});
+    }
 #endif
 
     fclose(log_file);
