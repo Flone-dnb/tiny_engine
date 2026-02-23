@@ -360,10 +360,6 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
         glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(vec4), NULL);
 
-        vec4 clip_rect;
-        glm_vec4_copy((vec4){0.0f, 0.0f, 1.0f, 1.0f}, clip_rect);
-        glUniform4fv(shader->uniform_clip_rect, 1, clip_rect);
-
         glUniform2fv(shader->uniform_window_size, 1, window_size);
 
         for (unsigned int widget_idx = 0; widget_idx < rect_widget_count; widget_idx++) {
@@ -371,6 +367,7 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
             data += widget_idx;
 
             glUniform4fv(shader->uniform_quad_color, 1, data->color);
+            glUniform4fv(shader->uniform_clip_rect, 1, data->clip_rect);
 
             glUniform2fv(shader->uniform_in_pos, 1, data->pos_pix);
             glUniform2fv(shader->uniform_in_size, 1, data->size_pix);

@@ -25,3 +25,8 @@ void rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_p
 // Returns NULL if texture is not set, otherwise path (relative to the `res` directory) to the used texture.
 // Do not free returned string, valid while the model exists.
 const char* rect_widget_get_texture(te_rect_widget* rect_widget);
+
+// Allows "cutting" part of the rectangle during the rendering.
+// XY stores clip start in range [0.0; 1.0] and ZW stores clip size in the same range.
+void rect_widget_set_clip_rect(te_rect_widget* rect_widget, vec4 clip_rect);
+void rect_widget_get_clip_rect(te_rect_widget* rect_widget, vec4 out);

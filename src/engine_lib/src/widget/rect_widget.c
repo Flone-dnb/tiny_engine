@@ -19,6 +19,10 @@ struct te_rect_widget {
     // NULL if texture is not set, otherwise path (relative to the `res` directory) to the texture file.
     char* tex_relative_path;
 
+    // Allows "cutting" part of the rectangle during the rendering.
+    // XY stores clip start in range [0.0; 1.0] and ZW stores clip size in the same range.
+    vec4 clip_rect;
+
     vec4 color;
 
     // Stores invalid value if not being rendered.
@@ -51,6 +55,8 @@ rect_widget_create(void) {
     rect_widget->tex_relative_path = NULL;
     rect_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
     rect_widget->is_rect_widget_destroy = false;
+
+    glm_vec4_copy((vec4){0.0f, 0.0f, 1.0f, 1.0f}, rect_widget->clip_rect);
 
     return rect_widget;
 }
@@ -175,6 +181,27 @@ rect_widget_get_texture(te_rect_widget* rect_widget) {
     return rect_widget->tex_relative_path;
 }
 
+void
+rect_widget_set_clip_rect(te_rect_widget* rect_widget, vec4 clip_rect) {
+    glm_vec4_copy(clip_rect, rect_widget->clip_rect);
+
+    if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        te_world* world = widget_get_world(rect_widget->widget);
+        if (world == NULL) {
+            show_error_and_abort("expected the widget to be spawned");
+        }
+
+        te_rect_widget_render_data* data =
+            widget_renderer_get_rect_widget_render_data_tmp(world_get_widget_renderer(world), rect_widget->render_data_handle);
+        glm_vec4_copy(clip_rect, data->clip_rect);
+    }
+}
+
+void
+rect_widget_get_clip_rect(te_rect_widget* rect_widget, vec4 out) {
+    glm_vec4_copy(rect_widget->clip_rect, out);
+}
+
 static void
 prv_rect_widget_register_for_rendering(te_rect_widget* rect_widget) {
 #if defined(DEBUG)
@@ -260,6 +287,8 @@ prv_rect_widget_update_non_tex_render_data(te_rect_widget* rect_widget) {
     widget_get_screen_size(rect_widget->widget, data->size_pix);
     glm_vec2_mul(data->pos_pix, (vec2){(float)window_width, (float)window_height}, data->pos_pix);
     glm_vec2_mul(data->size_pix, (vec2){(float)window_width, (float)window_height}, data->size_pix);
+
+    glm_vec4_copy(rect_widget->clip_rect, data->clip_rect);
 }
 
 static void

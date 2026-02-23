@@ -40,6 +40,9 @@ typedef struct te_rect_widget_render_data {
     // RGBA color.
     vec4 color;
 
+    // XY stores clip start in range [0.0; 1.0] and ZW stores clip size in the same range.
+    vec4 clip_rect;
+
     // 0 if not used
     unsigned int tex_id;
 } te_rect_widget_render_data;
