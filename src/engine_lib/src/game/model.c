@@ -45,6 +45,10 @@ struct te_model {
     // NULL if not spawned. Do not free/destroy this pointer.
     te_world* world;
 
+    // NULL if nothing attached.
+    te_model* child_model;
+    te_model* parent_model;
+
     // Color in RGBA format in range [0.0; 1.0].
     vec4 color;
 
@@ -61,6 +65,7 @@ struct te_model {
     // Stores invalid value if not spawned (see @ref world). OpenGL ID of the shader program used.
     unsigned int shader_prog_id;
 
+    bool is_world_destroy;
     bool is_opaque;
 };
 
@@ -71,10 +76,13 @@ model_create(const char* path_to_geo) {
     model->world = NULL;
     model->render_data_handle = 0xffffffff;
     model->shader_prog_id = 0xffffffff;
+    model->child_model = NULL;
+    model->parent_model = NULL;
     model->tex_relative_path = NULL;
     model->custom_vert_relative_path = NULL;
     model->custom_frag_relative_path = NULL;
     model->is_opaque = true;
+    model->is_world_destroy = false;
     glm_vec2_one(model->tex_tiling);
     glm_vec2_zero(model->uv_offset);
 
@@ -101,9 +109,32 @@ model_create(const char* path_to_geo) {
 
 void
 model_destroy(te_model* model) {
+    if (!model->is_world_destroy && model->child_model != NULL) {
+        if (model->child_model->world != NULL) {
+            // We should have despawned it in our despawn callback.
+            show_error_and_abort("expected the child model to be despawned already");
+        }
+        model_destroy(model->child_model);
+    }
+
     free(model->tex_relative_path);
     free(model->path_to_geo);
     free(model);
+}
+
+te_model_renderer*
+prv_model_get_renderer(te_model* model) {
+#if defined(DEBUG)
+    if (model->world == NULL) {
+        show_error_and_abort("expected world to be valid");
+    }
+#endif
+
+    if (model->is_opaque) {
+        return world_get_opaque_model_renderer(model->world);
+    } else {
+        return world_get_transparent_model_renderer(model->world);
+    }
 }
 
 static void
@@ -126,20 +157,21 @@ prv_model_calc_world_normal_matrices(te_model* model, mat4 world, mat3 normal) {
     glm_mat4_transpose(normal_mat);
 
     glm_mat4_pick3(normal_mat, normal);
-}
 
-te_model_renderer*
-prv_model_get_renderer(te_model* model) {
-#if defined(DEBUG)
-    if (model->world == NULL) {
-        show_error_and_abort("expected world to be valid");
+    if (model->parent_model != NULL && model->parent_model->render_data_handle != 0xffffffff) {
+        te_model_renderer* renderer = prv_model_get_renderer(model->parent_model);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(renderer, model->parent_model->render_data_handle);
+
+        glm_mat4_mul(data->world_mat, world, world);
+        glm_mat3_mul(data->normal_mat, normal, normal);
     }
-#endif
 
-    if (model->is_opaque) {
-        return world_get_opaque_model_renderer(model->world);
-    } else {
-        return world_get_transparent_model_renderer(model->world);
+    if (model->child_model != NULL && model->child_model->render_data_handle != 0xffffffff) {
+        te_model_renderer* renderer = prv_model_get_renderer(model->child_model);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(renderer, model->child_model->render_data_handle);
+
+        prv_model_calc_world_normal_matrices(model->child_model, data->world_mat, data->normal_mat);
+        data->aabb_world = aabb_shape_convert_to_world(&model->child_model->aabb_local, data->world_mat);
     }
 }
 
@@ -327,6 +359,45 @@ model_get_uv_offset(te_model* model, vec2 uv_offset) {
     glm_vec2_copy(model->uv_offset, uv_offset);
 }
 
+void
+model_set_parent(te_model* model, te_model* new_parent) {
+    if (new_parent != NULL && new_parent->child_model != NULL) {
+        show_error_and_abort("only 1 model can be attached");
+    }
+
+    if (model->parent_model != NULL) {
+        model->parent_model->child_model = NULL;
+    }
+    model->parent_model = new_parent;
+
+    new_parent->child_model = model;
+
+    if (model->world == NULL) {
+        if (new_parent != NULL && new_parent->world != NULL) {
+            world_spawn_model(new_parent->world, model);
+        }
+    } else {
+        if (new_parent == NULL) {
+            world_despawn_model(model->world, model);
+        } else {
+            if (new_parent->world != NULL && new_parent->world != model->world) {
+                show_error_and_abort("can't attach a model from a different world, despawn the child model first");
+            }
+            if (new_parent->world == NULL) {
+                world_despawn_model(model->world, model);
+            }
+        }
+    }
+
+    if (model->world != NULL) {
+        // Update render data.
+        te_model_render_data* data = model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
+
+        prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
+        data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
+    }
+}
+
 te_world*
 model_get_world(te_model* model) {
     return model->world;
@@ -462,10 +533,23 @@ void
 prv_model_on_spawned(te_model* model, te_world* world) {
     model->world = world;
     prv_model_add_to_model_renderer(model);
+
+    if (model->child_model != NULL) {
+        if (model->child_model->world != NULL) {
+            show_error_and_abort("expected the child node to not be spawned yet");
+        }
+        world_spawn_model(world, model->child_model);
+    }
 }
 
 void
 prv_model_on_despawned(te_model* model) {
+    model->is_world_destroy = prv_world_is_being_destroyed(model->world);
+
+    if (!model->is_world_destroy && model->child_model != NULL && model->child_model->world != NULL) {
+        world_despawn_model(model->child_model->world, model->child_model);
+    }
+
     prv_model_remove_from_model_renderer(model);
     model->world = NULL;
 }

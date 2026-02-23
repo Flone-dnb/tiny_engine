@@ -61,6 +61,9 @@ struct te_game_manager* world_get_game_manager(te_world* world);
 te_world* prv_world_create(struct te_game_manager* game_manager, const char* name);
 void prv_world_destroy(te_world* world);
 
+// Returns `true` if currently in @ref prv_world_destroy.
+bool prv_world_is_being_destroyed(te_world* world);
+
 // Called to possibly notify widgets.
 void prv_world_on_window_size_changed(te_world* world);
 

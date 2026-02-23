@@ -13,29 +13,41 @@ struct te_world;
 te_model* model_create(const char* path_to_geo);
 void model_destroy(te_model* model);
 
-// Sets position of the model.
 void model_set_position(te_model* model, vec3 position);
-
-// Sets rotation (in degrees) of the model.
-void model_set_rotation(te_model* model, vec3 rotation);
-
-// Sets scale of the model.
+void model_set_rotation(te_model* model, vec3 rotation); // in degrees
 void model_set_scale(te_model* model, vec3 scale);
+
+void model_get_position(te_model* model, vec3 out);
+void model_get_rotation(te_model* model, vec3 out); // in degrees
+void model_get_scale(te_model* model, vec3 out);
 
 // Sets color of the model in the RGBA format in range [0.0; 1.0].
 // Note that alpha will be ignored if @ref model_enable_transparency is disabled.
 void model_set_color(te_model* model, vec4 color);
+void model_get_color(te_model* model, vec4 out);
 
 // Sets path (relative to the `res` directory) to texture to use.
 // The path string will be copied and stored in the model. Specify NULL to remove texture.
 // Note that alpha will be ignored if @ref model_enable_transparency is disabled.
 void model_set_texture(te_model* model, const char* relative_path);
 
+// Returns NULL if texture is not set.
+// Do not free returned string, valid while the model exists.
+const char* model_get_texture(te_model* model);
+
 // Sets texture tiling multiplier.
 void model_set_texture_tiling(te_model* model, vec2 tex_tiling);
+void model_get_texture_tiling(te_model* model, vec2 tex_tiling);
 
 // Sets offset for UV coordinates.
 void model_set_uv_offset(te_model* model, vec2 uv_offset);
+void model_get_uv_offset(te_model* model, vec2 uv_offset);
+
+// Child model's location/rotation/scale will then be treated as relative to the parents parameters.
+// If the child model is not spawned but the parent is spawned will make the child model spawned.
+// When parent is despawned/destroyed will also make the attached child despawn/destroy.
+// Specify NULL as parent to detach.
+void model_set_parent(te_model* model, te_model* new_parent);
 
 // Sets custom vertex shader.
 //
@@ -58,24 +70,6 @@ void model_set_custom_frag_shader(te_model* model, const char* frag_relative_pat
 // (such as grass planes) because there's no sorting for transparent geometry.
 void model_enable_transparency(te_model* model, bool enable);
 bool model_is_transparency_enabled(te_model* model);
-
-void model_get_position(te_model* model, vec3 out);
-void model_get_rotation(te_model* model, vec3 out); // in degrees
-void model_get_scale(te_model* model, vec3 out);
-
-// Returns RGBA color of the model.
-void model_get_color(te_model* model, vec4 out);
-
-// Returns NULL if texture is not set, otherwise path (relative to the `res` directory)
-// to the used texture.
-// Do not free returned string, valid while the model exists.
-const char* model_get_texture(te_model* model);
-
-// Returns texture tiling multiplier.
-void model_get_texture_tiling(te_model* model, vec2 tex_tiling);
-
-// Returns offset for UV coordinates.
-void model_get_uv_offset(te_model* model, vec2 uv_offset);
 
 // Returns NULL if the model is not spawned.
 // Do not free/destroy returned pointer, valid while the model exists.

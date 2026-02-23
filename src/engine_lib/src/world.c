@@ -185,6 +185,11 @@ prv_world_destroy(te_world* world) {
     free(world);
 }
 
+bool
+prv_world_is_being_destroyed(te_world* world) {
+    return world->is_being_destroyed;
+}
+
 void
 prv_world_on_window_size_changed(te_world* world) {
     if (world->active_camera == NULL) {
@@ -269,6 +274,7 @@ world_spawn_model(te_world* world, te_model* model) {
     world->spawned_models[world->spawned_model_count] = model;
     world->spawned_model_count += 1;
 
+    // Notify model as the last step as it can spawn a child model here.
     prv_model_on_spawned(model, world);
 }
 
@@ -299,6 +305,7 @@ world_despawn_model(te_world* world, te_model* model) {
         sizeof(te_model*) * (world->spawned_model_count - model_idx - 1));
     world->spawned_model_count -= 1;
 
+    // Notify model as the last step as it can cause a child model to be despawned here.
     prv_model_on_despawned(model);
 }
 
