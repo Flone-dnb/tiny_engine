@@ -65,11 +65,6 @@ vbox_widget_get_widget(te_vbox_widget* vbox_widget) {
     return vbox_widget->widget;
 }
 
-void
-vbox_widget_set_child_spacing(te_vbox_widget* vbox_widget, float spacing) {
-    vbox_widget->child_spacing = spacing;
-}
-
 float
 vbox_widget_get_child_spacing(te_vbox_widget* vbox_widget) {
     return vbox_widget->child_spacing;
@@ -96,6 +91,15 @@ prv_vbox_widget_update_children(te_vbox_widget* vbox_widget) {
 
         widget_set_relative_position(child_widgets[i], relative_pos);
         relative_pos[1] += child_relative_size[1] + relative_spacing;
+    }
+}
+
+void
+vbox_widget_set_child_spacing(te_vbox_widget* vbox_widget, float spacing) {
+    vbox_widget->child_spacing = spacing;
+
+    if (widget_get_world(vbox_widget->widget) != NULL) {
+        prv_vbox_widget_update_children(vbox_widget);
     }
 }
 
