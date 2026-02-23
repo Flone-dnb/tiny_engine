@@ -17,10 +17,11 @@ struct te_widget {
     // Size of this array is @ref child_widget_count.
     te_widget** child_widgets;
 
-    // Always non-NULL.
+    // May be NULL.
     void (*on_pos_changed)(void* owner);
     void (*on_size_changed)(void* owner);
     void (*on_parent_changed)(void* owner);
+    void (*on_children_changed)(void* owner);
     void (*on_before_base_destroyed)(void* owner);
     void (*on_after_spawned)(void* owner);
     void (*on_before_despawned)(void* owner);
@@ -54,8 +55,9 @@ struct te_widget {
 te_widget*
 widget_create(
     void* owner, void (*on_pos_changed)(void* owner), void (*on_size_changed)(void* owner),
-    void (*on_before_base_destroyed)(void* owner), void (*on_after_spawned)(void* owner),
-    void (*on_before_despawned)(void* owner), void (*on_window_size_changed)(void* owner)) {
+    void (*on_before_base_destroyed)(void* owner), void (*on_parent_changed)(void* owner),
+    void (*on_children_changed)(void* owner), void (*on_after_spawned)(void* owner), void (*on_before_despawned)(void* owner),
+    void (*on_window_size_changed)(void* owner)) {
     te_widget* widget = malloc(sizeof(te_widget));
 
     widget->owner = owner;
@@ -64,6 +66,8 @@ widget_create(
     widget->child_widgets = NULL;
     widget->on_pos_changed = on_pos_changed;
     widget->on_size_changed = on_size_changed;
+    widget->on_parent_changed = on_parent_changed;
+    widget->on_children_changed = on_children_changed;
     widget->on_before_base_destroyed = on_before_base_destroyed;
     widget->on_after_spawned = on_after_spawned;
     widget->on_before_despawned = on_before_despawned;
@@ -94,7 +98,9 @@ widget_destroy(te_widget* widget) {
         show_error_and_abort("can't destroy a spawned widget, despawn it first");
     }
 
-    widget->on_before_base_destroyed(widget->owner);
+    if (widget->on_before_base_destroyed != NULL) {
+        widget->on_before_base_destroyed(widget->owner);
+    }
 
     for (unsigned int i = 0; i < widget->child_widget_count; i++) {
         widget_destroy(widget->child_widgets[i]);
@@ -191,8 +197,12 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
     widget->parent = new_parent;
     prv_widget_recalc_screen_pos_size(widget);
 
-    widget->on_pos_changed(widget->owner);
-    widget->on_size_changed(widget->owner);
+    if (widget->world != NULL && widget->on_pos_changed != NULL) {
+        widget->on_pos_changed(widget->owner);
+    }
+    if (widget->world != NULL && widget->on_size_changed != NULL) {
+        widget->on_size_changed(widget->owner);
+    }
 
     if (widget->world == NULL) {
         if (new_parent != NULL && new_parent->world != NULL) {
@@ -213,6 +223,14 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
                 prv_widget_on_despawned(widget);
             }
         }
+    }
+
+    if (widget->world != NULL && widget->on_parent_changed != NULL) {
+        widget->on_parent_changed(widget->owner);
+    }
+
+    if (new_parent != NULL && new_parent->world != NULL && new_parent->on_children_changed != NULL) {
+        new_parent->on_children_changed(new_parent->owner);
     }
 }
 
@@ -236,7 +254,9 @@ prv_widget_on_parent_pos_changed(te_widget* widget) {
         prv_widget_on_parent_pos_changed(widget->child_widgets[i]);
     }
 
-    widget->on_pos_changed(widget->owner);
+    if (widget->world != NULL && widget->on_pos_changed != NULL) {
+        widget->on_pos_changed(widget->owner);
+    }
 }
 
 static void
@@ -248,7 +268,9 @@ prv_widget_on_parent_size_changed(te_widget* widget) {
         prv_widget_on_parent_size_changed(widget->child_widgets[i]);
     }
 
-    widget->on_size_changed(widget->owner);
+    if (widget->world != NULL && widget->on_size_changed != NULL) {
+        widget->on_size_changed(widget->owner);
+    }
 }
 
 void
@@ -261,7 +283,9 @@ widget_set_relative_position(te_widget* widget, vec2 position) {
         prv_widget_on_parent_pos_changed(widget->child_widgets[i]);
     }
 
-    widget->on_pos_changed(widget->owner);
+    if (widget->world != NULL && widget->on_pos_changed != NULL) {
+        widget->on_pos_changed(widget->owner);
+    }
 }
 
 void
@@ -279,7 +303,9 @@ widget_set_relative_size(te_widget* widget, vec2 size) {
         prv_widget_on_parent_size_changed(widget->child_widgets[i]);
     }
 
-    widget->on_size_changed(widget->owner);
+    if (widget->world != NULL && widget->on_size_changed != NULL) {
+        widget->on_size_changed(widget->owner);
+    }
 }
 
 void
@@ -322,7 +348,9 @@ prv_widget_on_spawned(te_widget* widget, te_world* world) {
     // Spawn from top to bottom (in the hierarchy) so that widgets will be placed in the renderer
     // in the order from top to bottom (in the hierarchy) for top widgets to be rendered first and bottom widgets last.
     widget->world = world;
-    widget->on_after_spawned(widget->owner);
+    if (widget->on_after_spawned != NULL) {
+        widget->on_after_spawned(widget->owner);
+    }
 
     for (unsigned int i = 0; i < widget->child_widget_count; i++) {
         prv_widget_on_spawned(widget->child_widgets[i], world);
@@ -336,7 +364,9 @@ prv_widget_on_despawned(te_widget* widget) {
         prv_widget_on_despawned(widget->child_widgets[i]);
     }
 
-    widget->on_before_despawned(widget->owner);
+    if (widget->on_before_despawned != NULL) {
+        widget->on_before_despawned(widget->owner);
+    }
     widget->world = NULL;
 }
 
@@ -353,7 +383,9 @@ prv_widget_on_window_size_changed(te_widget* widget) {
         prv_widget_on_window_size_changed(widget->child_widgets[i]);
     }
 
-    widget->on_window_size_changed(widget->owner);
+    if (widget->on_window_size_changed != NULL) {
+        widget->on_window_size_changed(widget->owner);
+    }
 }
 
 void

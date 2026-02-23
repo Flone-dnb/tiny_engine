@@ -25,9 +25,6 @@ struct te_progress_widget {
 };
 
 // Widget callbacks:
-static void prv_progress_widget_on_pos_changed(void* this);
-static void prv_progress_widget_on_size_changed(void* this);
-static void prv_progress_widget_on_window_size_changed(void* this);
 static void prv_progress_widget_on_before_base_destroyed(void* this);
 static void prv_progress_widget_on_after_spawned(void* this);
 static void prv_progress_widget_on_before_despawned(void* this);
@@ -37,9 +34,8 @@ progress_widget_create(void) {
     te_progress_widget* progress_widget = malloc(sizeof(te_progress_widget));
 
     progress_widget->widget = widget_create(
-        progress_widget, prv_progress_widget_on_pos_changed, prv_progress_widget_on_size_changed,
-        prv_progress_widget_on_before_base_destroyed, prv_progress_widget_on_after_spawned,
-        prv_progress_widget_on_before_despawned, prv_progress_widget_on_window_size_changed);
+        progress_widget, NULL, NULL, prv_progress_widget_on_before_base_destroyed, NULL, NULL,
+        prv_progress_widget_on_after_spawned, prv_progress_widget_on_before_despawned, NULL);
 
     progress_widget->background_tex_relative_path = NULL;
     progress_widget->foreground_tex_relative_path = NULL;
@@ -179,21 +175,6 @@ progress_widget_get_background_texture(te_progress_widget* progress_widget) {
 char*
 progress_widget_get_foreground_texture(te_progress_widget* progress_widget) {
     return progress_widget->foreground_tex_relative_path;
-}
-
-static void
-prv_progress_widget_on_pos_changed(void* this) {
-    (void)this;
-}
-
-static void
-prv_progress_widget_on_size_changed(void* this) {
-    (void)this;
-}
-
-static void
-prv_progress_widget_on_window_size_changed(void* this) {
-    (void)this;
 }
 
 static void

@@ -13,14 +13,16 @@
 typedef struct te_widget te_widget;
 struct te_world;
 
-// Specify non-NULL callbacks that will be triggered when the widget is modified.
+// Callbacks that will be triggered when the widget is modified. Some may be specified as NULL.
+// All callbacks specified here will only be called while the widget is spawned except for the "on before base destroyed" callback.
 // "pos/size changed" callbacks will be triggered in both cases: when relative or screen pos/size changes.
 // "on after spawned" callback is called before any child widget is spawned.
 // "on before despawned" callback is called after all child widgets are despawned.
 te_widget* widget_create(
     void* owner, void (*on_pos_changed)(void* owner), void (*on_size_changed)(void* owner),
-    void (*on_before_base_destroyed)(void* owner), void (*on_after_spawned)(void* owner),
-    void (*on_before_despawned)(void* owner), void (*on_window_size_changed)(void* owner));
+    void (*on_before_base_destroyed)(void* owner), void (*on_parent_changed)(void* owner),
+    void (*on_children_changed)(void* owner), void (*on_after_spawned)(void* owner), void (*on_before_despawned)(void* owner),
+    void (*on_window_size_changed)(void* owner));
 void widget_destroy(te_widget* widget);
 
 // Sets or changes the current parent of a widget. Specify NULL to remove parent.

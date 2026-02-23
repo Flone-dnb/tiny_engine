@@ -33,7 +33,6 @@ struct te_checkbox_widget {
 };
 
 // Widget callbacks:
-static void prv_checkbox_widget_on_pos_changed(void* this);
 static void prv_checkbox_widget_on_size_changed(void* this);
 static void prv_checkbox_widget_on_window_size_changed(void* this);
 static void prv_checkbox_widget_on_before_base_destroyed(void* this);
@@ -48,9 +47,9 @@ checkbox_widget_create(void) {
     te_checkbox_widget* checkbox_widget = malloc(sizeof(te_checkbox_widget));
 
     checkbox_widget->widget = widget_create(
-        checkbox_widget, prv_checkbox_widget_on_pos_changed, prv_checkbox_widget_on_size_changed,
-        prv_checkbox_widget_on_before_base_destroyed, prv_checkbox_widget_on_after_spawned,
-        prv_checkbox_widget_on_before_despawned, prv_checkbox_widget_on_window_size_changed);
+        checkbox_widget, NULL, prv_checkbox_widget_on_size_changed, prv_checkbox_widget_on_before_base_destroyed, NULL, NULL,
+        prv_checkbox_widget_on_after_spawned, prv_checkbox_widget_on_before_despawned,
+        prv_checkbox_widget_on_window_size_changed);
 
     prv_widget_set_input_callbacks(
         checkbox_widget->widget, NULL, NULL, NULL, prv_checkbox_widget_on_mouse_button_released, NULL, NULL, NULL);
@@ -231,18 +230,13 @@ checkbox_widget_get_checked_texture(te_checkbox_widget* checkbox_widget) {
 }
 
 static void
-prv_checkbox_widget_on_pos_changed(void* this) {
-    (void)this;
-}
-
-static void
 prv_checkbox_fix_height(te_checkbox_widget* checkbox_widget) {
     te_world* world = widget_get_world(checkbox_widget->widget);
     if (world == NULL) {
         return;
     }
 
-    // To avoid recursion.
+    // To avoid recursion from on size changed callback.
     checkbox_widget->is_fixing_height = true;
 
     // Recalculate height to be a square.

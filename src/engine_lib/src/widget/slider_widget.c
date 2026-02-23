@@ -34,9 +34,6 @@ struct te_slider_widget {
 };
 
 // Widget callbacks:
-static void prv_slider_widget_on_pos_changed(void* this);
-static void prv_slider_widget_on_size_changed(void* this);
-static void prv_slider_widget_on_window_size_changed(void* this);
 static void prv_slider_widget_on_before_base_destroyed(void* this);
 static void prv_slider_widget_on_after_spawned(void* this);
 static void prv_slider_widget_on_before_despawned(void* this);
@@ -62,9 +59,8 @@ slider_widget_create(void) {
     slider_widget->is_handle_grabbed = false;
 
     slider_widget->widget = widget_create(
-        slider_widget, prv_slider_widget_on_pos_changed, prv_slider_widget_on_size_changed,
-        prv_slider_widget_on_before_base_destroyed, prv_slider_widget_on_after_spawned, prv_slider_widget_on_before_despawned,
-        prv_slider_widget_on_window_size_changed);
+        slider_widget, NULL, NULL, prv_slider_widget_on_before_base_destroyed, NULL, NULL, prv_slider_widget_on_after_spawned,
+        prv_slider_widget_on_before_despawned, NULL);
 
     prv_widget_set_input_callbacks(
         slider_widget->widget, NULL, prv_slider_widget_on_cursor_left, prv_slider_widget_on_mouse_button_pressed,
@@ -229,21 +225,6 @@ slider_widget_get_background_texture(te_slider_widget* slider_widget) {
 char*
 slider_widget_get_handle_texture(te_slider_widget* slider_widget) {
     return slider_widget->handle_tex_relative_path;
-}
-
-static void
-prv_slider_widget_on_pos_changed(void* this) {
-    (void)this;
-}
-
-static void
-prv_slider_widget_on_size_changed(void* this) {
-    (void)this;
-}
-
-static void
-prv_slider_widget_on_window_size_changed(void* this) {
-    (void)this;
 }
 
 static void

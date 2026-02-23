@@ -41,9 +41,6 @@ struct te_text_edit_widget {
 };
 
 // Widget callbacks:
-static void prv_text_edit_widget_on_pos_changed(void* this);
-static void prv_text_edit_widget_on_size_changed(void* this);
-static void prv_text_edit_widget_on_window_size_changed(void* this);
 static void prv_text_edit_widget_on_before_base_destroyed(void* this);
 static void prv_text_edit_widget_on_after_spawned(void* this);
 static void prv_text_edit_widget_on_before_despawned(void* this);
@@ -59,9 +56,8 @@ text_edit_widget_create(void) {
     te_text_edit_widget* text_edit_widget = malloc(sizeof(te_text_edit_widget));
 
     text_edit_widget->widget = widget_create(
-        text_edit_widget, prv_text_edit_widget_on_pos_changed, prv_text_edit_widget_on_size_changed,
-        prv_text_edit_widget_on_before_base_destroyed, prv_text_edit_widget_on_after_spawned,
-        prv_text_edit_widget_on_before_despawned, prv_text_edit_widget_on_window_size_changed);
+        text_edit_widget, NULL, NULL, prv_text_edit_widget_on_before_base_destroyed, NULL, NULL,
+        prv_text_edit_widget_on_after_spawned, prv_text_edit_widget_on_before_despawned, NULL);
 
     text_edit_widget->rect_cursor_widget = NULL;
 
@@ -114,21 +110,6 @@ void
 text_edit_widget_set_on_text_changed(
     te_text_edit_widget* text_edit_widget, void (*on_text_changed)(wchar_t* new_text, unsigned int strlen)) {
     text_edit_widget->on_text_changed = on_text_changed;
-}
-
-static void
-prv_text_edit_widget_on_pos_changed(void* this) {
-    (void)this;
-}
-
-static void
-prv_text_edit_widget_on_size_changed(void* this) {
-    (void)this;
-}
-
-static void
-prv_text_edit_widget_on_window_size_changed(void* this) {
-    (void)this;
 }
 
 void

@@ -42,7 +42,6 @@ struct te_button_widget {
 // Widget callbacks:
 static void prv_button_widget_on_pos_changed(void* this);
 static void prv_button_widget_on_size_changed(void* this);
-static void prv_button_widget_on_window_size_changed(void* this);
 static void prv_button_widget_on_before_base_destroyed(void* this);
 static void prv_button_widget_on_after_spawned(void* this);
 static void prv_button_widget_on_before_despawned(void* this);
@@ -62,8 +61,8 @@ button_widget_create(void) {
 
     button_widget->widget = widget_create(
         button_widget, prv_button_widget_on_pos_changed, prv_button_widget_on_size_changed,
-        prv_button_widget_on_before_base_destroyed, prv_button_widget_on_after_spawned, prv_button_widget_on_before_despawned,
-        prv_button_widget_on_window_size_changed);
+        prv_button_widget_on_before_base_destroyed, NULL, NULL, prv_button_widget_on_after_spawned,
+        prv_button_widget_on_before_despawned, NULL);
     glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color);
     glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color_hovered);
     glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color_pressed);
@@ -373,11 +372,6 @@ prv_button_widget_on_size_changed(void* this) {
     if (world != NULL) {
         prv_world_interactable_widget_pos_size_changed(world);
     }
-}
-
-static void
-prv_button_widget_on_window_size_changed(void* this) {
-    (void)this;
 }
 
 void
