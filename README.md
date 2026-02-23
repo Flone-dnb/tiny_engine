@@ -8,9 +8,9 @@ Supported platforms: Windows (x64), Linux (x64 and ARM64).
 
 - [X] Forward renderer using OpenGL ES 2.0
 - [X] Config management
+- [X] GUI
 - [ ] Type reflection
 - [ ] GLTF/GLB import
-- [ ] GUI
 - [ ] Audio
 - [ ] Simple editor
 - [ ] Simple physics engine
