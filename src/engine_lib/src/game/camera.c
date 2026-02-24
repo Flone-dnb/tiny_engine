@@ -1,6 +1,7 @@
 #include "game/camera.h"
 
 #include "cglm/cam.h"
+#include "game/model.h"
 #include "math_funcs.h"
 #include "misc/error.h"
 #include "misc/globals.h"
@@ -12,6 +13,9 @@ struct te_camera {
 
     // Not NULL if spawned. Do not free/destroy this pointer.
     struct te_world* world;
+
+    // NULL if not attached.
+    te_model* parent_model;
 
     // View matrix. May be outdated, see @ref is_view_mat_outdated.
     mat4 view_mat;
@@ -64,6 +68,7 @@ camera_create() {
     te_camera* camera = malloc(sizeof(te_camera));
 
     camera->world = NULL;
+    camera->parent_model = NULL;
     glm_vec3_zero(camera->position);
     glm_vec3_zero(camera->rotation);
     glm_vec3_zero(camera->forward);
@@ -162,6 +167,11 @@ recalculate_directions(te_camera* camera) {
     mat4 rot_mat;
     math_make_rotation_mat(camera->rotation, rot_mat);
 
+    if (camera->parent_model != NULL) {
+        mat4* world_mat = prv_model_get_world_mat_tmp(camera->parent_model);
+        glm_mat4_mul(*world_mat, rot_mat, rot_mat);
+    }
+
     vec4 global_forward;
     globals_get_world_forward(global_forward);
     global_forward[3] = 0.0f;
@@ -245,8 +255,8 @@ camera_get_view_proj_mat(te_camera* camera) {
 #endif
         if (camera->is_proj_mat_outdated) {
             glm_perspective_rh_no(
-                glm_rad(camera->vertical_fov), (float)camera->render_width / (float)camera->render_height,
-                camera->near_clip, camera->far_clip, camera->proj_mat);
+                glm_rad(camera->vertical_fov), (float)camera->render_width / (float)camera->render_height, camera->near_clip,
+                camera->far_clip, camera->proj_mat);
             camera->is_proj_mat_outdated = false;
         }
 
@@ -284,8 +294,8 @@ camera_get_frustum(te_camera* camera) {
 
         if (camera->is_proj_mat_outdated) {
             glm_perspective_rh_no(
-                glm_rad(camera->vertical_fov), (float)camera->render_width / (float)camera->render_height,
-                camera->near_clip, camera->far_clip, camera->proj_mat);
+                glm_rad(camera->vertical_fov), (float)camera->render_width / (float)camera->render_height, camera->near_clip,
+                camera->far_clip, camera->proj_mat);
 
             camera->is_proj_mat_outdated = false;
         }
@@ -310,4 +320,12 @@ prv_camera_set_render_target_size(te_camera* camera, unsigned int width, unsigne
 void
 prv_camera_set_world(te_camera* camera, struct te_world* world) {
     camera->world = world;
+}
+
+void
+prv_camera_on_parent_model_world_mat_changed(te_camera* camera, te_model* parent) {
+    camera->is_directions_outdated = true;
+    camera->is_view_mat_outdated = true;
+
+    camera->parent_model = parent;
 }

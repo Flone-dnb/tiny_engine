@@ -1,10 +1,12 @@
 #pragma once
 
+#include "cglm/mat4.h"
 #include "cglm/vec2.h"
 #include "cglm/vec3.h"
 
 typedef struct te_model te_model;
 struct te_world;
+struct te_camera;
 
 // Creates and loads a new model.
 //
@@ -49,6 +51,9 @@ void model_get_uv_offset(te_model* model, vec2 uv_offset);
 // Specify NULL as parent to detach.
 void model_set_parent(te_model* model, te_model* new_parent);
 
+// Same as @ref model_set_parent but attaches a camera. Specify NULL to detach the camera.
+void model_attach_camera(te_model* model, struct te_camera* camera);
+
 // Sets custom vertex shader.
 //
 // Can only be used before the model is spawned.
@@ -84,5 +89,8 @@ void prv_model_on_spawned(te_model* model, struct te_world* world);
 
 // Called by world before the model is despawned.
 void prv_model_on_despawned(te_model* model);
+
+// Returns model's world matrix (includes parent if has any).
+mat4* prv_model_get_world_mat_tmp(te_model* model);
 
 void prv_model_set_vertex_attributes();

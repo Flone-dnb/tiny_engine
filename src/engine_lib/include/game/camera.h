@@ -5,6 +5,7 @@
 #include "cglm/vec4.h"
 
 typedef struct te_camera te_camera;
+struct te_model;
 
 te_camera* camera_create();
 void camera_destroy(te_camera* camera);
@@ -57,3 +58,6 @@ void prv_camera_set_render_target_size(te_camera* camera, unsigned int width, un
 
 // Sets world the camera is spawned in (specify NULL to mark despawn).
 void prv_camera_set_world(te_camera* camera, struct te_world* world);
+
+// Called by model after attached (parent is NULL if detached) and after model's world matrix changed.
+void prv_camera_on_parent_model_world_mat_changed(te_camera* camera, struct te_model* parent);

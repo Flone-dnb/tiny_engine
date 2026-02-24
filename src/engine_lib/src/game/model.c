@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "cglm/mat4.h"
+#include "game/camera.h"
 #include "game_manager.h"
 #include "glad/glad.h"
 #include "math_funcs.h"
@@ -45,9 +46,10 @@ struct te_model {
     // NULL if not spawned. Do not free/destroy this pointer.
     te_world* world;
 
-    // NULL if nothing attached.
+    // NULL if not attached.
     te_model* child_model;
     te_model* parent_model;
+    te_camera* attached_camera;
 
     // Color in RGBA format in range [0.0; 1.0].
     vec4 color;
@@ -77,6 +79,7 @@ model_create(const char* path_to_geo) {
     model->render_data_handle = 0xffffffff;
     model->shader_prog_id = 0xffffffff;
     model->child_model = NULL;
+    model->attached_camera = NULL;
     model->parent_model = NULL;
     model->tex_relative_path = NULL;
     model->custom_vert_relative_path = NULL;
@@ -109,12 +112,21 @@ model_create(const char* path_to_geo) {
 
 void
 model_destroy(te_model* model) {
-    if (!model->is_world_destroy && model->child_model != NULL) {
-        if (model->child_model->world != NULL) {
-            // We should have despawned it in our despawn callback.
-            show_error_and_abort("expected the child model to be despawned already");
+    if (!model->is_world_destroy) {
+        if (model->child_model != NULL) {
+            if (model->child_model->world != NULL) {
+                // We should have despawned it in our despawn callback.
+                show_error_and_abort("expected the child model to be despawned already");
+            }
+            model_destroy(model->child_model);
         }
-        model_destroy(model->child_model);
+
+        if (model->attached_camera != NULL) {
+            if (camera_get_world(model->attached_camera) != NULL) {
+                show_error_and_abort("expected the attached camera to be despawned already");
+            }
+            camera_destroy(model->attached_camera);
+        }
     }
 
     free(model->tex_relative_path);
@@ -172,6 +184,10 @@ prv_model_calc_world_normal_matrices(te_model* model, mat4 world, mat3 normal) {
 
         prv_model_calc_world_normal_matrices(model->child_model, data->world_mat, data->normal_mat);
         data->aabb_world = aabb_shape_convert_to_world(&model->child_model->aabb_local, data->world_mat);
+    }
+
+    if (model->attached_camera != NULL) {
+        prv_camera_on_parent_model_world_mat_changed(model->attached_camera, model);
     }
 }
 
@@ -361,6 +377,10 @@ model_get_uv_offset(te_model* model, vec2 uv_offset) {
 
 void
 model_set_parent(te_model* model, te_model* new_parent) {
+    if (model->parent_model == new_parent) {
+        return;
+    }
+
     if (new_parent != NULL && new_parent->child_model != NULL) {
         show_error_and_abort("only 1 model can be attached");
     }
@@ -395,6 +415,41 @@ model_set_parent(te_model* model, te_model* new_parent) {
 
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
+    }
+}
+
+void
+model_attach_camera(te_model* model, te_camera* camera) {
+    if (model->attached_camera == camera) {
+        return;
+    }
+    if (camera != NULL && model->attached_camera != NULL) {
+        show_error_and_abort("only 1 camera can be attached");
+    }
+
+    if (model->attached_camera != NULL) {
+        prv_camera_on_parent_model_world_mat_changed(camera, NULL);
+    }
+    model->attached_camera = camera;
+    if (camera != NULL) {
+        prv_camera_on_parent_model_world_mat_changed(camera, model);
+    }
+
+    if (camera != NULL) {
+        te_world* camera_world = camera_get_world(camera);
+        if (model->world != NULL && camera_world != NULL && model->world != camera_world) {
+            show_error_and_abort("can't attach a camera from a different world, despawn the camera first");
+        }
+
+        if (model->world == NULL) {
+            if (camera_world != NULL) {
+                world_despawn_camera(camera_world, camera);
+            }
+        } else {
+            if (camera_world == NULL) {
+                world_spawn_camera(model->world, camera);
+            }
+        }
     }
 }
 
@@ -536,9 +591,16 @@ prv_model_on_spawned(te_model* model, te_world* world) {
 
     if (model->child_model != NULL) {
         if (model->child_model->world != NULL) {
-            show_error_and_abort("expected the child node to not be spawned yet");
+            show_error_and_abort("expected the child model to not be spawned yet");
         }
         world_spawn_model(world, model->child_model);
+    }
+
+    if (model->attached_camera != NULL) {
+        if (camera_get_world(model->attached_camera) != NULL) {
+            show_error_and_abort("expected the attached camera to not be spawned yet");
+        }
+        world_spawn_camera(world, model->attached_camera);
     }
 }
 
@@ -546,12 +608,30 @@ void
 prv_model_on_despawned(te_model* model) {
     model->is_world_destroy = prv_world_is_being_destroyed(model->world);
 
-    if (!model->is_world_destroy && model->child_model != NULL && model->child_model->world != NULL) {
-        world_despawn_model(model->child_model->world, model->child_model);
+    if (!model->is_world_destroy) {
+        if (model->child_model != NULL && model->child_model->world != NULL) {
+            world_despawn_model(model->child_model->world, model->child_model);
+        }
+        if (model->attached_camera != NULL) {
+            te_world* camera_world = camera_get_world(model->attached_camera);
+            if (camera_world != NULL) {
+                world_despawn_camera(camera_world, model->attached_camera);
+            }
+        }
     }
 
     prv_model_remove_from_model_renderer(model);
     model->world = NULL;
+}
+
+mat4*
+prv_model_get_world_mat_tmp(te_model* model) {
+    if (model->render_data_handle == 0xffffffff) {
+        show_error_and_abort("expected the model to be spawned and visible");
+    }
+
+    te_model_render_data* data = model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
+    return &data->world_mat;
 }
 
 void
