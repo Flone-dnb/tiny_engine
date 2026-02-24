@@ -24,11 +24,29 @@ math_fix_diagonal_movement_speedup(vec2 movement) {
     movement[1] /= length;
 }
 
+// Normalizes the specified vector while checking for zero division (to avoid NaNs in the normalized vector).
+static inline void
+math_normalize_safely(vec3 vec) {
+    const float square_sum = vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2];
+    if (square_sum < GLM_FLT_EPSILON) {
+        vec[0] = 0.0f;
+        vec[1] = 0.0f;
+        vec[2] = 0.0f;
+        return;
+    }
+
+    const float inv_sqrt = 1.0f / sqrtf(square_sum);
+    vec[0] *= inv_sqrt;
+    vec[1] *= inv_sqrt;
+    vec[2] *= inv_sqrt;
+}
+
 // Converts a normalized direction vector to rotation angles.
 static inline void
 math_convert_norm_dir_to_rot(vec3 dir, vec3 out) {
     if (glm_vec3_eq_eps(dir, 0.0f)) {
         glm_vec3_copy((vec3){0.0f, 0.0f, 0.0f}, out);
+        return;
     }
 
 #if defined(DEBUG)
