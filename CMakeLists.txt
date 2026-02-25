@@ -15,20 +15,6 @@ else()
     set(IS_RELEASE_BUILD OFF CACHE BOOL "" FORCE)
 endif()
 
-# Add `DEBUG` macro in debug builds.
-if(NOT IS_RELEASE_BUILD)
-    message(STATUS "${PROJECT_NAME}: adding debug macros.")
-    add_compile_definitions(DEBUG)
-endif()
-
-# Debug tools.
-if(NOT IS_RELEASE_BUILD)
-    add_compile_definitions(ENGINE_DEBUG_TOOLS)
-elseif(ENGINE_FORCE_ENABLE_DEBUG_TOOLS)
-    message(WARNING "Note: you enabled ENGINE_DEBUG_TOOLS in release build.")
-    add_compile_definitions(ENGINE_DEBUG_TOOLS)
-endif()
-
 # Prepare some variables.
 set(BUILD_DIRECTORY_NAME OUTPUT)
 set(DEPENDENCY_BUILD_DIR_NAME dep)
@@ -45,6 +31,20 @@ function(tiny_engine_configure_target TARGET_NAME)
         target_compile_options(${TARGET_NAME} PUBLIC /W3 /WX /wd4996) # disable "unsafe function" warning
     else()
         target_compile_options(${TARGET_NAME} PUBLIC -Wall -Wextra -Werror -Wconversion -Wno-unused-but-set-parameter)
+    endif()
+
+    # Add `DEBUG` macro in debug builds.
+    if(NOT IS_RELEASE_BUILD)
+	message(STATUS "${PROJECT_NAME}: adding DEBUG macro")
+	target_compile_definitions(${TARGET_NAME} PUBLIC DEBUG)
+    endif()
+
+    # Debug tools.
+    if(NOT IS_RELEASE_BUILD)
+	target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_DEBUG_TOOLS)
+    elseif(ENGINE_FORCE_ENABLE_DEBUG_TOOLS)
+	message(WARNING "Note: you enabled ENGINE_DEBUG_TOOLS in release build.")
+	target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_DEBUG_TOOLS)
     endif()
 
     # Add includes (relative to the target's directory).
