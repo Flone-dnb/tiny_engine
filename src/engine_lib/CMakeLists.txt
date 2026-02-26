@@ -150,7 +150,7 @@ target_compile_definitions(cglm_headers INTERFACE CGLM_ALL_UNALIGNED)
 message(STATUS "${PROJECT_NAME}: adding external dependency \"FreeType\"...")
 set(FT_DISABLE_BROTLI ON CACHE BOOL "" FORCE)
 set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
-add_subdirectory(${RELATIVE_EXT_PATH}/freetype ${DEPENDENCY_BUILD_DIR_NAME}/freetype SYSTEM)
+add_subdirectory(${RELATIVE_EXT_PATH}/freetype ${DEPENDENCY_BUILD_DIR_NAME}/freetype EXCLUDE_FROM_ALL)
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE freetype)
 
 # Add hashmap.c
