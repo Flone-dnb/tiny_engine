@@ -9,9 +9,9 @@
 
 #if defined(WIN32)
 #define NOMINMAX
+#include <Windows.h>
 #include <KnownFolders.h>
 #include <Shlobj.h>
-#include <Windows.h>
 #endif
 
 static char cached_path_to_config_dir[2048] = {0};
