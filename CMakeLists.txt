@@ -52,7 +52,7 @@ function(tiny_engine_configure_target TARGET_NAME)
     target_include_directories(${TARGET_NAME} PUBLIC include)
 
     # Enable ASan.
-    if(NOT IS_RELEASE_BUILD AND NOT MSVC)
+    if(NOT IS_RELEASE_BUILD AND NOT MSVC AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
 	message(STATUS "${TARGET_NAME}: Address sanitizer is enabled.")
 	target_compile_definitions(${TARGET_NAME} PRIVATE ENGINE_ASAN_ENABLED)
 	target_compile_options(${TARGET_NAME} PRIVATE -fno-omit-frame-pointer)
