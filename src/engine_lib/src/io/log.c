@@ -67,7 +67,7 @@ prv_log(enum te_log_category category, const char* message, char* filepath, int 
     printf("%s %s\n", log_prefix, message);
 #endif
 
-#if defined(ENGINE_DEBUG_TOOLS)
+#if !defined(ENGINE_EDITOR) && defined(ENGINE_DEBUG_TOOLS)
     if (category == LOG_WARN) {
         debug_drawer_draw_text_color(message, 5.0f, (vec3){1.0f, 1.0f, 0.0f});
     } else if (category == LOG_ERROR) {

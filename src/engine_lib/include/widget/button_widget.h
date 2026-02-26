@@ -39,3 +39,8 @@ char* button_widget_get_texture_pressed(te_button_widget* button_widget);
 void button_widget_enter_normal_state(te_button_widget* button_widget);
 void button_widget_enter_hovered_state(te_button_widget* button_widget);
 void button_widget_enter_pressed_state(te_button_widget* button_widget);
+
+// Returns unique ID of this type in the type database.
+const char* button_widget_get_type_id(void);
+// Registers the type in the type database.
+void button_widget_register_type(void);

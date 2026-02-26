@@ -30,3 +30,8 @@ const char* rect_widget_get_texture(te_rect_widget* rect_widget);
 // XY stores clip start in range [0.0; 1.0] and ZW stores clip size in the same range.
 void rect_widget_set_clip_rect(te_rect_widget* rect_widget, vec4 clip_rect);
 void rect_widget_get_clip_rect(te_rect_widget* rect_widget, vec4 out);
+
+// Returns unique ID of this type in the type database.
+const char* rect_widget_get_type_id(void);
+// Registers the type in the type database.
+void rect_widget_register_type(void);

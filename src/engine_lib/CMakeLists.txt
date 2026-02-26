@@ -18,6 +18,7 @@ set(PROJECT_SOURCES
     src/game_manager.c
     src/world.c
     src/debug_console.c
+    src/type_database.c
     src/render/renderer.c
     src/render/model_renderer.h
     src/render/model_renderer.c
@@ -43,6 +44,7 @@ set(PROJECT_SOURCES
     include/math_funcs.h
     include/window.h
     include/debug_console.h
+    include/type_database.h
     include/shape/plane_shape.h
     include/shape/sphere_shape.h
     include/shape/cone_shape.h

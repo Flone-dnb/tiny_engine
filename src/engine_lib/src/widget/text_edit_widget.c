@@ -11,6 +11,7 @@
 #include "widget/widget.h"
 #include "window.h"
 #include "world.h"
+#include "type_database.h"
 
 #define TE_INVALID_TEXT_CURSOR_INDEX 0xffffffff
 
@@ -489,7 +490,7 @@ text_edit_widget_set_text_own(te_text_edit_widget* text_edit_widget, wchar_t* te
     }
 }
 
-wchar_t*
+const wchar_t*
 text_edit_widget_get_text(te_text_edit_widget* text_edit_widget, unsigned int* text_len) {
     return text_widget_get_text(text_edit_widget->text_widget, text_len);
 }
@@ -514,4 +515,47 @@ text_edit_widget_set_color(te_text_edit_widget* text_edit_widget, vec4 color) {
 void
 text_edit_widget_get_color(te_text_edit_widget* text_edit_widget, vec4 out) {
     glm_vec4_copy(text_edit_widget->text_color, out);
+}
+
+static inline void
+prv_text_edit_widget_set_position(te_text_edit_widget* text_edit_widget, vec2 pos) {
+    widget_set_relative_position(text_edit_widget->widget, pos);
+}
+
+static inline void
+prv_text_edit_widget_get_position(te_text_edit_widget* text_edit_widget, vec2 out) {
+    widget_get_relative_position(text_edit_widget->widget, out);
+}
+
+static inline void
+prv_text_edit_widget_set_size(te_text_edit_widget* text_edit_widget, vec2 size) {
+    widget_set_relative_size(text_edit_widget->widget, size);
+}
+
+static inline void
+prv_text_edit_widget_get_size(te_text_edit_widget* text_edit_widget, vec2 out) {
+    widget_get_relative_size(text_edit_widget->widget, out);
+}
+
+static inline const wchar_t*
+prv_text_edit_widget_get_text(te_text_edit_widget* text_edit_widget) {
+    unsigned int text_len;
+    return text_edit_widget_get_text(text_edit_widget, &text_len);
+}
+
+const char*
+text_edit_widget_get_type_id(void) {
+    return "text_edit_widget";
+}
+
+void
+text_edit_widget_register_type(void) {
+    te_type_info* info = type_info_create(text_edit_widget_get_type_id());
+    type_info_add_vec2_variable(info, "position", prv_text_edit_widget_set_position, prv_text_edit_widget_get_position);
+    type_info_add_vec2_variable(info, "size", prv_text_edit_widget_set_size, prv_text_edit_widget_get_size);
+    type_info_add_wstring_variable(info, "text", text_edit_widget_set_text, prv_text_edit_widget_get_text);
+    type_info_add_float_variable(info, "text_height", text_edit_widget_set_text_height, text_edit_widget_get_text_height);
+    type_info_add_vec4_variable(info, "color", text_edit_widget_set_color, text_edit_widget_get_color);
+
+    type_database_register_type(info);
 }

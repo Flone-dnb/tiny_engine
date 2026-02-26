@@ -15,3 +15,8 @@ struct te_widget* vbox_widget_get_widget(te_vbox_widget* vbox_widget);
 // Sets spacing between child widgets in range [0.0; 1.0] relative to window's height.
 void vbox_widget_set_child_spacing(te_vbox_widget* vbox_widget, float spacing);
 float vbox_widget_get_child_spacing(te_vbox_widget* vbox_widget);
+
+// Returns unique ID of this type in the type database.
+const char* vbox_widget_get_type_id(void);
+// Registers the type in the type database.
+void vbox_widget_register_type(void);

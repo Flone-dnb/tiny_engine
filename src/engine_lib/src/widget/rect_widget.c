@@ -9,6 +9,7 @@
 #include "widget/widget.h"
 #include "window.h"
 #include "world.h"
+#include "type_database.h"
 
 #define INVALID_RENDER_DATA_HANDLE  0xffffffff
 #define RECT_WIDGET_TEX_LOAD_OPTION TE_TLO_NO_MIPMAPS
@@ -335,4 +336,40 @@ prv_rect_widget_on_window_size_changed(void* this) {
     }
 
     prv_rect_widget_update_non_tex_render_data(rect_widget);
+}
+
+static inline void
+prv_rect_widget_set_position(te_rect_widget* rect_widget, vec2 pos) {
+    widget_set_relative_position(rect_widget->widget, pos);
+}
+
+static inline void
+prv_rect_widget_get_position(te_rect_widget* rect_widget, vec2 out) {
+    widget_get_relative_position(rect_widget->widget, out);
+}
+
+static inline void
+prv_rect_widget_set_size(te_rect_widget* rect_widget, vec2 size) {
+    widget_set_relative_size(rect_widget->widget, size);
+}
+
+static inline void
+prv_rect_widget_get_size(te_rect_widget* rect_widget, vec2 out) {
+    widget_get_relative_size(rect_widget->widget, out);
+}
+
+const char*
+rect_widget_get_type_id(void) {
+    return "rect_widget";
+}
+
+void
+rect_widget_register_type(void) {
+    te_type_info* info = type_info_create(rect_widget_get_type_id());
+    type_info_add_vec2_variable(info, "position", prv_rect_widget_set_position, prv_rect_widget_get_position);
+    type_info_add_vec2_variable(info, "size", prv_rect_widget_set_size, prv_rect_widget_get_size);
+    type_info_add_vec4_variable(info, "color", rect_widget_set_color, rect_widget_get_color);
+    type_info_add_string_variable(info, "texture", rect_widget_set_texture, rect_widget_get_texture);
+
+    type_database_register_type(info);
 }

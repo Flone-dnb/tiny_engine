@@ -14,6 +14,7 @@
 #include "render/texture_manager.h"
 #include "shape/aabb_shape.h"
 #include "world.h"
+#include "type_database.h"
 
 #define MODEL_TEX_LOAD_OPTION TE_TLO_GENERATE_MIPMAPS
 
@@ -71,8 +72,30 @@ struct te_model {
     bool is_opaque;
 };
 
+const char*
+model_get_type_id(void) {
+    return "model";
+}
+
+void model_register_type(void) {
+    te_type_info* info = type_info_create(model_get_type_id());
+    type_info_add_vec3_variable(info, "position", model_set_position, model_get_position);
+    type_info_add_vec3_variable(info, "rotation", model_set_rotation, model_get_rotation);
+    type_info_add_vec3_variable(info, "scale", model_set_scale, model_get_scale);
+    type_info_add_vec4_variable(info, "color", model_set_color, model_get_color);
+    type_info_add_string_variable(info, "texture", model_set_texture, model_get_texture);
+    type_info_add_vec2_variable(info, "texture_tiling", model_set_texture_tiling, model_get_texture_tiling);
+    type_info_add_vec2_variable(info, "uv_offset", model_set_uv_offset, model_get_uv_offset);
+    type_info_add_bool_variable(info, "enable_transparency", model_enable_transparency, model_is_transparency_enabled);
+    type_info_add_string_variable(info, "geometry", model_set_geometry, model_get_geometry);
+    type_info_add_string_variable(info, "custom_vert_shader", model_set_custom_vert_shader, model_get_custom_vert_shader);
+    type_info_add_string_variable(info, "custom_frag_shader", model_set_custom_frag_shader, model_get_custom_frag_shader);
+
+    type_database_register_type(info);
+}
+
 te_model*
-model_create(const char* path_to_geo) {
+model_create() {
     te_model* model = malloc(sizeof(te_model));
 
     model->world = NULL;
@@ -82,21 +105,13 @@ model_create(const char* path_to_geo) {
     model->attached_camera = NULL;
     model->parent_model = NULL;
     model->tex_relative_path = NULL;
+    model->path_to_geo = NULL;
     model->custom_vert_relative_path = NULL;
     model->custom_frag_relative_path = NULL;
     model->is_opaque = true;
     model->is_world_destroy = false;
     glm_vec2_one(model->tex_tiling);
     glm_vec2_zero(model->uv_offset);
-
-    if (path_to_geo == NULL) {
-        model->path_to_geo = NULL;
-    } else {
-        const size_t path_len = strlen(path_to_geo);
-        model->path_to_geo = malloc(sizeof(char) * (path_len + 1));
-        memcpy(model->path_to_geo, path_to_geo, path_len);
-        model->path_to_geo[path_len] = 0;
-    }
 
     glm_vec4_one(model->color);
 
@@ -305,34 +320,6 @@ model_set_uv_offset(te_model* model, vec2 uv_offset) {
         te_model_render_data* data = model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
         glm_vec2_copy(model->uv_offset, data->uv_offset);
     }
-}
-
-void
-model_set_custom_vert_shader(te_model* model, const char* vert_relative_path) {
-    if (model->world != NULL) {
-        show_error_and_abort("setting custom shader is not allowed while the model is spawned");
-    }
-
-    free(model->custom_vert_relative_path);
-
-    const size_t len = strlen(vert_relative_path);
-    model->custom_vert_relative_path = malloc(sizeof(char) * (len + 1));
-    memcpy(model->custom_vert_relative_path, vert_relative_path, sizeof(char) * len);
-    model->custom_vert_relative_path[len] = 0;
-}
-
-void
-model_set_custom_frag_shader(te_model* model, const char* frag_relative_path) {
-    if (model->world != NULL) {
-        show_error_and_abort("setting custom shader is not allowed while the model is spawned");
-    }
-
-    free(model->custom_frag_relative_path);
-
-    const size_t len = strlen(frag_relative_path);
-    model->custom_frag_relative_path = malloc(sizeof(char) * (len + 1));
-    memcpy(model->custom_frag_relative_path, frag_relative_path, sizeof(char) * len);
-    model->custom_frag_relative_path[len] = 0;
 }
 
 bool
@@ -643,6 +630,84 @@ model_enable_transparency(te_model* model, bool enable) {
         model->is_opaque = !enable;
         prv_model_add_to_model_renderer(model);
     }
+}
+
+void
+model_set_custom_vert_shader(te_model* model, const char* vert_relative_path) {
+    if (model->world != NULL) {
+        prv_model_remove_from_model_renderer(model);
+    }
+
+    free(model->custom_vert_relative_path);
+    model->custom_vert_relative_path = NULL;
+
+    if (vert_relative_path != NULL) {
+        const size_t len = strlen(vert_relative_path);
+        model->custom_vert_relative_path = malloc(sizeof(char) * (len + 1));
+        memcpy(model->custom_vert_relative_path, vert_relative_path, sizeof(char) * len);
+        model->custom_vert_relative_path[len] = 0;
+    }
+
+    if (model->world != NULL) {
+        prv_model_add_to_model_renderer(model);
+    }
+}
+
+const char*
+model_get_custom_vert_shader(te_model* model) {
+    return model->custom_vert_relative_path;
+}
+
+void
+model_set_custom_frag_shader(te_model* model, const char* frag_relative_path) {
+    if (model->world != NULL) {
+        prv_model_remove_from_model_renderer(model);
+    }
+
+    free(model->custom_frag_relative_path);
+    model->custom_frag_relative_path = NULL;
+
+    if (frag_relative_path != NULL) {
+        const size_t len = strlen(frag_relative_path);
+        model->custom_frag_relative_path = malloc(sizeof(char) * (len + 1));
+        memcpy(model->custom_frag_relative_path, frag_relative_path, sizeof(char) * len);
+        model->custom_frag_relative_path[len] = 0;
+    }
+
+    if (model->world != NULL) {
+        prv_model_add_to_model_renderer(model);
+    }
+}
+
+void
+model_set_geometry(te_model* model, const char* relative_path) {
+    if (model->world != NULL) {
+        prv_model_remove_from_model_renderer(model);
+    }
+
+    free(model->path_to_geo);
+    model->path_to_geo = NULL;
+
+    if (relative_path != NULL) {
+        const size_t path_len = strlen(relative_path);
+        model->path_to_geo = malloc(sizeof(char) * (path_len + 1));
+        memcpy(model->path_to_geo, relative_path, path_len);
+        model->path_to_geo[path_len] = 0;
+    }
+
+    if (model->world != NULL) {
+        prv_model_add_to_model_renderer(model);
+    }
+}
+
+const char*
+model_get_geometry(te_model* model) {
+    return model->path_to_geo;
+}
+
+const char*
+model_get_custom_frag_shader(te_model* model) {
+    return model->custom_frag_relative_path;
 }
 
 void

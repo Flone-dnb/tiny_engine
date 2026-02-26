@@ -6,6 +6,7 @@
 #include "widget/widget.h"
 #include "window.h"
 #include "world.h"
+#include "type_database.h"
 
 struct te_checkbox_widget {
     te_widget* widget;
@@ -227,6 +228,46 @@ checkbox_widget_get_background_texture(te_checkbox_widget* checkbox_widget) {
 char*
 checkbox_widget_get_checked_texture(te_checkbox_widget* checkbox_widget) {
     return checkbox_widget->checked_tex_relative_path;
+}
+
+static inline void
+prv_checkbox_widget_set_position(te_checkbox_widget* checkbox_widget, vec2 pos) {
+    widget_set_relative_position(checkbox_widget->widget, pos);
+}
+
+static inline void
+prv_checkbox_widget_get_position(te_checkbox_widget* checkbox_widget, vec2 out) {
+    widget_get_relative_position(checkbox_widget->widget, out);
+}
+
+static inline void
+prv_checkbox_widget_set_size(te_checkbox_widget* checkbox_widget, vec2 size) {
+    widget_set_relative_size(checkbox_widget->widget, size);
+}
+
+static inline void
+prv_checkbox_widget_get_size(te_checkbox_widget* checkbox_widget, vec2 out) {
+    widget_get_relative_size(checkbox_widget->widget, out);
+}
+
+const char*
+checkbox_widget_get_type_id(void) {
+    return "checkbox_widget";
+}
+
+void checkbox_widget_register_type(void) {
+    te_type_info* info = type_info_create(checkbox_widget_get_type_id());
+    type_info_add_vec2_variable(info, "position", prv_checkbox_widget_set_position, prv_checkbox_widget_get_position);
+    type_info_add_vec2_variable(info, "size", prv_checkbox_widget_set_size, prv_checkbox_widget_get_size);
+    type_info_add_bool_variable(info, "is_checked", checkbox_widget_set_is_checked, checkbox_widget_is_checked);
+    type_info_add_vec4_variable(info, "background_color", checkbox_widget_set_background_color, checkbox_widget_get_background_color);
+    type_info_add_vec4_variable(info, "checked_color", checkbox_widget_set_checked_color, checkbox_widget_get_checked_color);
+    type_info_add_string_variable(
+        info, "background_texture", checkbox_widget_set_background_texture, checkbox_widget_get_background_texture);
+    type_info_add_string_variable(
+        info, "checked_texture", checkbox_widget_set_checked_texture, checkbox_widget_get_checked_texture);
+
+    type_database_register_type(info);
 }
 
 static void

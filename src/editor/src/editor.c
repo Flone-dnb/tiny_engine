@@ -80,12 +80,12 @@ editor_create_game_world(te_editor* editor, te_game_manager* game_manager) {
 
     // Prepare a sample scene.
     {
-        te_model* floor = model_create(NULL);
+        te_model* floor = model_create();
         model_set_scale(floor, (vec3){5.0f, 1.0f, 5.0f});
         model_set_color(floor, (vec4){1.0f, 0.5f, 0.0f, 1.0f});
         world_spawn_model(editor->game_world, floor);
 
-        te_model* box = model_create(NULL);
+        te_model* box = model_create();
         model_set_position(box, (vec3){0.0f, 1.0f, -1.0f});
         world_spawn_model(editor->game_world, box);
     }

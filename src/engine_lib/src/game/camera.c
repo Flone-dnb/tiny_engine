@@ -6,6 +6,7 @@
 #include "misc/error.h"
 #include "misc/globals.h"
 #include "shape/frustum_shape.h"
+#include "type_database.h"
 
 struct te_camera {
     // May be outdated, see @ref is_view_mat_outdated and @ref is_proj_mat_outdated.
@@ -95,6 +96,23 @@ camera_destroy(te_camera* camera) {
     free(camera);
 }
 
+const char*
+camera_get_type_id(void) {
+    return "camera";
+}
+
+void
+camera_register_type(void) {
+    te_type_info* info = type_info_create(camera_get_type_id());
+    type_info_add_vec3_variable(info, "position", camera_set_position, camera_get_position);
+    type_info_add_vec3_variable(info, "rotation", camera_set_rotation, camera_get_rotation);
+    type_info_add_uint_variable(info, "vertical_fov", camera_set_vertical_fov, camera_get_vertical_fov);
+    type_info_add_float_variable(info, "near_clip", camera_set_near_clip, camera_get_near_clip);
+    type_info_add_float_variable(info, "far_clip", camera_set_far_clip, camera_get_far_clip);
+
+    type_database_register_type(info);
+}
+
 void
 camera_set_position(te_camera* camera, vec3 position) {
     glm_vec3_copy(position, camera->position);
@@ -109,8 +127,8 @@ camera_set_rotation(te_camera* camera, vec3 rotation) {
 }
 
 void
-camera_set_vertical_fov(te_camera* camera, unsigned char vertical_fov) {
-    camera->vertical_fov = vertical_fov;
+camera_set_vertical_fov(te_camera* camera, unsigned int vertical_fov) {
+    camera->vertical_fov = (unsigned char)vertical_fov;
     camera->is_proj_mat_outdated = true;
 }
 
@@ -142,7 +160,7 @@ camera_get_rotation(te_camera* camera, vec3 out) {
     glm_vec3_copy(camera->rotation, out);
 }
 
-unsigned char
+unsigned int
 camera_get_vertical_fov(te_camera* camera) {
     return camera->vertical_fov;
 }

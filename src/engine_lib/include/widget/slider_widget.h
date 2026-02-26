@@ -41,3 +41,8 @@ void slider_widget_set_handle_texture(te_slider_widget* slider_widget, const cha
 // Do not free returned string, valid while the slider exists and the texture is not changed.
 char* slider_widget_get_background_texture(te_slider_widget* slider_widget);
 char* slider_widget_get_handle_texture(te_slider_widget* slider_widget);
+
+// Returns unique ID of this type in the type database.
+const char* slider_widget_get_type_id(void);
+// Registers the type in the type database.
+void slider_widget_register_type(void);

@@ -10,6 +10,7 @@
 #include "widget/widget.h"
 #include "window.h"
 #include "world.h"
+#include "type_database.h"
 
 #define INVALID_RENDER_DATA_HANDLE 0xffffffff
 
@@ -427,4 +428,46 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
             offset[0] += distance_to_next_glyph;
         }
     }
+}
+
+static inline void
+prv_text_widget_set_position(te_text_widget* text_widget, vec2 pos) {
+    widget_set_relative_position(text_widget->widget, pos);
+}
+
+static inline void
+prv_text_widget_get_position(te_text_widget* text_widget, vec2 out) {
+    widget_get_relative_position(text_widget->widget, out);
+}
+
+static inline void
+prv_text_widget_set_size(te_text_widget* text_widget, vec2 size) {
+    widget_set_relative_size(text_widget->widget, size);
+}
+
+static inline void
+prv_text_widget_get_size(te_text_widget* text_widget, vec2 out) {
+    widget_get_relative_size(text_widget->widget, out);
+}
+
+static inline const wchar_t* prv_text_widget_get_text(te_text_widget* text_widget) {
+    unsigned int text_len;
+    return text_widget_get_text(text_widget, &text_len);
+}
+
+const char* text_widget_get_type_id(void){
+    return "text_widget";
+}
+
+void text_widget_register_type(void) {
+    te_type_info* info = type_info_create(text_widget_get_type_id());
+    type_info_add_vec2_variable(info, "position", prv_text_widget_set_position, prv_text_widget_get_position);
+    type_info_add_vec2_variable(info, "size", prv_text_widget_set_size, prv_text_widget_get_size);
+    type_info_add_wstring_variable(info, "text", text_widget_set_text, prv_text_widget_get_text);
+    type_info_add_bool_variable(info, "is_multiline", text_widget_set_is_multiline, text_widget_is_multiline);
+    type_info_add_float_variable(info, "text_height", text_widget_set_text_height, text_widget_get_text_height);
+    type_info_add_float_variable(info, "line_spacing", text_widget_set_line_spacing, text_widget_get_line_spacing);
+    type_info_add_vec4_variable(info, "color", text_widget_set_color, text_widget_get_color);
+
+    type_database_register_type(info);
 }

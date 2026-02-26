@@ -22,7 +22,7 @@ void text_edit_widget_set_on_text_changed(
 // Text will be copied to the widget's data.
 void text_edit_widget_set_text(te_text_edit_widget* text_edit_widget, const wchar_t* text);
 // Do not free returned string pointer, valid while the text is not changed and the widget is not destroyed.
-wchar_t* text_edit_widget_get_text(te_text_edit_widget* text_edit_widget, unsigned int* text_len);
+const wchar_t* text_edit_widget_get_text(te_text_edit_widget* text_edit_widget, unsigned int* text_len);
 
 // Moves the ownership of the text to the widget.
 void text_edit_widget_set_text_own(te_text_edit_widget* text_edit_widget, wchar_t* text, unsigned int strlen);
@@ -34,3 +34,8 @@ float text_edit_widget_get_text_height(te_text_edit_widget* text_edit_widget);
 // Sets RGBA color of the text.
 void text_edit_widget_set_color(te_text_edit_widget* text_edit_widget, vec4 color);
 void text_edit_widget_get_color(te_text_edit_widget* text_edit_widget, vec4 out);
+
+// Returns unique ID of this type in the type database.
+const char* text_edit_widget_get_type_id(void);
+// Registers the type in the type database.
+void text_edit_widget_register_type(void);

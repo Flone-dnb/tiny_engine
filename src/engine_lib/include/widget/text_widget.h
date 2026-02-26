@@ -39,6 +39,11 @@ float text_widget_get_line_spacing(te_text_widget* text_widget);
 void text_widget_set_is_multiline(te_text_widget* text_widget, bool is_multiline);
 bool text_widget_is_multiline(te_text_widget* text_widget);
 
+// Returns unique ID of this type in the type database.
+const char* text_widget_get_type_id(void);
+// Registers the type in the type database.
+void text_widget_register_type(void);
+
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API
 // ------------------------------------------------------------------------------------------------

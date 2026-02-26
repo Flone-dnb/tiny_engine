@@ -32,3 +32,8 @@ void progress_widget_set_foreground_texture(te_progress_widget* progress_widget,
 // Do not free returned string, valid while the slider exists and the texture is not changed.
 char* progress_widget_get_background_texture(te_progress_widget* progress_widget);
 char* progress_widget_get_foreground_texture(te_progress_widget* progress_widget);
+
+// Returns unique ID of this type in the type database.
+const char* progress_widget_get_type_id(void);
+// Registers the type in the type database.
+void progress_widget_register_type(void);

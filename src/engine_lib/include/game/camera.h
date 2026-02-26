@@ -19,8 +19,8 @@ void camera_set_rotation(te_camera* camera, vec3 rotation);
 void camera_get_rotation(te_camera* camera, vec3 out);
 
 // Sets camera's vertical field of view (in degrees).
-void camera_set_vertical_fov(te_camera* camera, unsigned char vertical_fov);
-unsigned char camera_get_vertical_fov(te_camera* camera);
+void camera_set_vertical_fov(te_camera* camera, unsigned int vertical_fov);
+unsigned int camera_get_vertical_fov(te_camera* camera);
 
 // Sets distance to camera's near/far clip plane.
 void camera_set_near_clip(te_camera* camera, float near_clip);
@@ -47,6 +47,11 @@ struct te_world* camera_get_world(te_camera* camera);
 
 // Always valid pointer. Do not free/destroy returned pointer. Valid while the camera exists.
 struct te_frustum_shape* camera_get_frustum(te_camera* camera);
+
+// Returns unique ID of this type in the type database.
+const char* camera_get_type_id(void);
+// Registers the type in the type database.
+void camera_register_type(void);
 
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API

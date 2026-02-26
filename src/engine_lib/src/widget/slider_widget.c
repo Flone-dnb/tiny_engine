@@ -4,6 +4,7 @@
 #include "widget/rect_widget.h"
 #include "widget/widget.h"
 #include "world.h"
+#include "type_database.h"
 
 #define TE_SLIDER_HANDLE_WIDTH 0.1f
 
@@ -345,4 +346,45 @@ prv_slider_widget_on_cursor_left(void* this, vec2 cursor_pos) {
 
     prv_slider_widget_update_value(slider_widget, cursor_pos);
     slider_widget->is_handle_grabbed = false;
+}
+
+static inline void
+prv_slider_widget_set_position(te_slider_widget* slider_widget, vec2 pos) {
+    widget_set_relative_position(slider_widget->widget, pos);
+}
+
+static inline void
+prv_slider_widget_get_position(te_slider_widget* slider_widget, vec2 out) {
+    widget_get_relative_position(slider_widget->widget, out);
+}
+
+static inline void
+prv_slider_widget_set_size(te_slider_widget* slider_widget, vec2 size) {
+    widget_set_relative_size(slider_widget->widget, size);
+}
+
+static inline void
+prv_slider_widget_get_size(te_slider_widget* slider_widget, vec2 out) {
+    widget_get_relative_size(slider_widget->widget, out);
+}
+
+const char*
+slider_widget_get_type_id(void) {
+    return "slider_widget";
+}
+
+void
+slider_widget_register_type(void) {
+    te_type_info* info = type_info_create(slider_widget_get_type_id());
+    type_info_add_vec2_variable(info, "position", prv_slider_widget_set_position, prv_slider_widget_get_position);
+    type_info_add_vec2_variable(info, "size", prv_slider_widget_set_size, prv_slider_widget_get_size);
+    type_info_add_float_variable(info, "value", slider_widget_set_value, slider_widget_get_value);
+    type_info_add_float_variable(info, "step_size", slider_widget_set_step_size, slider_widget_get_step_size);
+    type_info_add_vec4_variable(info, "background_color", slider_widget_set_background_color, slider_widget_get_background_color);
+    type_info_add_vec4_variable(info, "handle_color", slider_widget_set_handle_color, slider_widget_get_handle_color);
+    type_info_add_string_variable(
+        info, "background_texture", slider_widget_set_background_texture, slider_widget_get_background_texture);
+    type_info_add_string_variable(info, "handle_texture", slider_widget_set_handle_texture, slider_widget_get_handle_texture);
+
+    type_database_register_type(info);
 }

@@ -3,6 +3,7 @@
 #include "misc/error.h"
 #include "widget/rect_widget.h"
 #include "widget/widget.h"
+#include "type_database.h"
 
 struct te_progress_widget {
     te_widget* widget;
@@ -211,4 +212,47 @@ prv_progress_widget_on_before_despawned(void* this) {
     if (child_count != 2) {
         show_error_and_abort("unexpected child widget count on a widget");
     }
+}
+
+static inline void
+prv_progress_widget_set_position(te_progress_widget* progress_widget, vec2 pos) {
+    widget_set_relative_position(progress_widget->widget, pos);
+}
+
+static inline void
+prv_progress_widget_get_position(te_progress_widget* progress_widget, vec2 out) {
+    widget_get_relative_position(progress_widget->widget, out);
+}
+
+static inline void
+prv_progress_widget_set_size(te_progress_widget* progress_widget, vec2 size) {
+    widget_set_relative_size(progress_widget->widget, size);
+}
+
+static inline void
+prv_progress_widget_get_size(te_progress_widget* progress_widget, vec2 out) {
+    widget_get_relative_size(progress_widget->widget, out);
+}
+
+const char*
+progress_widget_get_type_id(void) {
+    return "progress_widget";
+}
+
+void
+progress_widget_register_type(void) {
+    te_type_info* info = type_info_create(progress_widget_get_type_id());
+    type_info_add_vec2_variable(info, "position", prv_progress_widget_set_position, prv_progress_widget_get_position);
+    type_info_add_vec2_variable(info, "size", prv_progress_widget_set_size, prv_progress_widget_get_size);
+    type_info_add_float_variable(info, "value", progress_widget_set_value, progress_widget_get_value);
+    type_info_add_vec4_variable(
+        info, "background_color", progress_widget_set_background_color, progress_widget_get_background_color);
+    type_info_add_vec4_variable(
+        info, "foreground_color", progress_widget_set_foreground_color, progress_widget_get_foreground_color);
+    type_info_add_string_variable(
+        info, "background_texture", progress_widget_set_background_texture, progress_widget_get_background_texture);
+    type_info_add_string_variable(
+        info, "foreground_texture", progress_widget_set_foreground_texture, progress_widget_get_foreground_texture);
+
+    type_database_register_type(info);
 }

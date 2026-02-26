@@ -2,6 +2,7 @@
 
 #include "cglm/vec2.h"
 #include "widget/widget.h"
+#include "type_database.h"
 
 struct te_vbox_widget {
     te_widget* widget;
@@ -121,4 +122,39 @@ prv_vbox_widget_on_window_size_changed(void* this) {
 static void
 prv_vbox_widget_on_after_spawned(void* this) {
     prv_vbox_widget_update_children(this);
+}
+
+static inline void
+prv_vbox_widget_set_position(te_vbox_widget* vbox_widget, vec2 pos) {
+    widget_set_relative_position(vbox_widget->widget, pos);
+}
+
+static inline void
+prv_vbox_widget_get_position(te_vbox_widget* vbox_widget, vec2 out) {
+    widget_get_relative_position(vbox_widget->widget, out);
+}
+
+static inline void
+prv_vbox_widget_set_size(te_vbox_widget* vbox_widget, vec2 size) {
+    widget_set_relative_size(vbox_widget->widget, size);
+}
+
+static inline void
+prv_vbox_widget_get_size(te_vbox_widget* vbox_widget, vec2 out) {
+    widget_get_relative_size(vbox_widget->widget, out);
+}
+
+const char*
+vbox_widget_get_type_id(void) {
+    return "vbox_widget";
+}
+
+void
+vbox_widget_register_type(void) {
+    te_type_info* info = type_info_create(vbox_widget_get_type_id());
+    type_info_add_vec2_variable(info, "position", prv_vbox_widget_set_position, prv_vbox_widget_get_position);
+    type_info_add_vec2_variable(info, "size", prv_vbox_widget_set_size, prv_vbox_widget_get_size);
+    type_info_add_float_variable(info, "child_spacing", vbox_widget_set_child_spacing, vbox_widget_get_child_spacing);
+
+    type_database_register_type(info);
 }

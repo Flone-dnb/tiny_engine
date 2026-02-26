@@ -126,6 +126,37 @@ All widgets contain a `te_widget` object inside of them, it implement base widge
 
 In order to display a widget (and all of its attached child widgets) you need to spawn the root widget in a world (same as with models). You can also spawn widget by attaching a non-spawned widget to a spawned widget using the `set_parent` function.
 
+# Reflection
+
+`type_database.h` is used for registering a type info, you need to define a unique string (ID) of your type and then register it in the type database, here's a short example from `te_model` type:
+
+```C
+void model_get_type_id(void) {
+    return "model";
+}
+
+void model_register_type(void) {
+    te_type_info* info = type_info_create(model_get_type_id());
+    type_info_add_vec3_variable(info, "position", model_set_position, model_get_position);
+    type_info_add_string_variable(info, "texture", model_set_texture, model_get_texture);
+    type_info_add_vec2_variable(info, "texture_tiling", model_set_texture_tiling, model_get_texture_tiling);
+    type_info_add_bool_variable(info, "enable_transparency", model_enable_transparency, model_is_transparency_enabled);
+
+    type_database_register_type(info);
+}
+```
+
+Later in order to get type info all you need is this "type ID" string and a `void*` pointer to an object:
+
+```C
+const te_type_info* info = type_database_get_type_info(some_id);
+if (info == NULL) {
+    TODO; // not registered
+}
+
+// use setters/getters from `info`
+```
+
 # Building your game for retro handhelds (ARM64 Linux devices)
 
 ## Setup

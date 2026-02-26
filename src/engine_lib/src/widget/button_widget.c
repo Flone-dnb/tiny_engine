@@ -8,6 +8,7 @@
 #include "widget/rect_widget.h"
 #include "widget/widget.h"
 #include "world.h"
+#include "type_database.h"
 
 #define BUTTON_WIDGET_TEX_LOAD_OPTION TE_TLO_NO_MIPMAPS
 
@@ -204,6 +205,45 @@ prv_button_widget_unregister_render_data(te_button_widget* button_widget) {
 te_widget*
 button_widget_get_widget(te_button_widget* button_widget) {
     return button_widget->widget;
+}
+
+static inline void
+prv_button_widget_set_position(te_button_widget* button_widget, vec2 pos) {
+    widget_set_relative_position(button_widget->widget, pos);
+}
+
+static inline void
+prv_button_widget_get_position(te_button_widget* button_widget, vec2 out) {
+    widget_get_relative_position(button_widget->widget, out);
+}
+
+static inline void
+prv_button_widget_set_size(te_button_widget* button_widget, vec2 size) {
+    widget_set_relative_size(button_widget->widget, size);
+}
+
+static inline void
+prv_button_widget_get_size(te_button_widget* button_widget, vec2 out) {
+    widget_get_relative_size(button_widget->widget, out);
+}
+
+const char*
+button_widget_get_type_id(void) {
+    return "button_widget";
+}
+
+void button_widget_register_type(void){
+    te_type_info* info = type_info_create(button_widget_get_type_id());
+    type_info_add_vec2_variable(info, "position", prv_button_widget_set_position, prv_button_widget_get_position);
+    type_info_add_vec2_variable(info, "size", prv_button_widget_set_size, prv_button_widget_get_size);
+    type_info_add_vec4_variable(info, "color", button_widget_set_color, button_widget_get_color);
+    type_info_add_vec4_variable(info, "color_hovered", button_widget_set_color_hovered, button_widget_get_color_hovered);
+    type_info_add_vec4_variable(info, "color_pressed", button_widget_set_color_pressed, button_widget_get_color_pressed);
+    type_info_add_string_variable(info, "texture", button_widget_set_texture, button_widget_get_texture);
+    type_info_add_string_variable(info, "texture_hovered", button_widget_set_texture_hovered, button_widget_get_texture_hovered);
+    type_info_add_string_variable(info, "texture_pressed", button_widget_set_texture_pressed, button_widget_get_texture_pressed);
+
+    type_database_register_type(info);
 }
 
 void

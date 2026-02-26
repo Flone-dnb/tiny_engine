@@ -10,6 +10,7 @@
 #include "render/renderer.h"
 #include "window.h"
 #include "world.h"
+#include "type_database.h"
 
 // Stores all core systems such as game world, physics, audio, renderer and etc.
 struct te_game_manager {
@@ -32,6 +33,8 @@ prv_game_manager_create(struct te_window* window) {
     game_manager->window = window;
     game_manager->worlds = NULL;
     game_manager->world_count = 0;
+
+    prv_type_database_init();
 
 #if defined(ENGINE_DEBUG_TOOLS)
     prv_debug_console_init(game_manager);
@@ -77,6 +80,8 @@ prv_game_manager_destroy(te_game_manager* game_manager) {
 #endif
 
     renderer_destroy(game_manager->renderer);
+
+    prv_type_database_deinit();
 
     free(game_manager);
 }

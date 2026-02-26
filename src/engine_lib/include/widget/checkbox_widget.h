@@ -35,3 +35,8 @@ void checkbox_widget_set_checked_texture(te_checkbox_widget* checkbox_widget, co
 // Do not free returned string, valid while the widget exists and the texture is not changed.
 char* checkbox_widget_get_background_texture(te_checkbox_widget* checkbox_widget);
 char* checkbox_widget_get_checked_texture(te_checkbox_widget* checkbox_widget);
+
+// Returns unique ID of this type in the type database.
+const char* checkbox_widget_get_type_id(void);
+// Registers the type in the type database.
+void checkbox_widget_register_type(void);

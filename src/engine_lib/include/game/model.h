@@ -8,12 +8,13 @@ typedef struct te_model te_model;
 struct te_world;
 struct te_camera;
 
-// Creates and loads a new model.
-//
-// Specify path (relative to the `res` directory) to the file that stores mesh geometry.
-// Specify NULL if a default model should be used.
-te_model* model_create(const char* path_to_geo);
+te_model* model_create();
 void model_destroy(te_model* model);
+
+// Specify path (relative to the `res` directory) to the file that stores mesh geometry.
+// Specify NULL to use default model instead.
+void model_set_geometry(te_model* model, const char* relative_path);
+const char* model_get_geometry(te_model* model);
 
 void model_set_position(te_model* model, vec3 position);
 void model_set_rotation(te_model* model, vec3 rotation); // in degrees
@@ -56,19 +57,17 @@ void model_attach_camera(te_model* model, struct te_camera* camera);
 
 // Sets custom vertex shader.
 //
-// Can only be used before the model is spawned.
-//
 // Specify path to the shader file (relative to the `res` directory). The string will be copied
-// to the model's object.
+// to the model's object. Specify NULL to remove.
 void model_set_custom_vert_shader(te_model* model, const char* vert_relative_path);
+const char* model_get_custom_vert_shader(te_model* model);
 
 // Sets custom fragment shader.
 //
-// Can only be used before the model is spawned.
-//
 // Specify path to the shader file (relative to the `res` directory). The string will be copied
-// to the model's object.
+// to the model's object. Specify NULL to remove.
 void model_set_custom_frag_shader(te_model* model, const char* frag_relative_path);
+const char* model_get_custom_frag_shader(te_model* model);
 
 // Transparency is disabled by default.
 // Note that this option should only be used for semi-transparent 2D planes
@@ -79,6 +78,11 @@ bool model_is_transparency_enabled(te_model* model);
 // Returns NULL if the model is not spawned.
 // Do not free/destroy returned pointer, valid while the model exists.
 struct te_world* model_get_world(te_model* model);
+
+// Returns unique ID of this type in the type database.
+const char* model_get_type_id(void);
+// Registers the type in the type database.
+void model_register_type(void);
 
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API
