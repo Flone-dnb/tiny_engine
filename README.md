@@ -2,7 +2,7 @@
 
 Tiny 3D game engine for making small low-poly games.
 
-Supported platforms: Windows (x64), Linux (x64 and ARM64).
+Supported platforms: Windows (x64), Linux (x32, x64 and ARM64).
 
 # Roadmap
 
