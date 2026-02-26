@@ -30,7 +30,7 @@ function(tiny_engine_configure_target TARGET_NAME)
     if(MSVC)
         target_compile_options(${TARGET_NAME} PUBLIC /W3 /WX /wd4996) # disable "unsafe function" warning
     else()
-	target_compile_options(${TARGET_NAME} PUBLIC -Wall -Wextra -Werror -Wconversion -Wno-unused-but-set-parameter -Wno-incompatible-function-pointer-types -Wno-unknown-warning-option)
+	target_compile_options(${TARGET_NAME} PUBLIC -Wall -Wextra -Werror -Wconversion -Wno-unused-but-set-parameter -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unknown-warning-option)
     endif()
 
     # Add `DEBUG` macro in debug builds.
