@@ -1,7 +1,8 @@
 #include "misc/globals.h"
 
+#include <stdlib.h>
 #include <string.h>
-#include "misc/error.h"
+#include "io/log.h"
 
 #if defined(WIN32)
 #define NOMINMAX
@@ -23,11 +24,13 @@ globals_get_app_name(void) {
         // Get full path.
 #if defined(WIN32)
         if (GetModuleFileNameA(NULL, buffer, 1024) == 1024) {
-            show_error_and_abort("failed to get path to the application");
+            log_error("failed to get path to the application");
+            abort();
         }
 #elif __linux__
         if (readlink("/proc/self/exe", &buffer[0], 1024) == -1) {
-            show_error_and_abort("failed to get path to the application");
+            log_error("failed to get path to the application");
+            abort();
         }
 #else
 #error "unsupported OS"
@@ -43,12 +46,12 @@ globals_get_app_name(void) {
             }
         }
         if (last_slash_pos == path_len) {
-            show_error_and_abort("unable to extract application name from the application path");
+            log_error("unable to extract application name from the application path");
+            abort();
         }
 
         // Save app name.
-        for (size_t src = last_slash_pos + 1, dst = 0; src < path_len && dst < max_app_name_len;
-             src++, dst++) {
+        for (size_t src = last_slash_pos + 1, dst = 0; src < path_len && dst < max_app_name_len; src++, dst++) {
 #if defined(WIN32)
             if (buffer[src] == '.') {
                 // don't copy ".exe"

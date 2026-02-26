@@ -1,5 +1,6 @@
 #include "render/renderer.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_timer.h"
@@ -10,7 +11,6 @@
 #include "glad/glad.h"
 #include "io/log.h"
 #include "limits.h"
-#include "misc/error.h"
 #include "render/debug_drawer.h"
 #include "render/font_manager.h"
 #include "render/gpu_section.h"
@@ -78,7 +78,8 @@ debugMessageCallback(
     }
 
     if (severity != GL_DEBUG_SEVERITY_NOTIFICATION) {
-        show_error_and_abort(message);
+        log_error(message);
+        abort();
     }
 }
 #endif
@@ -109,12 +110,14 @@ renderer_create(struct te_window* window) {
     // Create GL context.
     renderer->gl_context = SDL_GL_CreateContext(prv_window_get_sdl_window(window));
     if (renderer->gl_context == NULL) {
-        show_error_and_abort(SDL_GetError());
+        log_error(SDL_GetError());
+        abort();
     }
 
     // Initialize GLAD.
     if (gladLoadGLES2Loader((GLADloadproc)SDL_GL_GetProcAddress) == 0) {
-        show_error_and_abort("failed to load OpenGL ES");
+        log_error("failed to load OpenGL ES");
+        abort();
     }
 
 #if defined(ENGINE_DEBUG_TOOLS)
@@ -162,7 +165,8 @@ renderer_create(struct te_window* window) {
 
     // Disable VSync.
     if (!SDL_GL_SetSwapInterval(0)) {
-        show_error_and_abort(SDL_GetError());
+        log_error(SDL_GetError());
+        abort();
     }
 
     // Set FPS limit.
@@ -195,7 +199,8 @@ renderer_destroy(te_renderer* renderer) {
 #endif
 
     if (!SDL_GL_DestroyContext(renderer->gl_context)) {
-        show_error_and_abort(SDL_GetError());
+        log_error(SDL_GetError());
+        abort();
     }
 
     free(renderer);
@@ -297,7 +302,20 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     // Make sure there was no GL error during the last frame.
     GLenum gl_error = glGetError();
     if (gl_error != GL_NO_ERROR) {
-        show_gl_error_and_abort(gl_error);
+        switch (gl_error) {
+            case GL_INVALID_ENUM: log_error("GL error: INVALID_ENUM"); break;
+            case GL_INVALID_VALUE: log_error("GL error: INVALID_VALUE"); break;
+            case GL_INVALID_OPERATION: log_error("GL error: INVALID_OPERATION"); break;
+            case GL_OUT_OF_MEMORY: log_error("GL error: OUT_OF_MEMORY"); break;
+            case GL_INVALID_FRAMEBUFFER_OPERATION: log_error("GL error: INVALID_FRAMEBUFFER_OPERATION"); break;
+            default: {
+                char error_msg[128] = {0};
+                snprintf(&error_msg[0], 128, "GL error: %u", gl_error);
+                log_error(&error_msg[0]);
+            } break;
+        }
+
+        abort();
     }
 
 #if defined(ENGINE_DEBUG_TOOLS)

@@ -1,7 +1,7 @@
 #include "widget/widget.h"
 
 #include <string.h>
-#include "misc/error.h"
+#include "io/log.h"
 #include "world.h"
 
 struct te_widget {
@@ -95,7 +95,8 @@ widget_create(
 void
 widget_destroy(te_widget* widget) {
     if (widget->world != NULL) {
-        show_error_and_abort("can't destroy a spawned widget, despawn it first");
+        log_error("can't destroy a spawned widget, despawn it first");
+        abort();
     }
 
     if (widget->on_before_base_destroyed != NULL) {
@@ -140,7 +141,8 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
         return;
     }
     if (widget == new_parent) {
-        show_error_and_abort("can't attach a widget to itself");
+        log_error("can't attach a widget to itself");
+        abort();
     }
 
     if (widget->parent != NULL) {
@@ -157,7 +159,8 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
             break;
         }
         if (!found) {
-            show_error_and_abort("unable to find widget in parent's array of child widgets");
+            log_error("unable to find widget in parent's array of child widgets");
+            abort();
         }
 
         if (widget->parent->child_widget_count == 1) {
@@ -178,7 +181,8 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
         }
     } else if (widget->world != NULL) {
         if (prv_world_find_root_widget(widget->world, widget)) {
-            show_error_and_abort("attaching a spawned root widgets to another widget is not allowed");
+            log_error("attaching a spawned root widgets to another widget is not allowed");
+            abort();
         }
     }
 
@@ -215,7 +219,8 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
             prv_widget_on_despawned(widget);
         } else {
             if (new_parent->world != NULL && widget->world != new_parent->world) {
-                show_error_and_abort("can't attach a widget to another widget because they are spawned in different worlds");
+                log_error("can't attach a widget to another widget because they are spawned in different worlds");
+                abort();
             }
             if (new_parent->world == NULL) {
                 // This is a child widget and we also don't need to notify the world
@@ -327,7 +332,8 @@ te_world*
 widget_get_world(te_widget* widget) {
 #if defined(DEBUG)
     if (widget == NULL) {
-        show_error_and_abort("invalid widget specified");
+        log_error("invalid widget specified");
+        abort();
     }
 #endif
     return widget->world;

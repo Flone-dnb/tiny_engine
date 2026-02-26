@@ -7,7 +7,6 @@
 #include "glad/glad.h"
 #include "io/log.h"
 #include "io/paths.h"
-#include "misc/error.h"
 
 // Groups information about a shader program.
 typedef struct te_shader_program {
@@ -51,7 +50,8 @@ prv_shader_manager_create() {
 void
 prv_shader_manager_destroy(te_shader_manager* manager) {
     if (manager->shader_count > 0) {
-        show_error_and_abort("shader manager is being destroyed but there are still some shaders in use");
+        log_error("shader manager is being destroyed but there are still some shaders in use");
+        abort();
     }
 
     free(manager);
@@ -66,7 +66,8 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
 
     FILE* f = fopen(path, "rb");
     if (f == NULL) {
-        show_error_and_abort("unable read the specified shader file (file exist?)");
+        log_error_fmt("unable to read the shader file \"%s\"", path);
+        abort();
     }
 
     // Get file size.
@@ -75,7 +76,8 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
     {
         long size = ftell(f);
         if (size < 0) {
-            show_error_and_abort("failed to get shader file size");
+            log_error("failed to get shader file size");
+            abort();
         }
         file_size = (unsigned long)size;
     }
@@ -86,7 +88,8 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
     const size_t bytes_read = fread(file_content, 1, file_size, f);
     file_content[file_size] = 0;
     if (bytes_read != file_size) {
-        show_error_and_abort("failed to read the shader file");
+        log_error_fmt("failed to read the shader file \"%s\"", path);
+        abort();
     }
     fclose(f);
 
@@ -142,7 +145,7 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
         log_info(fmt_code);
         free(fmt_code);
 
-        show_error_and_abort("failed to compile shader, see log for more details");
+        abort();
     }
 
     free(file_content);
@@ -152,8 +155,7 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
 }
 
 unsigned int
-shader_manager_request_shader(
-    te_shader_manager* manager, const char* vert_relative_path, const char* frag_relative_path) {
+shader_manager_request_shader(te_shader_manager* manager, const char* vert_relative_path, const char* frag_relative_path) {
     const size_t vert_relative_path_len = strlen(vert_relative_path);
     const size_t frag_relative_path_len = strlen(frag_relative_path);
 
@@ -199,7 +201,7 @@ shader_manager_request_shader(
             log_info_fmt("failed to link shaders \"%s\" and \"%s\", error: %s", vert_path, frag_path, msg);
             free(msg);
 
-            show_error_and_abort("failed to link shader program, see log for more details");
+            abort();
         }
 
         glDetachShader(prog_id, vert_id);
@@ -255,11 +257,12 @@ shader_manager_mark_unused_shader(te_shader_manager* manager, unsigned int prog_
         break;
     }
     if (!found) {
-        show_error_and_abort("unable to find the specified shader program");
+        log_error("unable to find the specified shader program");
+        abort();
     }
     if (manager->shaders[index].usage_count == 0) {
-        show_error_and_abort(
-            "the specified shader program id already has usage count of 0 (this is a shader manager bug)");
+        log_error("the specified shader program id already has usage count of 0 (this is a shader manager bug)");
+        abort();
     }
 
     manager->shaders[index].usage_count -= 1;
@@ -282,8 +285,7 @@ shader_manager_mark_unused_shader(te_shader_manager* manager, unsigned int prog_
         te_shader_program* new_shaders = malloc(sizeof(te_shader_program) * (manager->shader_count - 1));
         memcpy(new_shaders, manager->shaders, sizeof(te_shader_program) * index);
         memcpy(
-            new_shaders + index, manager->shaders + (index + 1),
-            sizeof(te_shader_program) * (manager->shader_count - index - 1));
+            new_shaders + index, manager->shaders + (index + 1), sizeof(te_shader_program) * (manager->shader_count - index - 1));
 
         free(manager->shaders);
         manager->shaders = new_shaders;
@@ -296,7 +298,7 @@ get_uniform_location(unsigned int prog_id, const char* name) {
     const int location = glGetUniformLocation(prog_id, name);
     if (location < 0) {
         log_info_fmt("missing uniform variable named \"%s\", maybe it was optimized out due to being unused", name);
-        show_error_and_abort("unable to find a uniform variable, see log for details");
+        abort();
     }
     return location;
 }

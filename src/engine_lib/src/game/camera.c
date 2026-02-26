@@ -3,7 +3,6 @@
 #include "cglm/cam.h"
 #include "game/model.h"
 #include "math_funcs.h"
-#include "misc/error.h"
 #include "misc/globals.h"
 #include "shape/frustum_shape.h"
 #include "type_database.h"
@@ -245,7 +244,8 @@ void
 prv_camera_recalc_frustum(te_camera* camera) {
 #if defined(DEBUG)
     if (camera->is_directions_outdated) {
-        show_error_and_abort("expected directions to be up to date to recalculate camera's frustum");
+        log_error("expected directions to be up to date to recalculate camera's frustum");
+        abort();
     }
 #endif
     camera->frustum = frustum_shape_create(
@@ -268,7 +268,8 @@ camera_get_view_proj_mat(te_camera* camera) {
 
 #if defined(DEBUG)
         if (camera->render_width == 0 || camera->render_height == 0) {
-            show_error_and_abort("expected render target width/height to be set at this point");
+            log_error("expected render target width/height to be set at this point");
+            abort();
         }
 #endif
         if (camera->is_proj_mat_outdated) {
@@ -294,7 +295,8 @@ struct te_frustum_shape*
 camera_get_frustum(te_camera* camera) {
 #if defined(DEBUG)
     if (camera->render_width == 0 || camera->render_height == 0) {
-        show_error_and_abort("expected render target width/height to be set at this point");
+        log_error("expected render target width/height to be set at this point");
+        abort();
     }
 #endif
 

@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "glad/glad.h"
+#include "io/log.h"
 #include "io/paths.h"
-#include "misc/error.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_NO_SIMD
@@ -48,15 +48,15 @@ prv_texture_manager_create() {
 void
 prv_texture_manager_destroy(te_texture_manager* manager) {
     if (manager->texture_count > 0) {
-        show_error_and_abort("texture manager is being destroyed but there are still some textures in use");
+        log_error("texture manager is being destroyed but there are still some textures in use");
+        abort();
     }
 
     free(manager);
 }
 
 unsigned int
-texture_manager_request_texture(te_texture_manager* manager, const char* relative_path,
-                                enum te_texture_load_opt opt) {
+texture_manager_request_texture(te_texture_manager* manager, const char* relative_path, enum te_texture_load_opt opt) {
     const size_t relative_path_len = strlen(relative_path);
 
     // Check cache.
@@ -84,7 +84,8 @@ texture_manager_request_texture(te_texture_manager* manager, const char* relativ
             int channel_count = 0;
             stbi_uc* pixels = stbi_load(tex_path, &width, &height, &channel_count, 0);
             if (pixels == NULL) {
-                show_error_and_abort("failed to load a texture");
+                log_error("failed to load a texture");
+                abort();
             }
 
             const int gl_format = channel_count == 4 ? GL_RGBA : GL_RGB;
@@ -94,8 +95,8 @@ texture_manager_request_texture(te_texture_manager* manager, const char* relativ
 
             glBindTexture(GL_TEXTURE_2D, tex_id);
             {
-                glTexImage2D(GL_TEXTURE_2D, 0, gl_internal_format, width, height, 0, (unsigned int)gl_format,
-                             GL_UNSIGNED_BYTE, pixels);
+                glTexImage2D(
+                    GL_TEXTURE_2D, 0, gl_internal_format, width, height, 0, (unsigned int)gl_format, GL_UNSIGNED_BYTE, pixels);
                 if (opt == TE_TLO_GENERATE_MIPMAPS) {
                     glGenerateMipmap(GL_TEXTURE_2D);
 
@@ -110,7 +111,8 @@ texture_manager_request_texture(te_texture_manager* manager, const char* relativ
             glBindTexture(GL_TEXTURE_2D, 0);
             stbi_image_free(pixels);
         } else {
-            show_error_and_abort("not implemented yet");
+            log_error("not implemented yet");
+            abort();
         }
 
         // Cache results.
@@ -154,11 +156,12 @@ texture_manager_mark_unused_texture(te_texture_manager* manager, unsigned int te
         break;
     }
     if (!found) {
-        show_error_and_abort("unable to find the specified texture");
+        log_error("unable to find the specified texture");
+        abort();
     }
     if (manager->textures[index].usage_count == 0) {
-        show_error_and_abort(
-            "the specified texture id already has usage count of 0 (this is a texture manager bug)");
+        log_error("the specified texture id already has usage count of 0 (this is a texture manager bug)");
+        abort();
     }
 
     manager->textures[index].usage_count -= 1;
@@ -178,8 +181,7 @@ texture_manager_mark_unused_texture(te_texture_manager* manager, unsigned int te
     } else {
         te_texture* new_textures = malloc(sizeof(te_texture) * (manager->texture_count - 1));
         memcpy(new_textures, manager->textures, sizeof(te_texture) * index);
-        memcpy(new_textures + index, manager->textures + (index + 1),
-               sizeof(te_texture) * (manager->texture_count - index - 1));
+        memcpy(new_textures + index, manager->textures + (index + 1), sizeof(te_texture) * (manager->texture_count - index - 1));
 
         free(manager->textures);
         manager->textures = new_textures;

@@ -6,15 +6,15 @@
 #include "game/camera.h"
 #include "game_manager.h"
 #include "glad/glad.h"
+#include "io/log.h"
 #include "math_funcs.h"
-#include "misc/error.h"
 #include "render/model_renderer.h"
 #include "render/renderer.h"
 #include "render/shader_manager.h"
 #include "render/texture_manager.h"
 #include "shape/aabb_shape.h"
-#include "world.h"
 #include "type_database.h"
+#include "world.h"
 
 #define MODEL_TEX_LOAD_OPTION TE_TLO_GENERATE_MIPMAPS
 
@@ -77,7 +77,8 @@ model_get_type_id(void) {
     return "model";
 }
 
-void model_register_type(void) {
+void
+model_register_type(void) {
     te_type_info* info = type_info_create(model_get_type_id());
     type_info_add_vec3_variable(info, "position", model_set_position, model_get_position);
     type_info_add_vec3_variable(info, "rotation", model_set_rotation, model_get_rotation);
@@ -131,14 +132,16 @@ model_destroy(te_model* model) {
         if (model->child_model != NULL) {
             if (model->child_model->world != NULL) {
                 // We should have despawned it in our despawn callback.
-                show_error_and_abort("expected the child model to be despawned already");
+                log_error("expected the child model to be despawned already");
+                abort();
             }
             model_destroy(model->child_model);
         }
 
         if (model->attached_camera != NULL) {
             if (camera_get_world(model->attached_camera) != NULL) {
-                show_error_and_abort("expected the attached camera to be despawned already");
+                log_error("expected the attached camera to be despawned already");
+                abort();
             }
             camera_destroy(model->attached_camera);
         }
@@ -153,7 +156,8 @@ te_model_renderer*
 prv_model_get_renderer(te_model* model) {
 #if defined(DEBUG)
     if (model->world == NULL) {
-        show_error_and_abort("expected world to be valid");
+        log_error("expected world to be valid");
+        abort();
     }
 #endif
 
@@ -369,7 +373,8 @@ model_set_parent(te_model* model, te_model* new_parent) {
     }
 
     if (new_parent != NULL && new_parent->child_model != NULL) {
-        show_error_and_abort("only 1 model can be attached");
+        log_error("only 1 model can be attached");
+        abort();
     }
 
     if (model->parent_model != NULL) {
@@ -388,7 +393,8 @@ model_set_parent(te_model* model, te_model* new_parent) {
             world_despawn_model(model->world, model);
         } else {
             if (new_parent->world != NULL && new_parent->world != model->world) {
-                show_error_and_abort("can't attach a model from a different world, despawn the child model first");
+                log_error("can't attach a model from a different world, despawn the child model first");
+                abort();
             }
             if (new_parent->world == NULL) {
                 world_despawn_model(model->world, model);
@@ -411,7 +417,8 @@ model_attach_camera(te_model* model, te_camera* camera) {
         return;
     }
     if (camera != NULL && model->attached_camera != NULL) {
-        show_error_and_abort("only 1 camera can be attached");
+        log_error("only 1 camera can be attached");
+        abort();
     }
 
     if (model->attached_camera != NULL) {
@@ -425,7 +432,8 @@ model_attach_camera(te_model* model, te_camera* camera) {
     if (camera != NULL) {
         te_world* camera_world = camera_get_world(camera);
         if (model->world != NULL && camera_world != NULL && model->world != camera_world) {
-            show_error_and_abort("can't attach a camera from a different world, despawn the camera first");
+            log_error("can't attach a camera from a different world, despawn the camera first");
+            abort();
         }
 
         if (model->world == NULL) {
@@ -454,7 +462,8 @@ static void
 prv_model_add_to_model_renderer(te_model* model) {
 #if defined(DEBUG)
     if (model->world == NULL) {
-        show_error_and_abort("expected world to be valid");
+        log_error("expected world to be valid");
+        abort();
     }
 #endif
 
@@ -535,7 +544,8 @@ static void
 prv_model_remove_from_model_renderer(te_model* model) {
 #if defined(DEBUG)
     if (model->world == NULL) {
-        show_error_and_abort("expected world to be valid");
+        log_error("expected world to be valid");
+        abort();
     }
 #endif
 
@@ -578,14 +588,16 @@ prv_model_on_spawned(te_model* model, te_world* world) {
 
     if (model->child_model != NULL) {
         if (model->child_model->world != NULL) {
-            show_error_and_abort("expected the child model to not be spawned yet");
+            log_error("expected the child model to not be spawned yet");
+            abort();
         }
         world_spawn_model(world, model->child_model);
     }
 
     if (model->attached_camera != NULL) {
         if (camera_get_world(model->attached_camera) != NULL) {
-            show_error_and_abort("expected the attached camera to not be spawned yet");
+            log_error("expected the attached camera to not be spawned yet");
+            abort();
         }
         world_spawn_camera(world, model->attached_camera);
     }
@@ -614,7 +626,8 @@ prv_model_on_despawned(te_model* model) {
 mat4*
 prv_model_get_world_mat_tmp(te_model* model) {
     if (model->render_data_handle == 0xffffffff) {
-        show_error_and_abort("expected the model to be spawned and visible");
+        log_error("expected the model to be spawned and visible");
+        abort();
     }
 
     te_model_render_data* data = model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);

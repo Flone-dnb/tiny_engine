@@ -5,12 +5,11 @@
 #include "cglm/vec2.h"
 #include "debug_console.h"
 #include "io/log.h"
-#include "misc/error.h"
 #include "render/debug_drawer.h"
 #include "render/renderer.h"
+#include "type_database.h"
 #include "window.h"
 #include "world.h"
-#include "type_database.h"
 
 // Stores all core systems such as game world, physics, audio, renderer and etc.
 struct te_game_manager {
@@ -89,7 +88,8 @@ prv_game_manager_destroy(te_game_manager* game_manager) {
 te_world*
 game_manager_create_world(te_game_manager* game_manager, const char* name) {
     if (name == NULL) {
-        show_error_and_abort("world name must not be NULL");
+        log_error("world name must not be NULL");
+        abort();
     }
 
     // Expand array.
@@ -126,7 +126,8 @@ game_manager_destroy_world(te_game_manager* game_manager, te_world* world) {
             break;
         }
         if (!found) {
-            show_error_and_abort("unable to find the specified world to destroy");
+            log_error("unable to find the specified world to destroy");
+            abort();
         }
 
         prv_world_destroy(game_manager->worlds[index]);

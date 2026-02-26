@@ -2,14 +2,14 @@
 
 #include <string.h>
 #include "game_manager.h"
-#include "misc/error.h"
+#include "io/log.h"
 #include "render/renderer.h"
 #include "render/texture_manager.h"
 #include "render/widget_renderer.h"
+#include "type_database.h"
 #include "widget/widget.h"
 #include "window.h"
 #include "world.h"
-#include "type_database.h"
 
 #define INVALID_RENDER_DATA_HANDLE  0xffffffff
 #define RECT_WIDGET_TEX_LOAD_OPTION TE_TLO_NO_MIPMAPS
@@ -107,7 +107,8 @@ rect_widget_set_color(te_rect_widget* rect_widget, vec4 color) {
     if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
         te_world* world = widget_get_world(rect_widget->widget);
         if (world == NULL) {
-            show_error_and_abort("expected the widget to be spawned");
+            log_error("expected the widget to be spawned");
+            abort();
         }
 
         te_rect_widget_render_data* data =
@@ -135,7 +136,8 @@ rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) 
         if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
             te_world* world = widget_get_world(rect_widget->widget);
             if (world == NULL) {
-                show_error_and_abort("expected the widget to be spawned");
+                log_error("expected the widget to be spawned");
+                abort();
             }
 
             te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
@@ -160,7 +162,8 @@ rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) 
         if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
             te_world* world = widget_get_world(rect_widget->widget);
             if (world == NULL) {
-                show_error_and_abort("expected the widget to be spawned");
+                log_error("expected the widget to be spawned");
+                abort();
             }
 
             te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
@@ -190,7 +193,8 @@ rect_widget_set_clip_rect(te_rect_widget* rect_widget, vec4 clip_rect) {
     if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
         te_world* world = widget_get_world(rect_widget->widget);
         if (world == NULL) {
-            show_error_and_abort("expected the widget to be spawned");
+            log_error("expected the widget to be spawned");
+            abort();
         }
 
         te_rect_widget_render_data* data =
@@ -208,13 +212,15 @@ static void
 prv_rect_widget_register_for_rendering(te_rect_widget* rect_widget) {
 #if defined(DEBUG)
     if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
-        show_error_and_abort("expected the render data handle to be invalid");
+        log_error("expected the render data handle to be invalid");
+        abort();
     }
 #endif
 
     te_world* world = widget_get_world(rect_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected the widget to be spawned");
+        log_error("expected the widget to be spawned");
+        abort();
     }
     te_game_manager* game_manager = world_get_game_manager(world);
     te_widget_renderer* widget_renderer = world_get_widget_renderer(world);
@@ -239,13 +245,15 @@ static void
 prv_rect_widget_unregister_from_rendering(te_rect_widget* rect_widget) {
 #if defined(DEBUG)
     if (rect_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
-        show_error_and_abort("expected the render data handle to be valid");
+        log_error("expected the render data handle to be valid");
+        abort();
     }
 #endif
 
     te_world* world = widget_get_world(rect_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected the widget to be spawned");
+        log_error("expected the widget to be spawned");
+        abort();
     }
     te_widget_renderer* widget_renderer = world_get_widget_renderer(world);
 
@@ -266,13 +274,15 @@ static void
 prv_rect_widget_update_non_tex_render_data(te_rect_widget* rect_widget) {
 #if defined(DEBUG)
     if (rect_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
-        show_error_and_abort("expected the render data handle to be valid");
+        log_error("expected the render data handle to be valid");
+        abort();
     }
 #endif
 
     te_world* world = widget_get_world(rect_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected the widget to be spawned");
+        log_error("expected the widget to be spawned");
+        abort();
     }
     te_game_manager* game_manager = world_get_game_manager(world);
 

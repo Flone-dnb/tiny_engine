@@ -1,4 +1,4 @@
-#include "misc/error.h"
+#include "io/log.h"
 #if defined(WIN32)
 // Hide console on Windows.
 #pragma comment(linker, "/subsystem:windows /entry:mainCRTStartup")
@@ -23,7 +23,8 @@ main(void) {
     te_window* window = window_create("tiny engine editor");
 
     if (sizeof(te_window_callbacks) != sizeof(void*) * 18) {
-        show_error_and_abort("add new callbacks here");
+        log_error("add new callbacks here");
+        abort();
     }
     te_window_callbacks callbacks;
     callbacks.on_game_started = &editor_on_game_started;

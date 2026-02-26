@@ -4,7 +4,7 @@
 #include "editor_camera.h"
 #include "game/model.h"
 #include "game_manager.h"
-#include "misc/error.h"
+#include "io/log.h"
 #include "misc/memory_usage.h"
 #include "misc/wchar_funcs.h"
 #include "render/font_manager.h"
@@ -132,7 +132,8 @@ editor_on_game_tick(void* game_instance, te_game_manager* game_manager, float de
 
         int len = snprintf(NULL, 0, fmt, fps, fps_limit, process_mem, total_used_mem, total_mem);
         if (len < 0) {
-            show_error_and_abort("snprintf error");
+            log_error("snprintf error");
+            abort();
         }
         char* src_text = malloc(sizeof(char) * (size_t)(len + 1));
         snprintf(src_text, (size_t)len + 1, fmt, fps, fps_limit, process_mem, total_used_mem, total_mem);

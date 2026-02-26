@@ -7,7 +7,7 @@
 #include "game_manager.h"
 #include "glad/glad.h"
 #include "hashmap.c/hashmap.h"
-#include "misc/error.h"
+#include "io/log.h"
 #include "misc/memory_usage.h"
 #include "render/debug_drawer.h"
 #include "render/renderer.h"
@@ -244,7 +244,8 @@ prv_debug_console_draw_stat(vec2 screen_pos, const char* fmt, ...) {
 
     int len = vsnprintf(NULL, 0, fmt, args);
     if (len <= 0) {
-        show_error_and_abort("snprintf error");
+        log_error("snprintf error");
+        abort();
     }
 
     char* text = malloc(sizeof(char) * ((unsigned int)len + 1));

@@ -6,7 +6,6 @@
 #include <string.h>
 #include <time.h>
 #include "io/paths.h"
-#include "misc/error.h"
 #include "render/debug_drawer.h"
 
 static unsigned int error_count_logged = 0;
@@ -87,7 +86,8 @@ prv_log_fmt(enum te_log_category category, char* filepath, int line, const char*
 
     int test_size = vsnprintf(NULL, 0, fmt, args);
     if (test_size <= 0) {
-        show_error_and_abort("failed to format last log message");
+        log_error("failed to format last log message");
+        abort();
     }
     size_t size = (size_t)test_size;
     char* message = malloc(size + 1);

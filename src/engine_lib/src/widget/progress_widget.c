@@ -1,9 +1,9 @@
 #include "widget/progress_widget.h"
 
-#include "misc/error.h"
+#include "io/log.h"
+#include "type_database.h"
 #include "widget/rect_widget.h"
 #include "widget/widget.h"
-#include "type_database.h"
 
 struct te_progress_widget {
     te_widget* widget;
@@ -186,7 +186,8 @@ prv_progress_widget_on_after_spawned(void* this) {
     unsigned int child_count = 0;
     (void)widget_get_child_widgets_tmp(progress_widget->widget, &child_count);
     if (child_count != 2) {
-        show_error_and_abort("unexpected child widget count on a widget");
+        log_error("unexpected child widget count on a widget");
+        abort();
     }
 
     rect_widget_set_color(progress_widget->background_rect, progress_widget->background_color);
@@ -210,7 +211,8 @@ prv_progress_widget_on_before_despawned(void* this) {
     unsigned int child_count = 0;
     (void)widget_get_child_widgets_tmp(progress_widget->widget, &child_count);
     if (child_count != 2) {
-        show_error_and_abort("unexpected child widget count on a widget");
+        log_error("unexpected child widget count on a widget");
+        abort();
     }
 }
 

@@ -8,7 +8,6 @@
 #include "io/filesystem.h"
 #include "io/log.h"
 #include "io/paths.h"
-#include "misc/error.h"
 #if defined(ENGINE_DEBUG_TOOLS)
 #include "render/renderer.h"
 #endif
@@ -66,7 +65,8 @@ struct te_window {
 te_window*
 window_create(const char* window_title) {
     if (window_title == NULL) {
-        show_error_and_abort("window title text must not be NULL");
+        log_error("window title text must not be NULL");
+        abort();
     }
 
     // Destroy old log file.
@@ -76,7 +76,8 @@ window_create(const char* window_title) {
     // Initialize SDL.
     {
         if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
-            show_error_and_abort(SDL_GetError());
+            log_error(SDL_GetError());
+            abort();
         }
 
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2); // IF CHANGING
@@ -85,13 +86,15 @@ window_create(const char* window_title) {
 
 #if defined(DEBUG)
         if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG)) {
-            show_error_and_abort(SDL_GetError());
+            log_error(SDL_GetError());
+            abort();
         }
 #endif
 
         // Set depth buffer size.
         if (!SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24)) {
-            show_error_and_abort(SDL_GetError());
+            log_error(SDL_GetError());
+            abort();
         }
     }
 
@@ -99,7 +102,8 @@ window_create(const char* window_title) {
     int display_count = 0;
     SDL_DisplayID* displays = SDL_GetDisplays(&display_count);
     if (display_count <= 0) {
-        show_error_and_abort("unable to find at least 1 display");
+        log_error("unable to find at least 1 display");
+        abort();
     }
 
     // Get display resolution.
@@ -124,7 +128,8 @@ window_create(const char* window_title) {
     SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_MAXIMIZED_BOOLEAN, true);
     SDL_Window* sdl_window = SDL_CreateWindowWithProperties(props);
     if (sdl_window == NULL) {
-        show_error_and_abort(SDL_GetError());
+        log_error(SDL_GetError());
+        abort();
     }
     SDL_DestroyProperties(props);
 
@@ -256,7 +261,8 @@ struct te_game_manager*
 window_get_game_manager(te_window* window) {
 #if defined(DEBUG)
     if (window->game_manager == NULL) {
-        show_error_and_abort("game manager is not created yet (game not started) or was already destroyed (game ended)");
+        log_error("game manager is not created yet (game not started) or was already destroyed (game ended)");
+        abort();
     }
 #endif
 
@@ -420,7 +426,8 @@ prv_window_process_event(te_window* window, union SDL_Event event, float delta_t
         case (SDL_EVENT_GAMEPAD_AXIS_MOTION): {
 #if defined(DEBUG)
             if (sizeof(event.gaxis.value) != 2) {
-                show_error_and_abort("expected \"short\" type");
+                log_error("expected \"short\" type");
+                abort();
             }
 #endif
             window->had_gamepad_input_curr_frame = true;
@@ -481,7 +488,8 @@ prv_window_process_event(te_window* window, union SDL_Event event, float delta_t
             int width;
             int height;
             if (SDL_GetWindowSizeInPixels(window->sdl_window, &width, &height) == false) {
-                show_error_and_abort(SDL_GetError());
+                log_error(SDL_GetError());
+                abort();
             }
             window->width = (unsigned int)width;
             window->height = (unsigned int)height;

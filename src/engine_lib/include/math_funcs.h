@@ -3,7 +3,7 @@
 #include "cglm/affine.h"
 #include "cglm/mat4.h"
 #include "cglm/vec3.h"
-#include "misc/error.h"
+#include "io/log.h"
 #include "misc/globals.h"
 
 // Used to fix a common problem where diagonal movement has ~1.4 speed instead of 1.
@@ -52,7 +52,8 @@ math_convert_norm_dir_to_rot(vec3 dir, vec3 out) {
 #if defined(DEBUG)
     // Make sure we are given a normalized direction.
     if (!glm_eq(glm_vec3_norm(dir), 1.0f)) {
-        show_error_and_abort("the specified direction vector should have been normalized");
+        log_error("the specified direction vector should have been normalized");
+        abort();
     }
 #endif
 

@@ -1,10 +1,10 @@
 #include "widget/slider_widget.h"
 
-#include "misc/error.h"
+#include "io/log.h"
+#include "type_database.h"
 #include "widget/rect_widget.h"
 #include "widget/widget.h"
 #include "world.h"
-#include "type_database.h"
 
 #define TE_SLIDER_HANDLE_WIDTH 0.1f
 
@@ -236,7 +236,8 @@ prv_slider_widget_on_after_spawned(void* this) {
     unsigned int child_count = 0;
     (void)widget_get_child_widgets_tmp(slider_widget->widget, &child_count);
     if (child_count != 2) {
-        show_error_and_abort("unexpected child widget count on a widget");
+        log_error("unexpected child widget count on a widget");
+        abort();
     }
 
     rect_widget_set_color(slider_widget->background_rect, slider_widget->background_color);
@@ -254,7 +255,8 @@ prv_slider_widget_on_after_spawned(void* this) {
 
     te_world* world = widget_get_world(slider_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected the widget to be spawned");
+        log_error("expected the widget to be spawned");
+        abort();
     }
     prv_world_add_interactable_widget(world, slider_widget->widget);
 }
@@ -267,12 +269,14 @@ prv_slider_widget_on_before_despawned(void* this) {
     unsigned int child_count = 0;
     (void)widget_get_child_widgets_tmp(slider_widget->widget, &child_count);
     if (child_count != 2) {
-        show_error_and_abort("unexpected child widget count on a widget");
+        log_error("unexpected child widget count on a widget");
+        abort();
     }
 
     te_world* world = widget_get_world(slider_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected the widget to be spawned");
+        log_error("expected the widget to be spawned");
+        abort();
     }
     prv_world_remove_interactable_widget(world, slider_widget->widget);
 }

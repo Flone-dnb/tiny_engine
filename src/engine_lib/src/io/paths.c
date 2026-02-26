@@ -4,14 +4,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "misc/error.h"
+#include "io/log.h"
 #include "misc/globals.h"
 
 #if defined(WIN32)
 #define NOMINMAX
-#include <Windows.h>
 #include <KnownFolders.h>
 #include <Shlobj.h>
+#include <Windows.h>
 #endif
 
 static char cached_path_to_config_dir[2048] = {0};
@@ -25,14 +25,16 @@ paths_get_config_dir(void) {
         const HRESULT result = SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &path_tmp);
         if (result != S_OK) {
             CoTaskMemFree(path_tmp);
-            show_error_and_abort("failed to query config dir path");
+            log_error("failed to query config dir path");
+            abort();
         }
 
         // Copy path and replace slashes.
         char path_buff[256] = {0};
         const size_t path_len = wcslen(path_tmp);
         if (path_len > 256) {
-            show_error_and_abort("path to AppData folder is too long");
+            log_error("path to AppData folder is too long");
+            abort();
         }
         for (size_t i = 0; i < path_len; i++) {
             if (path_tmp[i] == '\\') {
@@ -43,8 +45,7 @@ paths_get_config_dir(void) {
         }
         CoTaskMemFree(path_tmp);
 
-        sprintf(cached_path_to_config_dir, "%s/tiny_engine/%s/config/", &path_buff[0],
-                globals_get_app_name());
+        sprintf(cached_path_to_config_dir, "%s/tiny_engine/%s/config/", &path_buff[0], globals_get_app_name());
 #elif __linux__
 
 #if defined(__aarch64__)
@@ -53,10 +54,10 @@ paths_get_config_dir(void) {
 #else
         char* home_path = getenv("HOME");
         if (home_path == NULL) {
-            show_error_and_abort("unable to query environment variable HOME");
+            log_error("unable to query environment variable HOME");
+            abort();
         }
-        sprintf(cached_path_to_config_dir, "%s/.config/tiny_engine/%s/config/", home_path,
-                globals_get_app_name());
+        sprintf(cached_path_to_config_dir, "%s/.config/tiny_engine/%s/config/", home_path, globals_get_app_name());
 #endif
 
 #else
@@ -75,14 +76,16 @@ paths_get_log_file(void) {
         const HRESULT result = SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &path_tmp);
         if (result != S_OK) {
             CoTaskMemFree(path_tmp);
-            show_error_and_abort("failed to query config dir path");
+            log_error("failed to query config dir path");
+            abort();
         }
 
         // Copy path and replace slashes.
         char path_buff[256] = {0};
         const size_t path_len = wcslen(path_tmp);
         if (path_len > 256) {
-            show_error_and_abort("path to AppData folder is too long");
+            log_error("path to AppData folder is too long");
+            abort();
         }
         for (size_t i = 0; i < path_len; i++) {
             if (path_tmp[i] == '\\') {
@@ -102,10 +105,10 @@ paths_get_log_file(void) {
 #else
         char* home_path = getenv("HOME");
         if (home_path == NULL) {
-            show_error_and_abort("unable to query environment variable HOME");
+            log_error("unable to query environment variable HOME");
+            abort();
         }
-        sprintf(cached_path_to_log_file, "%s/.config/tiny_engine/%s/log.txt", home_path,
-                globals_get_app_name());
+        sprintf(cached_path_to_log_file, "%s/.config/tiny_engine/%s/log.txt", home_path, globals_get_app_name());
 #endif
 
 #else

@@ -12,7 +12,6 @@ set(PROJECT_SOURCES
     src/io/filesystem.c
     src/io/config.c
     src/misc/globals.c
-    src/misc/error.c
     src/misc/memory_usage.c
     src/misc/wchar_funcs.c
     src/game_manager.c
@@ -58,7 +57,6 @@ set(PROJECT_SOURCES
     include/io/filesystem.h
     include/io/config.h
     include/misc/globals.h
-    include/misc/error.h
     include/misc/memory_usage.h
     include/misc/wchar_funcs.h
     include/game_manager.h

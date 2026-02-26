@@ -1,17 +1,17 @@
 #include "widget/text_edit_widget.h"
 
 #include "game_manager.h"
-#include "misc/error.h"
+#include "io/log.h"
 #include "misc/wchar_funcs.h"
 #include "render/font_manager.h"
 #include "render/renderer.h"
 #include "render/widget_renderer.h"
+#include "type_database.h"
 #include "widget/rect_widget.h"
 #include "widget/text_widget.h"
 #include "widget/widget.h"
 #include "window.h"
 #include "world.h"
-#include "type_database.h"
 
 #define TE_INVALID_TEXT_CURSOR_INDEX 0xffffffff
 
@@ -124,12 +124,14 @@ prv_text_edit_widget_on_after_spawned(void* this) {
     unsigned int child_count = 0;
     (void)widget_get_child_widgets_tmp(text_edit_widget->widget, &child_count);
     if (child_count != 1) {
-        show_error_and_abort("unexpected child widget count on a widget");
+        log_error("unexpected child widget count on a widget");
+        abort();
     }
 
     te_world* world = widget_get_world(text_edit_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected the widget to be spawned");
+        log_error("expected the widget to be spawned");
+        abort();
     }
     prv_world_add_interactable_widget(world, text_edit_widget->widget);
 }
@@ -138,7 +140,8 @@ static void
 prv_text_edit_widget_despawn_destroy_cursor(te_text_edit_widget* text_edit_widget) {
     te_world* world = widget_get_world(text_edit_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected world to be valid");
+        log_error("expected world to be valid");
+        abort();
     }
 
     // Detach and despawn.
@@ -162,12 +165,14 @@ prv_text_edit_widget_on_before_despawned(void* this) {
     unsigned int child_count = 0;
     (void)widget_get_child_widgets_tmp(text_edit_widget->widget, &child_count);
     if (child_count > 2) {
-        show_error_and_abort("unexpected child widget count on a widget");
+        log_error("unexpected child widget count on a widget");
+        abort();
     }
 
     te_world* world = widget_get_world(text_edit_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected the widget to be spawned");
+        log_error("expected the widget to be spawned");
+        abort();
     }
     prv_world_remove_interactable_widget(world, text_edit_widget->widget);
 
@@ -188,7 +193,8 @@ prv_text_edit_widget_on_mouse_button_pressed(void* this, enum te_mouse_button bu
 
     te_world* world = widget_get_world(text_edit_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected world to be valid");
+        log_error("expected world to be valid");
+        abort();
     }
     te_game_manager* game_manager = world_get_game_manager(world);
     te_font_manager* font_manager = renderer_get_font_manager(game_manager_get_renderer(game_manager));
@@ -200,7 +206,8 @@ prv_text_edit_widget_on_mouse_button_pressed(void* this, enum te_mouse_button bu
 
     const unsigned int text_render_data_handle = prv_text_widget_get_render_data_handle(text_edit_widget->text_widget);
     if (text_render_data_handle == 0xffffffff) {
-        show_error_and_abort("expected text render data handle to be valid");
+        log_error("expected text render data handle to be valid");
+        abort();
     }
     te_text_widget_render_data* data =
         widget_renderer_get_text_widget_render_data_tmp(world_get_widget_renderer(world), text_render_data_handle);
@@ -307,14 +314,16 @@ prv_text_edit_widget_update_cursor(te_text_edit_widget* text_edit_widget) {
 
     te_world* world = widget_get_world(text_edit_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected world to be valid");
+        log_error("expected world to be valid");
+        abort();
     }
     te_game_manager* game_manager = world_get_game_manager(world);
     te_font_manager* font_manager = renderer_get_font_manager(game_manager_get_renderer(game_manager));
 
     const unsigned int text_render_data_handle = prv_text_widget_get_render_data_handle(text_edit_widget->text_widget);
     if (text_render_data_handle == 0xffffffff) {
-        show_error_and_abort("expected text render data handle to be valid");
+        log_error("expected text render data handle to be valid");
+        abort();
     }
     te_text_widget_render_data* data =
         widget_renderer_get_text_widget_render_data_tmp(world_get_widget_renderer(world), text_render_data_handle);
@@ -381,14 +390,16 @@ prv_text_edit_widget_on_keyboard_input_text(void* this, const char* input_text) 
     unsigned int added_text_len;
     wchar_t* added_text = wchar_from_char(input_text, &added_text_len);
     if (added_text_len == 0) {
-        show_error_and_abort("unexpected added text len");
+        log_error("unexpected added text len");
+        abort();
     }
 
     unsigned int old_text_len;
     wchar_t* old_text = text_widget_get_text(text_edit_widget->text_widget, &old_text_len);
 
     if (text_edit_widget->text_cursor_index > old_text_len) {
-        show_error_and_abort("expected a valid text cursor index");
+        log_error("expected a valid text cursor index");
+        abort();
     }
 
     wchar_t* new_text = malloc(sizeof(wchar_t) * (old_text_len + added_text_len + 1));

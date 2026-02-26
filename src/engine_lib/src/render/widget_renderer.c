@@ -2,7 +2,7 @@
 
 #include <string.h>
 #include "glad/glad.h"
-#include "misc/error.h"
+#include "io/log.h"
 #include "render/gpu_section.h"
 #include "render/renderer.h"
 #include "render/shader_manager.h"
@@ -107,7 +107,8 @@ static void
 widgets_render_data_remove_widget(te_widgets_render_data* data, unsigned int handle) {
 #if defined(DEBUG)
     if (handle >= data->array_size) {
-        show_error_and_abort("the specified widget handle is invalid");
+        log_error("the specified widget handle is invalid");
+        abort();
     }
 #endif
 
@@ -115,7 +116,8 @@ widgets_render_data_remove_widget(te_widgets_render_data* data, unsigned int han
 
 #if defined(DEBUG)
     if (render_data_index == INVALID_DATA_INDEX) {
-        show_error_and_abort("the specified widget handle is invalid");
+        log_error("the specified widget handle is invalid");
+        abort();
     }
 #endif
 
@@ -269,12 +271,14 @@ widget_renderer_create(te_renderer* renderer) {
 void
 widget_renderer_destroy(te_widget_renderer* widget_renderer) {
     if (widgets_render_data_count(widget_renderer->text_widget_data) > 0) {
-        show_error_and_abort("widget renderer is being destroyed but there are still some text widgets rendering");
+        log_error("widget renderer is being destroyed but there are still some text widgets rendering");
+        abort();
     }
     widgets_render_data_destroy(widget_renderer->text_widget_data);
 
     if (widgets_render_data_count(widget_renderer->rect_widget_data) > 0) {
-        show_error_and_abort("widget renderer is being destroyed but there are still some rect widgets rendering");
+        log_error("widget renderer is being destroyed but there are still some rect widgets rendering");
+        abort();
     }
     widgets_render_data_destroy(widget_renderer->rect_widget_data);
 

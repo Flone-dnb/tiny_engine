@@ -1,12 +1,12 @@
 #include "widget/checkbox_widget.h"
 
 #include "game_manager.h"
-#include "misc/error.h"
+#include "io/log.h"
+#include "type_database.h"
 #include "widget/rect_widget.h"
 #include "widget/widget.h"
 #include "window.h"
 #include "world.h"
-#include "type_database.h"
 
 struct te_checkbox_widget {
     te_widget* widget;
@@ -120,7 +120,8 @@ static void
 prv_checkbox_widget_create_checked_rect(te_checkbox_widget* checkbox_widget) {
 #if defined(DEBUG)
     if (checkbox_widget->checked_rect != NULL) {
-        show_error_and_abort("expected checked rect widget to be invalid");
+        log_error("expected checked rect widget to be invalid");
+        abort();
     }
 #endif
 
@@ -255,12 +256,14 @@ checkbox_widget_get_type_id(void) {
     return "checkbox_widget";
 }
 
-void checkbox_widget_register_type(void) {
+void
+checkbox_widget_register_type(void) {
     te_type_info* info = type_info_create(checkbox_widget_get_type_id());
     type_info_add_vec2_variable(info, "position", prv_checkbox_widget_set_position, prv_checkbox_widget_get_position);
     type_info_add_vec2_variable(info, "size", prv_checkbox_widget_set_size, prv_checkbox_widget_get_size);
     type_info_add_bool_variable(info, "is_checked", checkbox_widget_set_is_checked, checkbox_widget_is_checked);
-    type_info_add_vec4_variable(info, "background_color", checkbox_widget_set_background_color, checkbox_widget_get_background_color);
+    type_info_add_vec4_variable(
+        info, "background_color", checkbox_widget_set_background_color, checkbox_widget_get_background_color);
     type_info_add_vec4_variable(info, "checked_color", checkbox_widget_set_checked_color, checkbox_widget_get_checked_color);
     type_info_add_string_variable(
         info, "background_texture", checkbox_widget_set_background_texture, checkbox_widget_get_background_texture);
@@ -329,7 +332,8 @@ prv_checkbox_widget_on_after_spawned(void* this) {
     unsigned int child_count = 0;
     (void)widget_get_child_widgets_tmp(checkbox_widget->widget, &child_count);
     if (child_count != 1) {
-        show_error_and_abort("unexpected child widget count on a widget");
+        log_error("unexpected child widget count on a widget");
+        abort();
     }
 
     rect_widget_set_color(checkbox_widget->background_rect, checkbox_widget->background_color);
@@ -345,7 +349,8 @@ prv_checkbox_widget_on_after_spawned(void* this) {
 
     te_world* world = widget_get_world(checkbox_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected the widget to be spawned");
+        log_error("expected the widget to be spawned");
+        abort();
     }
     prv_world_add_interactable_widget(world, checkbox_widget->widget);
 }
@@ -358,12 +363,14 @@ prv_checkbox_widget_on_before_despawned(void* this) {
     unsigned int child_count = 0;
     (void)widget_get_child_widgets_tmp(checkbox_widget->widget, &child_count);
     if (child_count > 2) {
-        show_error_and_abort("unexpected child widget count on a widget");
+        log_error("unexpected child widget count on a widget");
+        abort();
     }
 
     te_world* world = widget_get_world(checkbox_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected the widget to be spawned");
+        log_error("expected the widget to be spawned");
+        abort();
     }
     prv_world_remove_interactable_widget(world, checkbox_widget->widget);
 }

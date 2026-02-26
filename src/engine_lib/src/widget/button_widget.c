@@ -2,13 +2,13 @@
 
 #include <string.h>
 #include "game_manager.h"
-#include "misc/error.h"
+#include "io/log.h"
 #include "render/renderer.h"
 #include "render/texture_manager.h"
+#include "type_database.h"
 #include "widget/rect_widget.h"
 #include "widget/widget.h"
 #include "world.h"
-#include "type_database.h"
 
 #define BUTTON_WIDGET_TEX_LOAD_OPTION TE_TLO_NO_MIPMAPS
 
@@ -137,7 +137,8 @@ prv_button_widget_on_after_spawned(void* this) {
     unsigned int child_count = 0;
     (void)widget_get_child_widgets_tmp(button_widget->widget, &child_count);
     if (child_count != 1) {
-        show_error_and_abort("unexpected child widget count on a widget");
+        log_error("unexpected child widget count on a widget");
+        abort();
     }
 }
 
@@ -150,7 +151,8 @@ prv_button_widget_on_before_despawned(void* this) {
     unsigned int child_count = 0;
     (void)widget_get_child_widgets_tmp(button_widget->widget, &child_count);
     if (child_count != 1) {
-        show_error_and_abort("unexpected child widget count on a widget");
+        log_error("unexpected child widget count on a widget");
+        abort();
     }
 }
 
@@ -158,7 +160,8 @@ static void
 prv_button_widget_register_render_data(te_button_widget* button_widget) {
     te_world* world = widget_get_world(button_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected the widget to be spawned");
+        log_error("expected the widget to be spawned");
+        abort();
     }
 
     te_texture_manager* texture_manager = renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(world)));
@@ -182,7 +185,8 @@ static void
 prv_button_widget_unregister_render_data(te_button_widget* button_widget) {
     te_world* world = widget_get_world(button_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected the widget to be spawned");
+        log_error("expected the widget to be spawned");
+        abort();
     }
 
     te_texture_manager* texture_manager = renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(world)));
@@ -232,7 +236,8 @@ button_widget_get_type_id(void) {
     return "button_widget";
 }
 
-void button_widget_register_type(void){
+void
+button_widget_register_type(void) {
     te_type_info* info = type_info_create(button_widget_get_type_id());
     type_info_add_vec2_variable(info, "position", prv_button_widget_set_position, prv_button_widget_get_position);
     type_info_add_vec2_variable(info, "size", prv_button_widget_set_size, prv_button_widget_get_size);

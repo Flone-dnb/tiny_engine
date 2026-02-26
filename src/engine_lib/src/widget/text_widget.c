@@ -2,15 +2,15 @@
 
 #include <string.h>
 #include "game_manager.h"
-#include "misc/error.h"
+#include "io/log.h"
 #include "misc/wchar_funcs.h"
 #include "render/font_manager.h"
 #include "render/renderer.h"
 #include "render/widget_renderer.h"
+#include "type_database.h"
 #include "widget/widget.h"
 #include "window.h"
 #include "world.h"
-#include "type_database.h"
 
 #define INVALID_RENDER_DATA_HANDLE 0xffffffff
 
@@ -109,7 +109,8 @@ text_widget_get_widget(te_text_widget* text_widget) {
 void
 text_widget_set_text_own(te_text_widget* text_widget, wchar_t* text, unsigned int strlen) {
     if (text == NULL) {
-        show_error_and_abort("text pointer must not be NULL");
+        log_error("text pointer must not be NULL");
+        abort();
     }
 
     free(text_widget->text);
@@ -125,7 +126,8 @@ text_widget_set_text_own(te_text_widget* text_widget, wchar_t* text, unsigned in
 void
 text_widget_set_text(te_text_widget* text_widget, const wchar_t* text) {
     if (text == NULL) {
-        show_error_and_abort("text pointer must not be NULL");
+        log_error("text pointer must not be NULL");
+        abort();
     }
 
     free(text_widget->text);
@@ -136,7 +138,8 @@ text_widget_set_text(te_text_widget* text_widget, const wchar_t* text) {
     text_widget->text[text_len] = 0;
 #if defined(DEBUG)
     if (text_len > 0xffffffff) {
-        show_error_and_abort("text too long");
+        log_error("text too long");
+        abort();
     }
 #endif
     text_widget->text_len = (unsigned int)text_len;
@@ -162,7 +165,8 @@ text_widget_set_color(te_text_widget* text_widget, vec4 color) {
 
     te_world* world = widget_get_world(text_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected the widget to be spawned");
+        log_error("expected the widget to be spawned");
+        abort();
     }
 
     te_text_widget_render_data* data =
@@ -231,13 +235,15 @@ static void
 prv_text_widget_register_for_rendering(te_text_widget* text_widget) {
 #if defined(DEBUG)
     if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
-        show_error_and_abort("expected the render data handle to be invalid");
+        log_error("expected the render data handle to be invalid");
+        abort();
     }
 #endif
 
     te_world* world = widget_get_world(text_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected the widget to be spawned");
+        log_error("expected the widget to be spawned");
+        abort();
     }
 
     text_widget->render_data_handle = widget_renderer_add_text_widget(world_get_widget_renderer(world));
@@ -248,13 +254,15 @@ static void
 prv_text_widget_unregister_from_rendering(te_text_widget* text_widget) {
 #if defined(DEBUG)
     if (text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
-        show_error_and_abort("expected the render data handle to be valid");
+        log_error("expected the render data handle to be valid");
+        abort();
     }
 #endif
 
     te_world* world = widget_get_world(text_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected the widget to be spawned");
+        log_error("expected the widget to be spawned");
+        abort();
     }
     te_widget_renderer* widget_renderer = world_get_widget_renderer(world);
 
@@ -272,7 +280,8 @@ prv_text_widget_on_pos_changed(void* this) {
 
     te_world* world = widget_get_world(text_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected the widget to be spawned");
+        log_error("expected the widget to be spawned");
+        abort();
     }
 
     unsigned int window_width;
@@ -324,13 +333,15 @@ static void
 prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
 #if defined(DEBUG)
     if (text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
-        show_error_and_abort("expected the render data handle to be valid");
+        log_error("expected the render data handle to be valid");
+        abort();
     }
 #endif
 
     te_world* world = widget_get_world(text_widget->widget);
     if (world == NULL) {
-        show_error_and_abort("expected the widget to be spawned");
+        log_error("expected the widget to be spawned");
+        abort();
     }
     te_game_manager* game_manager = world_get_game_manager(world);
     te_font_manager* font_manager = renderer_get_font_manager(game_manager_get_renderer(game_manager));
@@ -450,16 +461,19 @@ prv_text_widget_get_size(te_text_widget* text_widget, vec2 out) {
     widget_get_relative_size(text_widget->widget, out);
 }
 
-static inline const wchar_t* prv_text_widget_get_text(te_text_widget* text_widget) {
+static inline const wchar_t*
+prv_text_widget_get_text(te_text_widget* text_widget) {
     unsigned int text_len;
     return text_widget_get_text(text_widget, &text_len);
 }
 
-const char* text_widget_get_type_id(void){
+const char*
+text_widget_get_type_id(void) {
     return "text_widget";
 }
 
-void text_widget_register_type(void) {
+void
+text_widget_register_type(void) {
     te_type_info* info = type_info_create(text_widget_get_type_id());
     type_info_add_vec2_variable(info, "position", prv_text_widget_set_position, prv_text_widget_get_position);
     type_info_add_vec2_variable(info, "size", prv_text_widget_set_size, prv_text_widget_get_size);

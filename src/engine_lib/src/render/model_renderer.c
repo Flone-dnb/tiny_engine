@@ -4,7 +4,7 @@
 #include "debug_console.h"
 #include "game/model.h"
 #include "glad/glad.h"
-#include "misc/error.h"
+#include "io/log.h"
 #include "render/shader_manager.h"
 #include "shape/frustum_shape.h"
 
@@ -83,7 +83,8 @@ model_renderer_create(unsigned int capacity, unsigned int expand_size) {
 void
 model_renderer_destroy(te_model_renderer* renderer) {
     if (renderer->shader_group_count > 0) {
-        show_error_and_abort("model renderer is being destroyed but there are still some models/handles active (not removed)");
+        log_error("model renderer is being destroyed but there are still some models/handles active (not removed)");
+        abort();
     }
 
     free(renderer->handle_to_data);
@@ -211,7 +212,8 @@ model_renderer_add_model(te_model_renderer* renderer, unsigned int prog_id) {
 void
 model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
     if (handle >= renderer->render_handle_arrays_size) {
-        show_error_and_abort("the specified model render data handle is invalid");
+        log_error("the specified model render data handle is invalid");
+        abort();
     }
 
     const unsigned int data_index = renderer->handle_to_data[handle];
@@ -234,7 +236,8 @@ model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
             }
         }
         if (!found) {
-            show_error_and_abort("unable to find shader group from the specified handle");
+            log_error("unable to find shader group from the specified handle");
+            abort();
         }
     }
 
@@ -280,7 +283,8 @@ model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
 te_model_render_data*
 model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int handle) {
     if (CGLM_UNLIKELY(handle >= renderer->render_handle_arrays_size)) {
-        show_error_and_abort("the specified model render data handle is invalid");
+        log_error("the specified model render data handle is invalid");
+        abort();
     }
 
     return &renderer->render_data[renderer->handle_to_data[handle]];

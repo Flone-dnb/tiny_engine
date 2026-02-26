@@ -6,7 +6,7 @@
 #include "game/camera.h"
 #include "game/model.h"
 #include "game_manager.h"
-#include "misc/error.h"
+#include "io/log.h"
 #include "render/model_renderer.h"
 #include "render/widget_renderer.h"
 #include "widget/widget.h"
@@ -82,7 +82,8 @@ struct te_world {
 te_world*
 prv_world_create(struct te_game_manager* game_manager, const char* name) {
     if (name == NULL) {
-        show_error_and_abort("world name must not be NULL");
+        log_error("world name must not be NULL");
+        abort();
     }
 
     te_world* world = malloc(sizeof(te_world));
@@ -164,8 +165,8 @@ prv_world_destroy(te_world* world) {
         }
         free(world->spawned_widgets);
         if (world->interactable_widget_count > 0) {
-            show_error_and_abort(
-                "all widgets of a world were destroyed but there are still some interactable widgets registered");
+            log_error("all widgets of a world were destroyed but there are still some interactable widgets registered");
+            abort();
         }
         free(world->interactable_widgets);
     }
@@ -213,7 +214,8 @@ world_set_active_camera(te_world* world, te_camera* camera) {
     }
 
     if (camera_get_world(camera) != world) {
-        show_error_and_abort("in order to make a camera active in the world you first need to spawn the camera in the world");
+        log_error("in order to make a camera active in the world you first need to spawn the camera in the world");
+        abort();
     }
 
     world->active_camera = camera;
@@ -253,10 +255,12 @@ world_spawn_model(te_world* world, te_model* model) {
     te_world* old_model_world = model_get_world(model);
     if (old_model_world != NULL) {
         if (old_model_world == world) {
-            show_error_and_abort("the model is already spawned in this world");
+            log_error("the model is already spawned in this world");
+            abort();
         } else {
-            show_error_and_abort("the specified model cannot be spawned in this world because the model "
-                                 "must be first despawned from the world it currently resides in");
+            log_error("the specified model cannot be spawned in this world because the model "
+                      "must be first despawned from the world it currently resides in");
+            abort();
         }
     }
 
@@ -281,7 +285,8 @@ world_spawn_model(te_world* world, te_model* model) {
 void
 world_despawn_model(te_world* world, te_model* model) {
     if (model_get_world(model) != world) {
-        show_error_and_abort("the specified model cannot be despawned from this world as it's not spawned in this world");
+        log_error("the specified model cannot be despawned from this world as it's not spawned in this world");
+        abort();
     }
 
     // Find model.
@@ -296,7 +301,8 @@ world_despawn_model(te_world* world, te_model* model) {
         found = true;
     }
     if (!found) {
-        show_error_and_abort("the specified model (to despawn) was not spawned previously");
+        log_error("the specified model (to despawn) was not spawned previously");
+        abort();
     }
 
     // Remove from array (shift other elements).
@@ -317,17 +323,20 @@ world_spawn_camera(te_world* world, te_camera* camera) {
 
 #if defined(DEBUG)
     if (camera == NULL) {
-        show_error_and_abort("NULL camera specified to spawn");
+        log_error("NULL camera specified to spawn");
+        abort();
     }
 #endif
 
     te_world* old_camera_world = camera_get_world(camera);
     if (old_camera_world != NULL) {
         if (old_camera_world == world) {
-            show_error_and_abort("the camera is already spawned in this world");
+            log_error("the camera is already spawned in this world");
+            abort();
         } else {
-            show_error_and_abort("the specified camera cannot be spawned in this world because the camera "
-                                 "must be first despawned from the world it currently resides in");
+            log_error("the specified camera cannot be spawned in this world because the camera "
+                      "must be first despawned from the world it currently resides in");
+            abort();
         }
     }
 
@@ -347,12 +356,14 @@ void
 world_despawn_camera(te_world* world, te_camera* camera) {
 #if defined(DEBUG)
     if (camera == NULL) {
-        show_error_and_abort("NULL camera specified to despawn");
+        log_error("NULL camera specified to despawn");
+        abort();
     }
 #endif
 
     if (camera_get_world(camera) != world) {
-        show_error_and_abort("the specified camera cannot be despawned from this world as it's not spawned in this world");
+        log_error("the specified camera cannot be despawned from this world as it's not spawned in this world");
+        abort();
     }
 
     if (world->active_camera == camera) {
@@ -376,7 +387,8 @@ world_despawn_camera(te_world* world, te_camera* camera) {
             break;
         }
         if (!found) {
-            show_error_and_abort("unable to find the specified camera");
+            log_error("unable to find the specified camera");
+            abort();
         }
 
         te_camera** new_cameras = malloc(sizeof(te_camera*) * (world->spawned_model_count - 1));
@@ -398,10 +410,12 @@ world_spawn_widget(te_world* world, struct te_widget* widget) {
     te_world* old_widget_world = widget_get_world(widget);
     if (old_widget_world != NULL) {
         if (old_widget_world == world) {
-            show_error_and_abort("the widget is already spawned in this world");
+            log_error("the widget is already spawned in this world");
+            abort();
         } else {
-            show_error_and_abort("the specified widget cannot be spawned in this world because the widget "
-                                 "must be first despawned from the world it currently resides in");
+            log_error("the specified widget cannot be spawned in this world because the widget "
+                      "must be first despawned from the world it currently resides in");
+            abort();
         }
     }
 
@@ -420,7 +434,8 @@ world_spawn_widget(te_world* world, struct te_widget* widget) {
 void
 world_despawn_widget(te_world* world, te_widget* widget) {
     if (widget_get_world(widget) != world) {
-        show_error_and_abort("the specified widget cannot be despawned from this world as it's not spawned in this world");
+        log_error("the specified widget cannot be despawned from this world as it's not spawned in this world");
+        abort();
     }
 
     if (world->spawned_widget_count == 1) {
@@ -439,7 +454,8 @@ world_despawn_widget(te_world* world, te_widget* widget) {
             break;
         }
         if (!found) {
-            show_error_and_abort("unable to find the specified widget");
+            log_error("unable to find the specified widget");
+            abort();
         }
 
         te_widget** new_widgets = malloc(sizeof(te_widget*) * (world->spawned_widget_count - 1));
@@ -488,7 +504,8 @@ prv_world_remove_interactable_widget(te_world* world, te_widget* widget) {
             break;
         }
         if (!found) {
-            show_error_and_abort("unable to find the specified widget");
+            log_error("unable to find the specified widget");
+            abort();
         }
 
         te_widget** new_widgets = malloc(sizeof(te_widget*) * (world->interactable_widget_count - 1));
