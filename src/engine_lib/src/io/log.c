@@ -56,8 +56,21 @@ prv_log(enum te_log_category category, const char* message, char* filepath, int 
     const char* path_to_log_file = paths_get_log_file();
     FILE* log_file = fopen(path_to_log_file, "a");
     if (log_file == NULL) {
-        printf("failed to open log file");
-        abort();
+        printf("failed to open log file \"%s\"\n", path_to_log_file);
+#if defined(WIN32)
+        printf("does User name contains special characters?\n");
+#endif
+        log_file = fopen("log.txt", "a");
+        if (log_file == NULL) {
+            abort();
+        }
+        fprintf(log_file, "ERROR: failed to create log file at path \"%s\"\n", path_to_log_file);
+#if defined(WIN32)
+        fprintf(log_file, "does User name contains special characters?\n");
+#endif
+        if (error_count_logged == 0) {
+            error_count_logged += 1;
+        }
     }
 
     fprintf(log_file, "%s %s\n", log_prefix, message);
