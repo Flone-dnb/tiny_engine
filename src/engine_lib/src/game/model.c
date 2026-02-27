@@ -5,7 +5,6 @@
 #include "cglm/mat4.h"
 #include "game/camera.h"
 #include "game_manager.h"
-#include "glad/glad.h"
 #include "io/log.h"
 #include "math_funcs.h"
 #include "render/model_renderer.h"
@@ -15,6 +14,7 @@
 #include "shape/aabb_shape.h"
 #include "type_database.h"
 #include "world.h"
+#include "glad/glad.h"
 
 #define MODEL_TEX_LOAD_OPTION TE_TLO_GENERATE_MIPMAPS
 

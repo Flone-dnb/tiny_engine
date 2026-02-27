@@ -25,7 +25,7 @@ static te_type_database type_database;
 // Command hash for hashmap.
 static uint64_t
 prv_type_info_hash(const void* item, uint64_t seed0, uint64_t seed1) {
-    te_type_info* const* info = item;
+    const te_type_info* const* info = item;
     return hashmap_sip((*info)->id, strlen((*info)->id), seed0, seed1);
 }
 
@@ -33,8 +33,8 @@ prv_type_info_hash(const void* item, uint64_t seed0, uint64_t seed1) {
 static int
 prv_type_info_compare(const void* a, const void* b, void* udata) {
     (void)udata;
-    te_type_info* const* info1 = a;
-    te_type_info* const* info2 = b;
+    const te_type_info* const* info1 = a;
+    const te_type_info* const* info2 = b;
     return strcmp((*info1)->id, (*info2)->id);
 }
 
@@ -243,7 +243,7 @@ type_database_register_type(te_type_info* info) {
         abort();
     }
 
-    te_type_info* const* found = hashmap_get(type_database.types, &info);
+    const te_type_info* const* found = hashmap_get(type_database.types, &info);
     if (found != NULL) {
         log_error("a type with the specified ID is already registered");
         abort();
@@ -260,7 +260,7 @@ type_database_get_type_info(const char* id) {
     }
 
     te_type_info* test = type_info_create(id);
-    te_type_info* const* found = hashmap_get(type_database.types, &test);
+    const te_type_info* const* found = hashmap_get(type_database.types, &test);
     free(test);
 
     if (found == NULL) {

@@ -4,9 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "glad/glad.h"
 #include "io/log.h"
 #include "io/paths.h"
+#include "glad/glad.h"
 
 // Groups information about a shader program.
 typedef struct te_shader_program {

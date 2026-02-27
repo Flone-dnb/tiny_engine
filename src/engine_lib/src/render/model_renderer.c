@@ -3,10 +3,10 @@
 #include <string.h>
 #include "debug_console.h"
 #include "game/model.h"
-#include "glad/glad.h"
 #include "io/log.h"
 #include "render/shader_manager.h"
 #include "shape/frustum_shape.h"
+#include "glad/glad.h"
 
 #define INVALID_DATA_INDEX 0xffffffff
 
