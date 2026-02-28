@@ -10,6 +10,11 @@ struct te_model;
 te_camera* camera_create();
 void camera_destroy(te_camera* camera);
 
+// Optionally you can set a name of the camera. The string will be copied.
+// Returns NULL if was not set previously.
+void camera_set_name(te_camera* camera, const char* name);
+const char* camera_get_name(te_camera* camera);
+
 // Sets position of the camera.
 void camera_set_position(te_camera* camera, vec3 position);
 void camera_get_position(te_camera* camera, vec3 out);

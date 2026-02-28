@@ -1,6 +1,8 @@
 #include "game/camera.h"
 
 #include "cglm/cam.h"
+#include <stdlib.h>
+#include <string.h>
 #include "game/model.h"
 #include "math_funcs.h"
 #include "misc/globals.h"
@@ -16,6 +18,9 @@ struct te_camera {
 
     // NULL if not attached.
     te_model* parent_model;
+
+    // NULL if not set.
+    char* name;
 
     // View matrix. May be outdated, see @ref is_view_mat_outdated.
     mat4 view_mat;
@@ -68,6 +73,7 @@ camera_create() {
     te_camera* camera = malloc(sizeof(te_camera));
 
     camera->world = NULL;
+    camera->name = NULL;
     camera->parent_model = NULL;
     glm_vec3_zero(camera->position);
     glm_vec3_zero(camera->rotation);
@@ -92,12 +98,31 @@ camera_create() {
 
 void
 camera_destroy(te_camera* camera) {
+    free(camera->name);
     free(camera);
 }
 
 const char*
 camera_get_type_id(void) {
     return "camera";
+}
+
+void
+camera_set_name(te_camera* camera, const char* name) {
+    free(camera->name);
+    camera->name = NULL;
+
+    if (name != NULL) {
+        const size_t len = strlen(name);
+        camera->name = malloc(sizeof(char) * (len + 1));
+        memcpy(camera->name, name, sizeof(char) * len);
+        camera->name[len] = 0;
+    }
+}
+
+const char*
+camera_get_name(te_camera* camera) {
+    return camera->name;
 }
 
 void
@@ -108,6 +133,7 @@ camera_register_type(void) {
     type_info_add_uint_variable(info, "vertical_fov", camera_set_vertical_fov, camera_get_vertical_fov);
     type_info_add_float_variable(info, "near_clip", camera_set_near_clip, camera_get_near_clip);
     type_info_add_float_variable(info, "far_clip", camera_set_far_clip, camera_get_far_clip);
+    type_info_add_string_variable(info, "name", camera_set_name, camera_get_name);
 
     type_database_register_type(info);
 }

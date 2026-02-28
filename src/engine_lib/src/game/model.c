@@ -44,6 +44,9 @@ struct te_model {
     // NULL if texture is not set, otherwise path (relative to the `res` directory) to the texture file.
     char* tex_relative_path;
 
+    // NULL if not set.
+    char* name;
+
     // NULL if not spawned. Do not free/destroy this pointer.
     te_world* world;
 
@@ -91,6 +94,7 @@ model_register_type(void) {
     type_info_add_string_variable(info, "geometry", model_set_geometry, model_get_geometry);
     type_info_add_string_variable(info, "custom_vert_shader", model_set_custom_vert_shader, model_get_custom_vert_shader);
     type_info_add_string_variable(info, "custom_frag_shader", model_set_custom_frag_shader, model_get_custom_frag_shader);
+    type_info_add_string_variable(info, "name", model_set_name, model_get_name);
 
     type_database_register_type(info);
 }
@@ -100,6 +104,7 @@ model_create() {
     te_model* model = malloc(sizeof(te_model));
 
     model->world = NULL;
+    model->name = NULL;
     model->render_data_handle = 0xffffffff;
     model->shader_prog_id = 0xffffffff;
     model->child_model = NULL;
@@ -147,9 +152,28 @@ model_destroy(te_model* model) {
         }
     }
 
+    free(model->name);
     free(model->tex_relative_path);
     free(model->path_to_geo);
     free(model);
+}
+
+void
+model_set_name(te_model* model, const char* name) {
+    free(model->name);
+    model->name = NULL;
+
+    if (name != NULL) {
+        const size_t len = strlen(name);
+        model->name = malloc(sizeof(char) * (len + 1));
+        memcpy(model->name, name, sizeof(char) * len);
+        model->name[len] = 0;
+    }
+}
+
+const char*
+model_get_name(te_model* model) {
+    return model->name;
 }
 
 te_model_renderer*

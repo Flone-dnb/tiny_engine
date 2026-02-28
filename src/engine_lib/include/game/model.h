@@ -16,6 +16,11 @@ void model_destroy(te_model* model);
 void model_set_geometry(te_model* model, const char* relative_path);
 const char* model_get_geometry(te_model* model);
 
+// Optionally you can set a name of the model. The string will be copied.
+// Returns NULL if was not set previously.
+void model_set_name(te_model* model, const char* name);
+const char* model_get_name(te_model* model);
+
 void model_set_position(te_model* model, vec3 position);
 void model_set_rotation(te_model* model, vec3 rotation); // in degrees
 void model_set_scale(te_model* model, vec3 scale);
