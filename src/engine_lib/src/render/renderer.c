@@ -4,7 +4,8 @@
 #define NOMINMAX
 #include <Windows.h>
 #elif defined(__linux__)
-#include "time.h"
+#include <time.h>
+#include <errno.h>
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,6 +52,10 @@ struct te_renderer {
     te_renderer_frame_stats frame_stats;
 
     unsigned int fps_limit;
+
+#if defined(__linux__)
+    struct timespec frame_end_time;
+#endif
 
 #if defined(ENGINE_DEBUG_TOOLS)
     // GPU time query IDs.
@@ -106,6 +111,10 @@ renderer_create(struct te_window* window) {
     renderer->frame_stats.fps = 0;
 
     renderer->fps_limit = 0;
+
+#if defined(__linux__)
+    clock_gettime(CLOCK_MONOTONIC, &renderer->frame_end_time);
+#endif
 
     // Create GL context.
     renderer->gl_context = SDL_GL_CreateContext(prv_window_get_sdl_window(window));
@@ -267,24 +276,43 @@ prv_renderer_calc_frame_stats(te_renderer* renderer, float delta_time_sec) {
 
     // FPS limit.
     if (renderer->fps_limit > 0) {
-        // Should use perf counters and high precision timers here but this already works fine.
+#if defined(WIN32)
         const float target_time_ms = 1000.0f / (float)renderer->fps_limit;
         const float time_to_sleep_ms = target_time_ms - delta_time_sec;
         if (time_to_sleep_ms >= 1.0) {
-#if defined(WIN32)
             timeBeginPeriod(1);
             Sleep((unsigned long)time_to_sleep_ms);
             timeEndPeriod(1);
+        }
 #elif defined(__linux__)
-            struct timespec tim;
-            struct timespec tim2;
-            tim.tv_sec = 0;
-            tim.tv_nsec = (long)floor(time_to_sleep_ms * 1000000.0f * 0.965f);
-            nanosleep(&tim, &tim2);
+        const long target_time_ns = (long)(1000000000.0 / (double)renderer->fps_limit);
+
+        struct timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        long delta_ns = now.tv_nsec - renderer->frame_end_time.tv_nsec;
+        if (delta_ns < 0) {
+            delta_ns += 1000000000;
+        }
+
+        const long time_to_sleep_ns = target_time_ns - delta_ns;
+        if (time_to_sleep_ns > 0) {
+            struct timespec requested;
+            struct timespec remaining;
+            requested.tv_sec = 0;
+            requested.tv_nsec = time_to_sleep_ns;
+            while (nanosleep(&requested, &remaining) == -1) {
+                if (errno == EINTR) {
+                    requested = remaining;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        clock_gettime(CLOCK_MONOTONIC, &renderer->frame_end_time);
 #else
 #error "unsupported OS"
 #endif
-        }
     }
 }
 
