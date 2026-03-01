@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include "cglm/mat4.h"
 #include "cglm/vec3.h"
 #include "cglm/vec4.h"
@@ -43,6 +44,10 @@ void camera_get_forward(te_camera* camera, vec3 out);
 void camera_get_right(te_camera* camera, vec3 out);
 void camera_get_up(te_camera* camera, vec3 out);
 
+// Allows disabling serialization of the camera (enabled by default).
+void camera_set_is_serialization_allowed(te_camera* camera, bool enable);
+bool camera_is_serialization_allowed(te_camera* camera);
+
 // Returns camera's view projection matrix.
 // Do not free/destroy returned pointer, valid while the camera exists.
 mat4* camera_get_view_proj_mat(te_camera* camera);
@@ -52,6 +57,9 @@ struct te_world* camera_get_world(te_camera* camera);
 
 // Always valid pointer. Do not free/destroy returned pointer. Valid while the camera exists.
 struct te_frustum_shape* camera_get_frustum(te_camera* camera);
+
+// Returns NULL if not attached to a model.
+struct te_model* camera_get_parent_model(te_camera* camera);
 
 // Returns unique ID of this type in the type database.
 const char* camera_get_type_id(void);

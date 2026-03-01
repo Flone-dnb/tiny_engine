@@ -38,9 +38,18 @@ void world_despawn_widget(te_world* world, struct te_widget* widget);
 // The camera must be previously spawned in this world.
 void world_set_active_camera(te_world* world, struct te_camera* camera);
 
+// Serializes all spawned world entities into the specified file
+// (path relative to the `res` directory).
+void world_save_to_file(te_world* world, const char* relative_path);
+
 // Returns NULL if the world has no active camera.
 // Do not free/destroy returned pointer, valid until the camera is not destroyed.
 struct te_camera* world_get_active_camera(te_world* world);
+
+// Returns NULL if no camera is spawned, otherwise all spawned cameras.
+// Do not save/store returned pointer as it might become invalid after a camera is spawned/despawned.
+struct te_camera** world_get_cameras_tmp(te_world* world, unsigned int* count);
+struct te_model** world_get_models_tmp(te_world* world, unsigned int* count);
 
 // Do not free/destroy returned pointer, valid while the world exists.
 struct te_model_renderer* world_get_opaque_model_renderer(te_world* world);
@@ -66,6 +75,15 @@ bool prv_world_is_being_destroyed(te_world* world);
 
 // Called to possibly notify widgets.
 void prv_world_on_window_size_changed(te_world* world);
+
+// Adds/removes the specified item to/from the array of spawned root item
+// (does nothing if already added/removed). Does not notify the item.
+void prv_world_add_root_model_no_notify(te_world* world, struct te_model* model, bool check_if_already_added);
+void prv_world_remove_root_model_no_notify(te_world* world, struct te_model* model, bool must_exist_in_array);
+void prv_world_add_root_widget_no_notify(te_world* world, struct te_widget* widget, bool check_if_already_added);
+void prv_world_remove_root_widget_no_notify(te_world* world, struct te_widget* widget, bool must_exist_in_array);
+void prv_world_add_root_camera_no_notify(te_world* world, struct te_camera* camera, bool check_if_already_added);
+void prv_world_remove_root_camera_no_notify(te_world* world, struct te_camera* camera, bool must_exist_in_array);
 
 // Called by spawned widgets that receive input (for example buttons).
 // Note: these functions are not called from the base te_widget type (base type does not implement such functionality).

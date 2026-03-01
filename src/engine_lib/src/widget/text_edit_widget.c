@@ -57,7 +57,7 @@ text_edit_widget_create(void) {
     te_text_edit_widget* text_edit_widget = malloc(sizeof(te_text_edit_widget));
 
     text_edit_widget->widget = widget_create(
-        text_edit_widget, NULL, NULL, prv_text_edit_widget_on_before_base_destroyed, NULL, NULL,
+        text_edit_widget, text_edit_widget_get_type_id, NULL, NULL, prv_text_edit_widget_on_before_base_destroyed, NULL, NULL,
         prv_text_edit_widget_on_after_spawned, prv_text_edit_widget_on_before_despawned, NULL);
 
     text_edit_widget->rect_cursor_widget = NULL;

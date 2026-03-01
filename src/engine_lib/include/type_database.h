@@ -6,6 +6,8 @@
 #include "cglm/vec4.h"
 #include <wchar.h>
 
+struct te_config;
+
 enum te_variable_type {
     TE_VT_BOOL,
     TE_VT_UINT,
@@ -102,6 +104,10 @@ void type_info_add_vec3_variable(te_type_info* info, const char* name, te_vec3_s
 void type_info_add_vec4_variable(te_type_info* info, const char* name, te_vec4_setter setter, te_vec4_getter getter);
 void type_info_add_string_variable(te_type_info* info, const char* name, te_string_setter setter, te_string_getter getter);
 void type_info_add_wstring_variable(te_type_info* info, const char* name, te_wstring_setter setter, te_wstring_getter getter);
+
+// Creates a new section in the specified config (returns index of the created section) and saves all reflected variables
+// in this new section.
+unsigned int type_info_save_to_config(const te_type_info* type_info, struct te_config* config, void* obj);
 
 // Registers the specified type. Ownership of the pointer is moved to the type database.
 void type_database_register_type(te_type_info* info);

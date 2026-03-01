@@ -17,6 +17,9 @@ struct te_widget {
     // Size of this array is @ref child_widget_count.
     te_widget** child_widgets;
 
+    // Always valid.
+    const char* (*get_type_id)();
+
     // May be NULL.
     void (*on_pos_changed)(void* owner);
     void (*on_size_changed)(void* owner);
@@ -54,16 +57,26 @@ struct te_widget {
 
 te_widget*
 widget_create(
-    void* owner, void (*on_pos_changed)(void* owner), void (*on_size_changed)(void* owner),
+    void* owner, const char* (*get_type_id)(), void (*on_pos_changed)(void* owner), void (*on_size_changed)(void* owner),
     void (*on_before_base_destroyed)(void* owner), void (*on_parent_changed)(void* owner),
     void (*on_children_changed)(void* owner), void (*on_after_spawned)(void* owner), void (*on_before_despawned)(void* owner),
     void (*on_window_size_changed)(void* owner)) {
     te_widget* widget = malloc(sizeof(te_widget));
 
+    if (owner == NULL) {
+        log_error("owner widget must be specified");
+        abort();
+    }
+    if (get_type_id == NULL) {
+        log_error("get_type_id function must be specified");
+        abort();
+    }
+
     widget->owner = owner;
     widget->parent = NULL;
     widget->world = NULL;
     widget->child_widgets = NULL;
+    widget->get_type_id = get_type_id;
     widget->on_pos_changed = on_pos_changed;
     widget->on_size_changed = on_size_changed;
     widget->on_parent_changed = on_parent_changed;
@@ -110,6 +123,16 @@ widget_destroy(te_widget* widget) {
     widget->child_widget_count = 0;
 
     free(widget);
+}
+
+void*
+widget_get_owner(te_widget* widget) {
+    return widget->owner;
+}
+
+const char*
+widget_get_owner_type_id(te_widget* widget) {
+    return widget->get_type_id();
 }
 
 static void
@@ -210,19 +233,21 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
 
     if (widget->world == NULL) {
         if (new_parent != NULL && new_parent->world != NULL) {
-            // Parent widget is already added to the world so we don't need to notify the world
-            // (world only stores root widgets, not all widgets).
-            prv_widget_on_spawned(widget, new_parent->world);
+            world_spawn_widget(new_parent->world, widget);
+            prv_world_remove_root_widget_no_notify(new_parent->world, widget, true);
         }
     } else {
         if (new_parent == NULL) {
-            prv_widget_on_despawned(widget);
+            prv_world_add_root_widget_no_notify(widget->world, widget, true);
         } else {
-            if (new_parent->world != NULL && widget->world != new_parent->world) {
-                log_error("can't attach a widget to another widget because they are spawned in different worlds");
-                abort();
-            }
-            if (new_parent->world == NULL) {
+            if (new_parent->world != NULL) {
+                if (widget->world != new_parent->world) {
+                    log_error("can't attach a widget to another widget because they are spawned in different worlds");
+                    abort();
+                } else {
+                    prv_world_remove_root_widget_no_notify(widget->world, widget, false);
+                }
+            } else {
                 // This is a child widget and we also don't need to notify the world
                 // (root widgets don't have parents).
                 prv_widget_on_despawned(widget);

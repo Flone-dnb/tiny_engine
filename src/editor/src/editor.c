@@ -94,6 +94,7 @@ editor_create_game_world(te_editor* editor, te_game_manager* game_manager) {
     editor->game_world_stats_widget = text_widget_create();
     widget_set_relative_position(text_widget_get_widget(editor->game_world_stats_widget), (vec2){0.01f, 0.01f});
     widget_set_relative_size(text_widget_get_widget(editor->game_world_stats_widget), (vec2){0.4f, 0.2f});
+    widget_set_is_serialization_allowed(text_widget_get_widget(editor->game_world_stats_widget), false);
     text_widget_set_is_multiline(editor->game_world_stats_widget, true);
     editor->time_since_stats_update_sec = 10.0f;
 

@@ -51,14 +51,21 @@ void model_get_texture_tiling(te_model* model, vec2 tex_tiling);
 void model_set_uv_offset(te_model* model, vec2 uv_offset);
 void model_get_uv_offset(te_model* model, vec2 uv_offset);
 
-// Child model's location/rotation/scale will then be treated as relative to the parents parameters.
+// Child model's location/rotation/scale will then be treated as relative to the parents location/rotation/scale.
 // If the child model is not spawned but the parent is spawned will make the child model spawned.
 // When parent is despawned/destroyed will also make the attached child despawn/destroy.
+// After attached do not attempt to despawn the child model using the world because the world only operates on "root" models.
+// In order to despawn such model first detach it from the parent to make it "root" model and then despawn using the world.
 // Specify NULL as parent to detach.
 void model_set_parent(te_model* model, te_model* new_parent);
+te_model* model_get_parent(te_model* model);
+te_model* model_get_child_model(te_model* model);
 
 // Same as @ref model_set_parent but attaches a camera. Specify NULL to detach the camera.
+// After attached do not attempt to despawn this camera using the world because the world only operates on "root" cameras.
+// In order to despawn such camera first detach it from the parent to make it "root" camera and then despawn using the world.
 void model_attach_camera(te_model* model, struct te_camera* camera);
+struct te_camera* model_get_attached_camera(te_model* model);
 
 // Sets custom vertex shader.
 //
@@ -79,6 +86,10 @@ const char* model_get_custom_frag_shader(te_model* model);
 // (such as grass planes) because there's no sorting for transparent geometry.
 void model_enable_transparency(te_model* model, bool enable);
 bool model_is_transparency_enabled(te_model* model);
+
+// Allows disabling serialization of the model (enabled by default).
+void model_set_is_serialization_allowed(te_model* model, bool enable);
+bool model_is_serialization_allowed(te_model* model);
 
 // Returns NULL if the model is not spawned.
 // Do not free/destroy returned pointer, valid while the model exists.

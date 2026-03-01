@@ -35,7 +35,7 @@ progress_widget_create(void) {
     te_progress_widget* progress_widget = malloc(sizeof(te_progress_widget));
 
     progress_widget->widget = widget_create(
-        progress_widget, NULL, NULL, prv_progress_widget_on_before_base_destroyed, NULL, NULL,
+        progress_widget, progress_widget_get_type_id, NULL, NULL, prv_progress_widget_on_before_base_destroyed, NULL, NULL,
         prv_progress_widget_on_after_spawned, prv_progress_widget_on_before_despawned, NULL);
 
     progress_widget->background_tex_relative_path = NULL;

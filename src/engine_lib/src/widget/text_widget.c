@@ -63,9 +63,9 @@ text_widget_create(void) {
     glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, text_widget->color);
 
     text_widget->widget = widget_create(
-        text_widget, prv_text_widget_on_pos_changed, prv_text_widget_on_size_changed, prv_text_widget_on_before_base_destroyed,
-        NULL, NULL, prv_text_widget_on_after_spawned, prv_text_widget_on_before_despawned,
-        prv_text_widget_on_window_size_changed);
+        text_widget, text_widget_get_type_id, prv_text_widget_on_pos_changed, prv_text_widget_on_size_changed,
+        prv_text_widget_on_before_base_destroyed, NULL, NULL, prv_text_widget_on_after_spawned,
+        prv_text_widget_on_before_despawned, prv_text_widget_on_window_size_changed);
     text_widget->is_text_widget_destroy = false;
     text_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
 

@@ -196,6 +196,11 @@ config_destroy(te_config* config) {
 
 unsigned int
 config_create_section(te_config* config, const char* name) {
+    if (name == NULL) {
+        log_error("NULL section name specified");
+        abort();
+    }
+
     // Check name.
     const size_t name_len = strlen(name);
     for (size_t i = 0; i < name_len; i++) {
@@ -800,15 +805,17 @@ config_save(te_config* config, const char* relative_path, bool create_backup) {
                                 break;
                             }
                         }
-                        for (int i = len - 1; i > 1; i--) { // remove trailing zeroes
+                        for (int i = len - 1; i > 0; i--) { // remove trailing zeroes
                             if (temp[i] == '0') {
                                 temp[i] = 0;
-                                continue;
-                            }
-                            if (temp[i] == '.') {
+                            } else if (temp[i] == '.') {
+                                if (CONFIG_UNLIKELY(i + 2 >= len)) {
+                                    log_error_fmt("unexpected float text \"%s\", found dot at %d with len %d", temp, i, len);
+                                }
                                 temp[i + 1] = '0';
+                                temp[i + 2] = 0;
+                                break;
                             }
-                            break;
                         }
                         fprintf(fp, "%s", temp);
                         break;

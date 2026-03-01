@@ -73,6 +73,7 @@ struct te_model {
 
     bool is_world_destroy;
     bool is_opaque;
+    bool is_serialization_allowed;
 };
 
 const char*
@@ -90,7 +91,7 @@ model_register_type(void) {
     type_info_add_string_variable(info, "texture", model_set_texture, model_get_texture);
     type_info_add_vec2_variable(info, "texture_tiling", model_set_texture_tiling, model_get_texture_tiling);
     type_info_add_vec2_variable(info, "uv_offset", model_set_uv_offset, model_get_uv_offset);
-    type_info_add_bool_variable(info, "enable_transparency", model_enable_transparency, model_is_transparency_enabled);
+    type_info_add_bool_variable(info, "transparent", model_enable_transparency, model_is_transparency_enabled);
     type_info_add_string_variable(info, "geometry", model_set_geometry, model_get_geometry);
     type_info_add_string_variable(info, "custom_vert_shader", model_set_custom_vert_shader, model_get_custom_vert_shader);
     type_info_add_string_variable(info, "custom_frag_shader", model_set_custom_frag_shader, model_get_custom_frag_shader);
@@ -115,6 +116,7 @@ model_create() {
     model->custom_vert_relative_path = NULL;
     model->custom_frag_relative_path = NULL;
     model->is_opaque = true;
+    model->is_serialization_allowed = true;
     model->is_world_destroy = false;
     glm_vec2_one(model->tex_tiling);
     glm_vec2_zero(model->uv_offset);
@@ -356,6 +358,16 @@ model_is_transparency_enabled(te_model* model) {
 }
 
 void
+model_set_is_serialization_allowed(te_model* model, bool enable) {
+    model->is_serialization_allowed = enable;
+}
+
+bool
+model_is_serialization_allowed(te_model* model) {
+    return model->is_serialization_allowed;
+}
+
+void
 model_get_position(te_model* model, vec3 out) {
     glm_vec3_copy(model->position, out);
 }
@@ -411,16 +423,20 @@ model_set_parent(te_model* model, te_model* new_parent) {
     if (model->world == NULL) {
         if (new_parent != NULL && new_parent->world != NULL) {
             world_spawn_model(new_parent->world, model);
+            prv_world_remove_root_model_no_notify(new_parent->world, model, true);
         }
     } else {
         if (new_parent == NULL) {
-            world_despawn_model(model->world, model);
+            prv_world_add_root_model_no_notify(model->world, model, true);
         } else {
-            if (new_parent->world != NULL && new_parent->world != model->world) {
-                log_error("can't attach a model from a different world, despawn the child model first");
-                abort();
-            }
-            if (new_parent->world == NULL) {
+            if (new_parent->world != NULL) {
+                if (new_parent->world != model->world) {
+                    log_error("can't attach a model from a different world, despawn the child model first");
+                    abort();
+                } else {
+                    prv_world_remove_root_model_no_notify(model->world, model, false);
+                }
+            } else {
                 world_despawn_model(model->world, model);
             }
         }
@@ -435,14 +451,31 @@ model_set_parent(te_model* model, te_model* new_parent) {
     }
 }
 
+te_model*
+model_get_parent(te_model* model) {
+    return model->parent_model;
+}
+
+te_model*
+model_get_child_model(te_model* model) {
+    return model->child_model;
+}
+
 void
 model_attach_camera(te_model* model, te_camera* camera) {
     if (model->attached_camera == camera) {
         return;
     }
-    if (camera != NULL && model->attached_camera != NULL) {
-        log_error("only 1 camera can be attached");
-        abort();
+    if (camera != NULL) {
+        if (model->attached_camera != NULL) {
+            log_error("only 1 camera can be attached");
+            abort();
+        }
+        if (model->parent_model != NULL) {
+            // Also serialization does not support this.
+            log_error("can't attach camera to a model which has a parent model");
+            abort();
+        }
     }
 
     if (model->attached_camera != NULL) {
@@ -468,8 +501,19 @@ model_attach_camera(te_model* model, te_camera* camera) {
             if (camera_world == NULL) {
                 world_spawn_camera(model->world, camera);
             }
+            prv_world_remove_root_camera_no_notify(model->world, camera, true);
+        }
+    } else {
+        te_world* camera_world = camera_get_world(camera);
+        if (camera_world != NULL) {
+            prv_world_add_root_camera_no_notify(camera_world, camera, true);
         }
     }
+}
+
+struct te_camera*
+model_get_attached_camera(te_model* model) {
+    return model->attached_camera;
 }
 
 te_world*

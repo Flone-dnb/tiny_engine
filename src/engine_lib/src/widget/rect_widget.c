@@ -50,9 +50,9 @@ rect_widget_create(void) {
     te_rect_widget* rect_widget = malloc(sizeof(te_rect_widget));
 
     rect_widget->widget = widget_create(
-        rect_widget, prv_rect_widget_on_pos_changed, prv_rect_widget_on_size_changed, prv_rect_widget_on_before_base_destroyed,
-        NULL, NULL, prv_rect_widget_on_after_spawned, prv_rect_widget_on_before_despawned,
-        prv_rect_widget_on_window_size_changed);
+        rect_widget, rect_widget_get_type_id, prv_rect_widget_on_pos_changed, prv_rect_widget_on_size_changed,
+        prv_rect_widget_on_before_base_destroyed, NULL, NULL, prv_rect_widget_on_after_spawned,
+        prv_rect_widget_on_before_despawned, prv_rect_widget_on_window_size_changed);
     glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, rect_widget->color);
     rect_widget->tex_relative_path = NULL;
     rect_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;

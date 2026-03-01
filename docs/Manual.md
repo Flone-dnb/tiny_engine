@@ -140,7 +140,6 @@ void model_register_type(void) {
     type_info_add_vec3_variable(info, "position", model_set_position, model_get_position);
     type_info_add_string_variable(info, "texture", model_set_texture, model_get_texture);
     type_info_add_vec2_variable(info, "texture_tiling", model_set_texture_tiling, model_get_texture_tiling);
-    type_info_add_bool_variable(info, "enable_transparency", model_enable_transparency, model_is_transparency_enabled);
 
     type_database_register_type(info);
 }

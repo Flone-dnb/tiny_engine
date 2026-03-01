@@ -25,8 +25,9 @@ vbox_widget_create(void) {
     te_vbox_widget* vbox_widget = malloc(sizeof(te_vbox_widget));
 
     vbox_widget->widget = widget_create(
-        vbox_widget, NULL, prv_vbox_widget_on_size_changed, prv_vbox_widget_on_before_base_destroyed, NULL,
-        prv_vbox_widget_on_children_changed, prv_vbox_widget_on_after_spawned, NULL, prv_vbox_widget_on_window_size_changed);
+        vbox_widget, vbox_widget_get_type_id, NULL, prv_vbox_widget_on_size_changed, prv_vbox_widget_on_before_base_destroyed,
+        NULL, prv_vbox_widget_on_children_changed, prv_vbox_widget_on_after_spawned, NULL,
+        prv_vbox_widget_on_window_size_changed);
 
     vbox_widget->child_spacing = 0.01f;
     vbox_widget->is_vbox_widget_destroy = false;

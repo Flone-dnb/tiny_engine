@@ -6,6 +6,8 @@
 #include "game/model.h"
 #include "hashmap.c/hashmap.h"
 #include "io/log.h"
+#include "io/config.h"
+#include "misc/wchar_funcs.h"
 #include "widget/button_widget.h"
 #include "widget/checkbox_widget.h"
 #include "widget/progress_widget.h"
@@ -94,6 +96,8 @@ type_info_create(const char* id) {
     info->wstring_setters = NULL;
     info->wstring_getters = NULL;
     info->wstring_count = 0;
+
+    // NOTE: add new variables to type_info_save_to_config and type_info_load_from_config
 
     return info;
 }
@@ -189,34 +193,6 @@ type_info_add_vec2_variable(te_type_info* info, const char* name, te_vec2_setter
 void
 type_info_add_vec3_variable(te_type_info* info, const char* name, te_vec3_setter setter, te_vec3_getter getter) {
     TYPE_INFO_ALLOC_VARIABLE(info, name, TE_VT_VEC3, info->vec3_count, info->vec3_setters, info->vec3_getters, setter, getter);
-    //te_variable_info* new_variables = malloc(sizeof(te_variable_info) * (info->variable_count + 1));
-    //memcpy(new_variables, info->variables, sizeof(te_variable_info) * info->variable_count);
-
-    //free(info->variables);
-    //info->variables = new_variables;
-
-    //info->variable_count += 1;
-
-    //void* new_setters = malloc(sizeof(void*) * (info->vec3_count + 1));
-    //memcpy(new_setters, info->vec3_setters, sizeof(void*) * info->vec3_count);
-
-    //free(info->vec3_setters);
-    //info->vec3_setters = new_setters;
-    //info->vec3_setters[info->vec3_count] = setter;
-
-    //void* new_getters = malloc(sizeof(void*) * (info->vec3_count + 1));
-    //memcpy(new_getters, info->vec3_getters, sizeof(void*) * info->vec3_count);
-
-    //free(info->vec3_getters);
-    //info->vec3_getters = new_getters;
-    //info->vec3_getters[info->vec3_count] = getter;
-
-    //info->vec3_count += 1;
-
-    //te_variable_info* var_info = &info->variables[info->variable_count - 1];
-    //var_info->name = name;
-    //var_info->type = TE_VT_VEC3;
-    //var_info->set_get_index = info->vec3_count - 1;
 }
 
 void
@@ -234,6 +210,69 @@ void
 type_info_add_wstring_variable(te_type_info* info, const char* name, te_wstring_setter setter, te_wstring_getter getter) {
     TYPE_INFO_ALLOC_VARIABLE(
         info, name, TE_VT_WSTRING, info->wstring_count, info->wstring_setters, info->wstring_getters, setter, getter);
+}
+
+unsigned int
+type_info_save_to_config(const te_type_info* type_info, te_config* config, void* obj) {
+    const unsigned int section_idx = config_create_section(config, type_info->id);
+
+    for (unsigned int var_idx = 0; var_idx < type_info->variable_count; var_idx++) {
+        te_variable_info* var_info = &type_info->variables[var_idx];
+        switch (var_info->type) {
+            case (TE_VT_BOOL): {
+                config_section_set_bool(
+                    config, section_idx, var_info->name, type_info->bool_getters[var_info->set_get_index](obj));
+                break;
+            }
+            case (TE_VT_UINT): {
+                config_section_set_uint(
+                    config, section_idx, var_info->name, type_info->uint_getters[var_info->set_get_index](obj));
+                break;
+            }
+            case (TE_VT_FLOAT): {
+                config_section_set_float(
+                    config, section_idx, var_info->name, type_info->float_getters[var_info->set_get_index](obj));
+                break;
+            }
+            case (TE_VT_STRING): {
+                const char* text = type_info->string_getters[var_info->set_get_index](obj);
+                if (text != NULL) {
+                    config_section_set_string(config, section_idx, var_info->name, text);
+                }
+                break;
+            }
+            case (TE_VT_WSTRING): {
+                const wchar_t* src_text = type_info->wstring_getters[var_info->set_get_index](obj);
+                if (src_text != NULL) {
+                    unsigned int text_len;
+                    char* text = wchar_to_char(src_text, &text_len);
+                    config_section_set_string(config, section_idx, var_info->name, text);
+                    free(text);
+                }
+                break;
+            }
+            case (TE_VT_VEC2): {
+                vec2 val;
+                type_info->vec2_getters[var_info->set_get_index](obj, val);
+                config_section_set_float_array(config, section_idx, var_info->name, val, 2);
+                break;
+            }
+            case (TE_VT_VEC3): {
+                vec3 val;
+                type_info->vec3_getters[var_info->set_get_index](obj, val);
+                config_section_set_float_array(config, section_idx, var_info->name, val, 3);
+                break;
+            }
+            case (TE_VT_VEC4): {
+                vec4 val;
+                type_info->vec4_getters[var_info->set_get_index](obj, val);
+                config_section_set_float_array(config, section_idx, var_info->name, val, 4);
+                break;
+            }
+        }
+    }
+
+    return section_idx;
 }
 
 void

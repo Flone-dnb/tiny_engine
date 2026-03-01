@@ -37,6 +37,8 @@ editor_camera_create() {
     glm_vec2_zero(editor_camera->gamepad_look);
     glm_vec3_zero(editor_camera->movement_input);
 
+    camera_set_is_serialization_allowed(editor_camera->camera, false);
+
     return editor_camera;
 }
 

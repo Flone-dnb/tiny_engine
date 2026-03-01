@@ -66,6 +66,8 @@ struct te_camera {
 
     // `true` if @ref proj_mat contains outdated value and needs to be recalculated.
     bool is_proj_mat_outdated;
+
+    bool is_serialization_allowed;
 };
 
 te_camera*
@@ -92,6 +94,7 @@ camera_create() {
     camera->is_view_mat_outdated = true;
     camera->is_proj_mat_outdated = true;
     camera->is_directions_outdated = true;
+    camera->is_serialization_allowed = true;
 
     return camera;
 }
@@ -267,6 +270,16 @@ camera_get_up(te_camera* camera, vec3 out) {
 }
 
 void
+camera_set_is_serialization_allowed(te_camera* camera, bool enable) {
+    camera->is_serialization_allowed = enable;
+}
+
+bool
+camera_is_serialization_allowed(te_camera* camera) {
+    return camera->is_serialization_allowed;
+}
+
+void
 prv_camera_recalc_frustum(te_camera* camera) {
 #if defined(DEBUG)
     if (camera->is_directions_outdated) {
@@ -350,6 +363,11 @@ camera_get_frustum(te_camera* camera) {
     }
 
     return &camera->frustum;
+}
+
+struct te_model*
+camera_get_parent_model(te_camera* camera) {
+    return camera->parent_model;
 }
 
 void

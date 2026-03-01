@@ -61,7 +61,7 @@ button_widget_create(void) {
     te_button_widget* button_widget = malloc(sizeof(te_button_widget));
 
     button_widget->widget = widget_create(
-        button_widget, prv_button_widget_on_pos_changed, prv_button_widget_on_size_changed,
+        button_widget, button_widget_get_type_id, prv_button_widget_on_pos_changed, prv_button_widget_on_size_changed,
         prv_button_widget_on_before_base_destroyed, NULL, NULL, prv_button_widget_on_after_spawned,
         prv_button_widget_on_before_despawned, NULL);
     glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color);

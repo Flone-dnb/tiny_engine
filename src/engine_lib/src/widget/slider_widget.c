@@ -60,8 +60,8 @@ slider_widget_create(void) {
     slider_widget->is_handle_grabbed = false;
 
     slider_widget->widget = widget_create(
-        slider_widget, NULL, NULL, prv_slider_widget_on_before_base_destroyed, NULL, NULL, prv_slider_widget_on_after_spawned,
-        prv_slider_widget_on_before_despawned, NULL);
+        slider_widget, slider_widget_get_type_id, NULL, NULL, prv_slider_widget_on_before_base_destroyed, NULL, NULL,
+        prv_slider_widget_on_after_spawned, prv_slider_widget_on_before_despawned, NULL);
 
     prv_widget_set_input_callbacks(
         slider_widget->widget, NULL, prv_slider_widget_on_cursor_left, prv_slider_widget_on_mouse_button_pressed,

@@ -48,9 +48,9 @@ checkbox_widget_create(void) {
     te_checkbox_widget* checkbox_widget = malloc(sizeof(te_checkbox_widget));
 
     checkbox_widget->widget = widget_create(
-        checkbox_widget, NULL, prv_checkbox_widget_on_size_changed, prv_checkbox_widget_on_before_base_destroyed, NULL, NULL,
-        prv_checkbox_widget_on_after_spawned, prv_checkbox_widget_on_before_despawned,
-        prv_checkbox_widget_on_window_size_changed);
+        checkbox_widget, checkbox_widget_get_type_id, NULL, prv_checkbox_widget_on_size_changed,
+        prv_checkbox_widget_on_before_base_destroyed, NULL, NULL, prv_checkbox_widget_on_after_spawned,
+        prv_checkbox_widget_on_before_despawned, prv_checkbox_widget_on_window_size_changed);
 
     prv_widget_set_input_callbacks(
         checkbox_widget->widget, NULL, NULL, NULL, prv_checkbox_widget_on_mouse_button_released, NULL, NULL, NULL);
