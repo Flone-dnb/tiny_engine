@@ -373,9 +373,20 @@ rect_widget_get_type_id(void) {
     return "rect_widget";
 }
 
+static te_widget*
+prv_rect_widget_get_base(te_rect_widget* rect_widget) {
+    return rect_widget->widget;
+}
+
+static void
+prv_rect_widget_spawn(te_world* world, te_rect_widget* rect_widget) {
+    world_spawn_widget(world, prv_rect_widget_get_base(rect_widget));
+}
+
 void
 rect_widget_register_type(void) {
-    te_type_info* info = type_info_create(rect_widget_get_type_id());
+    te_type_info* info =
+        type_info_create(rect_widget_get_type_id(), rect_widget_create, prv_rect_widget_spawn, prv_rect_widget_get_base);
     type_info_add_vec2_variable(info, "position", prv_rect_widget_set_position, prv_rect_widget_get_position);
     type_info_add_vec2_variable(info, "size", prv_rect_widget_set_size, prv_rect_widget_get_size);
     type_info_add_vec4_variable(info, "color", rect_widget_set_color, rect_widget_get_color);

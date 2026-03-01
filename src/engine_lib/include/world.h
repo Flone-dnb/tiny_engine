@@ -42,6 +42,10 @@ void world_set_active_camera(te_world* world, struct te_camera* camera);
 // (path relative to the `res` directory).
 void world_save_to_file(te_world* world, const char* relative_path);
 
+// Deserializes game entities from the specified file
+// (path relative to the `res` directory) and spawns them in the world.
+void world_add_from_file(te_world* world, const char* relative_path);
+
 // Returns NULL if the world has no active camera.
 // Do not free/destroy returned pointer, valid until the camera is not destroyed.
 struct te_camera* world_get_active_camera(te_world* world);

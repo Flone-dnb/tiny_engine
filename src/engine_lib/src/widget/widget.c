@@ -18,7 +18,7 @@ struct te_widget {
     te_widget** child_widgets;
 
     // Always valid.
-    const char* (*get_type_id)();
+    const char* (*get_type_id)(void);
 
     // May be NULL.
     void (*on_pos_changed)(void* owner);
@@ -57,7 +57,7 @@ struct te_widget {
 
 te_widget*
 widget_create(
-    void* owner, const char* (*get_type_id)(), void (*on_pos_changed)(void* owner), void (*on_size_changed)(void* owner),
+    void* owner, const char* (*get_type_id)(void), void (*on_pos_changed)(void* owner), void (*on_size_changed)(void* owner),
     void (*on_before_base_destroyed)(void* owner), void (*on_parent_changed)(void* owner),
     void (*on_children_changed)(void* owner), void (*on_after_spawned)(void* owner), void (*on_before_despawned)(void* owner),
     void (*on_window_size_changed)(void* owner)) {

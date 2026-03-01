@@ -38,7 +38,7 @@ void config_section_set_string_array(
     te_config* config, unsigned int section_idx, const char* key, char** values, unsigned int value_count);
 
 unsigned int config_get_section_count(te_config* config);
-char* config_section_get_name(te_config* config, unsigned int section_idx);
+const char* config_section_get_name(te_config* config, unsigned int section_idx);
 
 bool config_section_get_bool(te_config* config, unsigned int section_idx, const char* key, bool if_not_found);
 unsigned int config_section_get_uint(te_config* config, unsigned int section_idx, const char* key, unsigned int if_not_found);

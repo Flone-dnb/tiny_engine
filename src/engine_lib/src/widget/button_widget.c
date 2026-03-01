@@ -236,9 +236,20 @@ button_widget_get_type_id(void) {
     return "button_widget";
 }
 
+static te_widget*
+prv_button_widget_get_base(te_button_widget* button_widget) {
+    return button_widget->widget;
+}
+
+static void
+prv_button_widget_spawn(te_world* world, te_button_widget* button_widget) {
+    world_spawn_widget(world, prv_button_widget_get_base(button_widget));
+}
+
 void
 button_widget_register_type(void) {
-    te_type_info* info = type_info_create(button_widget_get_type_id());
+    te_type_info* info =
+        type_info_create(button_widget_get_type_id(), button_widget_create, prv_button_widget_spawn, prv_button_widget_get_base);
     type_info_add_vec2_variable(info, "position", prv_button_widget_set_position, prv_button_widget_get_position);
     type_info_add_vec2_variable(info, "size", prv_button_widget_set_size, prv_button_widget_get_size);
     type_info_add_vec4_variable(info, "color", button_widget_set_color, button_widget_get_color);

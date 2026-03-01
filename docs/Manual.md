@@ -50,6 +50,12 @@ camera_destroy(camera);
 
 When the engine returns a pointer to you (like in the example above) often you need to make sure to free/destroy the pointer but in some cases you should not do that for example when the engine returns pointer to the game's window, in these cases the documentation for the function will specifically state that you should not free/destroy returned pointer so make sure to read the docs on the functions you are using.
 
+# Config files
+
+`te_config` provides functionality for reading and writing config files, these are human-readable text files in a custom format which is similar to INI or TOML but way simpler (see `config.h` for more info).
+
+You can use `te_config` for creating game save files and various config files. Game levels (worlds) are also saved using `te_config` and are also stored in this human-readable format. There's no special file extension for such config files and it does not matter which you use, you can use the ".txt" extension for example. Note that it might be not a good idea to use ".ini" or ".toml" extensions because `te_config` format might not be compatible to INI or TOML (see `config.h` for details), although there still might be good reasons to use such file extensions anyway (for example for text editors to apply syntax highlighting), it's up to you to decide.
+
 # Game world
 
 Create a new game world (level) using the following code:
@@ -61,7 +67,9 @@ te_world* game_world = game_manager_create_world(game_manager, "game");
 game_manager_destroy_world(game_manager, game_world);
 ```
 
-Game world is a container for game objects.
+Game world is a container for game objects (described in the next section).
+
+In order to save the world use `world_save_to_file` and in order to add game objects from a file to a world use `world_add_from_file`. Using these functions you can implement sublevels and prefabs (sort of): create a small scene in the editor (or in the code) then save it, then add this world (sublevel) to some other world (main level) using the "add from file" function.
 
 # Game objects
 

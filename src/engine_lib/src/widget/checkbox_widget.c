@@ -256,9 +256,20 @@ checkbox_widget_get_type_id(void) {
     return "checkbox_widget";
 }
 
+static te_widget*
+prv_checkbox_widget_get_base(te_checkbox_widget* checkbox_widget) {
+    return checkbox_widget->widget;
+}
+
+static void
+prv_checkbox_widget_spawn(te_world* world, te_checkbox_widget* checkbox_widget) {
+    world_spawn_widget(world, prv_checkbox_widget_get_base(checkbox_widget));
+}
+
 void
 checkbox_widget_register_type(void) {
-    te_type_info* info = type_info_create(checkbox_widget_get_type_id());
+    te_type_info* info = type_info_create(
+        checkbox_widget_get_type_id(), checkbox_widget_create, prv_checkbox_widget_spawn, prv_checkbox_widget_get_base);
     type_info_add_vec2_variable(info, "position", prv_checkbox_widget_set_position, prv_checkbox_widget_get_position);
     type_info_add_vec2_variable(info, "size", prv_checkbox_widget_set_size, prv_checkbox_widget_get_size);
     type_info_add_bool_variable(info, "is_checked", checkbox_widget_set_is_checked, checkbox_widget_is_checked);

@@ -547,7 +547,7 @@ config_get_section_count(te_config* config) {
     return config->section_count;
 }
 
-char*
+const char*
 config_section_get_name(te_config* config, unsigned int section_idx) {
 #if defined(DEBUG)
     if (CONFIG_UNLIKELY(section_idx >= config->section_count)) {
@@ -814,6 +814,8 @@ config_save(te_config* config, const char* relative_path, bool create_backup) {
                                 }
                                 temp[i + 1] = '0';
                                 temp[i + 2] = 0;
+                                break;
+                            } else {
                                 break;
                             }
                         }

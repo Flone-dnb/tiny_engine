@@ -4,6 +4,7 @@
 #include "type_database.h"
 #include "widget/rect_widget.h"
 #include "widget/widget.h"
+#include "world.h"
 
 struct te_progress_widget {
     te_widget* widget;
@@ -241,9 +242,20 @@ progress_widget_get_type_id(void) {
     return "progress_widget";
 }
 
+static te_widget*
+prv_progress_widget_get_base(te_progress_widget* progress_widget) {
+    return progress_widget->widget;
+}
+
+static void
+prv_progress_widget_spawn(te_world* world, te_progress_widget* progress_widget) {
+    world_spawn_widget(world, prv_progress_widget_get_base(progress_widget));
+}
+
 void
 progress_widget_register_type(void) {
-    te_type_info* info = type_info_create(progress_widget_get_type_id());
+    te_type_info* info = type_info_create(
+        progress_widget_get_type_id(), progress_widget_create, prv_progress_widget_spawn, prv_progress_widget_get_base);
     type_info_add_vec2_variable(info, "position", prv_progress_widget_set_position, prv_progress_widget_get_position);
     type_info_add_vec2_variable(info, "size", prv_progress_widget_set_size, prv_progress_widget_get_size);
     type_info_add_float_variable(info, "value", progress_widget_set_value, progress_widget_get_value);

@@ -83,7 +83,7 @@ model_get_type_id(void) {
 
 void
 model_register_type(void) {
-    te_type_info* info = type_info_create(model_get_type_id());
+    te_type_info* info = type_info_create(model_get_type_id(), model_create, world_spawn_model, NULL);
     type_info_add_vec3_variable(info, "position", model_set_position, model_get_position);
     type_info_add_vec3_variable(info, "rotation", model_set_rotation, model_get_rotation);
     type_info_add_vec3_variable(info, "scale", model_set_scale, model_get_scale);

@@ -58,8 +58,14 @@ prv_type_database_init(void) {
 }
 
 te_type_info*
-type_info_create(const char* id) {
+type_info_create(
+    const char* id, void* (*create)(void), void (*spawn)(struct te_world* world, void* obj),
+    struct te_widget* (*get_widget)(void*)) {
     te_type_info* info = malloc(sizeof(te_type_info));
+
+    info->create = create;
+    info->spawn = spawn;
+    info->get_widget = get_widget;
 
     info->id = id;
     info->variables = NULL;
@@ -276,6 +282,89 @@ type_info_save_to_config(const te_type_info* type_info, te_config* config, void*
 }
 
 void
+type_info_load_from_config(const te_type_info* type_info, te_config* config, unsigned int section_idx, void* obj) {
+    for (unsigned int var_idx = 0; var_idx < type_info->variable_count; var_idx++) {
+        te_variable_info* var_info = &type_info->variables[var_idx];
+        switch (var_info->type) {
+            case (TE_VT_BOOL): {
+                type_info->bool_setters[var_info->set_get_index](
+                    obj, config_section_get_bool(
+                             config, section_idx, var_info->name, type_info->bool_getters[var_info->set_get_index](obj)));
+                break;
+            }
+            case (TE_VT_UINT): {
+                type_info->uint_setters[var_info->set_get_index](
+                    obj, config_section_get_uint(
+                             config, section_idx, var_info->name, type_info->uint_getters[var_info->set_get_index](obj)));
+                break;
+            }
+            case (TE_VT_FLOAT): {
+                type_info->float_setters[var_info->set_get_index](
+                    obj, config_section_get_float(
+                             config, section_idx, var_info->name, type_info->float_getters[var_info->set_get_index](obj)));
+                break;
+            }
+            case (TE_VT_STRING): {
+                char* val = config_section_get_string(config, section_idx, var_info->name, NULL);
+                if (val != NULL) {
+                    type_info->string_setters[var_info->set_get_index](obj, val);
+                }
+                break;
+            }
+            case (TE_VT_WSTRING): {
+                char* val = config_section_get_string(config, section_idx, var_info->name, NULL);
+                if (val != NULL) {
+                    unsigned int len;
+                    wchar_t* text = wchar_from_char(val, &len);
+                    type_info->wstring_setters[var_info->set_get_index](obj, text);
+                    free(text);
+                }
+                break;
+            }
+            case (TE_VT_VEC2): {
+                unsigned int count;
+                float* val = config_section_get_float_array(config, section_idx, var_info->name, &count);
+                if (count != 2) {
+                    log_warn_fmt(
+                        "variable \"%s\" of section with index %u has unexpected array size in the config, expected 2 got %u, "
+                        "ignoring this variable",
+                        var_info->name, section_idx, count);
+                    continue;
+                }
+                type_info->vec2_setters[var_info->set_get_index](obj, val);
+                break;
+            }
+            case (TE_VT_VEC3): {
+                unsigned int count;
+                float* val = config_section_get_float_array(config, section_idx, var_info->name, &count);
+                if (count != 3) {
+                    log_warn_fmt(
+                        "variable \"%s\" of section with index %u has unexpected array size in the config, expected 3 got %u, "
+                        "ignoring this variable",
+                        var_info->name, section_idx, count);
+                    continue;
+                }
+                type_info->vec3_setters[var_info->set_get_index](obj, val);
+                break;
+            }
+            case (TE_VT_VEC4): {
+                unsigned int count;
+                float* val = config_section_get_float_array(config, section_idx, var_info->name, &count);
+                if (count != 4) {
+                    log_warn_fmt(
+                        "variable \"%s\" of section with index %u has unexpected array size in the config, expected 4 got %u, "
+                        "ignoring this variable",
+                        var_info->name, section_idx, count);
+                    continue;
+                }
+                type_info->vec4_setters[var_info->set_get_index](obj, val);
+                break;
+            }
+        }
+    }
+}
+
+void
 type_database_register_type(te_type_info* info) {
     if (type_database.types == NULL) {
         log_error("type database is not initialized yet or was already deinitialized");
@@ -298,7 +387,7 @@ type_database_get_type_info(const char* id) {
         abort();
     }
 
-    te_type_info* test = type_info_create(id);
+    te_type_info* test = type_info_create(id, NULL, NULL, NULL);
     const te_type_info* const* found = hashmap_get(type_database.types, &test);
     free(test);
 

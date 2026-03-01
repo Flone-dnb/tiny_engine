@@ -7,6 +7,8 @@
 #include <wchar.h>
 
 struct te_config;
+struct te_widget;
+struct te_world;
 
 enum te_variable_type {
     TE_VT_BOOL,
@@ -56,6 +58,15 @@ typedef struct te_type_info {
     // Unique identifier of the type.
     const char* id;
 
+    // Creates a new object of this type.
+    void* (*create)(void);
+
+    // Spawns in the world.
+    void (*spawn)(struct te_world* world, void* obj);
+
+    // NULL if not a widget, otherwise returns base widget type.
+    struct te_widget* (*get_widget)(void*);
+
     te_variable_info* variables;
 
     te_bool_setter* bool_setters;
@@ -95,7 +106,10 @@ typedef struct te_type_info {
 } te_type_info;
 
 // Creates a new type info to be registered using @ref type_database_register_type.
-te_type_info* type_info_create(const char* id);
+// Specify NULL to get_widget if not a widget, otherwise return base widget type.
+te_type_info* type_info_create(
+    const char* id, void* (*create)(void), void (*spawn)(struct te_world* world, void* obj),
+    struct te_widget* (*get_widget)(void*));
 void type_info_add_bool_variable(te_type_info* info, const char* name, te_bool_setter setter, te_bool_getter getter);
 void type_info_add_uint_variable(te_type_info* info, const char* name, te_uint_setter setter, te_uint_getter getter);
 void type_info_add_float_variable(te_type_info* info, const char* name, te_float_setter setter, te_float_getter getter);
@@ -108,6 +122,9 @@ void type_info_add_wstring_variable(te_type_info* info, const char* name, te_wst
 // Creates a new section in the specified config (returns index of the created section) and saves all reflected variables
 // in this new section.
 unsigned int type_info_save_to_config(const te_type_info* type_info, struct te_config* config, void* obj);
+
+// Loads variables from the specified config section into the specified object.
+void type_info_load_from_config(const te_type_info* type_info, struct te_config* config, unsigned int section_idx, void* obj);
 
 // Registers the specified type. Ownership of the pointer is moved to the type database.
 void type_database_register_type(te_type_info* info);

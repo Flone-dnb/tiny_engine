@@ -514,6 +514,99 @@ world_save_to_file(te_world* world, const char* relative_path) {
     config_destroy(config);
 }
 
+static void
+prv_load_child_widgets_recursive(
+    const char* relative_path, te_config* config, unsigned int section_count, te_widget* parent_widget,
+    unsigned int parent_child_count, unsigned int* section_idx) {
+    for (unsigned int child_idx = 0; child_idx < parent_child_count; child_idx++) {
+        const char* id = config_section_get_name(config, (*section_idx));
+        const te_type_info* type_info = type_database_get_type_info(id);
+        void* widget_owner = type_info->create();
+
+        type_info_load_from_config(type_info, config, (*section_idx), widget_owner);
+        if (type_info->get_widget == NULL) {
+            log_error("expected a child object to be a widget");
+            abort();
+        }
+        te_widget* child_widget = type_info->get_widget(widget_owner);
+        widget_set_parent(child_widget, parent_widget);
+
+        const unsigned int count = config_section_get_uint(config, (*section_idx), CONFIG_VAR_NAME_CHILD_WIDGET_COUNT, 0);
+
+        (*section_idx) += 1;
+        if ((*section_idx) >= section_count) {
+            log_error_fmt(
+                "unexpected end of file \"%s\", have %u sections while expected to have more", relative_path, section_count);
+            abort();
+        }
+
+        prv_load_child_widgets_recursive(relative_path, config, section_count, child_widget, count, section_idx);
+    }
+}
+
+void
+world_add_from_file(te_world* world, const char* relative_path) {
+    te_config* config = config_create(relative_path);
+
+    const te_type_info* model_type_info = type_database_get_type_info(model_get_type_id());
+    const te_type_info* camera_type_info = type_database_get_type_info(camera_get_type_id());
+
+    const unsigned int section_count = config_get_section_count(config);
+    for (unsigned int section_idx = 0; section_idx < section_count;) {
+        const char* id = config_section_get_name(config, section_idx);
+        const te_type_info* type_info = type_database_get_type_info(id);
+
+        void* obj = type_info->create();
+        type_info_load_from_config(type_info, config, section_idx, obj);
+
+        const bool has_child_model = config_section_get_bool(config, section_idx, CONFIG_VAR_NAME_HAS_CHILD_MODEL, false);
+        const bool has_attached_camera = config_section_get_bool(config, section_idx, CONFIG_VAR_NAME_HAS_ATTACHED_CAMERA, false);
+        const unsigned int child_widget_count =
+            config_section_get_uint(config, section_idx, CONFIG_VAR_NAME_CHILD_WIDGET_COUNT, 0);
+        section_idx += 1;
+
+        if (strcmp(id, model_get_type_id())) {
+            te_model* model = obj;
+            if (has_child_model) {
+                if (section_idx >= section_count) {
+                    log_error_fmt(
+                        "unexpected end of file \"%s\", have %u sections while expected to have more", relative_path,
+                        section_count);
+                    abort();
+                }
+                te_model* child_model = model_create();
+                type_info_load_from_config(model_type_info, config, section_idx, child_model);
+                model_set_parent(child_model, model);
+                section_idx += 1;
+            }
+            if (has_attached_camera) {
+                if (section_idx >= section_count) {
+                    log_error_fmt(
+                        "unexpected end of file \"%s\", have %u sections while expected to have more", relative_path,
+                        section_count);
+                    abort();
+                }
+                te_camera* camera = camera_create();
+                type_info_load_from_config(camera_type_info, config, section_idx, camera);
+                model_attach_camera(model, camera);
+                section_idx += 1;
+            }
+        } else if (child_widget_count > 0) {
+            if (type_info->get_widget == NULL) {
+                log_error(
+                    "found widget section that specified child count but the type does not have widget conversion function set");
+                abort();
+            }
+            te_widget* widget = type_info->get_widget(obj);
+            prv_load_child_widgets_recursive(relative_path, config, section_count, widget, child_widget_count, &section_idx);
+        }
+
+        type_info->spawn(world, obj);
+    }
+
+    config_destroy(config);
+}
+
 te_camera*
 world_get_active_camera(te_world* world) {
     return world->active_camera;
