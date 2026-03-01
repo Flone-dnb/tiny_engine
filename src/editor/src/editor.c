@@ -159,11 +159,14 @@ editor_on_keyboard_button_pressed(
 void
 editor_on_keyboard_button_released(
     void* game_instance, struct te_game_manager* game_manager, enum te_keyboard_button button, te_keyboard_modifiers modifiers) {
-    (void)game_manager;
     (void)modifiers;
 
     te_editor* editor = game_instance;
     editor_camera_on_keyboard_button_released(editor->editor_camera, button);
+
+    if (button == TE_KB_ESCAPE) {
+        window_close(game_manager_get_window(game_manager));
+    }
 }
 
 void
@@ -183,8 +186,10 @@ editor_on_gamepad_button_pressed(void* game_instance, struct te_game_manager* ga
 void
 editor_on_gamepad_button_released(void* game_instance, struct te_game_manager* game_manager, enum te_gamepad_button button) {
     (void)game_instance;
-    (void)game_manager;
-    (void)button;
+
+    if (button == TE_GB_BUTTON_RIGHT) {
+        window_close(game_manager_get_window(game_manager));
+    }
 }
 
 void
