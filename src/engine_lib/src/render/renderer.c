@@ -131,7 +131,7 @@ renderer_create(struct te_window* window) {
 
 #if defined(ENGINE_DEBUG_TOOLS)
     if (GLAD_GL_EXT_disjoint_timer_query != 1) {
-        log_warn("the GPU does not support GL_EXT_disjoint_timer_query extension, GPU time metrics are disabled");
+        log_info("the GPU does not support GL_EXT_disjoint_timer_query extension, GPU time metrics are disabled");
     } else {
         glGenQueriesEXT(1, &renderer->gl_timestamp_frame_start);
         glGenQueriesEXT(1, &renderer->gl_timestamp_frame_end);
@@ -149,7 +149,7 @@ renderer_create(struct te_window* window) {
 
 #if defined(DEBUG)
     if (GLAD_GL_KHR_debug != 1) {
-        log_warn("the GPU does not support GL_KHR_DEBUG extension, some debugging features are disabled");
+        log_info("the GPU does not support GL_KHR_DEBUG extension, some debugging features are disabled");
     } else {
         glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
