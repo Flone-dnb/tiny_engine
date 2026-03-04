@@ -1,9 +1,9 @@
-#include "misc/wchar_funcs.h"
+#include <misc/wchar_funcs.h>
 
 #include <stdlib.h>
 #include <string.h>
-#include "io/log.h"
-#include "limits.h"
+#include <io/log.h>
+#include <limits.h>
 
 char*
 wchar_to_char(const wchar_t* src, unsigned int* dst_strlen) {

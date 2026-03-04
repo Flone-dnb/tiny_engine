@@ -1,9 +1,9 @@
 #pragma once
 
 #include <stdbool.h>
-#include "cglm/vec2.h"
-#include "cglm/vec3.h"
-#include "cglm/vec4.h"
+#include <cglm/vec2.h>
+#include <cglm/vec3.h>
+#include <cglm/vec4.h>
 #include <wchar.h>
 
 struct te_config;

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "cglm/affine.h"
-#include "cglm/mat4.h"
-#include "cglm/vec3.h"
-#include "io/log.h"
-#include "misc/globals.h"
+#include <cglm/affine.h>
+#include <cglm/mat4.h>
+#include <cglm/vec3.h>
+#include <io/log.h>
+#include <misc/globals.h>
 
 // Used to fix a common problem where diagonal movement has ~1.4 speed instead of 1.
 static inline void

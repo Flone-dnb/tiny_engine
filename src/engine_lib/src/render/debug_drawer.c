@@ -1,14 +1,14 @@
-#include "render/debug_drawer.h"
+#include <render/debug_drawer.h>
 
 #if defined(ENGINE_DEBUG_TOOLS)
 
 #include <stdlib.h>
 #include <string.h>
-#include "render/font_manager.h"
-#include "render/renderer.h"
-#include "render/shader_manager.h"
-#include "window.h"
-#include "glad/glad.h"
+#include <render/font_manager.h>
+#include <render/renderer.h>
+#include <render/shader_manager.h>
+#include <window.h>
+#include <glad/glad.h>
 
 // Fixed text height for drawing text, in range [0.0; 1.0].
 static float debug_drawer_default_text_height = 0.0275f;

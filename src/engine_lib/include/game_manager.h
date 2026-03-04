@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stdbool.h>
-#include "input/keyboard_button.h"
-#include "input/mouse_button.h"
+#include <input/keyboard_button.h>
+#include <input/mouse_button.h>
 
 typedef struct te_game_manager te_game_manager;
 

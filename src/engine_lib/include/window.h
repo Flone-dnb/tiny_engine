@@ -2,9 +2,9 @@
 
 #include <stdbool.h>
 
-#include "input/gamepad_button.h"
-#include "input/keyboard_button.h"
-#include "input/mouse_button.h"
+#include <input/gamepad_button.h>
+#include <input/keyboard_button.h>
+#include <input/mouse_button.h>
 
 typedef struct te_window te_window;
 

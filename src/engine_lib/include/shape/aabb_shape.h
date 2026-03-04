@@ -1,11 +1,11 @@
 #pragma once
 
 #include <stdbool.h>
-#include "cglm/mat4.h"
-#include "cglm/vec3.h"
-#include "math.h"
-#include "misc/globals.h"
-#include "shape/plane_shape.h"
+#include <cglm/mat4.h>
+#include <cglm/vec3.h>
+#include <math.h>
+#include <misc/globals.h>
+#include <shape/plane_shape.h>
 
 // Axis-aligned bounding box.
 typedef struct te_aabb_shape {

@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 #include <wchar.h>
-#include "cglm/vec4.h"
+#include <cglm/vec4.h>
 
 typedef struct te_text_widget te_text_widget;
 struct te_widget;

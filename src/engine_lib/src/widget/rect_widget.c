@@ -1,15 +1,15 @@
-#include "widget/rect_widget.h"
+#include <widget/rect_widget.h>
 
 #include <string.h>
-#include "game_manager.h"
-#include "io/log.h"
-#include "render/renderer.h"
-#include "render/texture_manager.h"
-#include "render/widget_renderer.h"
-#include "type_database.h"
-#include "widget/widget.h"
-#include "window.h"
-#include "world.h"
+#include <game_manager.h>
+#include <io/log.h>
+#include <render/renderer.h>
+#include <render/texture_manager.h>
+#include <render/widget_renderer.h>
+#include <type_database.h>
+#include <widget/widget.h>
+#include <window.h>
+#include <world.h>
 
 #define INVALID_RENDER_DATA_HANDLE  0xffffffff
 #define RECT_WIDGET_TEX_LOAD_OPTION TE_TLO_NO_MIPMAPS

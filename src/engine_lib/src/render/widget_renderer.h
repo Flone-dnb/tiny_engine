@@ -1,7 +1,7 @@
 #pragma once
 
-#include "cglm/vec2.h"
-#include "cglm/vec4.h"
+#include <cglm/vec2.h>
+#include <cglm/vec4.h>
 
 typedef struct te_widget_renderer te_widget_renderer;
 struct te_renderer;

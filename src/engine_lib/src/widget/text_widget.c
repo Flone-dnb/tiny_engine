@@ -1,16 +1,16 @@
-#include "widget/text_widget.h"
+#include <widget/text_widget.h>
 
 #include <string.h>
-#include "game_manager.h"
-#include "io/log.h"
-#include "misc/wchar_funcs.h"
-#include "render/font_manager.h"
-#include "render/renderer.h"
-#include "render/widget_renderer.h"
-#include "type_database.h"
-#include "widget/widget.h"
-#include "window.h"
-#include "world.h"
+#include <game_manager.h>
+#include <io/log.h>
+#include <misc/wchar_funcs.h>
+#include <render/font_manager.h>
+#include <render/renderer.h>
+#include <render/widget_renderer.h>
+#include <type_database.h>
+#include <widget/widget.h>
+#include <window.h>
+#include <world.h>
 
 #define INVALID_RENDER_DATA_HANDLE 0xffffffff
 

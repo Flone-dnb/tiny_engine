@@ -1,10 +1,10 @@
-#include "widget/progress_widget.h"
+#include <widget/progress_widget.h>
 
-#include "io/log.h"
-#include "type_database.h"
-#include "widget/rect_widget.h"
-#include "widget/widget.h"
-#include "world.h"
+#include <io/log.h>
+#include <type_database.h>
+#include <widget/rect_widget.h>
+#include <widget/widget.h>
+#include <world.h>
 
 struct te_progress_widget {
     te_widget* widget;

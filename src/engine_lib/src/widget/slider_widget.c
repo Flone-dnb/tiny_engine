@@ -1,10 +1,10 @@
-#include "widget/slider_widget.h"
+#include <widget/slider_widget.h>
 
-#include "io/log.h"
-#include "type_database.h"
-#include "widget/rect_widget.h"
-#include "widget/widget.h"
-#include "world.h"
+#include <io/log.h>
+#include <type_database.h>
+#include <widget/rect_widget.h>
+#include <widget/widget.h>
+#include <world.h>
 
 #define TE_SLIDER_HANDLE_WIDTH 0.1f
 

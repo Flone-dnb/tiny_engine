@@ -1,4 +1,4 @@
-#include "render/renderer.h"
+#include <render/renderer.h>
 
 #if defined(WIN32)
 #define NOMINMAX
@@ -9,25 +9,25 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
-#include "SDL3/SDL_error.h"
-#include "SDL3/SDL_timer.h"
-#include "SDL3/SDL_video.h"
-#include "debug_console.h"
-#include "game/camera.h"
-#include "game_manager.h"
-#include "io/log.h"
-#include "limits.h"
-#include "render/debug_drawer.h"
-#include "render/font_manager.h"
-#include "render/gpu_section.h"
-#include "render/gpu_time_section.h"
-#include "render/model_renderer.h"
-#include "render/shader_manager.h"
-#include "render/texture_manager.h"
-#include "render/widget_renderer.h"
-#include "window.h"
-#include "world.h"
-#include "glad/glad.h"
+#include <SDL3/SDL_error.h>
+#include <SDL3/SDL_timer.h>
+#include <SDL3/SDL_video.h>
+#include <debug_console.h>
+#include <game/camera.h>
+#include <game_manager.h>
+#include <io/log.h>
+#include <limits.h>
+#include <render/debug_drawer.h>
+#include <render/font_manager.h>
+#include <render/gpu_section.h>
+#include <render/gpu_time_section.h>
+#include <render/model_renderer.h>
+#include <render/shader_manager.h>
+#include <render/texture_manager.h>
+#include <render/widget_renderer.h>
+#include <window.h>
+#include <world.h>
+#include <glad/glad.h>
 
 // Stuff needed to calculate FPS and keep frame limit.
 typedef struct te_renderer_frame_stats {

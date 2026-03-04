@@ -1,9 +1,9 @@
 #pragma once
 
 #include <stdbool.h>
-#include "cglm/vec2.h"
-#include "input/keyboard_button.h"
-#include "input/mouse_button.h"
+#include <cglm/vec2.h>
+#include <input/keyboard_button.h>
+#include <input/mouse_button.h>
 
 // Core component of any widget. This type handles hierarchy functionality.
 // Widgets store (own) this object inside of them.

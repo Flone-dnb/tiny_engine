@@ -1,7 +1,7 @@
 #pragma once
 
 #include <wchar.h>
-#include "cglm/vec4.h"
+#include <cglm/vec4.h>
 
 typedef struct te_text_edit_widget te_text_edit_widget;
 struct te_widget;

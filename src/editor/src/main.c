@@ -1,12 +1,12 @@
-#include "io/log.h"
+#include <io/log.h>
 #if defined(WIN32)
 // Hide console on Windows.
 #pragma comment(linker, "/subsystem:windows /entry:mainCRTStartup")
 #endif
 
 #include <stdlib.h>
-#include "editor.h"
-#include "window.h"
+#include <editor.h>
+#include <window.h>
 
 #if defined(WIN32)
 #include <Windows.h>

@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stdbool.h>
-#include "input/gamepad_button.h"
-#include "input/keyboard_button.h"
+#include <input/gamepad_button.h>
+#include <input/keyboard_button.h>
 
 /** AKA viewport camera (holds an actual camera inside of it). */
 typedef struct te_editor_camera te_editor_camera;

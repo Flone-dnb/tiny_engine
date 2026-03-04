@@ -1,16 +1,16 @@
-#include "debug_console.h"
+#include <debug_console.h>
 
 #if defined(ENGINE_DEBUG_TOOLS)
-#include "render/renderer.h"
+#include <render/renderer.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include "game_manager.h"
-#include "hashmap.c/hashmap.h"
-#include "io/log.h"
-#include "misc/memory_usage.h"
-#include "render/debug_drawer.h"
-#include "glad/glad.h"
+#include <game_manager.h>
+#include <hashmap.c/hashmap.h>
+#include <io/log.h>
+#include <misc/memory_usage.h>
+#include <render/debug_drawer.h>
+#include <glad/glad.h>
 
 // Command hash for hashmap.
 uint64_t

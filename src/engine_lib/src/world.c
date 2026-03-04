@@ -1,21 +1,21 @@
-#include "world.h"
+#include <world.h>
 
 #include <stdlib.h>
 #include <string.h>
 
-#include "game/camera.h"
-#include "game/model.h"
-#include "game_manager.h"
-#include "io/log.h"
-#include "io/config.h"
-#include "type_database.h"
-#include "render/model_renderer.h"
-#include "render/widget_renderer.h"
-#include "widget/widget.h"
-#include "window.h"
+#include <game/camera.h>
+#include <game/model.h>
+#include <game_manager.h>
+#include <io/log.h>
+#include <io/config.h>
+#include <type_database.h>
+#include <render/model_renderer.h>
+#include <render/widget_renderer.h>
+#include <widget/widget.h>
+#include <window.h>
 #if defined(ENGINE_DEBUG_TOOLS)
-#include "glad/glad.h"
-#include "render/gpu_time_section.h"
+#include <glad/glad.h>
+#include <render/gpu_time_section.h>
 #endif
 
 #define CONFIG_VAR_NAME_HAS_CHILD_MODEL     "has_child_model"

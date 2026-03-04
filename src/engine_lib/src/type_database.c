@@ -1,21 +1,21 @@
-#include "type_database.h"
+#include <type_database.h>
 
 #include <stdlib.h>
 #include <string.h>
-#include "game/camera.h"
-#include "game/model.h"
-#include "hashmap.c/hashmap.h"
-#include "io/log.h"
-#include "io/config.h"
-#include "misc/wchar_funcs.h"
-#include "widget/button_widget.h"
-#include "widget/checkbox_widget.h"
-#include "widget/progress_widget.h"
-#include "widget/rect_widget.h"
-#include "widget/slider_widget.h"
-#include "widget/text_edit_widget.h"
-#include "widget/text_widget.h"
-#include "widget/vbox_widget.h"
+#include <game/camera.h>
+#include <game/model.h>
+#include <hashmap.c/hashmap.h>
+#include <io/log.h>
+#include <io/config.h>
+#include <misc/wchar_funcs.h>
+#include <widget/button_widget.h>
+#include <widget/checkbox_widget.h>
+#include <widget/progress_widget.h>
+#include <widget/rect_widget.h>
+#include <widget/slider_widget.h>
+#include <widget/text_edit_widget.h>
+#include <widget/text_widget.h>
+#include <widget/vbox_widget.h>
 
 typedef struct te_type_database {
     struct hashmap* types;

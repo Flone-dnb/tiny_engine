@@ -1,11 +1,11 @@
 #pragma once
 
-#include "cglm/ivec3.h"
-#include "cglm/mat3.h"
-#include "cglm/mat4.h"
-#include "cglm/vec2.h"
-#include "cglm/vec4.h"
-#include "shape/aabb_shape.h"
+#include <cglm/ivec3.h>
+#include <cglm/mat3.h>
+#include <cglm/mat4.h>
+#include <cglm/vec2.h>
+#include <cglm/vec4.h>
+#include <shape/aabb_shape.h>
 
 typedef struct te_model_renderer te_model_renderer;
 

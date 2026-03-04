@@ -1,11 +1,11 @@
-#include "io/paths.h"
+#include <io/paths.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "io/log.h"
-#include "misc/globals.h"
+#include <io/log.h>
+#include <misc/globals.h>
 
 #if defined(WIN32)
 #define NOMINMAX

@@ -1,8 +1,8 @@
-#include "widget/widget.h"
+#include <widget/widget.h>
 
 #include <string.h>
-#include "io/log.h"
-#include "world.h"
+#include <io/log.h>
+#include <world.h>
 
 struct te_widget {
     // Actual widget that owns this component.

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cglm/vec4.h"
+#include <cglm/vec4.h>
 
 typedef struct te_button_widget te_button_widget;
 struct te_widget;

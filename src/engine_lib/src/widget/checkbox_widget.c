@@ -1,12 +1,12 @@
-#include "widget/checkbox_widget.h"
+#include <widget/checkbox_widget.h>
 
-#include "game_manager.h"
-#include "io/log.h"
-#include "type_database.h"
-#include "widget/rect_widget.h"
-#include "widget/widget.h"
-#include "window.h"
-#include "world.h"
+#include <game_manager.h>
+#include <io/log.h>
+#include <type_database.h>
+#include <widget/rect_widget.h>
+#include <widget/widget.h>
+#include <window.h>
+#include <world.h>
 
 struct te_checkbox_widget {
     te_widget* widget;

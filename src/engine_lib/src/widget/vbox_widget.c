@@ -1,9 +1,9 @@
-#include "widget/vbox_widget.h"
+#include <widget/vbox_widget.h>
 
-#include "cglm/vec2.h"
-#include "widget/widget.h"
-#include "world.h"
-#include "type_database.h"
+#include <cglm/vec2.h>
+#include <widget/widget.h>
+#include <world.h>
+#include <type_database.h>
 
 struct te_vbox_widget {
     te_widget* widget;

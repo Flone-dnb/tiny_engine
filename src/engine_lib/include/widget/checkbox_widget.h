@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
-#include "cglm/vec4.h"
+#include <cglm/vec4.h>
 
 typedef struct te_checkbox_widget te_checkbox_widget;
 struct te_widget;

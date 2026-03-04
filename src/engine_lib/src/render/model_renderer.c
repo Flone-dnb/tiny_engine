@@ -1,12 +1,12 @@
-#include "model_renderer.h"
+#include <render/model_renderer.h>
 
 #include <string.h>
-#include "debug_console.h"
-#include "game/model.h"
-#include "io/log.h"
-#include "render/shader_manager.h"
-#include "shape/frustum_shape.h"
-#include "glad/glad.h"
+#include <debug_console.h>
+#include <game/model.h>
+#include <io/log.h>
+#include <render/shader_manager.h>
+#include <shape/frustum_shape.h>
+#include <glad/glad.h>
 
 #define INVALID_DATA_INDEX 0xffffffff
 

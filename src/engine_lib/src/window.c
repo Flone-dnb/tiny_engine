@@ -1,21 +1,21 @@
-#include "window.h"
+#include <window.h>
 
 #include <SDL3/SDL_error.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include "debug_console.h"
-#include "game_manager.h"
-#include "io/filesystem.h"
-#include "io/log.h"
-#include "io/paths.h"
+#include <debug_console.h>
+#include <game_manager.h>
+#include <io/filesystem.h>
+#include <io/log.h>
+#include <io/paths.h>
 #if defined(ENGINE_DEBUG_TOOLS)
-#include "render/renderer.h"
+#include <render/renderer.h>
 #endif
 #define SDL_MAIN_HANDLED
-#include "SDL3/SDL_events.h"
-#include "SDL3/SDL_init.h"
-#include "SDL3/SDL_timer.h"
-#include "SDL3/SDL_video.h"
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_init.h>
+#include <SDL3/SDL_timer.h>
+#include <SDL3/SDL_video.h>
 
 #if defined(__aarch64__) || defined(__ARM64__)
 #define IS_ARM64

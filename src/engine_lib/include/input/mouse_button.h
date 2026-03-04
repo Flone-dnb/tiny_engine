@@ -1,6 +1,6 @@
 #pragma once
 
-#include "SDL3/SDL_mouse.h"
+#include <SDL3/SDL_mouse.h>
 
 enum te_mouse_button {
     TE_MB_LEFT = SDL_BUTTON_LEFT,

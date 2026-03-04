@@ -2,7 +2,7 @@
 #if defined(ENGINE_DEBUG_TOOLS)
 
 #include <stdbool.h>
-#include "input/keyboard_button.h"
+#include <input/keyboard_button.h>
 
 // Can be displayed in the game using the tilde (~) button.
 // Allows for creating and executing custom commands during the game.

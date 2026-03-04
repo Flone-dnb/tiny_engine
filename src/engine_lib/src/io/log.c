@@ -1,12 +1,12 @@
-#include "io/log.h"
+#include <io/log.h>
 
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "io/paths.h"
-#include "render/debug_drawer.h"
+#include <io/paths.h>
+#include <render/debug_drawer.h>
 
 static unsigned int error_count_logged = 0;
 static unsigned int warn_count_logged = 0;

@@ -1,18 +1,18 @@
-#include "editor.h"
+#include <editor.h>
 
 #include <stdio.h>
-#include "editor_camera.h"
-#include "game/model.h"
-#include "game_manager.h"
-#include "io/log.h"
-#include "misc/memory_usage.h"
-#include "misc/wchar_funcs.h"
-#include "render/font_manager.h"
-#include "render/renderer.h"
-#include "widget/text_widget.h"
-#include "widget/widget.h"
-#include "window.h"
-#include "world.h"
+#include <editor_camera.h>
+#include <game/model.h>
+#include <game_manager.h>
+#include <io/log.h>
+#include <misc/memory_usage.h>
+#include <misc/wchar_funcs.h>
+#include <render/font_manager.h>
+#include <render/renderer.h>
+#include <widget/text_widget.h>
+#include <widget/widget.h>
+#include <window.h>
+#include <world.h>
 
 struct te_editor {
     // Always valid pointer. Must be destroyed during the editor's destruction.

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
-#include "cglm/vec3.h"
+#include <cglm/vec3.h>
 
 // Plane represented by a normal and a distance from the origin.
 typedef struct te_plane_shape {

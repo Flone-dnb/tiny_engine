@@ -1,16 +1,16 @@
-#include "render/texture_manager.h"
+#include <render/texture_manager.h>
 
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "io/log.h"
-#include "io/paths.h"
-#include "glad/glad.h"
+#include <io/log.h>
+#include <io/paths.h>
+#include <glad/glad.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_NO_SIMD
-#include "stb/stb_image.h"
+#include <stb/stb_image.h>
 
 // Groups information about a texture.
 typedef struct te_texture {

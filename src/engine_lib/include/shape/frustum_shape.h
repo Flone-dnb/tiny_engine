@@ -1,10 +1,10 @@
 #pragma once
 
-#include "cglm/vec3.h"
-#include "shape/aabb_shape.h"
-#include "shape/cone_shape.h"
-#include "shape/plane_shape.h"
-#include "shape/sphere_shape.h"
+#include <cglm/vec3.h>
+#include <shape/aabb_shape.h>
+#include <shape/cone_shape.h>
+#include <shape/plane_shape.h>
+#include <shape/sphere_shape.h>
 
 typedef struct te_frustum_shape {
     te_plane_shape top;

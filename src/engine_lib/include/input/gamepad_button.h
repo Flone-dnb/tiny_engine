@@ -1,6 +1,6 @@
 #pragma once
 
-#include "SDL3/SDL_gamepad.h"
+#include <SDL3/SDL_gamepad.h>
 
 enum te_gamepad_button {
     TE_GB_BUTTON_LEFT =

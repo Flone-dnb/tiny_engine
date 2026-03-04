@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cglm/vec4.h"
+#include <cglm/vec4.h>
 
 // Rectangular widget, displays a color or a texture.
 typedef struct te_rect_widget te_rect_widget;

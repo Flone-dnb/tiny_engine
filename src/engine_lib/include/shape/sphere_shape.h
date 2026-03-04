@@ -1,7 +1,7 @@
 #pragma once
 
-#include "cglm/vec3.h"
-#include "shape/plane_shape.h"
+#include <cglm/vec3.h>
+#include <shape/plane_shape.h>
 
 typedef struct te_sphere_shape {
     vec3 center;

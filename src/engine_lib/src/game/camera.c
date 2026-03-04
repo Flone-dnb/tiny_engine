@@ -1,14 +1,14 @@
-#include "game/camera.h"
+#include <game/camera.h>
 
-#include "cglm/cam.h"
+#include <cglm/cam.h>
 #include <stdlib.h>
 #include <string.h>
-#include "game/model.h"
-#include "math_funcs.h"
-#include "misc/globals.h"
-#include "shape/frustum_shape.h"
-#include "type_database.h"
-#include "world.h"
+#include <game/model.h>
+#include <math_funcs.h>
+#include <misc/globals.h>
+#include <shape/frustum_shape.h>
+#include <type_database.h>
+#include <world.h>
 
 struct te_camera {
     // May be outdated, see @ref is_view_mat_outdated and @ref is_proj_mat_outdated.

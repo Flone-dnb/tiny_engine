@@ -1,8 +1,8 @@
-#include "misc/globals.h"
+#include <misc/globals.h>
 
 #include <stdlib.h>
 #include <string.h>
-#include "io/log.h"
+#include <io/log.h>
 
 #if defined(WIN32)
 #define NOMINMAX

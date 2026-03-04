@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stdbool.h>
-#include "cglm/vec3.h"
-#include "shape/plane_shape.h"
+#include <cglm/vec3.h>
+#include <shape/plane_shape.h>
 
 typedef struct te_cone_shape {
     vec3 position;

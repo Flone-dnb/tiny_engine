@@ -1,12 +1,12 @@
-#include "render/widget_renderer.h"
+#include <render/widget_renderer.h>
 
 #include <string.h>
-#include "io/log.h"
-#include "render/gpu_section.h"
-#include "render/renderer.h"
-#include "render/shader_manager.h"
-#include "window.h"
-#include "glad/glad.h"
+#include <io/log.h>
+#include <render/gpu_section.h>
+#include <render/renderer.h>
+#include <render/shader_manager.h>
+#include <window.h>
+#include <glad/glad.h>
 
 #define INVALID_DATA_INDEX 0xffffffff
 

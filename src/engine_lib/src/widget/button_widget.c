@@ -1,14 +1,14 @@
-#include "widget/button_widget.h"
+#include <widget/button_widget.h>
 
 #include <string.h>
-#include "game_manager.h"
-#include "io/log.h"
-#include "render/renderer.h"
-#include "render/texture_manager.h"
-#include "type_database.h"
-#include "widget/rect_widget.h"
-#include "widget/widget.h"
-#include "world.h"
+#include <game_manager.h>
+#include <io/log.h>
+#include <render/renderer.h>
+#include <render/texture_manager.h>
+#include <type_database.h>
+#include <widget/rect_widget.h>
+#include <widget/widget.h>
+#include <world.h>
 
 #define BUTTON_WIDGET_TEX_LOAD_OPTION TE_TLO_NO_MIPMAPS
 

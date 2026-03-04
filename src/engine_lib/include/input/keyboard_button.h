@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stdbool.h>
-#include "SDL3/SDL_keyboard.h"
-#include "SDL3/SDL_keycode.h"
+#include <SDL3/SDL_keyboard.h>
+#include <SDL3/SDL_keycode.h>
 
 typedef struct te_keyboard_modifiers {
     // SDL keyboard modifiers value.

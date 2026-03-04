@@ -1,7 +1,7 @@
 #pragma once
 
-#include "input/keyboard_button.h"
-#include "input/mouse_button.h"
+#include <input/keyboard_button.h>
+#include <input/mouse_button.h>
 
 typedef struct te_world te_world;
 

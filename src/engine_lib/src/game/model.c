@@ -1,20 +1,20 @@
-#include "game/model.h"
+#include <game/model.h>
 
 #include <stdlib.h>
 #include <string.h>
-#include "cglm/mat4.h"
-#include "game/camera.h"
-#include "game_manager.h"
-#include "io/log.h"
-#include "math_funcs.h"
-#include "render/model_renderer.h"
-#include "render/renderer.h"
-#include "render/shader_manager.h"
-#include "render/texture_manager.h"
-#include "shape/aabb_shape.h"
-#include "type_database.h"
-#include "world.h"
-#include "glad/glad.h"
+#include <cglm/mat4.h>
+#include <game/camera.h>
+#include <game_manager.h>
+#include <io/log.h>
+#include <math_funcs.h>
+#include <render/model_renderer.h>
+#include <render/renderer.h>
+#include <render/shader_manager.h>
+#include <render/texture_manager.h>
+#include <shape/aabb_shape.h>
+#include <type_database.h>
+#include <world.h>
+#include <glad/glad.h>
 
 #define MODEL_TEX_LOAD_OPTION TE_TLO_GENERATE_MIPMAPS
 

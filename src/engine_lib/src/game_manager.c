@@ -1,15 +1,15 @@
-#include "game_manager.h"
+#include <game_manager.h>
 
 #include <stdlib.h>
 #include <string.h>
-#include "cglm/vec2.h"
-#include "debug_console.h"
-#include "io/log.h"
-#include "render/debug_drawer.h"
-#include "render/renderer.h"
-#include "type_database.h"
-#include "window.h"
-#include "world.h"
+#include <cglm/vec2.h>
+#include <debug_console.h>
+#include <io/log.h>
+#include <render/debug_drawer.h>
+#include <render/renderer.h>
+#include <type_database.h>
+#include <window.h>
+#include <world.h>
 
 // Stores all core systems such as game world, physics, audio, renderer and etc.
 struct te_game_manager {

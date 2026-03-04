@@ -1,8 +1,8 @@
 #pragma once
 
-#include "input/gamepad_button.h"
-#include "input/keyboard_button.h"
-#include "input/mouse_button.h"
+#include <input/gamepad_button.h>
+#include <input/keyboard_button.h>
+#include <input/mouse_button.h>
 
 struct te_game_manager;
 

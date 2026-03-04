@@ -1,9 +1,9 @@
 #pragma once
 
 #include <stdbool.h>
-#include "cglm/mat4.h"
-#include "cglm/vec3.h"
-#include "cglm/vec4.h"
+#include <cglm/mat4.h>
+#include <cglm/vec3.h>
+#include <cglm/vec4.h>
 
 typedef struct te_camera te_camera;
 struct te_model;
