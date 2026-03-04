@@ -25,8 +25,10 @@ void progress_widget_get_foreground_color(te_progress_widget* progress_widget, v
 
 // Sets path (relative to the `res` directory) to the texture of the widget elements.
 // Specify NULL to remove texture. The string is copied to the widget's internal data.
-void progress_widget_set_background_texture(te_progress_widget* progress_widget, const char* relative_path);
-void progress_widget_set_foreground_texture(te_progress_widget* progress_widget, const char* relative_path);
+void progress_widget_set_background_texture(
+    te_progress_widget* progress_widget, const char* relative_path);
+void progress_widget_set_foreground_texture(
+    te_progress_widget* progress_widget, const char* relative_path);
 
 // Return NULL if texture is not set.
 // Do not free returned string, valid while the slider exists and the texture is not changed.

@@ -174,7 +174,8 @@ window_destroy(te_window* window) {
 }
 
 void
-window_process_events(te_window* window, te_window_callbacks* window_callbacks, void* game_instance) {
+window_process_events(
+    te_window* window, te_window_callbacks* window_callbacks, void* game_instance) {
     window->user_callbacks = window_callbacks;
     window->game_instance = game_instance;
     window->game_manager = prv_game_manager_create(window);
@@ -200,7 +201,8 @@ window_process_events(te_window* window, te_window_callbacks* window_callbacks, 
         window->had_gamepad_input_curr_frame = true;
         window->had_gamepad_input_prev_frame = true;
         window->user_callbacks->on_gamepad_connected(
-            window->game_instance, window->game_manager, SDL_GetGamepadName(window->connected_gamepad));
+            window->game_instance, window->game_manager,
+            SDL_GetGamepadName(window->connected_gamepad));
     }
 
     // Used to calculate delta time.
@@ -212,7 +214,8 @@ window_process_events(te_window* window, te_window_callbacks* window_callbacks, 
         // Process available window events.
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
-            const bool received_quit_event = prv_window_process_event(window, event, delta_time_sec);
+            const bool received_quit_event =
+                prv_window_process_event(window, event, delta_time_sec);
 
             // Use `OR` instead of assignment because the user can call `window_close`.
             window->quit_requested |= received_quit_event;
@@ -222,20 +225,23 @@ window_process_events(te_window* window, te_window_callbacks* window_callbacks, 
         prev_time_counter = current_time_counter;
         current_time_counter = SDL_GetPerformanceCounter();
         const double delta_time_ms =
-            (double)((current_time_counter - prev_time_counter) * 1000) / (double)(SDL_GetPerformanceFrequency());
+            (double)((current_time_counter - prev_time_counter) * 1000)
+            / (double)(SDL_GetPerformanceFrequency());
         delta_time_sec = (float)(delta_time_ms * 0.001);
 
         // Tick.
         {
             prv_game_manager_tick(window->game_manager, delta_time_sec);
-            window->user_callbacks->on_game_tick(window->game_instance, window->game_manager, delta_time_sec);
+            window->user_callbacks->on_game_tick(
+                window->game_instance, window->game_manager, delta_time_sec);
 
             if (window->had_gamepad_input_prev_frame != window->had_gamepad_input_curr_frame) {
                 window->had_gamepad_input_prev_frame = window->had_gamepad_input_curr_frame;
 
                 prv_game_manager_on_input_source_changed(window->game_manager);
                 window->user_callbacks->on_input_source_changed(
-                    window->game_instance, window->game_manager, window->had_gamepad_input_curr_frame);
+                    window->game_instance, window->game_manager,
+                    window->had_gamepad_input_curr_frame);
             }
         }
 
@@ -261,7 +267,8 @@ struct te_game_manager*
 window_get_game_manager(te_window* window) {
 #if defined(DEBUG)
     if (window->game_manager == NULL) {
-        log_error("game manager is not created yet (game not started) or was already destroyed (game ended)");
+        log_error("game manager is not created yet (game not started) or was already "
+                  "destroyed (game ended)");
         abort();
     }
 #endif
@@ -323,21 +330,24 @@ prv_window_process_event(te_window* window, union SDL_Event event, float delta_t
         case (SDL_EVENT_MOUSE_MOTION): {
             prv_game_manager_on_mouse_moved(window->game_manager);
             window->user_callbacks->on_mouse_moved(
-                window->game_instance, window->game_manager, event.motion.xrel, event.motion.yrel);
+                window->game_instance, window->game_manager, event.motion.xrel,
+                event.motion.yrel);
             break;
         }
         case (SDL_EVENT_MOUSE_BUTTON_DOWN): {
-            const bool is_handled =
-                prv_game_manager_on_mouse_button_pressed(window->game_manager, (enum te_mouse_button)event.button.button);
+            const bool is_handled = prv_game_manager_on_mouse_button_pressed(
+                window->game_manager, (enum te_mouse_button)event.button.button);
             window->user_callbacks->on_mouse_button_pressed(
-                window->game_instance, window->game_manager, (enum te_mouse_button)event.button.button, is_handled);
+                window->game_instance, window->game_manager,
+                (enum te_mouse_button)event.button.button, is_handled);
             break;
         }
         case (SDL_EVENT_MOUSE_BUTTON_UP): {
-            const bool is_handled =
-                prv_game_manager_on_mouse_button_released(window->game_manager, (enum te_mouse_button)event.button.button);
+            const bool is_handled = prv_game_manager_on_mouse_button_released(
+                window->game_manager, (enum te_mouse_button)event.button.button);
             window->user_callbacks->on_mouse_button_released(
-                window->game_instance, window->game_manager, (enum te_mouse_button)event.button.button, is_handled);
+                window->game_instance, window->game_manager,
+                (enum te_mouse_button)event.button.button, is_handled);
             break;
         }
         case (SDL_EVENT_KEY_DOWN): {
@@ -354,19 +364,22 @@ prv_window_process_event(te_window* window, union SDL_Event event, float delta_t
                 if ((enum te_keyboard_button)event.key.scancode == TE_KB_TILDE) {
                     break; // key up event is used to show/hide console
                 }
-                prv_debug_console_on_keyboard_input(window->game_manager, (enum te_keyboard_button)event.key.scancode);
+                prv_debug_console_on_keyboard_input(
+                    window->game_manager, (enum te_keyboard_button)event.key.scancode);
                 break; // don't trigger user callbacks
             }
 #endif
             window->had_gamepad_input_curr_frame = false;
 
-            prv_game_manager_on_keyboard_input(window->game_manager, (enum te_keyboard_button)event.key.scancode, is_repeat);
+            prv_game_manager_on_keyboard_input(
+                window->game_manager, (enum te_keyboard_button)event.key.scancode, is_repeat);
 
             if (!is_repeat) {
                 te_keyboard_modifiers mods;
                 mods.mod = event.key.mod;
                 window->user_callbacks->on_keyboard_button_pressed(
-                    window->game_instance, window->game_manager, (enum te_keyboard_button)event.key.scancode, mods);
+                    window->game_instance, window->game_manager,
+                    (enum te_keyboard_button)event.key.scancode, mods);
             }
             break;
         }
@@ -390,7 +403,9 @@ prv_window_process_event(te_window* window, union SDL_Event event, float delta_t
                     // input is handled in key down event
                     break; // don't trigger user callbacks
                 }
-            } else if (!prv_debug_console_is_shown() && (enum te_keyboard_button)event.key.scancode == TE_KB_TILDE) {
+            } else if (
+                !prv_debug_console_is_shown()
+                && (enum te_keyboard_button)event.key.scancode == TE_KB_TILDE) {
                 prv_debug_console_show();
                 SDL_StartTextInput(window->sdl_window);
             }
@@ -400,7 +415,8 @@ prv_window_process_event(te_window* window, union SDL_Event event, float delta_t
             te_keyboard_modifiers mods;
             mods.mod = event.key.mod;
             window->user_callbacks->on_keyboard_button_released(
-                window->game_instance, window->game_manager, (enum te_keyboard_button)event.key.scancode, mods);
+                window->game_instance, window->game_manager,
+                (enum te_keyboard_button)event.key.scancode, mods);
             break;
         }
         case (SDL_EVENT_TEXT_INPUT): {
@@ -420,7 +436,8 @@ prv_window_process_event(te_window* window, union SDL_Event event, float delta_t
             }
 #endif
             prv_game_manager_on_keyboard_input_text(window->game_manager, event.text.text);
-            window->user_callbacks->on_keyboard_input_text(window->game_instance, window->game_manager, event.text.text);
+            window->user_callbacks->on_keyboard_input_text(
+                window->game_instance, window->game_manager, event.text.text);
             break;
         }
         case (SDL_EVENT_GAMEPAD_AXIS_MOTION): {
@@ -434,13 +451,15 @@ prv_window_process_event(te_window* window, union SDL_Event event, float delta_t
 
             const float new_pos = (float)event.gaxis.value / 32767.0f;
             window->user_callbacks->on_gamepad_axis_moved(
-                window->game_instance, window->game_manager, (enum te_gamepad_axis)event.gaxis.axis, new_pos);
+                window->game_instance, window->game_manager,
+                (enum te_gamepad_axis)event.gaxis.axis, new_pos);
             break;
         }
         case (SDL_EVENT_GAMEPAD_BUTTON_DOWN): {
             window->had_gamepad_input_curr_frame = true;
             window->user_callbacks->on_gamepad_button_pressed(
-                window->game_instance, window->game_manager, (enum te_gamepad_button)event.gbutton.button);
+                window->game_instance, window->game_manager,
+                (enum te_gamepad_button)event.gbutton.button);
             break;
         }
         case (SDL_EVENT_GAMEPAD_BUTTON_UP): {
@@ -450,13 +469,15 @@ prv_window_process_event(te_window* window, union SDL_Event event, float delta_t
             } else if ((enum te_gamepad_button)event.gbutton.button == TE_GB_START) {
                 window->debug_stats_time_since_start = 0.0f;
             }
-            if (window->debug_stats_time_since_menu < 0.25f && window->debug_stats_time_since_start < 0.25f) {
+            if (window->debug_stats_time_since_menu < 0.25f
+                && window->debug_stats_time_since_start < 0.25f) {
                 if (!debug_console_is_stats_shown()) {
                     renderer_set_fps_limit(game_manager_get_renderer(window->game_manager), 0);
                     debug_console_show_stats();
                 } else {
                     renderer_set_fps_limit(
-                        game_manager_get_renderer(window->game_manager), window_get_display_refresh_rate(window));
+                        game_manager_get_renderer(window->game_manager),
+                        window_get_display_refresh_rate(window));
                     debug_console_hide_stats();
                 }
                 window->debug_stats_time_since_menu = 10.0f;
@@ -466,19 +487,23 @@ prv_window_process_event(te_window* window, union SDL_Event event, float delta_t
 
             window->had_gamepad_input_curr_frame = true;
             window->user_callbacks->on_gamepad_button_released(
-                window->game_instance, window->game_manager, (enum te_gamepad_button)event.gbutton.button);
+                window->game_instance, window->game_manager,
+                (enum te_gamepad_button)event.gbutton.button);
             break;
         }
         case (SDL_EVENT_MOUSE_WHEEL): {
-            window->user_callbacks->on_mouse_scroll_moved(window->game_instance, window->game_manager, event.wheel.y);
+            window->user_callbacks->on_mouse_scroll_moved(
+                window->game_instance, window->game_manager, event.wheel.y);
             break;
         }
         case (SDL_EVENT_WINDOW_FOCUS_GAINED): {
-            window->user_callbacks->on_window_received_focus(window->game_instance, window->game_manager);
+            window->user_callbacks->on_window_received_focus(
+                window->game_instance, window->game_manager);
             break;
         }
         case (SDL_EVENT_WINDOW_FOCUS_LOST): {
-            window->user_callbacks->on_window_lost_focus(window->game_instance, window->game_manager);
+            window->user_callbacks->on_window_lost_focus(
+                window->game_instance, window->game_manager);
             break;
         }
         case (SDL_EVENT_WINDOW_RESIZED):
@@ -502,16 +527,20 @@ prv_window_process_event(te_window* window, union SDL_Event event, float delta_t
             if (window->connected_gamepad == NULL) {
                 window->connected_gamepad = SDL_OpenGamepad(event.cdevice.which);
                 window->user_callbacks->on_gamepad_connected(
-                    window->game_instance, window->game_manager, SDL_GetGamepadName(window->connected_gamepad));
+                    window->game_instance, window->game_manager,
+                    SDL_GetGamepadName(window->connected_gamepad));
             }
             break;
         }
         case (SDL_EVENT_GAMEPAD_REMOVED): {
             if (window->connected_gamepad != NULL
-                && event.cdevice.which == SDL_GetJoystickID(SDL_GetGamepadJoystick(window->connected_gamepad))) {
+                && event.cdevice.which
+                       == SDL_GetJoystickID(
+                           SDL_GetGamepadJoystick(window->connected_gamepad))) {
                 SDL_CloseGamepad(window->connected_gamepad);
                 window->connected_gamepad = NULL;
-                window->user_callbacks->on_gamepad_disconnected(window->game_instance, window->game_manager);
+                window->user_callbacks->on_gamepad_disconnected(
+                    window->game_instance, window->game_manager);
 
 #if defined(ENGINE_DEBUG_TOOLS)
                 window->debug_stats_time_since_menu = 10.0f;

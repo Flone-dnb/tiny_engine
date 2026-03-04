@@ -82,12 +82,18 @@ void prv_world_on_window_size_changed(te_world* world);
 
 // Adds/removes the specified item to/from the array of spawned root item
 // (does nothing if already added/removed). Does not notify the item.
-void prv_world_add_root_model_no_notify(te_world* world, struct te_model* model, bool check_if_already_added);
-void prv_world_remove_root_model_no_notify(te_world* world, struct te_model* model, bool must_exist_in_array);
-void prv_world_add_root_widget_no_notify(te_world* world, struct te_widget* widget, bool check_if_already_added);
-void prv_world_remove_root_widget_no_notify(te_world* world, struct te_widget* widget, bool must_exist_in_array);
-void prv_world_add_root_camera_no_notify(te_world* world, struct te_camera* camera, bool check_if_already_added);
-void prv_world_remove_root_camera_no_notify(te_world* world, struct te_camera* camera, bool must_exist_in_array);
+void prv_world_add_root_model_no_notify(
+    te_world* world, struct te_model* model, bool check_if_already_added);
+void prv_world_remove_root_model_no_notify(
+    te_world* world, struct te_model* model, bool must_exist_in_array);
+void prv_world_add_root_widget_no_notify(
+    te_world* world, struct te_widget* widget, bool check_if_already_added);
+void prv_world_remove_root_widget_no_notify(
+    te_world* world, struct te_widget* widget, bool must_exist_in_array);
+void prv_world_add_root_camera_no_notify(
+    te_world* world, struct te_camera* camera, bool check_if_already_added);
+void prv_world_remove_root_camera_no_notify(
+    te_world* world, struct te_camera* camera, bool must_exist_in_array);
 
 // Called by spawned widgets that receive input (for example buttons).
 // Note: these functions are not called from the base te_widget type (base type does not implement such functionality).
@@ -98,10 +104,13 @@ void prv_world_interactable_widget_pos_size_changed(te_world* world);
 // Cursor pos in range [0.0; 1.0] relative to the window.
 // Returns `true` if was handled by some widget.
 void prv_world_on_mouse_moved(te_world* world, float cursor_pos[2]);
-bool prv_world_on_mouse_button_pressed(te_world* world, enum te_mouse_button button, float cursor_pos[2]);
-bool prv_world_on_mouse_button_released(te_world* world, enum te_mouse_button button, float cursor_pos[2]);
+bool prv_world_on_mouse_button_pressed(
+    te_world* world, enum te_mouse_button button, float cursor_pos[2]);
+bool prv_world_on_mouse_button_released(
+    te_world* world, enum te_mouse_button button, float cursor_pos[2]);
 void prv_world_on_keyboard_input_text(te_world* world, const char* text);
-void prv_world_on_keyboard_input(te_world* world, enum te_keyboard_button button, bool is_repeat);
+void
+prv_world_on_keyboard_input(te_world* world, enum te_keyboard_button button, bool is_repeat);
 
 // Called by game manager after user input device was changed (keyboard+mouse/gamepad).
 void prv_world_on_input_source_changed(te_world* world);

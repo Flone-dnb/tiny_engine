@@ -16,8 +16,9 @@ typedef struct te_frustum_shape {
 } te_frustum_shape;
 
 static inline te_frustum_shape
-frustum_shape_create(vec3 camera_pos, vec3 forward, vec3 up, float near_clip, float far_clip,
-                     float vertical_fov, float aspect_ratio) {
+frustum_shape_create(
+    vec3 camera_pos, vec3 forward, vec3 up, float near_clip, float far_clip,
+    float vertical_fov, float aspect_ratio) {
     const float tan_half_fov = tanf(0.5f * vertical_fov);
     const float far_half_height = far_clip * tan_half_fov;
     const float far_half_width = far_half_height * aspect_ratio;

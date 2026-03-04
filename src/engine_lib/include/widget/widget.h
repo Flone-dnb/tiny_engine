@@ -19,9 +19,10 @@ struct te_world;
 // "on after spawned" callback is called before any child widget is spawned.
 // "on before despawned" callback is called after all child widgets are despawned.
 te_widget* widget_create(
-    void* owner, const char* (*get_type_id)(void), void (*on_pos_changed)(void* owner), void (*on_size_changed)(void* owner),
-    void (*on_before_base_destroyed)(void* owner), void (*on_parent_changed)(void* owner),
-    void (*on_children_changed)(void* owner), void (*on_after_spawned)(void* owner), void (*on_before_despawned)(void* owner),
+    void* owner, const char* (*get_type_id)(void), void (*on_pos_changed)(void* owner),
+    void (*on_size_changed)(void* owner), void (*on_before_base_destroyed)(void* owner),
+    void (*on_parent_changed)(void* owner), void (*on_children_changed)(void* owner),
+    void (*on_after_spawned)(void* owner), void (*on_before_despawned)(void* owner),
     void (*on_window_size_changed)(void* owner));
 void widget_destroy(te_widget* widget);
 
@@ -83,14 +84,17 @@ void prv_widget_set_input_callbacks(
     te_widget* widget, void (*on_cursor_entered)(void* owner, vec2 cursor_pos),
     void (*on_cursor_left)(void* owner, vec2 cursor_pos),
     void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, vec2 cursor_pos),
-    void (*on_mouse_button_released)(void* owner, enum te_mouse_button button, vec2 cursor_pos),
+    void (*on_mouse_button_released)(
+        void* owner, enum te_mouse_button button, vec2 cursor_pos),
     void (*on_hovered_cursor_moved)(void* owner, vec2 cursor_pos),
     void (*on_keyboard_input_text)(void* owner, const char* input_text),
     void (*on_keyboard_input)(void* owner, enum te_keyboard_button button));
 
 // Called by world when the mouse cursor is inside of the widget. Cursor pos is position in range [0.0; 1.0] relative to the window.
-void prv_widget_on_mouse_button_pressed(te_widget* widget, enum te_mouse_button button, vec2 cursor_pos);
-void prv_widget_on_mouse_button_released(te_widget* widget, enum te_mouse_button button, vec2 cursor_pos);
+void prv_widget_on_mouse_button_pressed(
+    te_widget* widget, enum te_mouse_button button, vec2 cursor_pos);
+void prv_widget_on_mouse_button_released(
+    te_widget* widget, enum te_mouse_button button, vec2 cursor_pos);
 void prv_widget_on_cursor_entered(te_widget* widget, vec2 cursor_pos);
 void prv_widget_on_cursor_left(te_widget* widget, vec2 cursor_pos);
 void prv_widget_on_hovered_cursor_moved(te_widget* widget, vec2 cursor_pos);

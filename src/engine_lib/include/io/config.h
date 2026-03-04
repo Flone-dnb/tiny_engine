@@ -23,36 +23,51 @@ unsigned int config_create_section(te_config* config, const char* name);
 
 // Sets a value with a unique name (unique within the section) to a config's section.
 // Key names must only contain characters A-Z, a-z, 0-9, '.' and '_'.
-void config_section_set_bool(te_config* config, unsigned int section_idx, const char* key, bool value);
-void config_section_set_uint(te_config* config, unsigned int section_idx, const char* key, unsigned int value);
-void config_section_set_float(te_config* config, unsigned int section_idx, const char* key, float value);
-void config_section_set_string(te_config* config, unsigned int section_idx, const char* key, const char* value);
+void config_section_set_bool(
+    te_config* config, unsigned int section_idx, const char* key, bool value);
+void config_section_set_uint(
+    te_config* config, unsigned int section_idx, const char* key, unsigned int value);
+void config_section_set_float(
+    te_config* config, unsigned int section_idx, const char* key, float value);
+void config_section_set_string(
+    te_config* config, unsigned int section_idx, const char* key, const char* value);
 
 void config_section_set_bool_array(
-    te_config* config, unsigned int section_idx, const char* key, bool* values, unsigned int value_count);
+    te_config* config, unsigned int section_idx, const char* key, bool* values,
+    unsigned int value_count);
 void config_section_set_uint_array(
-    te_config* config, unsigned int section_idx, const char* key, unsigned int* values, unsigned int value_count);
+    te_config* config, unsigned int section_idx, const char* key, unsigned int* values,
+    unsigned int value_count);
 void config_section_set_float_array(
-    te_config* config, unsigned int section_idx, const char* key, float* values, unsigned int value_count);
+    te_config* config, unsigned int section_idx, const char* key, float* values,
+    unsigned int value_count);
 void config_section_set_string_array(
-    te_config* config, unsigned int section_idx, const char* key, char** values, unsigned int value_count);
+    te_config* config, unsigned int section_idx, const char* key, char** values,
+    unsigned int value_count);
 
 unsigned int config_get_section_count(te_config* config);
 const char* config_section_get_name(te_config* config, unsigned int section_idx);
 
-bool config_section_get_bool(te_config* config, unsigned int section_idx, const char* key, bool if_not_found);
-unsigned int config_section_get_uint(te_config* config, unsigned int section_idx, const char* key, unsigned int if_not_found);
-float config_section_get_float(te_config* config, unsigned int section_idx, const char* key, float if_not_found);
+bool config_section_get_bool(
+    te_config* config, unsigned int section_idx, const char* key, bool if_not_found);
+unsigned int config_section_get_uint(
+    te_config* config, unsigned int section_idx, const char* key, unsigned int if_not_found);
+float config_section_get_float(
+    te_config* config, unsigned int section_idx, const char* key, float if_not_found);
 // Do not free returned pointer. The pointer may become invalid after new strings are added.
-char* config_section_get_string(te_config* config, unsigned int section_idx, const char* key, char* if_not_found);
+char* config_section_get_string(
+    te_config* config, unsigned int section_idx, const char* key, char* if_not_found);
 
 // Do not free returned pointer. The pointer may become invalid after new values are added.
 // Value count is set to 0 if not found.
-bool* config_section_get_bool_array(te_config* config, unsigned int section_idx, const char* key, unsigned int* value_count);
-unsigned int*
-config_section_get_uint_array(te_config* config, unsigned int section_idx, const char* key, unsigned int* value_count);
-float* config_section_get_float_array(te_config* config, unsigned int section_idx, const char* key, unsigned int* value_count);
-char** config_section_get_string_array(te_config* config, unsigned int section_idx, const char* key, unsigned int* value_count);
+bool* config_section_get_bool_array(
+    te_config* config, unsigned int section_idx, const char* key, unsigned int* value_count);
+unsigned int* config_section_get_uint_array(
+    te_config* config, unsigned int section_idx, const char* key, unsigned int* value_count);
+float* config_section_get_float_array(
+    te_config* config, unsigned int section_idx, const char* key, unsigned int* value_count);
+char** config_section_get_string_array(
+    te_config* config, unsigned int section_idx, const char* key, unsigned int* value_count);
 
 // Serializes the config to the specified path relative to the "res" directory.
 void config_save(te_config* config, const char* relative_path, bool create_backup);

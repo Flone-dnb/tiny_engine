@@ -15,7 +15,8 @@ void checkbox_widget_destroy(te_checkbox_widget* checkbox_widget);
 struct te_widget* checkbox_widget_get_widget(te_checkbox_widget* checkbox_widget);
 
 void checkbox_widget_set_on_changed(
-    te_checkbox_widget* checkbox_widget, void (*on_changed)(te_checkbox_widget* checkbox_widget, bool is_checked));
+    te_checkbox_widget* checkbox_widget,
+    void (*on_changed)(te_checkbox_widget* checkbox_widget, bool is_checked));
 
 void checkbox_widget_set_is_checked(te_checkbox_widget* checkbox_widget, bool is_checked);
 bool checkbox_widget_is_checked(te_checkbox_widget* checkbox_widget);
@@ -28,8 +29,10 @@ void checkbox_widget_get_background_color(te_checkbox_widget* checkbox_widget, v
 void checkbox_widget_get_checked_color(te_checkbox_widget* checkbox_widget, vec4 out);
 
 // Sets path (relataive to the `res` directory) to background and foreground (checked) textures.
-void checkbox_widget_set_background_texture(te_checkbox_widget* checkbox_widget, const char* relative_path);
-void checkbox_widget_set_checked_texture(te_checkbox_widget* checkbox_widget, const char* relative_path);
+void checkbox_widget_set_background_texture(
+    te_checkbox_widget* checkbox_widget, const char* relative_path);
+void checkbox_widget_set_checked_texture(
+    te_checkbox_widget* checkbox_widget, const char* relative_path);
 
 // Returns NULL if the texture was not set.
 // Do not free returned string, valid while the widget exists and the texture is not changed.

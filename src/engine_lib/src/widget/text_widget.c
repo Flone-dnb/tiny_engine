@@ -63,9 +63,10 @@ text_widget_create(void) {
     glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, text_widget->color);
 
     text_widget->widget = widget_create(
-        text_widget, text_widget_get_type_id, prv_text_widget_on_pos_changed, prv_text_widget_on_size_changed,
-        prv_text_widget_on_before_base_destroyed, NULL, NULL, prv_text_widget_on_after_spawned,
-        prv_text_widget_on_before_despawned, prv_text_widget_on_window_size_changed);
+        text_widget, text_widget_get_type_id, prv_text_widget_on_pos_changed,
+        prv_text_widget_on_size_changed, prv_text_widget_on_before_base_destroyed, NULL, NULL,
+        prv_text_widget_on_after_spawned, prv_text_widget_on_before_despawned,
+        prv_text_widget_on_window_size_changed);
     text_widget->is_text_widget_destroy = false;
     text_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
 
@@ -169,8 +170,8 @@ text_widget_set_color(te_text_widget* text_widget, vec4 color) {
         abort();
     }
 
-    te_text_widget_render_data* data =
-        widget_renderer_get_text_widget_render_data_tmp(world_get_widget_renderer(world), text_widget->render_data_handle);
+    te_text_widget_render_data* data = widget_renderer_get_text_widget_render_data_tmp(
+        world_get_widget_renderer(world), text_widget->render_data_handle);
 
     glm_vec4_copy(text_widget->color, data->color);
 }
@@ -246,7 +247,8 @@ prv_text_widget_register_for_rendering(te_text_widget* text_widget) {
         abort();
     }
 
-    text_widget->render_data_handle = widget_renderer_add_text_widget(world_get_widget_renderer(world));
+    text_widget->render_data_handle =
+        widget_renderer_add_text_widget(world_get_widget_renderer(world));
     prv_text_widget_update_all_render_data(text_widget);
 }
 
@@ -286,13 +288,15 @@ prv_text_widget_on_pos_changed(void* this) {
 
     unsigned int window_width;
     unsigned int window_height;
-    window_get_size(game_manager_get_window(world_get_game_manager(world)), &window_width, &window_height);
+    window_get_size(
+        game_manager_get_window(world_get_game_manager(world)), &window_width, &window_height);
 
-    te_text_widget_render_data* data =
-        widget_renderer_get_text_widget_render_data_tmp(world_get_widget_renderer(world), text_widget->render_data_handle);
+    te_text_widget_render_data* data = widget_renderer_get_text_widget_render_data_tmp(
+        world_get_widget_renderer(world), text_widget->render_data_handle);
 
     widget_get_screen_position(text_widget->widget, data->pos_pix);
-    glm_vec2_mul(data->pos_pix, (vec2){(float)window_width, (float)window_height}, data->pos_pix);
+    glm_vec2_mul(
+        data->pos_pix, (vec2){(float)window_width, (float)window_height}, data->pos_pix);
 }
 
 static void
@@ -344,10 +348,11 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
         abort();
     }
     te_game_manager* game_manager = world_get_game_manager(world);
-    te_font_manager* font_manager = renderer_get_font_manager(game_manager_get_renderer(game_manager));
+    te_font_manager* font_manager =
+        renderer_get_font_manager(game_manager_get_renderer(game_manager));
 
-    te_text_widget_render_data* data =
-        widget_renderer_get_text_widget_render_data_tmp(world_get_widget_renderer(world), text_widget->render_data_handle);
+    te_text_widget_render_data* data = widget_renderer_get_text_widget_render_data_tmp(
+        world_get_widget_renderer(world), text_widget->render_data_handle);
 
     glm_vec4_copy(text_widget->color, data->color);
 
@@ -356,10 +361,12 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
     window_get_size(game_manager_get_window(game_manager), &window_width, &window_height);
 
     widget_get_screen_position(text_widget->widget, data->pos_pix);
-    glm_vec2_mul(data->pos_pix, (vec2){(float)window_width, (float)window_height}, data->pos_pix);
+    glm_vec2_mul(
+        data->pos_pix, (vec2){(float)window_width, (float)window_height}, data->pos_pix);
 
     // Update glyphs (calculating in pixels).
-    const float glyph_scale = text_widget->text_height / prv_font_manager_get_font_height_to_load();
+    const float glyph_scale =
+        text_widget->text_height / prv_font_manager_get_font_height_to_load();
     const float glyph_height = text_widget->text_height * (float)window_height;
     const float line_spacing = text_widget->line_spacing * glyph_height;
 
@@ -370,7 +377,8 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
     // Count how much glyphs with non 0 width there are (i.e. displayable glyphs).
     data->glyph_count = 0;
     for (unsigned int i = 0; i < text_widget->text_len; i++) {
-        te_font_glyph glyph = font_manager_get_glyph(font_manager, (unsigned long)text_widget->text[i]);
+        te_font_glyph glyph =
+            font_manager_get_glyph(font_manager, (unsigned long)text_widget->text[i]);
         data->glyph_count += glyph.width > 0;
     }
     free(data->glyphs);
@@ -386,8 +394,10 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
         // Switch to the first row of the text.
         offset[1] += glyph_height;
 
-        for (unsigned int char_idx = 0, glyph_idx = 0; char_idx < text_widget->text_len; char_idx++) {
-            te_font_glyph src_glyph = font_manager_get_glyph(font_manager, (unsigned long)text_widget->text[char_idx]);
+        for (unsigned int char_idx = 0, glyph_idx = 0; char_idx < text_widget->text_len;
+             char_idx++) {
+            te_font_glyph src_glyph = font_manager_get_glyph(
+                font_manager, (unsigned long)text_widget->text[char_idx]);
             glyph_idx += src_glyph.width > 0;
 
             if (text_widget->text[char_idx] == '\n' && text_widget->is_multiline) {
@@ -426,12 +436,15 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
                 dst_glyph->tex_id = src_glyph.tex_id;
 
                 glm_vec2_copy(
-                    (vec2){(float)src_glyph.width * glyph_scale, (float)src_glyph.height * glyph_scale}, dst_glyph->size_pix);
+                    (vec2){(float)src_glyph.width * glyph_scale,
+                           (float)src_glyph.height * glyph_scale},
+                    dst_glyph->size_pix);
 
                 glm_vec2_copy(offset, dst_glyph->offset_pix);
                 glm_vec2_add(
                     dst_glyph->offset_pix,
-                    (vec2){(float)src_glyph.bearing_x * glyph_scale, -(float)src_glyph.bearing_y * glyph_scale},
+                    (vec2){(float)src_glyph.bearing_x * glyph_scale,
+                           -(float)src_glyph.bearing_y * glyph_scale},
                     dst_glyph->offset_pix);
             }
 
@@ -484,14 +497,21 @@ prv_text_widget_spawn(te_world* world, te_text_widget* text_widget) {
 
 void
 text_widget_register_type(void) {
-    te_type_info* info =
-        type_info_create(text_widget_get_type_id(), text_widget_create, prv_text_widget_spawn, prv_text_widget_get_base);
-    type_info_add_vec2_variable(info, "position", prv_text_widget_set_position, prv_text_widget_get_position);
-    type_info_add_vec2_variable(info, "size", prv_text_widget_set_size, prv_text_widget_get_size);
-    type_info_add_wstring_variable(info, "text", text_widget_set_text, prv_text_widget_get_text);
-    type_info_add_bool_variable(info, "is_multiline", text_widget_set_is_multiline, text_widget_is_multiline);
-    type_info_add_float_variable(info, "text_height", text_widget_set_text_height, text_widget_get_text_height);
-    type_info_add_float_variable(info, "line_spacing", text_widget_set_line_spacing, text_widget_get_line_spacing);
+    te_type_info* info = type_info_create(
+        text_widget_get_type_id(), text_widget_create, prv_text_widget_spawn,
+        prv_text_widget_get_base);
+    type_info_add_vec2_variable(
+        info, "position", prv_text_widget_set_position, prv_text_widget_get_position);
+    type_info_add_vec2_variable(
+        info, "size", prv_text_widget_set_size, prv_text_widget_get_size);
+    type_info_add_wstring_variable(
+        info, "text", text_widget_set_text, prv_text_widget_get_text);
+    type_info_add_bool_variable(
+        info, "is_multiline", text_widget_set_is_multiline, text_widget_is_multiline);
+    type_info_add_float_variable(
+        info, "text_height", text_widget_set_text_height, text_widget_get_text_height);
+    type_info_add_float_variable(
+        info, "line_spacing", text_widget_set_line_spacing, text_widget_get_line_spacing);
     type_info_add_vec4_variable(info, "color", text_widget_set_color, text_widget_get_color);
 
     type_database_register_type(info);

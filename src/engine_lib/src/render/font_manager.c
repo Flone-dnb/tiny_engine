@@ -52,8 +52,9 @@ prv_font_manager_create(te_renderer* renderer) {
     te_font_manager* manager = malloc(sizeof(te_font_manager));
 
     manager->renderer = renderer;
-    manager->cached_glyphs =
-        hashmap_new(sizeof(te_font_glyph), 64, 0, 0, font_manager_glyph_hash, font_manager_glyph_compare, NULL, NULL);
+    manager->cached_glyphs = hashmap_new(
+        sizeof(te_font_glyph), 64, 0, 0, font_manager_glyph_hash, font_manager_glyph_compare,
+        NULL, NULL);
     manager->ft_face = NULL;
 
     const int error_code = FT_Init_FreeType(&manager->ft_library);
@@ -102,7 +103,8 @@ prv_font_manager_clear_cache(te_font_manager* manager) {
     unsigned int window_height = 0;
     window_get_size(window, &window_width, &window_height);
 
-    const unsigned int font_height = (unsigned int)((float)window_height * TE_FONT_HEIGHT_TO_LOAD);
+    const unsigned int font_height =
+        (unsigned int)((float)window_height * TE_FONT_HEIGHT_TO_LOAD);
     FT_Set_Pixel_Sizes(manager->ft_face, 0, font_height);
 
     size_t iter = 0;
@@ -151,7 +153,8 @@ font_manager_load_font(te_font_manager* manager, const char* relative_path) {
 
 te_font_glyph
 font_manager_get_glyph(te_font_manager* manager, unsigned long char_code) {
-    const te_font_glyph* glyph = hashmap_get(manager->cached_glyphs, &(te_font_glyph){.char_code = char_code});
+    const te_font_glyph* glyph =
+        hashmap_get(manager->cached_glyphs, &(te_font_glyph){.char_code = char_code});
     if (glyph == NULL) {
         font_manager_cache_glyphs(manager, char_code, char_code);
         glyph = hashmap_get(manager->cached_glyphs, &(te_font_glyph){.char_code = char_code});
@@ -161,7 +164,8 @@ font_manager_get_glyph(te_font_manager* manager, unsigned long char_code) {
 }
 
 void
-font_manager_cache_glyphs(te_font_manager* manager, unsigned long char_code_first, unsigned long char_code_last) {
+font_manager_cache_glyphs(
+    te_font_manager* manager, unsigned long char_code_first, unsigned long char_code_last) {
     if (char_code_first > char_code_last) {
         log_error("the specified character code range is invalid");
         abort();
@@ -172,7 +176,8 @@ font_manager_cache_glyphs(te_font_manager* manager, unsigned long char_code_firs
     glGetIntegerv(GL_UNPACK_ALIGNMENT, &prev_unpack_alignment);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     for (unsigned long char_code = char_code_first; char_code <= char_code_last; char_code++) {
-        const te_font_glyph* glyph = hashmap_get(manager->cached_glyphs, &(te_font_glyph){.char_code = char_code});
+        const te_font_glyph* glyph =
+            hashmap_get(manager->cached_glyphs, &(te_font_glyph){.char_code = char_code});
         if (glyph != NULL) {
             // Already cached.
             continue;
@@ -181,7 +186,8 @@ font_manager_cache_glyphs(te_font_manager* manager, unsigned long char_code_firs
         // Load glyph.
         int error_code = FT_Load_Char(manager->ft_face, char_code, FT_LOAD_RENDER);
         if (error_code != 0) {
-            log_error_fmt("failed to load glyph for character %u, error: %d", char_code, error_code);
+            log_error_fmt(
+                "failed to load glyph for character %u, error: %d", char_code, error_code);
             abort();
         }
 
@@ -193,8 +199,8 @@ font_manager_cache_glyphs(te_font_manager* manager, unsigned long char_code_firs
         {
             glTexImage2D(
                 GL_TEXTURE_2D, 0, GL_LUMINANCE, (int)manager->ft_face->glyph->bitmap.width,
-                (int)manager->ft_face->glyph->bitmap.rows, 0, GL_LUMINANCE, (unsigned int)gl_format,
-                manager->ft_face->glyph->bitmap.buffer);
+                (int)manager->ft_face->glyph->bitmap.rows, 0, GL_LUMINANCE,
+                (unsigned int)gl_format, manager->ft_face->glyph->bitmap.buffer);
 
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

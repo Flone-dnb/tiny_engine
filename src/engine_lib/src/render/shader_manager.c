@@ -101,7 +101,8 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
     const size_t code_len = prefix_len + file_size;
 
     // Compile shader.
-    const unsigned int shader_id = glCreateShader(is_frag ? GL_FRAGMENT_SHADER : GL_VERTEX_SHADER);
+    const unsigned int shader_id =
+        glCreateShader(is_frag ? GL_FRAGMENT_SHADER : GL_VERTEX_SHADER);
     glShaderSource(shader_id, 1, (const char**)&shader_code, NULL);
     glCompileShader(shader_id);
 
@@ -141,7 +142,9 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
             }
         }
 
-        log_info_fmt("failed to compile shader \"%s\", error: %s, see full source code below:", path, comp_error_msg);
+        log_info_fmt(
+            "failed to compile shader \"%s\", error: %s, see full source code below:", path,
+            comp_error_msg);
         log_info(fmt_code);
         free(fmt_code);
 
@@ -155,7 +158,9 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
 }
 
 unsigned int
-shader_manager_request_shader(te_shader_manager* manager, const char* vert_relative_path, const char* frag_relative_path) {
+shader_manager_request_shader(
+    te_shader_manager* manager, const char* vert_relative_path,
+    const char* frag_relative_path) {
     const size_t vert_relative_path_len = strlen(vert_relative_path);
     const size_t frag_relative_path_len = strlen(frag_relative_path);
 
@@ -198,7 +203,9 @@ shader_manager_request_shader(te_shader_manager* manager, const char* vert_relat
             char* msg = malloc(sizeof(char) * (unsigned long)log_len);
             glGetProgramInfoLog(prog_id, log_len, NULL, msg);
 
-            log_info_fmt("failed to link shaders \"%s\" and \"%s\", error: %s", vert_path, frag_path, msg);
+            log_info_fmt(
+                "failed to link shaders \"%s\" and \"%s\", error: %s", vert_path, frag_path,
+                msg);
             free(msg);
 
             abort();
@@ -211,8 +218,10 @@ shader_manager_request_shader(te_shader_manager* manager, const char* vert_relat
         glDeleteShader(frag_id);
 
         // Cache results.
-        te_shader_program* new_shaders = malloc(sizeof(te_shader_program) * (manager->shader_count + 1));
-        memcpy(new_shaders, manager->shaders, sizeof(te_shader_program) * manager->shader_count);
+        te_shader_program* new_shaders =
+            malloc(sizeof(te_shader_program) * (manager->shader_count + 1));
+        memcpy(
+            new_shaders, manager->shaders, sizeof(te_shader_program) * manager->shader_count);
 
         free(manager->shaders);
         manager->shaders = new_shaders;
@@ -227,12 +236,16 @@ shader_manager_request_shader(te_shader_manager* manager, const char* vert_relat
         prog->id = prog_id;
 
         prog->vert_relative_path = malloc(sizeof(char) * (vert_relative_path_len + 1));
-        memcpy(prog->vert_relative_path, vert_relative_path, sizeof(char) * vert_relative_path_len);
+        memcpy(
+            prog->vert_relative_path, vert_relative_path,
+            sizeof(char) * vert_relative_path_len);
         prog->vert_relative_path[vert_relative_path_len] = 0;
         prog->vert_relative_path_len = (unsigned int)vert_relative_path_len;
 
         prog->frag_relative_path = malloc(sizeof(char) * (frag_relative_path_len + 1));
-        memcpy(prog->frag_relative_path, frag_relative_path, sizeof(char) * frag_relative_path_len);
+        memcpy(
+            prog->frag_relative_path, frag_relative_path,
+            sizeof(char) * frag_relative_path_len);
         prog->frag_relative_path[frag_relative_path_len] = 0;
         prog->frag_relative_path_len = (unsigned int)frag_relative_path_len;
 
@@ -261,7 +274,8 @@ shader_manager_mark_unused_shader(te_shader_manager* manager, unsigned int prog_
         abort();
     }
     if (manager->shaders[index].usage_count == 0) {
-        log_error("the specified shader program id already has usage count of 0 (this is a shader manager bug)");
+        log_error("the specified shader program id already has usage count of 0 (this is a "
+                  "shader manager bug)");
         abort();
     }
 
@@ -282,10 +296,12 @@ shader_manager_mark_unused_shader(te_shader_manager* manager, unsigned int prog_
         manager->shaders = NULL;
         manager->shader_count = 0;
     } else {
-        te_shader_program* new_shaders = malloc(sizeof(te_shader_program) * (manager->shader_count - 1));
+        te_shader_program* new_shaders =
+            malloc(sizeof(te_shader_program) * (manager->shader_count - 1));
         memcpy(new_shaders, manager->shaders, sizeof(te_shader_program) * index);
         memcpy(
-            new_shaders + index, manager->shaders + (index + 1), sizeof(te_shader_program) * (manager->shader_count - index - 1));
+            new_shaders + index, manager->shaders + (index + 1),
+            sizeof(te_shader_program) * (manager->shader_count - index - 1));
 
         free(manager->shaders);
         manager->shaders = new_shaders;
@@ -297,7 +313,10 @@ int
 get_uniform_location(unsigned int prog_id, const char* name) {
     const int location = glGetUniformLocation(prog_id, name);
     if (location < 0) {
-        log_info_fmt("missing uniform variable named \"%s\", maybe it was optimized out due to being unused", name);
+        log_info_fmt(
+            "missing uniform variable named \"%s\", maybe it was optimized out due to being "
+            "unused",
+            name);
         abort();
     }
     return location;

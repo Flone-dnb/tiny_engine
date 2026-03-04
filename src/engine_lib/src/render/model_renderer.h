@@ -48,7 +48,8 @@ bool model_renderer_has_models(te_model_renderer* renderer);
 // Returns handle to update model's render data using @ref model_renderer_get_render_data_tmp.
 //
 // Later you would need to remove the model from rendering using @ref model_renderer_remove_model.
-unsigned int model_renderer_add_model(te_model_renderer* renderer, unsigned int shader_prog_id);
+unsigned int
+model_renderer_add_model(te_model_renderer* renderer, unsigned int shader_prog_id);
 
 // Removes a model from rendering.
 void model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle);
@@ -60,7 +61,9 @@ void model_renderer_remove_model(te_model_renderer* renderer, unsigned int handl
 // update some render data. Suffix "_tmp" is used because of this.
 //
 // Do not free/destroy returned pointer.
-te_model_render_data* model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int handle);
+te_model_render_data*
+model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int handle);
 
 // Draws models to the currently set framebuffer.
-void model_renderer_draw(te_model_renderer* renderer, mat4* view_proj_mat, struct te_frustum_shape* camera_frustum);
+void model_renderer_draw(
+    te_model_renderer* renderer, mat4* view_proj_mat, struct te_frustum_shape* camera_frustum);

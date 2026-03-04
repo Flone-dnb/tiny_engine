@@ -34,7 +34,8 @@ struct te_widget {
     void (*on_cursor_entered)(void* owner, vec2 cursor_pos);
     void (*on_cursor_left)(void* owner, vec2 cursor_pos);
     void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, vec2 cursor_pos);
-    void (*on_mouse_button_released)(void* owner, enum te_mouse_button button, vec2 cursor_pos);
+    void (*on_mouse_button_released)(
+        void* owner, enum te_mouse_button button, vec2 cursor_pos);
     void (*on_hovered_cursor_moved)(void* owner, vec2 cursor_pos);
     void (*on_keyboard_input_text)(void* owner, const char* text);
     void (*on_keyboard_input)(void* owner, enum te_keyboard_button button);
@@ -57,9 +58,10 @@ struct te_widget {
 
 te_widget*
 widget_create(
-    void* owner, const char* (*get_type_id)(void), void (*on_pos_changed)(void* owner), void (*on_size_changed)(void* owner),
-    void (*on_before_base_destroyed)(void* owner), void (*on_parent_changed)(void* owner),
-    void (*on_children_changed)(void* owner), void (*on_after_spawned)(void* owner), void (*on_before_despawned)(void* owner),
+    void* owner, const char* (*get_type_id)(void), void (*on_pos_changed)(void* owner),
+    void (*on_size_changed)(void* owner), void (*on_before_base_destroyed)(void* owner),
+    void (*on_parent_changed)(void* owner), void (*on_children_changed)(void* owner),
+    void (*on_after_spawned)(void* owner), void (*on_before_despawned)(void* owner),
     void (*on_window_size_changed)(void* owner)) {
     te_widget* widget = malloc(sizeof(te_widget));
 
@@ -154,7 +156,8 @@ prv_widget_recalc_screen_pos_size(te_widget* widget) {
     glm_vec2_copy(widget->relative_size, widget->screen_size);
 
     if (widget->parent != NULL) {
-        prv_widget_calc_screen_pos_size_recursive(widget->parent, widget->screen_pos, widget->screen_size);
+        prv_widget_calc_screen_pos_size_recursive(
+            widget->parent, widget->screen_pos, widget->screen_size);
     }
 }
 
@@ -191,7 +194,8 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
             free(widget->parent->child_widgets);
             widget->parent->child_widgets = NULL;
         } else {
-            te_widget** new_children = malloc(sizeof(te_widget*) * (widget->parent->child_widget_count - 1));
+            te_widget** new_children =
+                malloc(sizeof(te_widget*) * (widget->parent->child_widget_count - 1));
             memcpy(new_children, widget->parent->child_widgets, sizeof(te_widget*) * index);
             memcpy(
                 new_children + index, widget->parent->child_widgets + (index + 1),
@@ -211,8 +215,11 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
 
     // Add self to new parent's array of child widgets.
     if (new_parent != NULL) {
-        te_widget** new_children = malloc(sizeof(te_widget*) * (new_parent->child_widget_count + 1));
-        memcpy(new_children, new_parent->child_widgets, sizeof(te_widget*) * new_parent->child_widget_count);
+        te_widget** new_children =
+            malloc(sizeof(te_widget*) * (new_parent->child_widget_count + 1));
+        memcpy(
+            new_children, new_parent->child_widgets,
+            sizeof(te_widget*) * new_parent->child_widget_count);
 
         free(new_parent->child_widgets);
         new_parent->child_widgets = new_children;
@@ -242,7 +249,8 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
         } else {
             if (new_parent->world != NULL) {
                 if (widget->world != new_parent->world) {
-                    log_error("can't attach a widget to another widget because they are spawned in different worlds");
+                    log_error("can't attach a widget to another widget because they are "
+                              "spawned in different worlds");
                     abort();
                 } else {
                     prv_world_remove_root_widget_no_notify(widget->world, widget, false);
@@ -259,7 +267,8 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
         widget->on_parent_changed(widget->owner);
     }
 
-    if (new_parent != NULL && new_parent->world != NULL && new_parent->on_children_changed != NULL) {
+    if (new_parent != NULL && new_parent->world != NULL
+        && new_parent->on_children_changed != NULL) {
         new_parent->on_children_changed(new_parent->owner);
     }
 }
@@ -424,7 +433,8 @@ prv_widget_set_input_callbacks(
     te_widget* widget, void (*on_cursor_entered)(void* owner, vec2 cursor_pos),
     void (*on_cursor_left)(void* owner, vec2 cursor_pos),
     void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, vec2 cursor_pos),
-    void (*on_mouse_button_released)(void* owner, enum te_mouse_button button, vec2 cursor_pos),
+    void (*on_mouse_button_released)(
+        void* owner, enum te_mouse_button button, vec2 cursor_pos),
     void (*on_hovered_cursor_moved)(void* owner, vec2 cursor_pos),
     void (*on_keyboard_input_text)(void* owner, const char* input_text),
     void (*on_keyboard_input)(void* owner, enum te_keyboard_button button)) {
@@ -438,7 +448,8 @@ prv_widget_set_input_callbacks(
 }
 
 void
-prv_widget_on_mouse_button_pressed(te_widget* widget, enum te_mouse_button button, vec2 cursor_pos) {
+prv_widget_on_mouse_button_pressed(
+    te_widget* widget, enum te_mouse_button button, vec2 cursor_pos) {
     if (widget->on_mouse_button_pressed == NULL) {
         return;
     }
@@ -447,7 +458,8 @@ prv_widget_on_mouse_button_pressed(te_widget* widget, enum te_mouse_button butto
 }
 
 void
-prv_widget_on_mouse_button_released(te_widget* widget, enum te_mouse_button button, vec2 cursor_pos) {
+prv_widget_on_mouse_button_released(
+    te_widget* widget, enum te_mouse_button button, vec2 cursor_pos) {
     if (widget->on_mouse_button_released == NULL) {
         return;
     }

@@ -25,10 +25,14 @@ void editor_camera_enable_input(te_editor_camera* editor_camera, bool enable);
 struct te_camera* editor_camera_get_camera(te_editor_camera* editor_camera);
 
 // callbacks -------------------------------------------------------------------------------
-void editor_camera_on_mouse_moved(te_editor_camera* editor_camera, float x_offset, float y_offset);
-void editor_camera_on_gamepad_axis_moved(te_editor_camera* editor_camera, enum te_gamepad_axis axis, float new_pos);
-void editor_camera_on_keyboard_button_pressed(te_editor_camera* editor_camera, enum te_keyboard_button button);
-void editor_camera_on_keyboard_button_released(te_editor_camera* editor_camera, enum te_keyboard_button button);
+void
+editor_camera_on_mouse_moved(te_editor_camera* editor_camera, float x_offset, float y_offset);
+void editor_camera_on_gamepad_axis_moved(
+    te_editor_camera* editor_camera, enum te_gamepad_axis axis, float new_pos);
+void editor_camera_on_keyboard_button_pressed(
+    te_editor_camera* editor_camera, enum te_keyboard_button button);
+void editor_camera_on_keyboard_button_released(
+    te_editor_camera* editor_camera, enum te_keyboard_button button);
 void editor_camera_on_game_tick(te_editor_camera* editor_camera, float delta_time_sec);
 void editor_camera_on_gamepad_connected(te_editor_camera* editor_camera);
 void editor_camera_on_gamepad_disconnected(te_editor_camera* editor_camera);

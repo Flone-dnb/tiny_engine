@@ -131,11 +131,14 @@ camera_get_name(te_camera* camera) {
 
 void
 camera_register_type(void) {
-    te_type_info* info = type_info_create(camera_get_type_id(), camera_create, world_spawn_camera, NULL);
+    te_type_info* info =
+        type_info_create(camera_get_type_id(), camera_create, world_spawn_camera, NULL);
     type_info_add_vec3_variable(info, "position", camera_set_position, camera_get_position);
     type_info_add_vec3_variable(info, "rotation", camera_set_rotation, camera_get_rotation);
-    type_info_add_uint_variable(info, "vertical_fov", camera_set_vertical_fov, camera_get_vertical_fov);
-    type_info_add_float_variable(info, "near_clip", camera_set_near_clip, camera_get_near_clip);
+    type_info_add_uint_variable(
+        info, "vertical_fov", camera_set_vertical_fov, camera_get_vertical_fov);
+    type_info_add_float_variable(
+        info, "near_clip", camera_set_near_clip, camera_get_near_clip);
     type_info_add_float_variable(info, "far_clip", camera_set_far_clip, camera_get_far_clip);
     type_info_add_string_variable(info, "name", camera_set_name, camera_get_name);
 
@@ -289,8 +292,8 @@ prv_camera_recalc_frustum(te_camera* camera) {
     }
 #endif
     camera->frustum = frustum_shape_create(
-        camera->position, camera->forward, camera->up, camera->near_clip, camera->far_clip, camera->vertical_fov,
-        (float)camera->render_width / (float)camera->render_height);
+        camera->position, camera->forward, camera->up, camera->near_clip, camera->far_clip,
+        camera->vertical_fov, (float)camera->render_width / (float)camera->render_height);
 }
 
 mat4*
@@ -314,7 +317,8 @@ camera_get_view_proj_mat(te_camera* camera) {
 #endif
         if (camera->is_proj_mat_outdated) {
             glm_perspective_rh_no(
-                glm_rad(camera->vertical_fov), (float)camera->render_width / (float)camera->render_height, camera->near_clip,
+                glm_rad(camera->vertical_fov),
+                (float)camera->render_width / (float)camera->render_height, camera->near_clip,
                 camera->far_clip, camera->proj_mat);
             camera->is_proj_mat_outdated = false;
         }
@@ -354,7 +358,8 @@ camera_get_frustum(te_camera* camera) {
 
         if (camera->is_proj_mat_outdated) {
             glm_perspective_rh_no(
-                glm_rad(camera->vertical_fov), (float)camera->render_width / (float)camera->render_height, camera->near_clip,
+                glm_rad(camera->vertical_fov),
+                (float)camera->render_width / (float)camera->render_height, camera->near_clip,
                 camera->far_clip, camera->proj_mat);
 
             camera->is_proj_mat_outdated = false;

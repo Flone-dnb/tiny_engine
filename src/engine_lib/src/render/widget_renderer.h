@@ -62,5 +62,7 @@ void widget_renderer_remove_rect_widget(te_widget_renderer* renderer, unsigned i
 // Never store/save pointer to render data because on the next frame
 // the pointer may end up pointing to an invalid memory. Only use "get_render_data" function to quickly
 // update some render data. Suffix "_tmp" is used because of this.
-te_text_widget_render_data* widget_renderer_get_text_widget_render_data_tmp(te_widget_renderer* renderer, unsigned int handle);
-te_rect_widget_render_data* widget_renderer_get_rect_widget_render_data_tmp(te_widget_renderer* renderer, unsigned int handle);
+te_text_widget_render_data* widget_renderer_get_text_widget_render_data_tmp(
+    te_widget_renderer* renderer, unsigned int handle);
+te_rect_widget_render_data* widget_renderer_get_rect_widget_render_data_tmp(
+    te_widget_renderer* renderer, unsigned int handle);

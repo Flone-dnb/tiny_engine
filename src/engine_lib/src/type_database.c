@@ -42,7 +42,8 @@ prv_type_info_compare(const void* a, const void* b, void* udata) {
 
 void
 prv_type_database_init(void) {
-    type_database.types = hashmap_new(sizeof(te_type_info*), 4, 0, 0, prv_type_info_hash, prv_type_info_compare, NULL, NULL);
+    type_database.types = hashmap_new(
+        sizeof(te_type_info*), 4, 0, 0, prv_type_info_hash, prv_type_info_compare, NULL, NULL);
 
     // Register engine types.
     model_register_type();
@@ -141,81 +142,104 @@ prv_type_database_deinit(void) {
     type_database.types = NULL;
 }
 
-#define TYPE_INFO_ALLOC_VARIABLE(info, var_name, var_type, type_var_count, setters, getters, new_setter, new_getter)             \
-    if (info->variable_count == 0xffff) {                                                                                        \
-        log_error("reached variable limit");                                                                                     \
-        abort();                                                                                                                 \
-    }                                                                                                                            \
-    te_variable_info* new_variables = malloc(sizeof(te_variable_info) * (info->variable_count + 1));                             \
-    memcpy(new_variables, info->variables, sizeof(te_variable_info) * info->variable_count);                                     \
-                                                                                                                                 \
-    free(info->variables);                                                                                                       \
-    info->variables = new_variables;                                                                                             \
-                                                                                                                                 \
-    info->variable_count += 1;                                                                                                   \
-                                                                                                                                 \
-    void* new_setters = malloc(sizeof(void*) * (type_var_count + 1));                                                            \
-    memcpy(new_setters, setters, sizeof(void*) * type_var_count);                                                                \
-                                                                                                                                 \
-    free(setters);                                                                                                               \
-    setters = new_setters;                                                                                                       \
-    setters[type_var_count] = new_setter;                                                                                        \
-                                                                                                                                 \
-    void* new_getters = malloc(sizeof(void*) * (type_var_count + 1));                                                            \
-    memcpy(new_getters, getters, sizeof(void*) * type_var_count);                                                                \
-                                                                                                                                 \
-    free(getters);                                                                                                               \
-    getters = new_getters;                                                                                                       \
-    getters[type_var_count] = new_getter;                                                                                        \
-                                                                                                                                 \
-    type_var_count += 1;                                                                                                         \
-                                                                                                                                 \
-    te_variable_info* var_info = &info->variables[info->variable_count - 1];                                                     \
-    var_info->name = name;                                                                                                       \
-    var_info->type = var_type;                                                                                                   \
+#define TYPE_INFO_ALLOC_VARIABLE(                                                             \
+    info, var_name, var_type, type_var_count, setters, getters, new_setter, new_getter)       \
+    if (info->variable_count == 0xffff) {                                                     \
+        log_error("reached variable limit");                                                  \
+        abort();                                                                              \
+    }                                                                                         \
+    te_variable_info* new_variables =                                                         \
+        malloc(sizeof(te_variable_info) * (info->variable_count + 1));                        \
+    memcpy(new_variables, info->variables, sizeof(te_variable_info) * info->variable_count);  \
+                                                                                              \
+    free(info->variables);                                                                    \
+    info->variables = new_variables;                                                          \
+                                                                                              \
+    info->variable_count += 1;                                                                \
+                                                                                              \
+    void* new_setters = malloc(sizeof(void*) * (type_var_count + 1));                         \
+    memcpy(new_setters, setters, sizeof(void*) * type_var_count);                             \
+                                                                                              \
+    free(setters);                                                                            \
+    setters = new_setters;                                                                    \
+    setters[type_var_count] = new_setter;                                                     \
+                                                                                              \
+    void* new_getters = malloc(sizeof(void*) * (type_var_count + 1));                         \
+    memcpy(new_getters, getters, sizeof(void*) * type_var_count);                             \
+                                                                                              \
+    free(getters);                                                                            \
+    getters = new_getters;                                                                    \
+    getters[type_var_count] = new_getter;                                                     \
+                                                                                              \
+    type_var_count += 1;                                                                      \
+                                                                                              \
+    te_variable_info* var_info = &info->variables[info->variable_count - 1];                  \
+    var_info->name = name;                                                                    \
+    var_info->type = var_type;                                                                \
     var_info->set_get_index = type_var_count - 1;
 
 void
-type_info_add_bool_variable(te_type_info* info, const char* name, te_bool_setter setter, te_bool_getter getter) {
-    TYPE_INFO_ALLOC_VARIABLE(info, name, TE_VT_BOOL, info->bool_count, info->bool_setters, info->bool_getters, setter, getter);
-}
-
-void
-type_info_add_uint_variable(te_type_info* info, const char* name, te_uint_setter setter, te_uint_getter getter) {
-    TYPE_INFO_ALLOC_VARIABLE(info, name, TE_VT_UINT, info->uint_count, info->uint_setters, info->uint_getters, setter, getter);
-}
-
-void
-type_info_add_float_variable(te_type_info* info, const char* name, te_float_setter setter, te_float_getter getter) {
+type_info_add_bool_variable(
+    te_type_info* info, const char* name, te_bool_setter setter, te_bool_getter getter) {
     TYPE_INFO_ALLOC_VARIABLE(
-        info, name, TE_VT_FLOAT, info->float_count, info->float_setters, info->float_getters, setter, getter);
+        info, name, TE_VT_BOOL, info->bool_count, info->bool_setters, info->bool_getters,
+        setter, getter);
 }
 
 void
-type_info_add_vec2_variable(te_type_info* info, const char* name, te_vec2_setter setter, te_vec2_getter getter) {
-    TYPE_INFO_ALLOC_VARIABLE(info, name, TE_VT_VEC2, info->vec2_count, info->vec2_setters, info->vec2_getters, setter, getter);
-}
-
-void
-type_info_add_vec3_variable(te_type_info* info, const char* name, te_vec3_setter setter, te_vec3_getter getter) {
-    TYPE_INFO_ALLOC_VARIABLE(info, name, TE_VT_VEC3, info->vec3_count, info->vec3_setters, info->vec3_getters, setter, getter);
-}
-
-void
-type_info_add_vec4_variable(te_type_info* info, const char* name, te_vec4_setter setter, te_vec4_getter getter) {
-    TYPE_INFO_ALLOC_VARIABLE(info, name, TE_VT_VEC4, info->vec4_count, info->vec4_setters, info->vec4_getters, setter, getter);
-}
-
-void
-type_info_add_string_variable(te_type_info* info, const char* name, te_string_setter setter, te_string_getter getter) {
+type_info_add_uint_variable(
+    te_type_info* info, const char* name, te_uint_setter setter, te_uint_getter getter) {
     TYPE_INFO_ALLOC_VARIABLE(
-        info, name, TE_VT_STRING, info->string_count, info->string_setters, info->string_getters, setter, getter);
+        info, name, TE_VT_UINT, info->uint_count, info->uint_setters, info->uint_getters,
+        setter, getter);
 }
 
 void
-type_info_add_wstring_variable(te_type_info* info, const char* name, te_wstring_setter setter, te_wstring_getter getter) {
+type_info_add_float_variable(
+    te_type_info* info, const char* name, te_float_setter setter, te_float_getter getter) {
     TYPE_INFO_ALLOC_VARIABLE(
-        info, name, TE_VT_WSTRING, info->wstring_count, info->wstring_setters, info->wstring_getters, setter, getter);
+        info, name, TE_VT_FLOAT, info->float_count, info->float_setters, info->float_getters,
+        setter, getter);
+}
+
+void
+type_info_add_vec2_variable(
+    te_type_info* info, const char* name, te_vec2_setter setter, te_vec2_getter getter) {
+    TYPE_INFO_ALLOC_VARIABLE(
+        info, name, TE_VT_VEC2, info->vec2_count, info->vec2_setters, info->vec2_getters,
+        setter, getter);
+}
+
+void
+type_info_add_vec3_variable(
+    te_type_info* info, const char* name, te_vec3_setter setter, te_vec3_getter getter) {
+    TYPE_INFO_ALLOC_VARIABLE(
+        info, name, TE_VT_VEC3, info->vec3_count, info->vec3_setters, info->vec3_getters,
+        setter, getter);
+}
+
+void
+type_info_add_vec4_variable(
+    te_type_info* info, const char* name, te_vec4_setter setter, te_vec4_getter getter) {
+    TYPE_INFO_ALLOC_VARIABLE(
+        info, name, TE_VT_VEC4, info->vec4_count, info->vec4_setters, info->vec4_getters,
+        setter, getter);
+}
+
+void
+type_info_add_string_variable(
+    te_type_info* info, const char* name, te_string_setter setter, te_string_getter getter) {
+    TYPE_INFO_ALLOC_VARIABLE(
+        info, name, TE_VT_STRING, info->string_count, info->string_setters,
+        info->string_getters, setter, getter);
+}
+
+void
+type_info_add_wstring_variable(
+    te_type_info* info, const char* name, te_wstring_setter setter, te_wstring_getter getter) {
+    TYPE_INFO_ALLOC_VARIABLE(
+        info, name, TE_VT_WSTRING, info->wstring_count, info->wstring_setters,
+        info->wstring_getters, setter, getter);
 }
 
 unsigned int
@@ -227,17 +251,20 @@ type_info_save_to_config(const te_type_info* type_info, te_config* config, void*
         switch (var_info->type) {
             case (TE_VT_BOOL): {
                 config_section_set_bool(
-                    config, section_idx, var_info->name, type_info->bool_getters[var_info->set_get_index](obj));
+                    config, section_idx, var_info->name,
+                    type_info->bool_getters[var_info->set_get_index](obj));
                 break;
             }
             case (TE_VT_UINT): {
                 config_section_set_uint(
-                    config, section_idx, var_info->name, type_info->uint_getters[var_info->set_get_index](obj));
+                    config, section_idx, var_info->name,
+                    type_info->uint_getters[var_info->set_get_index](obj));
                 break;
             }
             case (TE_VT_FLOAT): {
                 config_section_set_float(
-                    config, section_idx, var_info->name, type_info->float_getters[var_info->set_get_index](obj));
+                    config, section_idx, var_info->name,
+                    type_info->float_getters[var_info->set_get_index](obj));
                 break;
             }
             case (TE_VT_STRING): {
@@ -248,7 +275,8 @@ type_info_save_to_config(const te_type_info* type_info, te_config* config, void*
                 break;
             }
             case (TE_VT_WSTRING): {
-                const wchar_t* src_text = type_info->wstring_getters[var_info->set_get_index](obj);
+                const wchar_t* src_text =
+                    type_info->wstring_getters[var_info->set_get_index](obj);
                 if (src_text != NULL) {
                     unsigned int text_len;
                     char* text = wchar_to_char(src_text, &text_len);
@@ -282,37 +310,43 @@ type_info_save_to_config(const te_type_info* type_info, te_config* config, void*
 }
 
 void
-type_info_load_from_config(const te_type_info* type_info, te_config* config, unsigned int section_idx, void* obj) {
+type_info_load_from_config(
+    const te_type_info* type_info, te_config* config, unsigned int section_idx, void* obj) {
     for (unsigned int var_idx = 0; var_idx < type_info->variable_count; var_idx++) {
         te_variable_info* var_info = &type_info->variables[var_idx];
         switch (var_info->type) {
             case (TE_VT_BOOL): {
                 type_info->bool_setters[var_info->set_get_index](
                     obj, config_section_get_bool(
-                             config, section_idx, var_info->name, type_info->bool_getters[var_info->set_get_index](obj)));
+                             config, section_idx, var_info->name,
+                             type_info->bool_getters[var_info->set_get_index](obj)));
                 break;
             }
             case (TE_VT_UINT): {
                 type_info->uint_setters[var_info->set_get_index](
                     obj, config_section_get_uint(
-                             config, section_idx, var_info->name, type_info->uint_getters[var_info->set_get_index](obj)));
+                             config, section_idx, var_info->name,
+                             type_info->uint_getters[var_info->set_get_index](obj)));
                 break;
             }
             case (TE_VT_FLOAT): {
                 type_info->float_setters[var_info->set_get_index](
                     obj, config_section_get_float(
-                             config, section_idx, var_info->name, type_info->float_getters[var_info->set_get_index](obj)));
+                             config, section_idx, var_info->name,
+                             type_info->float_getters[var_info->set_get_index](obj)));
                 break;
             }
             case (TE_VT_STRING): {
-                char* val = config_section_get_string(config, section_idx, var_info->name, NULL);
+                char* val =
+                    config_section_get_string(config, section_idx, var_info->name, NULL);
                 if (val != NULL) {
                     type_info->string_setters[var_info->set_get_index](obj, val);
                 }
                 break;
             }
             case (TE_VT_WSTRING): {
-                char* val = config_section_get_string(config, section_idx, var_info->name, NULL);
+                char* val =
+                    config_section_get_string(config, section_idx, var_info->name, NULL);
                 if (val != NULL) {
                     unsigned int len;
                     wchar_t* text = wchar_from_char(val, &len);
@@ -323,10 +357,12 @@ type_info_load_from_config(const te_type_info* type_info, te_config* config, uns
             }
             case (TE_VT_VEC2): {
                 unsigned int count;
-                float* val = config_section_get_float_array(config, section_idx, var_info->name, &count);
+                float* val = config_section_get_float_array(
+                    config, section_idx, var_info->name, &count);
                 if (count != 2) {
                     log_warn_fmt(
-                        "variable \"%s\" of section with index %u has unexpected array size in the config, expected 2 got %u, "
+                        "variable \"%s\" of section with index %u has unexpected array size "
+                        "in the config, expected 2 got %u, "
                         "ignoring this variable",
                         var_info->name, section_idx, count);
                     continue;
@@ -336,10 +372,12 @@ type_info_load_from_config(const te_type_info* type_info, te_config* config, uns
             }
             case (TE_VT_VEC3): {
                 unsigned int count;
-                float* val = config_section_get_float_array(config, section_idx, var_info->name, &count);
+                float* val = config_section_get_float_array(
+                    config, section_idx, var_info->name, &count);
                 if (count != 3) {
                     log_warn_fmt(
-                        "variable \"%s\" of section with index %u has unexpected array size in the config, expected 3 got %u, "
+                        "variable \"%s\" of section with index %u has unexpected array size "
+                        "in the config, expected 3 got %u, "
                         "ignoring this variable",
                         var_info->name, section_idx, count);
                     continue;
@@ -349,10 +387,12 @@ type_info_load_from_config(const te_type_info* type_info, te_config* config, uns
             }
             case (TE_VT_VEC4): {
                 unsigned int count;
-                float* val = config_section_get_float_array(config, section_idx, var_info->name, &count);
+                float* val = config_section_get_float_array(
+                    config, section_idx, var_info->name, &count);
                 if (count != 4) {
                     log_warn_fmt(
-                        "variable \"%s\" of section with index %u has unexpected array size in the config, expected 4 got %u, "
+                        "variable \"%s\" of section with index %u has unexpected array size "
+                        "in the config, expected 4 got %u, "
                         "ignoring this variable",
                         var_info->name, section_idx, count);
                     continue;

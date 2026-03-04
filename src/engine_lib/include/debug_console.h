@@ -40,7 +40,8 @@ void prv_debug_console_hide(void);
 
 bool prv_debug_console_is_shown(void);
 
-void prv_debug_console_on_keyboard_input(struct te_game_manager* game_manager, enum te_keyboard_button button);
+void prv_debug_console_on_keyboard_input(
+    struct te_game_manager* game_manager, enum te_keyboard_button button);
 void prv_debug_console_on_keyboard_input_text(const char* text);
 
 void prv_debug_console_draw(float delta_time_sec);

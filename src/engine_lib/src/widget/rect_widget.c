@@ -11,7 +11,7 @@
 #include <window.h>
 #include <world.h>
 
-#define INVALID_RENDER_DATA_HANDLE  0xffffffff
+#define INVALID_RENDER_DATA_HANDLE 0xffffffff
 #define RECT_WIDGET_TEX_LOAD_OPTION TE_TLO_NO_MIPMAPS
 
 struct te_rect_widget {
@@ -50,9 +50,10 @@ rect_widget_create(void) {
     te_rect_widget* rect_widget = malloc(sizeof(te_rect_widget));
 
     rect_widget->widget = widget_create(
-        rect_widget, rect_widget_get_type_id, prv_rect_widget_on_pos_changed, prv_rect_widget_on_size_changed,
-        prv_rect_widget_on_before_base_destroyed, NULL, NULL, prv_rect_widget_on_after_spawned,
-        prv_rect_widget_on_before_despawned, prv_rect_widget_on_window_size_changed);
+        rect_widget, rect_widget_get_type_id, prv_rect_widget_on_pos_changed,
+        prv_rect_widget_on_size_changed, prv_rect_widget_on_before_base_destroyed, NULL, NULL,
+        prv_rect_widget_on_after_spawned, prv_rect_widget_on_before_despawned,
+        prv_rect_widget_on_window_size_changed);
     glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, rect_widget->color);
     rect_widget->tex_relative_path = NULL;
     rect_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
@@ -111,8 +112,8 @@ rect_widget_set_color(te_rect_widget* rect_widget, vec4 color) {
             abort();
         }
 
-        te_rect_widget_render_data* data =
-            widget_renderer_get_rect_widget_render_data_tmp(world_get_widget_renderer(world), rect_widget->render_data_handle);
+        te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
+            world_get_widget_renderer(world), rect_widget->render_data_handle);
         glm_vec4_copy(rect_widget->color, data->color);
     }
 }
@@ -145,8 +146,8 @@ rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) 
 
             if (data->tex_id > 0) {
                 // Mark texture as unused.
-                te_texture_manager* texture_manager =
-                    renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(world)));
+                te_texture_manager* texture_manager = renderer_get_texture_manager(
+                    game_manager_get_renderer(world_get_game_manager(world)));
                 texture_manager_mark_unused_texture(texture_manager, data->tex_id);
             }
 
@@ -169,14 +170,15 @@ rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) 
             te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
                 world_get_widget_renderer(world), rect_widget->render_data_handle);
 
-            te_texture_manager* texture_manager =
-                renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(world)));
+            te_texture_manager* texture_manager = renderer_get_texture_manager(
+                game_manager_get_renderer(world_get_game_manager(world)));
             if (data->tex_id > 0) {
                 texture_manager_mark_unused_texture(texture_manager, data->tex_id);
             }
 
             // Load new texture.
-            data->tex_id = texture_manager_request_texture(texture_manager, relative_path, RECT_WIDGET_TEX_LOAD_OPTION);
+            data->tex_id = texture_manager_request_texture(
+                texture_manager, relative_path, RECT_WIDGET_TEX_LOAD_OPTION);
         }
     }
 }
@@ -197,8 +199,8 @@ rect_widget_set_clip_rect(te_rect_widget* rect_widget, vec4 clip_rect) {
             abort();
         }
 
-        te_rect_widget_render_data* data =
-            widget_renderer_get_rect_widget_render_data_tmp(world_get_widget_renderer(world), rect_widget->render_data_handle);
+        te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
+            world_get_widget_renderer(world), rect_widget->render_data_handle);
         glm_vec4_copy(clip_rect, data->clip_rect);
     }
 }
@@ -227,15 +229,16 @@ prv_rect_widget_register_for_rendering(te_rect_widget* rect_widget) {
 
     rect_widget->render_data_handle = widget_renderer_add_rect_widget(widget_renderer);
 
-    te_rect_widget_render_data* data =
-        widget_renderer_get_rect_widget_render_data_tmp(widget_renderer, rect_widget->render_data_handle);
+    te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
+        widget_renderer, rect_widget->render_data_handle);
 
     // Setup texture.
     data->tex_id = 0;
     if (rect_widget->tex_relative_path != NULL) {
-        te_texture_manager* texture_manager = renderer_get_texture_manager(game_manager_get_renderer(game_manager));
-        data->tex_id =
-            texture_manager_request_texture(texture_manager, rect_widget->tex_relative_path, RECT_WIDGET_TEX_LOAD_OPTION);
+        te_texture_manager* texture_manager =
+            renderer_get_texture_manager(game_manager_get_renderer(game_manager));
+        data->tex_id = texture_manager_request_texture(
+            texture_manager, rect_widget->tex_relative_path, RECT_WIDGET_TEX_LOAD_OPTION);
     }
 
     prv_rect_widget_update_non_tex_render_data(rect_widget);
@@ -258,11 +261,11 @@ prv_rect_widget_unregister_from_rendering(te_rect_widget* rect_widget) {
     te_widget_renderer* widget_renderer = world_get_widget_renderer(world);
 
     // Cleanup data.
-    te_rect_widget_render_data* data =
-        widget_renderer_get_rect_widget_render_data_tmp(widget_renderer, rect_widget->render_data_handle);
+    te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
+        widget_renderer, rect_widget->render_data_handle);
     if (data->tex_id > 0) {
-        te_texture_manager* texture_manager =
-            renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(world)));
+        te_texture_manager* texture_manager = renderer_get_texture_manager(
+            game_manager_get_renderer(world_get_game_manager(world)));
         texture_manager_mark_unused_texture(texture_manager, data->tex_id);
     }
 
@@ -286,8 +289,8 @@ prv_rect_widget_update_non_tex_render_data(te_rect_widget* rect_widget) {
     }
     te_game_manager* game_manager = world_get_game_manager(world);
 
-    te_rect_widget_render_data* data =
-        widget_renderer_get_rect_widget_render_data_tmp(world_get_widget_renderer(world), rect_widget->render_data_handle);
+    te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
+        world_get_widget_renderer(world), rect_widget->render_data_handle);
 
     glm_vec4_copy(rect_widget->color, data->color);
 
@@ -297,8 +300,10 @@ prv_rect_widget_update_non_tex_render_data(te_rect_widget* rect_widget) {
 
     widget_get_screen_position(rect_widget->widget, data->pos_pix);
     widget_get_screen_size(rect_widget->widget, data->size_pix);
-    glm_vec2_mul(data->pos_pix, (vec2){(float)window_width, (float)window_height}, data->pos_pix);
-    glm_vec2_mul(data->size_pix, (vec2){(float)window_width, (float)window_height}, data->size_pix);
+    glm_vec2_mul(
+        data->pos_pix, (vec2){(float)window_width, (float)window_height}, data->pos_pix);
+    glm_vec2_mul(
+        data->size_pix, (vec2){(float)window_width, (float)window_height}, data->size_pix);
 
     glm_vec4_copy(rect_widget->clip_rect, data->clip_rect);
 }
@@ -385,12 +390,16 @@ prv_rect_widget_spawn(te_world* world, te_rect_widget* rect_widget) {
 
 void
 rect_widget_register_type(void) {
-    te_type_info* info =
-        type_info_create(rect_widget_get_type_id(), rect_widget_create, prv_rect_widget_spawn, prv_rect_widget_get_base);
-    type_info_add_vec2_variable(info, "position", prv_rect_widget_set_position, prv_rect_widget_get_position);
-    type_info_add_vec2_variable(info, "size", prv_rect_widget_set_size, prv_rect_widget_get_size);
+    te_type_info* info = type_info_create(
+        rect_widget_get_type_id(), rect_widget_create, prv_rect_widget_spawn,
+        prv_rect_widget_get_base);
+    type_info_add_vec2_variable(
+        info, "position", prv_rect_widget_set_position, prv_rect_widget_get_position);
+    type_info_add_vec2_variable(
+        info, "size", prv_rect_widget_set_size, prv_rect_widget_get_size);
     type_info_add_vec4_variable(info, "color", rect_widget_set_color, rect_widget_get_color);
-    type_info_add_string_variable(info, "texture", rect_widget_set_texture, rect_widget_get_texture);
+    type_info_add_string_variable(
+        info, "texture", rect_widget_set_texture, rect_widget_get_texture);
 
     type_database_register_type(info);
 }

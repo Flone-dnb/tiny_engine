@@ -50,7 +50,9 @@ prv_log(enum te_log_category category, const char* message, char* filepath, int 
 
     // Create log prefix.
     char log_prefix[512] = {0};
-    snprintf(&log_prefix[0], 511, "[%s] [%s] [%s:%d]", time_str, category_str, filepath + filename_start, line);
+    snprintf(
+        &log_prefix[0], 511, "[%s] [%s] [%s:%d]", time_str, category_str,
+        filepath + filename_start, line);
 
     // Open log file (not checking if directories exist because we checked this at game start).
     const char* path_to_log_file = paths_get_log_file();
@@ -64,7 +66,8 @@ prv_log(enum te_log_category category, const char* message, char* filepath, int 
         if (log_file == NULL) {
             abort();
         }
-        fprintf(log_file, "ERROR: failed to create log file at path \"%s\"\n", path_to_log_file);
+        fprintf(
+            log_file, "ERROR: failed to create log file at path \"%s\"\n", path_to_log_file);
 #if defined(WIN32)
         fprintf(log_file, "does User name contains special characters?\n");
 #endif

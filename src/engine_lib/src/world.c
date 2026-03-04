@@ -18,9 +18,9 @@
 #include <render/gpu_time_section.h>
 #endif
 
-#define CONFIG_VAR_NAME_HAS_CHILD_MODEL     "has_child_model"
+#define CONFIG_VAR_NAME_HAS_CHILD_MODEL "has_child_model"
 #define CONFIG_VAR_NAME_HAS_ATTACHED_CAMERA "has_attached_camera"
-#define CONFIG_VAR_NAME_CHILD_WIDGET_COUNT  "child_widget_count"
+#define CONFIG_VAR_NAME_CHILD_WIDGET_COUNT "child_widget_count"
 
 // World represents several objects: audio system, cameras, game objects and etc.
 struct te_world {
@@ -173,7 +173,8 @@ prv_world_destroy(te_world* world) {
         }
         free(world->spawned_widgets);
         if (world->interactable_widget_count > 0) {
-            log_error("all widgets of a world were destroyed but there are still some interactable widgets registered");
+            log_error("all widgets of a world were destroyed but there are still some "
+                      "interactable widgets registered");
             abort();
         }
         free(world->interactable_widgets);
@@ -211,7 +212,8 @@ prv_world_on_window_size_changed(te_world* world) {
 }
 
 void
-prv_world_add_root_model_no_notify(te_world* world, struct te_model* model, bool check_if_already_added) {
+prv_world_add_root_model_no_notify(
+    te_world* world, struct te_model* model, bool check_if_already_added) {
     if (check_if_already_added) {
         for (unsigned int i = 0; i < world->spawned_model_count; i++) {
             if (world->spawned_models[i] == model) {
@@ -223,8 +225,10 @@ prv_world_add_root_model_no_notify(te_world* world, struct te_model* model, bool
     if (world->spawned_model_count == world->spawned_models_array_size) {
         // Expand array.
         const unsigned int grow_size = 128;
-        te_model** new_models = malloc(sizeof(te_model*) * (world->spawned_models_array_size + grow_size));
-        memcpy(new_models, world->spawned_models, sizeof(te_model*) * world->spawned_model_count);
+        te_model** new_models =
+            malloc(sizeof(te_model*) * (world->spawned_models_array_size + grow_size));
+        memcpy(
+            new_models, world->spawned_models, sizeof(te_model*) * world->spawned_model_count);
 
         free(world->spawned_models);
         world->spawned_models = new_models;
@@ -236,7 +240,8 @@ prv_world_add_root_model_no_notify(te_world* world, struct te_model* model, bool
 }
 
 void
-prv_world_remove_root_model_no_notify(te_world* world, struct te_model* model, bool must_exist_in_array) {
+prv_world_remove_root_model_no_notify(
+    te_world* world, struct te_model* model, bool must_exist_in_array) {
     // Find model.
     unsigned int model_idx = 0;
     bool found = false;
@@ -250,9 +255,10 @@ prv_world_remove_root_model_no_notify(te_world* world, struct te_model* model, b
     }
     if (!found) {
         if (must_exist_in_array) {
-            log_error(
-                "unable to despawn the specified model: the model was not spawned previously or is a child model (despawn root "
-                "model to despawn child modes or detach child model from parent first, then despawn the model)");
+            log_error("unable to despawn the specified model: the model was not spawned "
+                      "previously or is a child model (despawn root "
+                      "model to despawn child modes or detach child model from parent first, "
+                      "then despawn the model)");
             abort();
         } else {
             return;
@@ -269,7 +275,8 @@ prv_world_remove_root_model_no_notify(te_world* world, struct te_model* model, b
 }
 
 void
-prv_world_add_root_widget_no_notify(te_world* world, struct te_widget* widget, bool check_if_already_added) {
+prv_world_add_root_widget_no_notify(
+    te_world* world, struct te_widget* widget, bool check_if_already_added) {
     if (check_if_already_added) {
         for (unsigned int i = 0; i < world->spawned_widget_count; i++) {
             if (world->spawned_widgets[i] == widget) {
@@ -279,7 +286,8 @@ prv_world_add_root_widget_no_notify(te_world* world, struct te_widget* widget, b
     }
 
     te_widget** new_widgets = malloc(sizeof(te_widget*) * (world->spawned_widget_count + 1));
-    memcpy(new_widgets, world->spawned_widgets, sizeof(te_widget*) * world->spawned_widget_count);
+    memcpy(
+        new_widgets, world->spawned_widgets, sizeof(te_widget*) * world->spawned_widget_count);
 
     free(world->spawned_widgets);
     world->spawned_widgets = new_widgets;
@@ -289,7 +297,8 @@ prv_world_add_root_widget_no_notify(te_world* world, struct te_widget* widget, b
 }
 
 void
-prv_world_remove_root_widget_no_notify(te_world* world, struct te_widget* widget, bool must_exist_in_array) {
+prv_world_remove_root_widget_no_notify(
+    te_world* world, struct te_widget* widget, bool must_exist_in_array) {
     if (world->spawned_widget_count == 1) {
         if (world->spawned_widgets[0] != widget) {
             if (must_exist_in_array) {
@@ -315,8 +324,10 @@ prv_world_remove_root_widget_no_notify(te_world* world, struct te_widget* widget
         }
         if (!found) {
             if (must_exist_in_array) {
-                log_error("unable to despawn the specified widget: the widget was not spawned previously or is a child widget "
-                          "(despawn root widget to despawn child widgets or detach child widget from parent first, then despawn "
+                log_error("unable to despawn the specified widget: the widget was not spawned "
+                          "previously or is a child widget "
+                          "(despawn root widget to despawn child widgets or detach child "
+                          "widget from parent first, then despawn "
                           "the widget)");
                 abort();
             } else {
@@ -324,9 +335,12 @@ prv_world_remove_root_widget_no_notify(te_world* world, struct te_widget* widget
             }
         }
 
-        te_widget** new_widgets = malloc(sizeof(te_widget*) * (world->spawned_widget_count - 1));
+        te_widget** new_widgets =
+            malloc(sizeof(te_widget*) * (world->spawned_widget_count - 1));
         memcpy(new_widgets, world->spawned_widgets, sizeof(te_widget*) * i);
-        memcpy(new_widgets + i, world->spawned_widgets + (i + 1), sizeof(te_widget*) * (world->spawned_widget_count - i - 1));
+        memcpy(
+            new_widgets + i, world->spawned_widgets + (i + 1),
+            sizeof(te_widget*) * (world->spawned_widget_count - i - 1));
 
         free(world->spawned_widgets);
         world->spawned_widgets = new_widgets;
@@ -335,7 +349,8 @@ prv_world_remove_root_widget_no_notify(te_world* world, struct te_widget* widget
 }
 
 void
-prv_world_add_root_camera_no_notify(te_world* world, struct te_camera* camera, bool check_if_already_added) {
+prv_world_add_root_camera_no_notify(
+    te_world* world, struct te_camera* camera, bool check_if_already_added) {
     if (check_if_already_added) {
         for (unsigned int i = 0; i < world->spawned_camera_count; i++) {
             if (world->spawned_cameras[i] == camera) {
@@ -350,14 +365,16 @@ prv_world_add_root_camera_no_notify(te_world* world, struct te_camera* camera, b
             log_error("the camera is already spawned in this world");
             abort();
         } else {
-            log_error("the specified camera cannot be spawned in this world because the camera "
-                      "must be first despawned from the world it currently resides in");
+            log_error(
+                "the specified camera cannot be spawned in this world because the camera "
+                "must be first despawned from the world it currently resides in");
             abort();
         }
     }
 
     te_camera** new_cameras = malloc(sizeof(te_camera*) * (world->spawned_camera_count + 1));
-    memcpy(new_cameras, world->spawned_cameras, sizeof(te_camera*) * world->spawned_camera_count);
+    memcpy(
+        new_cameras, world->spawned_cameras, sizeof(te_camera*) * world->spawned_camera_count);
 
     free(world->spawned_cameras);
     world->spawned_cameras = new_cameras;
@@ -369,7 +386,8 @@ prv_world_add_root_camera_no_notify(te_world* world, struct te_camera* camera, b
 }
 
 void
-prv_world_remove_root_camera_no_notify(te_world* world, struct te_camera* camera, bool must_exist_in_array) {
+prv_world_remove_root_camera_no_notify(
+    te_world* world, struct te_camera* camera, bool must_exist_in_array) {
     if (world->active_camera == camera) {
         world->active_camera = NULL;
     }
@@ -400,8 +418,10 @@ prv_world_remove_root_camera_no_notify(te_world* world, struct te_camera* camera
         }
         if (!found) {
             if (must_exist_in_array) {
-                log_error("unable to despawn the specified camera: the camera was not spawned previously or is a child camera "
-                          "(despawn root object to despawn child objects or detach child camera from parent first, then despawn "
+                log_error("unable to despawn the specified camera: the camera was not spawned "
+                          "previously or is a child camera "
+                          "(despawn root object to despawn child objects or detach child "
+                          "camera from parent first, then despawn "
                           "the camera)");
                 abort();
             } else {
@@ -409,9 +429,12 @@ prv_world_remove_root_camera_no_notify(te_world* world, struct te_camera* camera
             }
         }
 
-        te_camera** new_cameras = malloc(sizeof(te_camera*) * (world->spawned_model_count - 1));
+        te_camera** new_cameras =
+            malloc(sizeof(te_camera*) * (world->spawned_model_count - 1));
         memcpy(new_cameras, world->spawned_cameras, sizeof(te_camera*) * i);
-        memcpy(new_cameras + i, world->spawned_cameras + (i + 1), sizeof(te_camera*) * (world->spawned_camera_count - i - 1));
+        memcpy(
+            new_cameras + i, world->spawned_cameras + (i + 1),
+            sizeof(te_camera*) * (world->spawned_camera_count - i - 1));
 
         free(world->spawned_cameras);
         world->spawned_cameras = new_cameras;
@@ -431,7 +454,8 @@ world_set_active_camera(te_world* world, te_camera* camera) {
     }
 
     if (camera_get_world(camera) != world) {
-        log_error("in order to make a camera active in the world you first need to spawn the camera in the world");
+        log_error("in order to make a camera active in the world you first need to spawn the "
+                  "camera in the world");
         abort();
     }
 
@@ -444,8 +468,10 @@ prv_save_widget_recursive(te_config* config, te_widget* widget) {
         return;
     }
 
-    const te_type_info* type_info = type_database_get_type_info(widget_get_owner_type_id(widget));
-    const unsigned int section_idx = type_info_save_to_config(type_info, config, widget_get_owner(widget));
+    const te_type_info* type_info =
+        type_database_get_type_info(widget_get_owner_type_id(widget));
+    const unsigned int section_idx =
+        type_info_save_to_config(type_info, config, widget_get_owner(widget));
 
     unsigned int count;
     te_widget** child_widgets = widget_get_child_widgets_tmp(widget, &count);
@@ -475,16 +501,19 @@ world_save_to_file(te_world* world, const char* relative_path) {
                 continue;
             }
 
-            const unsigned int section_idx = type_info_save_to_config(model_type_info, config, model);
+            const unsigned int section_idx =
+                type_info_save_to_config(model_type_info, config, model);
 
             te_model* child_model = model_get_child_model(model);
             te_camera* attached_camera = model_get_attached_camera(model);
             if (child_model != NULL) {
-                config_section_set_bool(config, section_idx, CONFIG_VAR_NAME_HAS_CHILD_MODEL, true);
+                config_section_set_bool(
+                    config, section_idx, CONFIG_VAR_NAME_HAS_CHILD_MODEL, true);
                 (void)type_info_save_to_config(model_type_info, config, child_model);
             }
             if (attached_camera != NULL) {
-                config_section_set_bool(config, section_idx, CONFIG_VAR_NAME_HAS_ATTACHED_CAMERA, true);
+                config_section_set_bool(
+                    config, section_idx, CONFIG_VAR_NAME_HAS_ATTACHED_CAMERA, true);
                 (void)type_info_save_to_config(camera_type_info, config, attached_camera);
             }
         }
@@ -492,7 +521,8 @@ world_save_to_file(te_world* world, const char* relative_path) {
 
     // Save cameras.
     if (world->spawned_camera_count > 0) {
-        for (unsigned int camera_idx = 0; camera_idx < world->spawned_camera_count; camera_idx++) {
+        for (unsigned int camera_idx = 0; camera_idx < world->spawned_camera_count;
+             camera_idx++) {
             te_camera* camera = world->spawned_cameras[camera_idx];
             if (!camera_is_serialization_allowed(camera)) {
                 continue;
@@ -504,7 +534,8 @@ world_save_to_file(te_world* world, const char* relative_path) {
 
     // Spawn widgets.
     if (world->spawned_widget_count > 0) {
-        for (unsigned int widget_idx = 0; widget_idx < world->spawned_widget_count; widget_idx++) {
+        for (unsigned int widget_idx = 0; widget_idx < world->spawned_widget_count;
+             widget_idx++) {
             te_widget* widget = world->spawned_widgets[widget_idx];
             prv_save_widget_recursive(config, widget);
         }
@@ -516,8 +547,8 @@ world_save_to_file(te_world* world, const char* relative_path) {
 
 static void
 prv_load_child_widgets_recursive(
-    const char* relative_path, te_config* config, unsigned int section_count, te_widget* parent_widget,
-    unsigned int parent_child_count, unsigned int* section_idx) {
+    const char* relative_path, te_config* config, unsigned int section_count,
+    te_widget* parent_widget, unsigned int parent_child_count, unsigned int* section_idx) {
     for (unsigned int child_idx = 0; child_idx < parent_child_count; child_idx++) {
         const char* id = config_section_get_name(config, (*section_idx));
         const te_type_info* type_info = type_database_get_type_info(id);
@@ -531,16 +562,19 @@ prv_load_child_widgets_recursive(
         te_widget* child_widget = type_info->get_widget(widget_owner);
         widget_set_parent(child_widget, parent_widget);
 
-        const unsigned int count = config_section_get_uint(config, (*section_idx), CONFIG_VAR_NAME_CHILD_WIDGET_COUNT, 0);
+        const unsigned int count = config_section_get_uint(
+            config, (*section_idx), CONFIG_VAR_NAME_CHILD_WIDGET_COUNT, 0);
 
         (*section_idx) += 1;
         if ((*section_idx) >= section_count) {
             log_error_fmt(
-                "unexpected end of file \"%s\", have %u sections while expected to have more", relative_path, section_count);
+                "unexpected end of file \"%s\", have %u sections while expected to have more",
+                relative_path, section_count);
             abort();
         }
 
-        prv_load_child_widgets_recursive(relative_path, config, section_count, child_widget, count, section_idx);
+        prv_load_child_widgets_recursive(
+            relative_path, config, section_count, child_widget, count, section_idx);
     }
 }
 
@@ -559,10 +593,12 @@ world_add_from_file(te_world* world, const char* relative_path) {
         void* obj = type_info->create();
         type_info_load_from_config(type_info, config, section_idx, obj);
 
-        const bool has_child_model = config_section_get_bool(config, section_idx, CONFIG_VAR_NAME_HAS_CHILD_MODEL, false);
-        const bool has_attached_camera = config_section_get_bool(config, section_idx, CONFIG_VAR_NAME_HAS_ATTACHED_CAMERA, false);
-        const unsigned int child_widget_count =
-            config_section_get_uint(config, section_idx, CONFIG_VAR_NAME_CHILD_WIDGET_COUNT, 0);
+        const bool has_child_model = config_section_get_bool(
+            config, section_idx, CONFIG_VAR_NAME_HAS_CHILD_MODEL, false);
+        const bool has_attached_camera = config_section_get_bool(
+            config, section_idx, CONFIG_VAR_NAME_HAS_ATTACHED_CAMERA, false);
+        const unsigned int child_widget_count = config_section_get_uint(
+            config, section_idx, CONFIG_VAR_NAME_CHILD_WIDGET_COUNT, 0);
         section_idx += 1;
 
         if (strcmp(id, model_get_type_id())) {
@@ -570,8 +606,9 @@ world_add_from_file(te_world* world, const char* relative_path) {
             if (has_child_model) {
                 if (section_idx >= section_count) {
                     log_error_fmt(
-                        "unexpected end of file \"%s\", have %u sections while expected to have more", relative_path,
-                        section_count);
+                        "unexpected end of file \"%s\", have %u sections while expected to "
+                        "have more",
+                        relative_path, section_count);
                     abort();
                 }
                 te_model* child_model = model_create();
@@ -582,8 +619,9 @@ world_add_from_file(te_world* world, const char* relative_path) {
             if (has_attached_camera) {
                 if (section_idx >= section_count) {
                     log_error_fmt(
-                        "unexpected end of file \"%s\", have %u sections while expected to have more", relative_path,
-                        section_count);
+                        "unexpected end of file \"%s\", have %u sections while expected to "
+                        "have more",
+                        relative_path, section_count);
                     abort();
                 }
                 te_camera* camera = camera_create();
@@ -593,12 +631,14 @@ world_add_from_file(te_world* world, const char* relative_path) {
             }
         } else if (child_widget_count > 0) {
             if (type_info->get_widget == NULL) {
-                log_error(
-                    "found widget section that specified child count but the type does not have widget conversion function set");
+                log_error("found widget section that specified child count but the type does "
+                          "not have widget conversion function set");
                 abort();
             }
             te_widget* widget = type_info->get_widget(obj);
-            prv_load_child_widgets_recursive(relative_path, config, section_count, widget, child_widget_count, &section_idx);
+            prv_load_child_widgets_recursive(
+                relative_path, config, section_count, widget, child_widget_count,
+                &section_idx);
         }
 
         type_info->spawn(world, obj);
@@ -675,7 +715,8 @@ world_spawn_model(te_world* world, te_model* model) {
 void
 world_despawn_model(te_world* world, te_model* model) {
     if (model_get_world(model) != world) {
-        log_error("the specified model cannot be despawned from this world as it's not spawned in this world");
+        log_error("the specified model cannot be despawned from this world as it's not "
+                  "spawned in this world");
         abort();
     }
 
@@ -715,7 +756,8 @@ world_despawn_camera(te_world* world, te_camera* camera) {
 #endif
 
     if (camera_get_world(camera) != world) {
-        log_error("the specified camera cannot be despawned from this world as it's not spawned in this world");
+        log_error("the specified camera cannot be despawned from this world as it's not "
+                  "spawned in this world");
         abort();
     }
 
@@ -734,8 +776,9 @@ world_spawn_widget(te_world* world, struct te_widget* widget) {
             log_error("the widget is already spawned in this world");
             abort();
         } else {
-            log_error("the specified widget cannot be spawned in this world because the widget "
-                      "must be first despawned from the world it currently resides in");
+            log_error(
+                "the specified widget cannot be spawned in this world because the widget "
+                "must be first despawned from the world it currently resides in");
             abort();
         }
     }
@@ -751,7 +794,8 @@ world_spawn_widget(te_world* world, struct te_widget* widget) {
 void
 world_despawn_widget(te_world* world, te_widget* widget) {
     if (widget_get_world(widget) != world) {
-        log_error("the specified widget cannot be despawned from this world as it's not spawned in this world");
+        log_error("the specified widget cannot be despawned from this world as it's not "
+                  "spawned in this world");
         abort();
     }
 
@@ -761,8 +805,11 @@ world_despawn_widget(te_world* world, te_widget* widget) {
 
 void
 prv_world_add_interactable_widget(te_world* world, te_widget* widget) {
-    te_widget** new_widgets = malloc(sizeof(te_widget*) * (world->interactable_widget_count + 1));
-    memcpy(new_widgets, world->interactable_widgets, sizeof(te_widget*) * world->interactable_widget_count);
+    te_widget** new_widgets =
+        malloc(sizeof(te_widget*) * (world->interactable_widget_count + 1));
+    memcpy(
+        new_widgets, world->interactable_widgets,
+        sizeof(te_widget*) * world->interactable_widget_count);
 
     free(world->interactable_widgets);
     world->interactable_widgets = new_widgets;
@@ -797,7 +844,8 @@ prv_world_remove_interactable_widget(te_world* world, te_widget* widget) {
             abort();
         }
 
-        te_widget** new_widgets = malloc(sizeof(te_widget*) * (world->interactable_widget_count - 1));
+        te_widget** new_widgets =
+            malloc(sizeof(te_widget*) * (world->interactable_widget_count - 1));
         memcpy(new_widgets, world->interactable_widgets, sizeof(te_widget*) * i);
         memcpy(
             new_widgets + i, world->interactable_widgets + (i + 1),
@@ -850,7 +898,8 @@ prv_world_on_mouse_moved(te_world* world, float cursor_pos[2]) {
                 world->hovered_interactable_widget = world->interactable_widgets[i];
                 prv_widget_on_cursor_entered(world->hovered_interactable_widget, cursor_pos);
             } else {
-                prv_widget_on_hovered_cursor_moved(world->hovered_interactable_widget, cursor_pos);
+                prv_widget_on_hovered_cursor_moved(
+                    world->hovered_interactable_widget, cursor_pos);
             }
         }
 
@@ -864,7 +913,8 @@ prv_world_on_mouse_moved(te_world* world, float cursor_pos[2]) {
 }
 
 bool
-prv_world_on_mouse_button_pressed(te_world* world, enum te_mouse_button button, float cursor_pos[2]) {
+prv_world_on_mouse_button_pressed(
+    te_world* world, enum te_mouse_button button, float cursor_pos[2]) {
     vec2 pos;
     vec2 size;
     for (unsigned int i = 0; i < world->interactable_widget_count; i++) {
@@ -886,7 +936,8 @@ prv_world_on_mouse_button_pressed(te_world* world, enum te_mouse_button button, 
 }
 
 bool
-prv_world_on_mouse_button_released(te_world* world, enum te_mouse_button button, float cursor_pos[2]) {
+prv_world_on_mouse_button_released(
+    te_world* world, enum te_mouse_button button, float cursor_pos[2]) {
     vec2 pos;
     vec2 size;
     for (unsigned int i = 0; i < world->interactable_widget_count; i++) {
@@ -900,7 +951,8 @@ prv_world_on_mouse_button_released(te_world* world, enum te_mouse_button button,
             continue;
         }
 
-        prv_widget_on_mouse_button_released(world->interactable_widgets[i], button, cursor_pos);
+        prv_widget_on_mouse_button_released(
+            world->interactable_widgets[i], button, cursor_pos);
         return true;
     }
 
@@ -940,7 +992,8 @@ prv_world_on_input_source_changed(te_world* world) {
         unsigned int window_height;
         window_get_size(window, &window_width, &window_height);
 
-        glm_vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
+        glm_vec2_div(
+            cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
 
         prv_widget_on_cursor_left(world->hovered_interactable_widget, cursor_pos);
         world->hovered_interactable_widget = NULL;

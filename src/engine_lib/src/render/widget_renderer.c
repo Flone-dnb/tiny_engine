@@ -77,14 +77,16 @@ widgets_render_data_add_widget(te_widgets_render_data* data) {
         // Expand array.
         const unsigned int expand_size = 4;
 
-        unsigned int* new_handles = malloc(sizeof(unsigned int) * (data->array_size + expand_size));
+        unsigned int* new_handles =
+            malloc(sizeof(unsigned int) * (data->array_size + expand_size));
         memcpy(new_handles, data->handle_to_data, sizeof(unsigned int) * data->array_size);
 
         free(data->handle_to_data);
         data->handle_to_data = new_handles;
 
         void* new_data = malloc(data->sizeof_render_data * (data->array_size + expand_size));
-        memcpy(new_data, data->render_data, data->sizeof_render_data * data->render_data_count);
+        memcpy(
+            new_data, data->render_data, data->sizeof_render_data * data->render_data_count);
 
         free(data->render_data);
         data->render_data = new_data;
@@ -134,7 +136,8 @@ widgets_render_data_remove_widget(te_widgets_render_data* data, unsigned int han
 
     // Shift render data indices after the removed one.
     for (unsigned int i = 0; i < data->array_size; i++) {
-        if (data->handle_to_data[i] == INVALID_DATA_INDEX || data->handle_to_data[i] < render_data_index) {
+        if (data->handle_to_data[i] == INVALID_DATA_INDEX
+            || data->handle_to_data[i] < render_data_index) {
             continue;
         }
         data->handle_to_data[i] -= 1;
@@ -206,8 +209,10 @@ te_widget_renderer*
 widget_renderer_create(te_renderer* renderer) {
     te_widget_renderer* widget_renderer = malloc(sizeof(te_widget_renderer));
 
-    widget_renderer->text_widget_data = widgets_render_data_create(sizeof(te_text_widget_render_data));
-    widget_renderer->rect_widget_data = widgets_render_data_create(sizeof(te_rect_widget_render_data));
+    widget_renderer->text_widget_data =
+        widgets_render_data_create(sizeof(te_text_widget_render_data));
+    widget_renderer->rect_widget_data =
+        widgets_render_data_create(sizeof(te_rect_widget_render_data));
     widget_renderer->renderer = renderer;
 
     // Load text shader.
@@ -215,8 +220,8 @@ widget_renderer_create(te_renderer* renderer) {
     {
         te_text_shader_data* shader = &widget_renderer->text_shader;
 
-        shader->prog_id =
-            shader_manager_request_shader(shader_manager, "engine/shader/quad.vert.glsl", "engine/shader/text.frag.glsl");
+        shader->prog_id = shader_manager_request_shader(
+            shader_manager, "engine/shader/quad.vert.glsl", "engine/shader/text.frag.glsl");
 
         shader->uniform_in_pos = get_uniform_location(shader->prog_id, "in_pos");
         shader->uniform_in_size = get_uniform_location(shader->prog_id, "in_size");
@@ -229,8 +234,8 @@ widget_renderer_create(te_renderer* renderer) {
     {
         te_quad_shader_data* shader = &widget_renderer->quad_shader;
 
-        shader->prog_id =
-            shader_manager_request_shader(shader_manager, "engine/shader/quad.vert.glsl", "engine/shader/quad.frag.glsl");
+        shader->prog_id = shader_manager_request_shader(
+            shader_manager, "engine/shader/quad.vert.glsl", "engine/shader/quad.frag.glsl");
 
         shader->uniform_in_pos = get_uniform_location(shader->prog_id, "in_pos");
         shader->uniform_in_size = get_uniform_location(shader->prog_id, "in_size");
@@ -256,7 +261,8 @@ widget_renderer_create(te_renderer* renderer) {
         glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(vec4), &vertices[0][0], GL_STATIC_DRAW);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
+        glBufferData(
+            GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
 
         glBindAttribLocation(widget_renderer->text_shader.prog_id, 0, "vertex");
         glEnableVertexAttribArray(0);
@@ -271,21 +277,25 @@ widget_renderer_create(te_renderer* renderer) {
 void
 widget_renderer_destroy(te_widget_renderer* widget_renderer) {
     if (widgets_render_data_count(widget_renderer->text_widget_data) > 0) {
-        log_error("widget renderer is being destroyed but there are still some text widgets rendering");
+        log_error("widget renderer is being destroyed but there are still some text widgets "
+                  "rendering");
         abort();
     }
     widgets_render_data_destroy(widget_renderer->text_widget_data);
 
     if (widgets_render_data_count(widget_renderer->rect_widget_data) > 0) {
-        log_error("widget renderer is being destroyed but there are still some rect widgets rendering");
+        log_error("widget renderer is being destroyed but there are still some rect widgets "
+                  "rendering");
         abort();
     }
     widgets_render_data_destroy(widget_renderer->rect_widget_data);
 
     shader_manager_mark_unused_shader(
-        renderer_get_shader_manager(widget_renderer->renderer), widget_renderer->text_shader.prog_id);
+        renderer_get_shader_manager(widget_renderer->renderer),
+        widget_renderer->text_shader.prog_id);
     shader_manager_mark_unused_shader(
-        renderer_get_shader_manager(widget_renderer->renderer), widget_renderer->quad_shader.prog_id);
+        renderer_get_shader_manager(widget_renderer->renderer),
+        widget_renderer->quad_shader.prog_id);
 
     glDeleteBuffers(1, &widget_renderer->vbo);
     glDeleteBuffers(1, &widget_renderer->ebo);
@@ -298,26 +308,30 @@ widget_renderer_add_text_widget(te_widget_renderer* renderer) {
     const unsigned int handle = widgets_render_data_add_widget(renderer->text_widget_data);
 
     // Init data.
-    te_text_widget_render_data* data = widgets_render_data_get_widget_data(renderer->text_widget_data, handle);
+    te_text_widget_render_data* data =
+        widgets_render_data_get_widget_data(renderer->text_widget_data, handle);
     memset(data, 0, sizeof(te_text_widget_render_data));
 
     return handle;
 }
 
 te_text_widget_render_data*
-widget_renderer_get_text_widget_render_data_tmp(te_widget_renderer* renderer, unsigned int handle) {
+widget_renderer_get_text_widget_render_data_tmp(
+    te_widget_renderer* renderer, unsigned int handle) {
     return widgets_render_data_get_widget_data(renderer->text_widget_data, handle);
 }
 
 te_rect_widget_render_data*
-widget_renderer_get_rect_widget_render_data_tmp(te_widget_renderer* renderer, unsigned int handle) {
+widget_renderer_get_rect_widget_render_data_tmp(
+    te_widget_renderer* renderer, unsigned int handle) {
     return widgets_render_data_get_widget_data(renderer->rect_widget_data, handle);
 }
 
 void
 widget_renderer_remove_text_widget(te_widget_renderer* renderer, unsigned int handle) {
     // Cleanup.
-    te_text_widget_render_data* data = widgets_render_data_get_widget_data(renderer->text_widget_data, handle);
+    te_text_widget_render_data* data =
+        widgets_render_data_get_widget_data(renderer->text_widget_data, handle);
     free(data->glyphs);
 
     widgets_render_data_remove_widget(renderer->text_widget_data, handle);
@@ -328,7 +342,8 @@ widget_renderer_add_rect_widget(te_widget_renderer* renderer) {
     const unsigned int handle = widgets_render_data_add_widget(renderer->rect_widget_data);
 
     // Init data.
-    te_rect_widget_render_data* data = widgets_render_data_get_widget_data(renderer->rect_widget_data, handle);
+    te_rect_widget_render_data* data =
+        widgets_render_data_get_widget_data(renderer->rect_widget_data, handle);
     memset(data, 0, sizeof(te_rect_widget_render_data));
 
     return handle;
@@ -347,12 +362,14 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
     unsigned int window_width;
     unsigned int window_height;
-    window_get_size(renderer_get_window(widget_renderer->renderer), &window_width, &window_height);
+    window_get_size(
+        renderer_get_window(widget_renderer->renderer), &window_width, &window_height);
     vec2 window_size;
     glm_vec2_copy((vec2){(float)window_width, (float)window_height}, window_size);
 
     // Draw rect widgets.
-    const unsigned int rect_widget_count = widgets_render_data_count(widget_renderer->rect_widget_data);
+    const unsigned int rect_widget_count =
+        widgets_render_data_count(widget_renderer->rect_widget_data);
     if (rect_widget_count > 0) {
         te_quad_shader_data* shader = &widget_renderer->quad_shader;
         GPU_SECTION_BEGIN("rect");
@@ -367,7 +384,8 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
         glUniform2fv(shader->uniform_window_size, 1, window_size);
 
         for (unsigned int widget_idx = 0; widget_idx < rect_widget_count; widget_idx++) {
-            te_rect_widget_render_data* data = widgets_render_data_get(widget_renderer->rect_widget_data);
+            te_rect_widget_render_data* data =
+                widgets_render_data_get(widget_renderer->rect_widget_data);
             data += widget_idx;
 
             glUniform4fv(shader->uniform_quad_color, 1, data->color);
@@ -386,7 +404,8 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
     }
 
     // Draw text widgets.
-    const unsigned int text_widget_count = widgets_render_data_count(widget_renderer->text_widget_data);
+    const unsigned int text_widget_count =
+        widgets_render_data_count(widget_renderer->text_widget_data);
     if (text_widget_count > 0) {
         te_text_shader_data* shader = &widget_renderer->text_shader;
         GPU_SECTION_BEGIN("text");
@@ -405,7 +424,8 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
         glUniform2fv(shader->uniform_window_size, 1, window_size);
 
         for (unsigned int widget_idx = 0; widget_idx < text_widget_count; widget_idx++) {
-            te_text_widget_render_data* data = widgets_render_data_get(widget_renderer->text_widget_data);
+            te_text_widget_render_data* data =
+                widgets_render_data_get(widget_renderer->text_widget_data);
             data += widget_idx;
 
             glUniform4fv(shader->uniform_text_color, 1, data->color);

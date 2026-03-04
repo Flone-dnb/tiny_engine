@@ -36,7 +36,8 @@ progress_widget_create(void) {
     te_progress_widget* progress_widget = malloc(sizeof(te_progress_widget));
 
     progress_widget->widget = widget_create(
-        progress_widget, progress_widget_get_type_id, NULL, NULL, prv_progress_widget_on_before_base_destroyed, NULL, NULL,
+        progress_widget, progress_widget_get_type_id, NULL, NULL,
+        prv_progress_widget_on_before_base_destroyed, NULL, NULL,
         prv_progress_widget_on_after_spawned, prv_progress_widget_on_before_despawned, NULL);
 
     progress_widget->background_tex_relative_path = NULL;
@@ -103,7 +104,8 @@ progress_widget_get_widget(te_progress_widget* progress_widget) {
 void
 progress_widget_set_value(te_progress_widget* progress_widget, float value) {
     progress_widget->value = value;
-    rect_widget_set_clip_rect(progress_widget->foreground_rect, (vec4){0.0f, 0.0f, progress_widget->value, 1.0f});
+    rect_widget_set_clip_rect(
+        progress_widget->foreground_rect, (vec4){0.0f, 0.0f, progress_widget->value, 1.0f});
 }
 
 float
@@ -134,7 +136,8 @@ progress_widget_get_foreground_color(te_progress_widget* progress_widget, vec4 o
 }
 
 void
-progress_widget_set_background_texture(te_progress_widget* progress_widget, const char* relative_path) {
+progress_widget_set_background_texture(
+    te_progress_widget* progress_widget, const char* relative_path) {
     free(progress_widget->background_tex_relative_path);
     progress_widget->background_tex_relative_path = NULL;
 
@@ -145,14 +148,17 @@ progress_widget_set_background_texture(te_progress_widget* progress_widget, cons
 
     const size_t path_len = strlen(relative_path);
     progress_widget->background_tex_relative_path = malloc(sizeof(char) * (path_len + 1));
-    memcpy(progress_widget->background_tex_relative_path, relative_path, sizeof(char) * path_len);
+    memcpy(
+        progress_widget->background_tex_relative_path, relative_path, sizeof(char) * path_len);
     progress_widget->background_tex_relative_path[path_len] = 0;
 
-    rect_widget_set_texture(progress_widget->background_rect, progress_widget->background_tex_relative_path);
+    rect_widget_set_texture(
+        progress_widget->background_rect, progress_widget->background_tex_relative_path);
 }
 
 void
-progress_widget_set_foreground_texture(te_progress_widget* progress_widget, const char* relative_path) {
+progress_widget_set_foreground_texture(
+    te_progress_widget* progress_widget, const char* relative_path) {
     free(progress_widget->foreground_tex_relative_path);
     progress_widget->foreground_tex_relative_path = NULL;
 
@@ -163,10 +169,12 @@ progress_widget_set_foreground_texture(te_progress_widget* progress_widget, cons
 
     const size_t path_len = strlen(relative_path);
     progress_widget->foreground_tex_relative_path = malloc(sizeof(char) * (path_len + 1));
-    memcpy(progress_widget->foreground_tex_relative_path, relative_path, sizeof(char) * path_len);
+    memcpy(
+        progress_widget->foreground_tex_relative_path, relative_path, sizeof(char) * path_len);
     progress_widget->foreground_tex_relative_path[path_len] = 0;
 
-    rect_widget_set_texture(progress_widget->foreground_rect, progress_widget->foreground_tex_relative_path);
+    rect_widget_set_texture(
+        progress_widget->foreground_rect, progress_widget->foreground_tex_relative_path);
 }
 
 char*
@@ -195,13 +203,16 @@ prv_progress_widget_on_after_spawned(void* this) {
     rect_widget_set_color(progress_widget->foreground_rect, progress_widget->foreground_color);
 
     if (progress_widget->background_tex_relative_path != NULL) {
-        rect_widget_set_texture(progress_widget->background_rect, progress_widget->background_tex_relative_path);
+        rect_widget_set_texture(
+            progress_widget->background_rect, progress_widget->background_tex_relative_path);
     }
     if (progress_widget->foreground_tex_relative_path != NULL) {
-        rect_widget_set_texture(progress_widget->foreground_rect, progress_widget->foreground_tex_relative_path);
+        rect_widget_set_texture(
+            progress_widget->foreground_rect, progress_widget->foreground_tex_relative_path);
     }
 
-    rect_widget_set_clip_rect(progress_widget->foreground_rect, (vec4){0.0f, 0.0f, progress_widget->value, 1.0f});
+    rect_widget_set_clip_rect(
+        progress_widget->foreground_rect, (vec4){0.0f, 0.0f, progress_widget->value, 1.0f});
 }
 
 static void
@@ -255,18 +266,26 @@ prv_progress_widget_spawn(te_world* world, te_progress_widget* progress_widget) 
 void
 progress_widget_register_type(void) {
     te_type_info* info = type_info_create(
-        progress_widget_get_type_id(), progress_widget_create, prv_progress_widget_spawn, prv_progress_widget_get_base);
-    type_info_add_vec2_variable(info, "position", prv_progress_widget_set_position, prv_progress_widget_get_position);
-    type_info_add_vec2_variable(info, "size", prv_progress_widget_set_size, prv_progress_widget_get_size);
-    type_info_add_float_variable(info, "value", progress_widget_set_value, progress_widget_get_value);
+        progress_widget_get_type_id(), progress_widget_create, prv_progress_widget_spawn,
+        prv_progress_widget_get_base);
+    type_info_add_vec2_variable(
+        info, "position", prv_progress_widget_set_position, prv_progress_widget_get_position);
+    type_info_add_vec2_variable(
+        info, "size", prv_progress_widget_set_size, prv_progress_widget_get_size);
+    type_info_add_float_variable(
+        info, "value", progress_widget_set_value, progress_widget_get_value);
     type_info_add_vec4_variable(
-        info, "background_color", progress_widget_set_background_color, progress_widget_get_background_color);
+        info, "background_color", progress_widget_set_background_color,
+        progress_widget_get_background_color);
     type_info_add_vec4_variable(
-        info, "foreground_color", progress_widget_set_foreground_color, progress_widget_get_foreground_color);
+        info, "foreground_color", progress_widget_set_foreground_color,
+        progress_widget_get_foreground_color);
     type_info_add_string_variable(
-        info, "background_texture", progress_widget_set_background_texture, progress_widget_get_background_texture);
+        info, "background_texture", progress_widget_set_background_texture,
+        progress_widget_get_background_texture);
     type_info_add_string_variable(
-        info, "foreground_texture", progress_widget_set_foreground_texture, progress_widget_get_foreground_texture);
+        info, "foreground_texture", progress_widget_set_foreground_texture,
+        progress_widget_get_foreground_texture);
 
     type_database_register_type(info);
 }

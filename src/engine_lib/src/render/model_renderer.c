@@ -67,9 +67,11 @@ model_renderer_create(unsigned int capacity, unsigned int expand_size) {
 
     renderer->expand_size = expand_size;
     renderer->render_handle_arrays_size = capacity;
-    renderer->render_data = malloc(sizeof(te_model_render_data) * renderer->render_handle_arrays_size);
+    renderer->render_data =
+        malloc(sizeof(te_model_render_data) * renderer->render_handle_arrays_size);
 
-    renderer->handle_to_data = malloc(sizeof(unsigned int) * renderer->render_handle_arrays_size);
+    renderer->handle_to_data =
+        malloc(sizeof(unsigned int) * renderer->render_handle_arrays_size);
     for (unsigned int i = 0; i < renderer->render_handle_arrays_size; i++) {
         renderer->handle_to_data[i] = INVALID_DATA_INDEX;
     }
@@ -83,7 +85,8 @@ model_renderer_create(unsigned int capacity, unsigned int expand_size) {
 void
 model_renderer_destroy(te_model_renderer* renderer) {
     if (renderer->shader_group_count > 0) {
-        log_error("model renderer is being destroyed but there are still some models/handles active (not removed)");
+        log_error("model renderer is being destroyed but there are still some models/handles "
+                  "active (not removed)");
         abort();
     }
 
@@ -123,8 +126,12 @@ model_renderer_add_model(te_model_renderer* renderer, unsigned int prog_id) {
     }
     if (!found) {
         // Expand handle array.
-        unsigned int* new_handles = malloc(sizeof(unsigned int) * (renderer->render_handle_arrays_size + renderer->expand_size));
-        memcpy(new_handles, renderer->handle_to_data, sizeof(unsigned int) * renderer->render_handle_arrays_size);
+        unsigned int* new_handles = malloc(
+            sizeof(unsigned int)
+            * (renderer->render_handle_arrays_size + renderer->expand_size));
+        memcpy(
+            new_handles, renderer->handle_to_data,
+            sizeof(unsigned int) * renderer->render_handle_arrays_size);
 
         free(renderer->handle_to_data);
         renderer->handle_to_data = new_handles;
@@ -136,9 +143,12 @@ model_renderer_add_model(te_model_renderer* renderer, unsigned int prog_id) {
         handle = renderer->render_handle_arrays_size;
 
         // Expand render data array.
-        te_model_render_data* new_data =
-            malloc(sizeof(te_model_render_data) * (renderer->render_handle_arrays_size + renderer->expand_size));
-        memcpy(new_data, renderer->render_data, sizeof(te_model_render_data) * renderer->render_handle_arrays_size);
+        te_model_render_data* new_data = malloc(
+            sizeof(te_model_render_data)
+            * (renderer->render_handle_arrays_size + renderer->expand_size));
+        memcpy(
+            new_data, renderer->render_data,
+            sizeof(te_model_render_data) * renderer->render_handle_arrays_size);
 
         free(renderer->render_data);
         renderer->render_data = new_data;
@@ -166,8 +176,11 @@ model_renderer_add_model(te_model_renderer* renderer, unsigned int prog_id) {
         }
 
         // Create a new group.
-        te_shader_group* new_groups = malloc(sizeof(te_shader_group) * (renderer->shader_group_count + 1));
-        memcpy(new_groups, renderer->shader_groups, sizeof(te_shader_group) * renderer->shader_group_count);
+        te_shader_group* new_groups =
+            malloc(sizeof(te_shader_group) * (renderer->shader_group_count + 1));
+        memcpy(
+            new_groups, renderer->shader_groups,
+            sizeof(te_shader_group) * renderer->shader_group_count);
 
         free(renderer->shader_groups);
         renderer->shader_groups = new_groups;
@@ -229,7 +242,8 @@ model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
         unsigned int start_index = 0;
         bool found = false;
         for (unsigned int i = 0; i < renderer->shader_group_count; i++) {
-            if (data_index >= start_index && data_index < (start_index + renderer->shader_groups[i].count)) {
+            if (data_index >= start_index
+                && data_index < (start_index + renderer->shader_groups[i].count)) {
                 group_index = i;
                 found = true;
                 break;
@@ -249,7 +263,8 @@ model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
             free(renderer->shader_groups);
             renderer->shader_groups = NULL;
         } else {
-            te_shader_group* new_groups = malloc(sizeof(te_shader_group) * (renderer->shader_group_count - 1));
+            te_shader_group* new_groups =
+                malloc(sizeof(te_shader_group) * (renderer->shader_group_count - 1));
             memcpy(new_groups, renderer->shader_groups, sizeof(te_shader_group) * group_index);
             memcpy(
                 new_groups + group_index, renderer->shader_groups + (group_index + 1),
@@ -273,7 +288,8 @@ model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
 
     // Shift render data indices after the removed one.
     for (unsigned int i = 0; i < renderer->render_handle_arrays_size; i++) {
-        if (renderer->handle_to_data[i] == INVALID_DATA_INDEX || renderer->handle_to_data[i] < data_index) {
+        if (renderer->handle_to_data[i] == INVALID_DATA_INDEX
+            || renderer->handle_to_data[i] < data_index) {
             continue;
         }
         renderer->handle_to_data[i] -= 1;
@@ -291,7 +307,8 @@ model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int han
 }
 
 void
-model_renderer_draw(te_model_renderer* renderer, mat4* view_proj_mat, te_frustum_shape* camera_frustum) {
+model_renderer_draw(
+    te_model_renderer* renderer, mat4* view_proj_mat, te_frustum_shape* camera_frustum) {
 #if defined(ENGINE_DEBUG_TOOLS)
     te_debug_stats* debug_stats = prv_debug_console_get_stats();
 #endif
@@ -309,7 +326,8 @@ model_renderer_draw(te_model_renderer* renderer, mat4* view_proj_mat, te_frustum
             te_model_render_data* data = &renderer->render_data[render_data_idx];
 
             // Frustum culling (don't cull skeletal meshes due to animations).
-            if (group->uniform_skin_mats == -1 && !frustum_shape_is_aabb_inside(camera_frustum, &data->aabb_world)) {
+            if (group->uniform_skin_mats == -1
+                && !frustum_shape_is_aabb_inside(camera_frustum, &data->aabb_world)) {
                 continue;
             }
 

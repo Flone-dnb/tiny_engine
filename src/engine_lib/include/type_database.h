@@ -110,21 +110,32 @@ typedef struct te_type_info {
 te_type_info* type_info_create(
     const char* id, void* (*create)(void), void (*spawn)(struct te_world* world, void* obj),
     struct te_widget* (*get_widget)(void*));
-void type_info_add_bool_variable(te_type_info* info, const char* name, te_bool_setter setter, te_bool_getter getter);
-void type_info_add_uint_variable(te_type_info* info, const char* name, te_uint_setter setter, te_uint_getter getter);
-void type_info_add_float_variable(te_type_info* info, const char* name, te_float_setter setter, te_float_getter getter);
-void type_info_add_vec2_variable(te_type_info* info, const char* name, te_vec2_setter setter, te_vec2_getter getter);
-void type_info_add_vec3_variable(te_type_info* info, const char* name, te_vec3_setter setter, te_vec3_getter getter);
-void type_info_add_vec4_variable(te_type_info* info, const char* name, te_vec4_setter setter, te_vec4_getter getter);
-void type_info_add_string_variable(te_type_info* info, const char* name, te_string_setter setter, te_string_getter getter);
-void type_info_add_wstring_variable(te_type_info* info, const char* name, te_wstring_setter setter, te_wstring_getter getter);
+void type_info_add_bool_variable(
+    te_type_info* info, const char* name, te_bool_setter setter, te_bool_getter getter);
+void type_info_add_uint_variable(
+    te_type_info* info, const char* name, te_uint_setter setter, te_uint_getter getter);
+void type_info_add_float_variable(
+    te_type_info* info, const char* name, te_float_setter setter, te_float_getter getter);
+void type_info_add_vec2_variable(
+    te_type_info* info, const char* name, te_vec2_setter setter, te_vec2_getter getter);
+void type_info_add_vec3_variable(
+    te_type_info* info, const char* name, te_vec3_setter setter, te_vec3_getter getter);
+void type_info_add_vec4_variable(
+    te_type_info* info, const char* name, te_vec4_setter setter, te_vec4_getter getter);
+void type_info_add_string_variable(
+    te_type_info* info, const char* name, te_string_setter setter, te_string_getter getter);
+void type_info_add_wstring_variable(
+    te_type_info* info, const char* name, te_wstring_setter setter, te_wstring_getter getter);
 
 // Creates a new section in the specified config (returns index of the created section) and saves all reflected variables
 // in this new section.
-unsigned int type_info_save_to_config(const te_type_info* type_info, struct te_config* config, void* obj);
+unsigned int
+type_info_save_to_config(const te_type_info* type_info, struct te_config* config, void* obj);
 
 // Loads variables from the specified config section into the specified object.
-void type_info_load_from_config(const te_type_info* type_info, struct te_config* config, unsigned int section_idx, void* obj);
+void type_info_load_from_config(
+    const te_type_info* type_info, struct te_config* config, unsigned int section_idx,
+    void* obj);
 
 // Registers the specified type. Ownership of the pointer is moved to the type database.
 void type_database_register_type(te_type_info* info);

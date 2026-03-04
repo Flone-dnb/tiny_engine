@@ -79,7 +79,8 @@ editor_camera_get_camera(te_editor_camera* editor_camera) {
 }
 
 void
-editor_camera_apply_look_input(te_editor_camera* editor_camera, float x_offset, float y_offset) {
+editor_camera_apply_look_input(
+    te_editor_camera* editor_camera, float x_offset, float y_offset) {
     vec3 rotation;
     camera_get_rotation(editor_camera->camera, rotation);
 
@@ -99,7 +100,8 @@ editor_camera_on_mouse_moved(te_editor_camera* editor_camera, float x_offset, fl
 }
 
 void
-editor_camera_on_gamepad_axis_moved(te_editor_camera* editor_camera, enum te_gamepad_axis axis, float new_pos) {
+editor_camera_on_gamepad_axis_moved(
+    te_editor_camera* editor_camera, enum te_gamepad_axis axis, float new_pos) {
     if (axis == TE_GA_RIGHT_STICK_X) {
         editor_camera->gamepad_look[0] = new_pos;
     } else if (axis == TE_GA_RIGHT_STICK_Y) {
@@ -116,7 +118,8 @@ editor_camera_on_gamepad_axis_moved(te_editor_camera* editor_camera, enum te_gam
 }
 
 void
-editor_camera_on_keyboard_button_pressed(te_editor_camera* editor_camera, enum te_keyboard_button button) {
+editor_camera_on_keyboard_button_pressed(
+    te_editor_camera* editor_camera, enum te_keyboard_button button) {
     if (!editor_camera->is_input_enabled) {
         return;
     }
@@ -143,7 +146,8 @@ editor_camera_on_keyboard_button_pressed(te_editor_camera* editor_camera, enum t
 }
 
 void
-editor_camera_on_keyboard_button_released(te_editor_camera* editor_camera, enum te_keyboard_button button) {
+editor_camera_on_keyboard_button_released(
+    te_editor_camera* editor_camera, enum te_keyboard_button button) {
     if (!editor_camera->is_input_enabled) {
         return;
     }
@@ -186,7 +190,8 @@ editor_camera_on_game_tick(te_editor_camera* editor_camera, float delta_time_sec
     if (editor_camera->gamepad_look[0] != 0.0f || editor_camera->gamepad_look[1] != 0.0f) {
         const float mult = 2000.0f * delta_time_sec;
         editor_camera_apply_look_input(
-            editor_camera, editor_camera->gamepad_look[0] * mult, editor_camera->gamepad_look[1] * mult);
+            editor_camera, editor_camera->gamepad_look[0] * mult,
+            editor_camera->gamepad_look[1] * mult);
     }
 
     if (editor_camera->movement_input[0] == 0.0f && editor_camera->movement_input[1] == 0.0f

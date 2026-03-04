@@ -8,8 +8,9 @@ typedef struct te_shader_manager te_shader_manager;
 // You must use @ref shader_manager_mark_unused_shader when you no longer need the shader program.
 //
 // Specify a non-NULL path (relative to the `res` directory) to the shader files.
-unsigned int shader_manager_request_shader(te_shader_manager* manager, const char* vert_relative_path,
-                                           const char* frag_relative_path);
+unsigned int shader_manager_request_shader(
+    te_shader_manager* manager, const char* vert_relative_path,
+    const char* frag_relative_path);
 
 // Decrements shader usage counter.
 void shader_manager_mark_unused_shader(te_shader_manager* manager, unsigned int prog_id);

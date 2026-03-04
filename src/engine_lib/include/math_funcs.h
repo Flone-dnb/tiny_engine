@@ -15,7 +15,8 @@ math_fix_diagonal_movement_speedup(vec2 movement) {
     }
 
     const float length = sqrtf(square_sum);
-    if (length <= 1.0f) { // only normalize when exceeding 1 to keep small gamepad thumbstick movements
+    if (length
+        <= 1.0f) { // only normalize when exceeding 1 to keep small gamepad thumbstick movements
         return;
     }
 

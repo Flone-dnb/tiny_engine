@@ -72,7 +72,8 @@ void camera_register_type(void);
 
 // Sets size (in pixels) of the render target (used to calculate aspect ratio for the projection matrix).
 // Does nothing if the specified render target size is already set to the same value.
-void prv_camera_set_render_target_size(te_camera* camera, unsigned int width, unsigned int height);
+void
+prv_camera_set_render_target_size(te_camera* camera, unsigned int width, unsigned int height);
 
 // Sets world the camera is spawned in (specify NULL to mark despawn).
 void prv_camera_set_world(te_camera* camera, struct te_world* world);

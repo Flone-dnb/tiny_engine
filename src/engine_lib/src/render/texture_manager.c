@@ -48,7 +48,8 @@ prv_texture_manager_create() {
 void
 prv_texture_manager_destroy(te_texture_manager* manager) {
     if (manager->texture_count > 0) {
-        log_error("texture manager is being destroyed but there are still some textures in use");
+        log_error(
+            "texture manager is being destroyed but there are still some textures in use");
         abort();
     }
 
@@ -56,7 +57,8 @@ prv_texture_manager_destroy(te_texture_manager* manager) {
 }
 
 unsigned int
-texture_manager_request_texture(te_texture_manager* manager, const char* relative_path, enum te_texture_load_opt opt) {
+texture_manager_request_texture(
+    te_texture_manager* manager, const char* relative_path, enum te_texture_load_opt opt) {
     const size_t relative_path_len = strlen(relative_path);
 
     // Check cache.
@@ -96,11 +98,13 @@ texture_manager_request_texture(te_texture_manager* manager, const char* relativ
             glBindTexture(GL_TEXTURE_2D, tex_id);
             {
                 glTexImage2D(
-                    GL_TEXTURE_2D, 0, gl_internal_format, width, height, 0, (unsigned int)gl_format, GL_UNSIGNED_BYTE, pixels);
+                    GL_TEXTURE_2D, 0, gl_internal_format, width, height, 0,
+                    (unsigned int)gl_format, GL_UNSIGNED_BYTE, pixels);
                 if (opt == TE_TLO_GENERATE_MIPMAPS) {
                     glGenerateMipmap(GL_TEXTURE_2D);
 
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+                    glTexParameteri(
+                        GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
                 } else {
                     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
                 }
@@ -160,7 +164,8 @@ texture_manager_mark_unused_texture(te_texture_manager* manager, unsigned int te
         abort();
     }
     if (manager->textures[index].usage_count == 0) {
-        log_error("the specified texture id already has usage count of 0 (this is a texture manager bug)");
+        log_error("the specified texture id already has usage count of 0 (this is a texture "
+                  "manager bug)");
         abort();
     }
 
@@ -181,7 +186,9 @@ texture_manager_mark_unused_texture(te_texture_manager* manager, unsigned int te
     } else {
         te_texture* new_textures = malloc(sizeof(te_texture) * (manager->texture_count - 1));
         memcpy(new_textures, manager->textures, sizeof(te_texture) * index);
-        memcpy(new_textures + index, manager->textures + (index + 1), sizeof(te_texture) * (manager->texture_count - index - 1));
+        memcpy(
+            new_textures + index, manager->textures + (index + 1),
+            sizeof(te_texture) * (manager->texture_count - index - 1));
 
         free(manager->textures);
         manager->textures = new_textures;

@@ -22,7 +22,8 @@ paths_get_config_dir(void) {
     if (cached_path_to_config_dir[0] == 0) {
 #if defined(WIN32)
         PWSTR path_tmp = NULL;
-        const HRESULT result = SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &path_tmp);
+        const HRESULT result =
+            SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &path_tmp);
         if (result != S_OK) {
             CoTaskMemFree(path_tmp);
             log_error("failed to query config dir path");
@@ -45,7 +46,9 @@ paths_get_config_dir(void) {
         }
         CoTaskMemFree(path_tmp);
 
-        sprintf(cached_path_to_config_dir, "%s/tiny_engine/%s/config/", &path_buff[0], globals_get_app_name());
+        sprintf(
+            cached_path_to_config_dir, "%s/tiny_engine/%s/config/", &path_buff[0],
+            globals_get_app_name());
 #elif __linux__
 
 #if defined(__aarch64__)
@@ -57,7 +60,9 @@ paths_get_config_dir(void) {
             log_error("unable to query environment variable HOME");
             abort();
         }
-        sprintf(cached_path_to_config_dir, "%s/.config/tiny_engine/%s/config/", home_path, globals_get_app_name());
+        sprintf(
+            cached_path_to_config_dir, "%s/.config/tiny_engine/%s/config/", home_path,
+            globals_get_app_name());
 #endif
 
 #else
@@ -73,7 +78,8 @@ paths_get_log_file(void) {
     if (cached_path_to_log_file[0] == 0) {
 #if defined(WIN32)
         PWSTR path_tmp = NULL;
-        const HRESULT result = SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &path_tmp);
+        const HRESULT result =
+            SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &path_tmp);
         if (result != S_OK) {
             CoTaskMemFree(path_tmp);
             log_error("failed to query config dir path");
@@ -96,7 +102,9 @@ paths_get_log_file(void) {
         }
         CoTaskMemFree(path_tmp);
 
-        sprintf(cached_path_to_log_file, "%s/tiny_engine/%s/log.txt", &path_buff[0], globals_get_app_name());
+        sprintf(
+            cached_path_to_log_file, "%s/tiny_engine/%s/log.txt", &path_buff[0],
+            globals_get_app_name());
 #elif __linux__
 
 #if defined(__aarch64__)
@@ -108,7 +116,9 @@ paths_get_log_file(void) {
             log_error("unable to query environment variable HOME");
             abort();
         }
-        sprintf(cached_path_to_log_file, "%s/.config/tiny_engine/%s/log.txt", home_path, globals_get_app_name());
+        sprintf(
+            cached_path_to_log_file, "%s/.config/tiny_engine/%s/log.txt", home_path,
+            globals_get_app_name());
 #endif
 
 #else

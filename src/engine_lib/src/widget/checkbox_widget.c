@@ -41,19 +41,22 @@ static void prv_checkbox_widget_on_after_spawned(void* this);
 static void prv_checkbox_widget_on_before_despawned(void* this);
 
 // Interactable callbacks:
-static void prv_checkbox_widget_on_mouse_button_released(void* this, enum te_mouse_button button, vec2 cursor_pos);
+static void prv_checkbox_widget_on_mouse_button_released(
+    void* this, enum te_mouse_button button, vec2 cursor_pos);
 
 te_checkbox_widget*
 checkbox_widget_create(void) {
     te_checkbox_widget* checkbox_widget = malloc(sizeof(te_checkbox_widget));
 
     checkbox_widget->widget = widget_create(
-        checkbox_widget, checkbox_widget_get_type_id, NULL, prv_checkbox_widget_on_size_changed,
-        prv_checkbox_widget_on_before_base_destroyed, NULL, NULL, prv_checkbox_widget_on_after_spawned,
+        checkbox_widget, checkbox_widget_get_type_id, NULL,
+        prv_checkbox_widget_on_size_changed, prv_checkbox_widget_on_before_base_destroyed,
+        NULL, NULL, prv_checkbox_widget_on_after_spawned,
         prv_checkbox_widget_on_before_despawned, prv_checkbox_widget_on_window_size_changed);
 
     prv_widget_set_input_callbacks(
-        checkbox_widget->widget, NULL, NULL, NULL, prv_checkbox_widget_on_mouse_button_released, NULL, NULL, NULL);
+        checkbox_widget->widget, NULL, NULL, NULL,
+        prv_checkbox_widget_on_mouse_button_released, NULL, NULL, NULL);
 
     glm_vec4_copy((vec4){0.5f, 0.5f, 0.5f, 1.0f}, checkbox_widget->background_color);
     glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, checkbox_widget->checked_color);
@@ -112,7 +115,8 @@ checkbox_widget_get_widget(te_checkbox_widget* checkbox_widget) {
 
 void
 checkbox_widget_set_on_changed(
-    te_checkbox_widget* checkbox_widget, void (*on_changed)(te_checkbox_widget* checkbox_widget, bool is_checked)) {
+    te_checkbox_widget* checkbox_widget,
+    void (*on_changed)(te_checkbox_widget* checkbox_widget, bool is_checked)) {
     checkbox_widget->on_changed = on_changed;
 }
 
@@ -135,7 +139,8 @@ prv_checkbox_widget_create_checked_rect(te_checkbox_widget* checkbox_widget) {
 
     rect_widget_set_color(checkbox_widget->checked_rect, checkbox_widget->checked_color);
     if (checkbox_widget->checked_tex_relative_path != NULL) {
-        rect_widget_set_texture(checkbox_widget->checked_rect, checkbox_widget->checked_tex_relative_path);
+        rect_widget_set_texture(
+            checkbox_widget->checked_rect, checkbox_widget->checked_tex_relative_path);
     }
 }
 
@@ -188,7 +193,8 @@ checkbox_widget_get_checked_color(te_checkbox_widget* checkbox_widget, vec4 out)
 }
 
 void
-checkbox_widget_set_background_texture(te_checkbox_widget* checkbox_widget, const char* relative_path) {
+checkbox_widget_set_background_texture(
+    te_checkbox_widget* checkbox_widget, const char* relative_path) {
     free(checkbox_widget->background_tex_relative_path);
 
     if (relative_path == NULL) {
@@ -196,15 +202,19 @@ checkbox_widget_set_background_texture(te_checkbox_widget* checkbox_widget, cons
     } else {
         const size_t path_len = strlen(relative_path);
         checkbox_widget->background_tex_relative_path = malloc(sizeof(char) * (path_len + 1));
-        memcpy(checkbox_widget->background_tex_relative_path, relative_path, sizeof(char) * path_len);
+        memcpy(
+            checkbox_widget->background_tex_relative_path, relative_path,
+            sizeof(char) * path_len);
         checkbox_widget->background_tex_relative_path[path_len] = 0;
     }
 
-    rect_widget_set_texture(checkbox_widget->background_rect, checkbox_widget->background_tex_relative_path);
+    rect_widget_set_texture(
+        checkbox_widget->background_rect, checkbox_widget->background_tex_relative_path);
 }
 
 void
-checkbox_widget_set_checked_texture(te_checkbox_widget* checkbox_widget, const char* relative_path) {
+checkbox_widget_set_checked_texture(
+    te_checkbox_widget* checkbox_widget, const char* relative_path) {
     free(checkbox_widget->checked_tex_relative_path);
 
     if (relative_path == NULL) {
@@ -212,12 +222,15 @@ checkbox_widget_set_checked_texture(te_checkbox_widget* checkbox_widget, const c
     } else {
         const size_t path_len = strlen(relative_path);
         checkbox_widget->checked_tex_relative_path = malloc(sizeof(char) * (path_len + 1));
-        memcpy(checkbox_widget->checked_tex_relative_path, relative_path, sizeof(char) * path_len);
+        memcpy(
+            checkbox_widget->checked_tex_relative_path, relative_path,
+            sizeof(char) * path_len);
         checkbox_widget->checked_tex_relative_path[path_len] = 0;
     }
 
     if (checkbox_widget->checked_rect != NULL) {
-        rect_widget_set_texture(checkbox_widget->checked_rect, checkbox_widget->checked_tex_relative_path);
+        rect_widget_set_texture(
+            checkbox_widget->checked_rect, checkbox_widget->checked_tex_relative_path);
     }
 }
 
@@ -269,17 +282,26 @@ prv_checkbox_widget_spawn(te_world* world, te_checkbox_widget* checkbox_widget) 
 void
 checkbox_widget_register_type(void) {
     te_type_info* info = type_info_create(
-        checkbox_widget_get_type_id(), checkbox_widget_create, prv_checkbox_widget_spawn, prv_checkbox_widget_get_base);
-    type_info_add_vec2_variable(info, "position", prv_checkbox_widget_set_position, prv_checkbox_widget_get_position);
-    type_info_add_vec2_variable(info, "size", prv_checkbox_widget_set_size, prv_checkbox_widget_get_size);
-    type_info_add_bool_variable(info, "is_checked", checkbox_widget_set_is_checked, checkbox_widget_is_checked);
+        checkbox_widget_get_type_id(), checkbox_widget_create, prv_checkbox_widget_spawn,
+        prv_checkbox_widget_get_base);
+    type_info_add_vec2_variable(
+        info, "position", prv_checkbox_widget_set_position, prv_checkbox_widget_get_position);
+    type_info_add_vec2_variable(
+        info, "size", prv_checkbox_widget_set_size, prv_checkbox_widget_get_size);
+    type_info_add_bool_variable(
+        info, "is_checked", checkbox_widget_set_is_checked, checkbox_widget_is_checked);
     type_info_add_vec4_variable(
-        info, "background_color", checkbox_widget_set_background_color, checkbox_widget_get_background_color);
-    type_info_add_vec4_variable(info, "checked_color", checkbox_widget_set_checked_color, checkbox_widget_get_checked_color);
+        info, "background_color", checkbox_widget_set_background_color,
+        checkbox_widget_get_background_color);
+    type_info_add_vec4_variable(
+        info, "checked_color", checkbox_widget_set_checked_color,
+        checkbox_widget_get_checked_color);
     type_info_add_string_variable(
-        info, "background_texture", checkbox_widget_set_background_texture, checkbox_widget_get_background_texture);
+        info, "background_texture", checkbox_widget_set_background_texture,
+        checkbox_widget_get_background_texture);
     type_info_add_string_variable(
-        info, "checked_texture", checkbox_widget_set_checked_texture, checkbox_widget_get_checked_texture);
+        info, "checked_texture", checkbox_widget_set_checked_texture,
+        checkbox_widget_get_checked_texture);
 
     type_database_register_type(info);
 }
@@ -349,7 +371,8 @@ prv_checkbox_widget_on_after_spawned(void* this) {
 
     rect_widget_set_color(checkbox_widget->background_rect, checkbox_widget->background_color);
     if (checkbox_widget->background_tex_relative_path != NULL) {
-        rect_widget_set_texture(checkbox_widget->background_rect, checkbox_widget->background_tex_relative_path);
+        rect_widget_set_texture(
+            checkbox_widget->background_rect, checkbox_widget->background_tex_relative_path);
     }
 
     if (checkbox_widget->is_checked) {
@@ -387,7 +410,8 @@ prv_checkbox_widget_on_before_despawned(void* this) {
 }
 
 static void
-prv_checkbox_widget_on_mouse_button_released(void* this, enum te_mouse_button button, vec2 cursor_pos) {
+prv_checkbox_widget_on_mouse_button_released(
+    void* this, enum te_mouse_button button, vec2 cursor_pos) {
     (void)cursor_pos;
 
     if (button != TE_MB_LEFT) {

@@ -26,9 +26,9 @@ vbox_widget_create(void) {
     te_vbox_widget* vbox_widget = malloc(sizeof(te_vbox_widget));
 
     vbox_widget->widget = widget_create(
-        vbox_widget, vbox_widget_get_type_id, NULL, prv_vbox_widget_on_size_changed, prv_vbox_widget_on_before_base_destroyed,
-        NULL, prv_vbox_widget_on_children_changed, prv_vbox_widget_on_after_spawned, NULL,
-        prv_vbox_widget_on_window_size_changed);
+        vbox_widget, vbox_widget_get_type_id, NULL, prv_vbox_widget_on_size_changed,
+        prv_vbox_widget_on_before_base_destroyed, NULL, prv_vbox_widget_on_children_changed,
+        prv_vbox_widget_on_after_spawned, NULL, prv_vbox_widget_on_window_size_changed);
 
     vbox_widget->child_spacing = 0.01f;
     vbox_widget->is_vbox_widget_destroy = false;
@@ -76,7 +76,8 @@ vbox_widget_get_child_spacing(te_vbox_widget* vbox_widget) {
 static void
 prv_vbox_widget_update_children(te_vbox_widget* vbox_widget) {
     unsigned int child_count;
-    te_widget** child_widgets = widget_get_child_widgets_tmp(vbox_widget->widget, &child_count);
+    te_widget** child_widgets =
+        widget_get_child_widgets_tmp(vbox_widget->widget, &child_count);
     if (child_count == 0) {
         return;
     }
@@ -163,11 +164,15 @@ prv_vbox_widget_spawn(te_world* world, te_vbox_widget* text_widget) {
 
 void
 vbox_widget_register_type(void) {
-    te_type_info* info =
-        type_info_create(vbox_widget_get_type_id(), vbox_widget_create, prv_vbox_widget_spawn, prv_vbox_widget_get_base);
-    type_info_add_vec2_variable(info, "position", prv_vbox_widget_set_position, prv_vbox_widget_get_position);
-    type_info_add_vec2_variable(info, "size", prv_vbox_widget_set_size, prv_vbox_widget_get_size);
-    type_info_add_float_variable(info, "child_spacing", vbox_widget_set_child_spacing, vbox_widget_get_child_spacing);
+    te_type_info* info = type_info_create(
+        vbox_widget_get_type_id(), vbox_widget_create, prv_vbox_widget_spawn,
+        prv_vbox_widget_get_base);
+    type_info_add_vec2_variable(
+        info, "position", prv_vbox_widget_set_position, prv_vbox_widget_get_position);
+    type_info_add_vec2_variable(
+        info, "size", prv_vbox_widget_set_size, prv_vbox_widget_get_size);
+    type_info_add_float_variable(
+        info, "child_spacing", vbox_widget_set_child_spacing, vbox_widget_get_child_spacing);
 
     type_database_register_type(info);
 }

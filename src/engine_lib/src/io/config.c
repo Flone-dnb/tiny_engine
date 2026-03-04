@@ -204,8 +204,8 @@ config_create_section(te_config* config, const char* name) {
     // Check name.
     const size_t name_len = strlen(name);
     for (size_t i = 0; i < name_len; i++) {
-        if ((name[i] >= 'A' && name[i] <= 'Z') || (name[i] >= 'a' && name[i] <= 'z') || (name[i] >= '0' && name[i] <= '9')
-            || name[i] == '.' || name[i] == '_') {
+        if ((name[i] >= 'A' && name[i] <= 'Z') || (name[i] >= 'a' && name[i] <= 'z')
+            || (name[i] >= '0' && name[i] <= '9') || name[i] == '.' || name[i] == '_') {
             continue;
         }
 
@@ -216,8 +216,10 @@ config_create_section(te_config* config, const char* name) {
     if (config->section_count == config->section_array_size) {
         // Expand array.
         config->section_array_size += section_expand_count;
-        te_config_section* new_sections = malloc(sizeof(te_config_section) * config->section_array_size);
-        memcpy(new_sections, config->sections, sizeof(te_config_section) * config->section_count);
+        te_config_section* new_sections =
+            malloc(sizeof(te_config_section) * config->section_array_size);
+        memcpy(
+            new_sections, config->sections, sizeof(te_config_section) * config->section_count);
 
         free(config->sections);
         config->sections = new_sections;
@@ -253,8 +255,8 @@ prv_config_section_expand_items(te_config_section* section) {
 static void
 prv_config_check_item_name(const char* key, size_t key_len) {
     for (size_t i = 0; i < key_len; i++) {
-        if ((key[i] >= 'A' && key[i] <= 'Z') || (key[i] >= 'a' && key[i] <= 'z') || (key[i] >= '0' && key[i] <= '9')
-            || key[i] == '.' || key[i] == '_') {
+        if ((key[i] >= 'A' && key[i] <= 'Z') || (key[i] >= 'a' && key[i] <= 'z')
+            || (key[i] >= '0' && key[i] <= '9') || key[i] == '.' || key[i] == '_') {
             continue;
         }
 
@@ -264,28 +266,33 @@ prv_config_check_item_name(const char* key, size_t key_len) {
 }
 
 void
-config_section_set_bool(te_config* config, unsigned int section_idx, const char* key, bool value) {
+config_section_set_bool(
+    te_config* config, unsigned int section_idx, const char* key, bool value) {
     config_section_set_bool_array(config, section_idx, key, &value, 1);
 }
 
 void
-config_section_set_uint(te_config* config, unsigned int section_idx, const char* key, unsigned int value) {
+config_section_set_uint(
+    te_config* config, unsigned int section_idx, const char* key, unsigned int value) {
     config_section_set_uint_array(config, section_idx, key, &value, 1);
 }
 
 void
-config_section_set_float(te_config* config, unsigned int section_idx, const char* key, float value) {
+config_section_set_float(
+    te_config* config, unsigned int section_idx, const char* key, float value) {
     config_section_set_float_array(config, section_idx, key, &value, 1);
 }
 
 void
-config_section_set_string(te_config* config, unsigned int section_idx, const char* key, const char* value) {
+config_section_set_string(
+    te_config* config, unsigned int section_idx, const char* key, const char* value) {
     config_section_set_string_array(config, section_idx, key, (char**)&value, 1);
 }
 
 void
 config_section_set_bool_array(
-    te_config* config, unsigned int section_idx, const char* key, bool* values, unsigned int value_count) {
+    te_config* config, unsigned int section_idx, const char* key, bool* values,
+    unsigned int value_count) {
 #if defined(DEBUG)
     if (CONFIG_UNLIKELY(section_idx >= config->section_count)) {
         log_error("the specified config section index is out of range");
@@ -302,7 +309,9 @@ config_section_set_bool_array(
     // Check that section name is unique.
     for (unsigned int i = 0; i < section->item_count; i++) {
         if (strcmp(section->name, key) == 0) {
-            log_error_fmt("the section \"%s\" already has a key with the name \"%s\"", section->name, key);
+            log_error_fmt(
+                "the section \"%s\" already has a key with the name \"%s\"", section->name,
+                key);
             abort();
         }
     }
@@ -344,7 +353,8 @@ config_section_set_bool_array(
 
 void
 config_section_set_uint_array(
-    te_config* config, unsigned int section_idx, const char* key, unsigned int* values, unsigned int value_count) {
+    te_config* config, unsigned int section_idx, const char* key, unsigned int* values,
+    unsigned int value_count) {
 #if defined(DEBUG)
     if (CONFIG_UNLIKELY(section_idx >= config->section_count)) {
         log_error("the specified config section index is out of range");
@@ -361,7 +371,9 @@ config_section_set_uint_array(
     // Check that section name is unique.
     for (unsigned int i = 0; i < section->item_count; i++) {
         if (strcmp(section->name, key) == 0) {
-            log_error_fmt("the section \"%s\" already has a key with the name \"%s\"", section->name, key);
+            log_error_fmt(
+                "the section \"%s\" already has a key with the name \"%s\"", section->name,
+                key);
             abort();
         }
     }
@@ -396,14 +408,17 @@ config_section_set_uint_array(
     // Copy values.
     new_item->value_start_index = config->uint_count;
     new_item->value_count = value_count;
-    memcpy(config->uints + new_item->value_start_index, values, sizeof(unsigned int) * value_count);
+    memcpy(
+        config->uints + new_item->value_start_index, values,
+        sizeof(unsigned int) * value_count);
 
     config->uint_count += value_count;
 }
 
 void
 config_section_set_float_array(
-    te_config* config, unsigned int section_idx, const char* key, float* values, unsigned int value_count) {
+    te_config* config, unsigned int section_idx, const char* key, float* values,
+    unsigned int value_count) {
 #if defined(DEBUG)
     if (CONFIG_UNLIKELY(section_idx >= config->section_count)) {
         log_error("the specified config section index is out of range");
@@ -420,7 +435,9 @@ config_section_set_float_array(
     // Check that section name is unique.
     for (unsigned int i = 0; i < section->item_count; i++) {
         if (strcmp(section->name, key) == 0) {
-            log_error_fmt("the section \"%s\" already has a key with the name \"%s\"", section->name, key);
+            log_error_fmt(
+                "the section \"%s\" already has a key with the name \"%s\"", section->name,
+                key);
             abort();
         }
     }
@@ -462,7 +479,8 @@ config_section_set_float_array(
 
 void
 config_section_set_string_array(
-    te_config* config, unsigned int section_idx, const char* key, char** values, unsigned int value_count) {
+    te_config* config, unsigned int section_idx, const char* key, char** values,
+    unsigned int value_count) {
 #if defined(DEBUG)
     if (CONFIG_UNLIKELY(section_idx >= config->section_count)) {
         log_error("the specified config section index is out of range");
@@ -482,7 +500,8 @@ config_section_set_string_array(
         for (size_t i = 0; i < value_len; i++) {
             if (value[i] == '\n' || value[i] == '\r' || value[i] == '"') {
                 log_error_fmt(
-                    "string value \"%s\" contains forbidden characters, note: string values can't contain \" character "
+                    "string value \"%s\" contains forbidden characters, note: string values "
+                    "can't contain \" character "
                     "because it's used internally",
                     value);
                 abort();
@@ -494,7 +513,9 @@ config_section_set_string_array(
     // Check that section name is unique.
     for (unsigned int i = 0; i < section->item_count; i++) {
         if (strcmp(section->name, key) == 0) {
-            log_error_fmt("the section \"%s\" already has a key with the name \"%s\"", section->name, key);
+            log_error_fmt(
+                "the section \"%s\" already has a key with the name \"%s\"", section->name,
+                key);
             abort();
         }
     }
@@ -559,7 +580,8 @@ config_section_get_name(te_config* config, unsigned int section_idx) {
 }
 
 bool
-config_section_get_bool(te_config* config, unsigned int section_idx, const char* key, bool if_not_found) {
+config_section_get_bool(
+    te_config* config, unsigned int section_idx, const char* key, bool if_not_found) {
     unsigned int count;
     bool* array = config_section_get_bool_array(config, section_idx, key, &count);
     if (count == 0) {
@@ -569,7 +591,8 @@ config_section_get_bool(te_config* config, unsigned int section_idx, const char*
 }
 
 unsigned int
-config_section_get_uint(te_config* config, unsigned int section_idx, const char* key, unsigned int if_not_found) {
+config_section_get_uint(
+    te_config* config, unsigned int section_idx, const char* key, unsigned int if_not_found) {
     unsigned int count;
     unsigned int* array = config_section_get_uint_array(config, section_idx, key, &count);
     if (count == 0) {
@@ -579,7 +602,8 @@ config_section_get_uint(te_config* config, unsigned int section_idx, const char*
 }
 
 float
-config_section_get_float(te_config* config, unsigned int section_idx, const char* key, float if_not_found) {
+config_section_get_float(
+    te_config* config, unsigned int section_idx, const char* key, float if_not_found) {
     unsigned int count;
     float* array = config_section_get_float_array(config, section_idx, key, &count);
     if (count == 0) {
@@ -589,7 +613,8 @@ config_section_get_float(te_config* config, unsigned int section_idx, const char
 }
 
 char*
-config_section_get_string(te_config* config, unsigned int section_idx, const char* key, char* if_not_found) {
+config_section_get_string(
+    te_config* config, unsigned int section_idx, const char* key, char* if_not_found) {
     unsigned int count;
     char** array = config_section_get_string_array(config, section_idx, key, &count);
     if (count == 0) {
@@ -599,7 +624,8 @@ config_section_get_string(te_config* config, unsigned int section_idx, const cha
 }
 
 bool*
-config_section_get_bool_array(te_config* config, unsigned int section_idx, const char* key, unsigned int* value_count) {
+config_section_get_bool_array(
+    te_config* config, unsigned int section_idx, const char* key, unsigned int* value_count) {
 #if defined(DEBUG)
     if (CONFIG_UNLIKELY(section_idx >= config->section_count)) {
         log_error("the specified config section index is out of range");
@@ -620,7 +646,9 @@ config_section_get_bool_array(te_config* config, unsigned int section_idx, const
         }
 
         if (CONFIG_UNLIKELY(section->items[i].type != TE_CVT_BOOL)) {
-            log_error_fmt("expected section \"%s\" item \"%s\" to have a bool value", section->name, section->items[i].name);
+            log_error_fmt(
+                "expected section \"%s\" item \"%s\" to have a bool value", section->name,
+                section->items[i].name);
             abort();
         }
 
@@ -633,7 +661,8 @@ config_section_get_bool_array(te_config* config, unsigned int section_idx, const
 }
 
 unsigned int*
-config_section_get_uint_array(te_config* config, unsigned int section_idx, const char* key, unsigned int* value_count) {
+config_section_get_uint_array(
+    te_config* config, unsigned int section_idx, const char* key, unsigned int* value_count) {
 #if defined(DEBUG)
     if (CONFIG_UNLIKELY(section_idx >= config->section_count)) {
         log_error("the specified config section index is out of range");
@@ -654,7 +683,9 @@ config_section_get_uint_array(te_config* config, unsigned int section_idx, const
         }
 
         if (CONFIG_UNLIKELY(section->items[i].type != TE_CVT_UINT)) {
-            log_error_fmt("expected section \"%s\" item \"%s\" to have a uint value", section->name, section->items[i].name);
+            log_error_fmt(
+                "expected section \"%s\" item \"%s\" to have a uint value", section->name,
+                section->items[i].name);
             abort();
         }
 
@@ -667,7 +698,8 @@ config_section_get_uint_array(te_config* config, unsigned int section_idx, const
 }
 
 float*
-config_section_get_float_array(te_config* config, unsigned int section_idx, const char* key, unsigned int* value_count) {
+config_section_get_float_array(
+    te_config* config, unsigned int section_idx, const char* key, unsigned int* value_count) {
 #if defined(DEBUG)
     if (CONFIG_UNLIKELY(section_idx >= config->section_count)) {
         log_error("the specified config section index is out of range");
@@ -688,7 +720,9 @@ config_section_get_float_array(te_config* config, unsigned int section_idx, cons
         }
 
         if (CONFIG_UNLIKELY(section->items[i].type != TE_CVT_FLOAT)) {
-            log_error_fmt("expected section \"%s\" item \"%s\" to have a float value", section->name, section->items[i].name);
+            log_error_fmt(
+                "expected section \"%s\" item \"%s\" to have a float value", section->name,
+                section->items[i].name);
             abort();
         }
 
@@ -701,7 +735,8 @@ config_section_get_float_array(te_config* config, unsigned int section_idx, cons
 }
 
 char**
-config_section_get_string_array(te_config* config, unsigned int section_idx, const char* key, unsigned int* value_count) {
+config_section_get_string_array(
+    te_config* config, unsigned int section_idx, const char* key, unsigned int* value_count) {
 #if defined(DEBUG)
     if (CONFIG_UNLIKELY(section_idx >= config->section_count)) {
         log_error("the specified config section index is out of range");
@@ -722,7 +757,9 @@ config_section_get_string_array(te_config* config, unsigned int section_idx, con
         }
 
         if (CONFIG_UNLIKELY(section->items[i].type != TE_CVT_STRING)) {
-            log_error_fmt("expected section \"%s\" item \"%s\" to have a string value", section->name, section->items[i].name);
+            log_error_fmt(
+                "expected section \"%s\" item \"%s\" to have a string value", section->name,
+                section->items[i].name);
             abort();
         }
 
@@ -810,7 +847,10 @@ config_save(te_config* config, const char* relative_path, bool create_backup) {
                                 temp[i] = 0;
                             } else if (temp[i] == '.') {
                                 if (CONFIG_UNLIKELY(i + 2 >= len)) {
-                                    log_error_fmt("unexpected float text \"%s\", found dot at %d with len %d", temp, i, len);
+                                    log_error_fmt(
+                                        "unexpected float text \"%s\", found dot at %d with "
+                                        "len %d",
+                                        temp, i, len);
                                 }
                                 temp[i + 1] = '0';
                                 temp[i + 2] = 0;
@@ -921,7 +961,9 @@ prv_config_load(te_config* config, const char* relative_path) {
         line[key_len] = 0; // null terminated for string
 
         if (CONFIG_UNLIKELY(section_idx == 0xffffffff)) {
-            log_error_fmt("config \"%s\", line %u: found key-value pair without a section", path_to_config, line_num);
+            log_error_fmt(
+                "config \"%s\", line %u: found key-value pair without a section",
+                path_to_config, line_num);
             abort();
         }
 
@@ -1018,7 +1060,9 @@ prv_config_load(te_config* config, const char* relative_path) {
                 char* end = NULL;
                 floats[item_idx] = strtof(start, &end);
                 if (CONFIG_UNLIKELY(start == end)) {
-                    log_error_fmt("config \"%s\", line %u: failed to convert value to float", path_to_config, line_num);
+                    log_error_fmt(
+                        "config \"%s\", line %u: failed to convert value to float",
+                        path_to_config, line_num);
                     abort();
                 }
 
@@ -1039,7 +1083,9 @@ prv_config_load(te_config* config, const char* relative_path) {
                 char* end = NULL;
                 uints[item_idx] = (unsigned int)strtoul(start, &end, 10);
                 if (CONFIG_UNLIKELY(start == end)) {
-                    log_error_fmt("config \"%s\", line %u: failed to convert value to unsigned int", path_to_config, line_num);
+                    log_error_fmt(
+                        "config \"%s\", line %u: failed to convert value to unsigned int",
+                        path_to_config, line_num);
                     abort();
                 }
 

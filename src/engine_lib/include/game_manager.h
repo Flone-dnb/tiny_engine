@@ -28,7 +28,8 @@ struct te_renderer* game_manager_get_renderer(te_game_manager* game_manager);
 
 // Returns array of currently existing worlds.
 // Do not free/destroy returned pointer.
-struct te_world** game_manager_get_worlds(te_game_manager* game_manager, unsigned int* world_count);
+struct te_world**
+game_manager_get_worlds(te_game_manager* game_manager, unsigned int* world_count);
 
 // Returns user's main game system that was specified after window creation.
 void* game_manager_get_game_instance(te_game_manager* game_manager);
@@ -51,11 +52,14 @@ void prv_game_manager_on_window_size_changed(te_game_manager* game_manager);
 
 // Transfers the event to UI.
 // Returns `true` if the event was handled by some widget.
-bool prv_game_manager_on_mouse_button_pressed(te_game_manager* game_manager, enum te_mouse_button button);
-bool prv_game_manager_on_mouse_button_released(te_game_manager* game_manager, enum te_mouse_button button);
+bool prv_game_manager_on_mouse_button_pressed(
+    te_game_manager* game_manager, enum te_mouse_button button);
+bool prv_game_manager_on_mouse_button_released(
+    te_game_manager* game_manager, enum te_mouse_button button);
 void prv_game_manager_on_mouse_moved(te_game_manager* game_manager);
 void prv_game_manager_on_keyboard_input_text(te_game_manager* game_manager, const char* text);
-void prv_game_manager_on_keyboard_input(te_game_manager* game_manager, enum te_keyboard_button button, bool is_repeat);
+void prv_game_manager_on_keyboard_input(
+    te_game_manager* game_manager, enum te_keyboard_button button, bool is_repeat);
 
 // Called by window after user input device was changed (keyboard+mouse/gamepad).
 void prv_game_manager_on_input_source_changed(te_game_manager* game_manager);

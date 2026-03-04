@@ -17,8 +17,8 @@ enum te_texture_load_opt {
 // Specify a non-NULL path to the texture file relative to the `res` directory.
 // If the opt argument is set to "cubemap" the path should point to a directory that stores textures
 // with the names "right.png", "left.png", "top.png", "bottom.png", "front.png", "back.png".
-unsigned int texture_manager_request_texture(te_texture_manager* manager, const char* relative_path,
-                                             enum te_texture_load_opt opt);
+unsigned int texture_manager_request_texture(
+    te_texture_manager* manager, const char* relative_path, enum te_texture_load_opt opt);
 
 // Decrements texture usage counter.
 void texture_manager_mark_unused_texture(te_texture_manager* manager, unsigned int tex_id);

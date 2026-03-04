@@ -88,7 +88,8 @@ void
 prv_debug_console_init(te_game_manager* game_manager) {
     console.game_manager = game_manager;
     console.commands = hashmap_new(
-        sizeof(te_debug_console_command), 4, 0, 0, debug_console_command_hash, debug_console_command_compare, NULL, NULL);
+        sizeof(te_debug_console_command), 4, 0, 0, debug_console_command_hash,
+        debug_console_command_compare, NULL, NULL);
     console.input_total_len = 65;
     console.input = malloc(sizeof(char) * console.input_total_len);
     console.input_valid_len = 0;
@@ -166,7 +167,8 @@ prv_debug_console_is_shown(void) {
 }
 
 void
-prv_debug_console_on_keyboard_input(struct te_game_manager* game_manager, enum te_keyboard_button button) {
+prv_debug_console_on_keyboard_input(
+    struct te_game_manager* game_manager, enum te_keyboard_button button) {
     if (button == TE_KB_BACKSPACE && console.input_valid_len > 0) {
         console.input_valid_len -= 1;
         console.input[console.input_valid_len] = 0;
@@ -191,12 +193,14 @@ prv_debug_console_on_keyboard_input(struct te_game_manager* game_manager, enum t
         memcpy((char*)target_command.name, console.input, sizeof(char) * command_len);
         ((char*)target_command.name)[command_len] = 0;
 
-        const te_debug_console_command* found_command = hashmap_get(console.commands, &target_command);
+        const te_debug_console_command* found_command =
+            hashmap_get(console.commands, &target_command);
         if (found_command == NULL) {
             console.message = "command not found";
             console.message_sec_left = 1.0f;
         } else {
-            if (found_command->arg_uint != NULL && (!found_arg || (arg_pos + 1) >= console.input_valid_len)) {
+            if (found_command->arg_uint != NULL
+                && (!found_arg || (arg_pos + 1) >= console.input_valid_len)) {
                 console.message = "the command requires arguments";
                 console.message_sec_left = 2.0f;
             } else if (found_command->arg_uint != NULL && found_arg) {
@@ -251,7 +255,8 @@ prv_debug_console_draw_stat(vec2 screen_pos, const char* fmt, ...) {
     char* text = malloc(sizeof(char) * ((unsigned int)len + 1));
     vsnprintf(text, (unsigned int)len + 1, fmt, args_copy);
 
-    debug_drawer_draw_text_color_pos(text, console.time_sec_to_update_stats, (vec3){1.0f, 1.0f, 1.0f}, screen_pos);
+    debug_drawer_draw_text_color_pos(
+        text, console.time_sec_to_update_stats, (vec3){1.0f, 1.0f, 1.0f}, screen_pos);
     screen_pos[1] += debug_drawer_get_default_text_height();
 
     free(text);
@@ -269,8 +274,10 @@ prv_debug_console_draw(float delta_time_sec) {
         console.time_sec_to_update_stats = 2.0f;
 
         te_debug_stats* stats = &console.displayed_stats;
-        stats->process_mem = (unsigned int)(memory_usage_get_process_used_memory() / 1024 / 1024);
-        stats->total_used_mem = (unsigned int)(memory_usage_get_total_used_memory() / 1024 / 1024);
+        stats->process_mem =
+            (unsigned int)(memory_usage_get_process_used_memory() / 1024 / 1024);
+        stats->total_used_mem =
+            (unsigned int)(memory_usage_get_total_used_memory() / 1024 / 1024);
         stats->total_mem = (unsigned int)(memory_usage_get_total_memory() / 1024 / 1024);
     }
 
@@ -280,7 +287,8 @@ prv_debug_console_draw(float delta_time_sec) {
         glm_vec2_copy((vec2){0.01f, 0.5f}, screen_pos);
 
         // FPS.
-        const unsigned int fps_limit = renderer_get_fps_limit(game_manager_get_renderer(console.game_manager));
+        const unsigned int fps_limit =
+            renderer_get_fps_limit(game_manager_get_renderer(console.game_manager));
         prv_debug_console_draw_stat(screen_pos, "FPS: %u (limit: %u)", stats->fps, fps_limit);
 
         // RAM.
@@ -288,27 +296,42 @@ prv_debug_console_draw(float delta_time_sec) {
 #if defined(ENGINE_ASAN_ENABLED)
         ram_fmt = "RAM used (MB): %u (%u/%u) (ASan enabled)";
 #endif
-        prv_debug_console_draw_stat(screen_pos, ram_fmt, stats->process_mem, stats->total_used_mem, stats->total_mem);
+        prv_debug_console_draw_stat(
+            screen_pos, ram_fmt, stats->process_mem, stats->total_used_mem, stats->total_mem);
 
         // Rendered model count.
-        prv_debug_console_draw_stat(screen_pos, "rendered model count: %u", stats->rendered_model_count);
+        prv_debug_console_draw_stat(
+            screen_pos, "rendered model count: %u", stats->rendered_model_count);
 
         // CPU stats.
-        prv_debug_console_draw_stat(screen_pos, "%s: %.2f", "CPU time to submit a frame (ms)", stats->cpu_time_frame_ms);
-        prv_debug_console_draw_stat(screen_pos, "- %s: %.2f", "models", stats->cpu_time_submit_models_ms);
-        prv_debug_console_draw_stat(screen_pos, "- %s: %.2f", "widgets", stats->cpu_time_submit_widgets_ms);
-        prv_debug_console_draw_stat(screen_pos, "- %s: %.2f", "debug", stats->cpu_time_submit_debug_ms);
+        prv_debug_console_draw_stat(
+            screen_pos, "%s: %.2f", "CPU time to submit a frame (ms)",
+            stats->cpu_time_frame_ms);
+        prv_debug_console_draw_stat(
+            screen_pos, "- %s: %.2f", "models", stats->cpu_time_submit_models_ms);
+        prv_debug_console_draw_stat(
+            screen_pos, "- %s: %.2f", "widgets", stats->cpu_time_submit_widgets_ms);
+        prv_debug_console_draw_stat(
+            screen_pos, "- %s: %.2f", "debug", stats->cpu_time_submit_debug_ms);
         prv_debug_console_draw_stat(screen_pos, "- %s: %.2f", "swap", stats->cpu_time_swap_ms);
 
         // GPU stats.
         if (GLAD_GL_EXT_disjoint_timer_query != 1) {
-            prv_debug_console_draw_stat(screen_pos, "%s", "GL_EXT_disjoint_timer_query not supported");
+            prv_debug_console_draw_stat(
+                screen_pos, "%s", "GL_EXT_disjoint_timer_query not supported");
         } else {
-            prv_debug_console_draw_stat(screen_pos, "CPU is ahead of the GPU on %u frame(s)", stats->cpu_ahead_gpu_frame_count);
-            prv_debug_console_draw_stat(screen_pos, "%s: %.2f", "GPU time to draw a frame (ms)", stats->gpu_time_frame_ms);
-            prv_debug_console_draw_stat(screen_pos, "- %s: %.2f", "models", stats->gpu_time_draw_models_ms);
-            prv_debug_console_draw_stat(screen_pos, "- %s: %.2f", "widgets", stats->gpu_time_draw_widgets_ms);
-            prv_debug_console_draw_stat(screen_pos, "- %s: %.2f", "debug", stats->gpu_time_draw_debug_ms);
+            prv_debug_console_draw_stat(
+                screen_pos, "CPU is ahead of the GPU on %u frame(s)",
+                stats->cpu_ahead_gpu_frame_count);
+            prv_debug_console_draw_stat(
+                screen_pos, "%s: %.2f", "GPU time to draw a frame (ms)",
+                stats->gpu_time_frame_ms);
+            prv_debug_console_draw_stat(
+                screen_pos, "- %s: %.2f", "models", stats->gpu_time_draw_models_ms);
+            prv_debug_console_draw_stat(
+                screen_pos, "- %s: %.2f", "widgets", stats->gpu_time_draw_widgets_ms);
+            prv_debug_console_draw_stat(
+                screen_pos, "- %s: %.2f", "debug", stats->gpu_time_draw_debug_ms);
         }
 
         if (fps_limit > 0) {
@@ -322,14 +345,17 @@ prv_debug_console_draw(float delta_time_sec) {
 
     if (console.message_sec_left > 0.0f) {
         console.message_sec_left -= delta_time_sec;
-        debug_drawer_draw_text_color_pos(console.message, 0.0f, (vec3){1.0f, 1.0f, 1.0f}, console.screen_pos);
+        debug_drawer_draw_text_color_pos(
+            console.message, 0.0f, (vec3){1.0f, 1.0f, 1.0f}, console.screen_pos);
         return;
     }
 
     if (console.input_valid_len == 0) {
-        debug_drawer_draw_text_color_pos("type a command...", 0.0f, (vec3){1.0f, 1.0f, 1.0f}, console.screen_pos);
+        debug_drawer_draw_text_color_pos(
+            "type a command...", 0.0f, (vec3){1.0f, 1.0f, 1.0f}, console.screen_pos);
     } else {
-        debug_drawer_draw_text_color_pos(console.input, 0.0f, (vec3){1.0f, 1.0f, 1.0f}, console.screen_pos);
+        debug_drawer_draw_text_color_pos(
+            console.input, 0.0f, (vec3){1.0f, 1.0f, 1.0f}, console.screen_pos);
     }
 }
 

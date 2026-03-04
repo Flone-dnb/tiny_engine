@@ -13,7 +13,8 @@ void button_widget_destroy(te_button_widget* button_widget);
 // You can destroy returned object and it will cause this widget to be destroyed.
 struct te_widget* button_widget_get_widget(te_button_widget* button_widget);
 
-void button_widget_set_on_clicked(te_button_widget* button_widget, void (*on_clicked)(te_button_widget*));
+void button_widget_set_on_clicked(
+    te_button_widget* button_widget, void (*on_clicked)(te_button_widget*));
 
 // Sets RGBA colors for 3 states: normal, hovered and pressed.
 void button_widget_set_color(te_button_widget* button_widget, vec4 color);
@@ -27,8 +28,10 @@ void button_widget_get_color_pressed(te_button_widget* button_widget, vec4 out);
 // Sets textures (path relative to the "res" directory) for 3 states: normal, hovered and pressed.
 // Specify NULL to remove texture. The string will be copied to the button.
 void button_widget_set_texture(te_button_widget* button_widget, const char* relative_path);
-void button_widget_set_texture_hovered(te_button_widget* button_widget, const char* relative_path);
-void button_widget_set_texture_pressed(te_button_widget* button_widget, const char* relative_path);
+void
+button_widget_set_texture_hovered(te_button_widget* button_widget, const char* relative_path);
+void
+button_widget_set_texture_pressed(te_button_widget* button_widget, const char* relative_path);
 
 // NULL if not set. Do not free returned string, valid while the button exists and the texture is not changed.
 char* button_widget_get_texture(te_button_widget* button_widget);

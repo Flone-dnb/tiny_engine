@@ -83,18 +83,25 @@ model_get_type_id(void) {
 
 void
 model_register_type(void) {
-    te_type_info* info = type_info_create(model_get_type_id(), model_create, world_spawn_model, NULL);
+    te_type_info* info =
+        type_info_create(model_get_type_id(), model_create, world_spawn_model, NULL);
     type_info_add_vec3_variable(info, "position", model_set_position, model_get_position);
     type_info_add_vec3_variable(info, "rotation", model_set_rotation, model_get_rotation);
     type_info_add_vec3_variable(info, "scale", model_set_scale, model_get_scale);
     type_info_add_vec4_variable(info, "color", model_set_color, model_get_color);
     type_info_add_string_variable(info, "texture", model_set_texture, model_get_texture);
-    type_info_add_vec2_variable(info, "texture_tiling", model_set_texture_tiling, model_get_texture_tiling);
+    type_info_add_vec2_variable(
+        info, "texture_tiling", model_set_texture_tiling, model_get_texture_tiling);
     type_info_add_vec2_variable(info, "uv_offset", model_set_uv_offset, model_get_uv_offset);
-    type_info_add_bool_variable(info, "transparent", model_enable_transparency, model_is_transparency_enabled);
+    type_info_add_bool_variable(
+        info, "transparent", model_enable_transparency, model_is_transparency_enabled);
     type_info_add_string_variable(info, "geometry", model_set_geometry, model_get_geometry);
-    type_info_add_string_variable(info, "custom_vert_shader", model_set_custom_vert_shader, model_get_custom_vert_shader);
-    type_info_add_string_variable(info, "custom_frag_shader", model_set_custom_frag_shader, model_get_custom_frag_shader);
+    type_info_add_string_variable(
+        info, "custom_vert_shader", model_set_custom_vert_shader,
+        model_get_custom_vert_shader);
+    type_info_add_string_variable(
+        info, "custom_frag_shader", model_set_custom_frag_shader,
+        model_get_custom_frag_shader);
     type_info_add_string_variable(info, "name", model_set_name, model_get_name);
 
     type_database_register_type(info);
@@ -217,7 +224,8 @@ prv_model_calc_world_normal_matrices(te_model* model, mat4 world, mat3 normal) {
 
     if (model->parent_model != NULL && model->parent_model->render_data_handle != 0xffffffff) {
         te_model_renderer* renderer = prv_model_get_renderer(model->parent_model);
-        te_model_render_data* data = model_renderer_get_render_data_tmp(renderer, model->parent_model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(
+            renderer, model->parent_model->render_data_handle);
 
         glm_mat4_mul(data->world_mat, world, world);
         glm_mat3_mul(data->normal_mat, normal, normal);
@@ -225,10 +233,13 @@ prv_model_calc_world_normal_matrices(te_model* model, mat4 world, mat3 normal) {
 
     if (model->child_model != NULL && model->child_model->render_data_handle != 0xffffffff) {
         te_model_renderer* renderer = prv_model_get_renderer(model->child_model);
-        te_model_render_data* data = model_renderer_get_render_data_tmp(renderer, model->child_model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(
+            renderer, model->child_model->render_data_handle);
 
-        prv_model_calc_world_normal_matrices(model->child_model, data->world_mat, data->normal_mat);
-        data->aabb_world = aabb_shape_convert_to_world(&model->child_model->aabb_local, data->world_mat);
+        prv_model_calc_world_normal_matrices(
+            model->child_model, data->world_mat, data->normal_mat);
+        data->aabb_world =
+            aabb_shape_convert_to_world(&model->child_model->aabb_local, data->world_mat);
     }
 
     if (model->attached_camera != NULL) {
@@ -242,7 +253,8 @@ model_set_position(te_model* model, vec3 position) {
 
     if (model->world != NULL) {
         // Update render data.
-        te_model_render_data* data = model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(
+            prv_model_get_renderer(model), model->render_data_handle);
 
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
@@ -255,7 +267,8 @@ model_set_rotation(te_model* model, vec3 rotation) {
 
     if (model->world != NULL) {
         // Update render data.
-        te_model_render_data* data = model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(
+            prv_model_get_renderer(model), model->render_data_handle);
 
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
@@ -268,7 +281,8 @@ model_set_scale(te_model* model, vec3 scale) {
 
     if (model->world != NULL) {
         // Update render data.
-        te_model_render_data* data = model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(
+            prv_model_get_renderer(model), model->render_data_handle);
 
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
@@ -281,7 +295,8 @@ model_set_color(te_model* model, vec4 color) {
 
     if (model->world != NULL) {
         // Update render data.
-        te_model_render_data* data = model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(
+            prv_model_get_renderer(model), model->render_data_handle);
         glm_vec4_copy(model->color, data->color);
     }
 }
@@ -295,12 +310,12 @@ model_set_texture(te_model* model, const char* relative_path) {
         model->tex_relative_path = NULL;
         if (model->world != NULL) {
             // Update render data.
-            te_model_render_data* data =
-                model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
+            te_model_render_data* data = model_renderer_get_render_data_tmp(
+                prv_model_get_renderer(model), model->render_data_handle);
 
             if (data->tex_id > 0) {
-                te_texture_manager* texture_manager =
-                    renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(model->world)));
+                te_texture_manager* texture_manager = renderer_get_texture_manager(
+                    game_manager_get_renderer(world_get_game_manager(model->world)));
                 texture_manager_mark_unused_texture(texture_manager, data->tex_id);
             }
 
@@ -316,15 +331,16 @@ model_set_texture(te_model* model, const char* relative_path) {
 
         if (model->world != NULL) {
             // Update render data.
-            te_model_render_data* data =
-                model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
+            te_model_render_data* data = model_renderer_get_render_data_tmp(
+                prv_model_get_renderer(model), model->render_data_handle);
 
-            te_texture_manager* texture_manager =
-                renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(model->world)));
+            te_texture_manager* texture_manager = renderer_get_texture_manager(
+                game_manager_get_renderer(world_get_game_manager(model->world)));
             if (data->tex_id > 0) {
                 texture_manager_mark_unused_texture(texture_manager, data->tex_id);
             }
-            data->tex_id = texture_manager_request_texture(texture_manager, relative_path, MODEL_TEX_LOAD_OPTION);
+            data->tex_id = texture_manager_request_texture(
+                texture_manager, relative_path, MODEL_TEX_LOAD_OPTION);
             glm_vec2_copy(model->tex_tiling, data->tex_tiling);
         }
     }
@@ -336,7 +352,8 @@ model_set_texture_tiling(te_model* model, vec2 tex_tiling) {
 
     if (model->world != NULL && model->tex_relative_path != NULL) {
         // Update render data.
-        te_model_render_data* data = model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(
+            prv_model_get_renderer(model), model->render_data_handle);
         glm_vec2_copy(model->tex_tiling, data->tex_tiling);
     }
 }
@@ -347,7 +364,8 @@ model_set_uv_offset(te_model* model, vec2 uv_offset) {
 
     if (model->world != NULL) {
         // Update render data.
-        te_model_render_data* data = model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(
+            prv_model_get_renderer(model), model->render_data_handle);
         glm_vec2_copy(model->uv_offset, data->uv_offset);
     }
 }
@@ -431,7 +449,8 @@ model_set_parent(te_model* model, te_model* new_parent) {
         } else {
             if (new_parent->world != NULL) {
                 if (new_parent->world != model->world) {
-                    log_error("can't attach a model from a different world, despawn the child model first");
+                    log_error("can't attach a model from a different world, despawn the child "
+                              "model first");
                     abort();
                 } else {
                     prv_world_remove_root_model_no_notify(model->world, model, false);
@@ -444,7 +463,8 @@ model_set_parent(te_model* model, te_model* new_parent) {
 
     if (model->world != NULL) {
         // Update render data.
-        te_model_render_data* data = model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(
+            prv_model_get_renderer(model), model->render_data_handle);
 
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
@@ -489,7 +509,8 @@ model_attach_camera(te_model* model, te_camera* camera) {
     if (camera != NULL) {
         te_world* camera_world = camera_get_world(camera);
         if (model->world != NULL && camera_world != NULL && model->world != camera_world) {
-            log_error("can't attach a camera from a different world, despawn the camera first");
+            log_error(
+                "can't attach a camera from a different world, despawn the camera first");
             abort();
         }
 
@@ -522,7 +543,8 @@ model_get_world(te_model* model) {
 }
 
 void prv_model_generate_cube(
-    te_model_vertex** vertices, unsigned short** indices, unsigned int* vertex_count, unsigned int* index_count);
+    te_model_vertex** vertices, unsigned short** indices, unsigned int* vertex_count,
+    unsigned int* index_count);
 
 te_aabb_shape prv_model_calc_aabb(te_model_vertex* vertices, unsigned int vertex_count);
 
@@ -537,12 +559,14 @@ prv_model_add_to_model_renderer(te_model* model) {
 
     // Get shader program.
     {
-        te_shader_manager* shader_manager =
-            renderer_get_shader_manager(game_manager_get_renderer(world_get_game_manager(model->world)));
+        te_shader_manager* shader_manager = renderer_get_shader_manager(
+            game_manager_get_renderer(world_get_game_manager(model->world)));
         model->shader_prog_id = shader_manager_request_shader(
             shader_manager,
-            model->custom_vert_relative_path == NULL ? "engine/shader/model.vert.glsl" : model->custom_vert_relative_path,
-            model->custom_frag_relative_path == NULL ? "engine/shader/model.frag.glsl" : model->custom_frag_relative_path);
+            model->custom_vert_relative_path == NULL ? "engine/shader/model.vert.glsl"
+                                                     : model->custom_vert_relative_path,
+            model->custom_frag_relative_path == NULL ? "engine/shader/model.frag.glsl"
+                                                     : model->custom_frag_relative_path);
     }
 
     // Load geometry.
@@ -559,10 +583,13 @@ prv_model_add_to_model_renderer(te_model* model) {
         glGenBuffers(1, &ebo);
 
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(te_model_vertex) * vertex_count, vertices, GL_STATIC_DRAW);
+        glBufferData(
+            GL_ARRAY_BUFFER, sizeof(te_model_vertex) * vertex_count, vertices, GL_STATIC_DRAW);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * index_count, indices, GL_STATIC_DRAW);
+        glBufferData(
+            GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * index_count, indices,
+            GL_STATIC_DRAW);
 
         // Position.
         glBindAttribLocation(model->shader_prog_id, 0, "pos");
@@ -584,11 +611,13 @@ prv_model_add_to_model_renderer(te_model* model) {
 
     // Add to rendering.
     te_model_renderer* model_renderer = prv_model_get_renderer(model);
-    model->render_data_handle = model_renderer_add_model(model_renderer, model->shader_prog_id);
+    model->render_data_handle =
+        model_renderer_add_model(model_renderer, model->shader_prog_id);
 
     // Init render data.
     {
-        te_model_render_data* data = model_renderer_get_render_data_tmp(model_renderer, model->render_data_handle);
+        te_model_render_data* data =
+            model_renderer_get_render_data_tmp(model_renderer, model->render_data_handle);
 
         glm_vec4_copy(model->color, data->color);
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
@@ -600,9 +629,10 @@ prv_model_add_to_model_renderer(te_model* model) {
         data->index_count = (int)index_count;
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
         if (model->tex_relative_path != NULL) {
-            te_texture_manager* texture_manager =
-                renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(model->world)));
-            data->tex_id = texture_manager_request_texture(texture_manager, model->tex_relative_path, MODEL_TEX_LOAD_OPTION);
+            te_texture_manager* texture_manager = renderer_get_texture_manager(
+                game_manager_get_renderer(world_get_game_manager(model->world)));
+            data->tex_id = texture_manager_request_texture(
+                texture_manager, model->tex_relative_path, MODEL_TEX_LOAD_OPTION);
             glm_vec2_copy(model->tex_tiling, data->tex_tiling);
         }
     }
@@ -626,7 +656,8 @@ prv_model_remove_from_model_renderer(te_model* model) {
     unsigned int vbo = 0;
     unsigned int ebo = 0;
     {
-        te_model_render_data* data = model_renderer_get_render_data_tmp(model_renderer, model->render_data_handle);
+        te_model_render_data* data =
+            model_renderer_get_render_data_tmp(model_renderer, model->render_data_handle);
         tex_id = data->tex_id;
         vbo = data->vbo;
         ebo = data->ebo;
@@ -698,7 +729,8 @@ prv_model_get_world_mat_tmp(te_model* model) {
         abort();
     }
 
-    te_model_render_data* data = model_renderer_get_render_data_tmp(prv_model_get_renderer(model), model->render_data_handle);
+    te_model_render_data* data = model_renderer_get_render_data_tmp(
+        prv_model_get_renderer(model), model->render_data_handle);
     return &data->world_mat;
 }
 
@@ -797,10 +829,12 @@ prv_model_set_vertex_attributes() {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), NULL);
 
     // Normal.
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)sizeof(vec3));
+    glVertexAttribPointer(
+        1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)sizeof(vec3));
 
     // UV.
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)(sizeof(vec3) * 2));
+    glVertexAttribPointer(
+        2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)(sizeof(vec3) * 2));
 }
 
 te_aabb_shape
@@ -829,7 +863,8 @@ prv_model_calc_aabb(te_model_vertex* vertices, unsigned int vertex_count) {
 
 void
 prv_model_generate_cube(
-    te_model_vertex** vertices, unsigned short** indices, unsigned int* vertex_count, unsigned int* index_count) {
+    te_model_vertex** vertices, unsigned short** indices, unsigned int* vertex_count,
+    unsigned int* index_count) {
     const float half = 0.5f;
 
     (*vertex_count) = 24;

@@ -17,15 +17,18 @@ struct te_widget* text_edit_widget_get_widget(te_text_edit_widget* text_edit_wid
 
 // Sets a callback that will be triggered after the text was changed by user input.
 void text_edit_widget_set_on_text_changed(
-    te_text_edit_widget* text_edit_widget, void (*on_text_changed)(wchar_t* new_text, unsigned int strlen));
+    te_text_edit_widget* text_edit_widget,
+    void (*on_text_changed)(wchar_t* new_text, unsigned int strlen));
 
 // Text will be copied to the widget's data.
 void text_edit_widget_set_text(te_text_edit_widget* text_edit_widget, const wchar_t* text);
 // Do not free returned string pointer, valid while the text is not changed and the widget is not destroyed.
-const wchar_t* text_edit_widget_get_text(te_text_edit_widget* text_edit_widget, unsigned int* text_len);
+const wchar_t*
+text_edit_widget_get_text(te_text_edit_widget* text_edit_widget, unsigned int* text_len);
 
 // Moves the ownership of the text to the widget.
-void text_edit_widget_set_text_own(te_text_edit_widget* text_edit_widget, wchar_t* text, unsigned int strlen);
+void text_edit_widget_set_text_own(
+    te_text_edit_widget* text_edit_widget, wchar_t* text, unsigned int strlen);
 
 // Sets height of the text in range [0.0; 1.0] relative to window height.
 void text_edit_widget_set_text_height(te_text_edit_widget* text_edit_widget, float height);

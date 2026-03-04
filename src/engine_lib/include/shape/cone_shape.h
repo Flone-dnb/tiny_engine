@@ -32,5 +32,6 @@ cone_shape_is_behind_plane(te_cone_shape* cone, te_plane_shape* plane) {
     vec3 point_on_cone;
     glm_vec3_add(left_part, right_part, point_on_cone);
 
-    return plane_shape_test_point(plane, cone->position) && plane_shape_test_point(plane, point_on_cone);
+    return plane_shape_test_point(plane, cone->position)
+           && plane_shape_test_point(plane, point_on_cone);
 }

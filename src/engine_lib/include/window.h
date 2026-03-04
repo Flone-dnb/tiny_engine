@@ -17,41 +17,56 @@ typedef struct te_window_callbacks {
     void (*on_game_started)(void* game_instance, struct te_game_manager* game_manager);
 
     // Called before a new frame is rendered.
-    void (*on_game_tick)(void* game_instance, struct te_game_manager* game_manager, float delta_time_sec);
+    void (*on_game_tick)(
+        void* game_instance, struct te_game_manager* game_manager, float delta_time_sec);
 
     void (*on_keyboard_button_pressed)(
-        void* game_instance, struct te_game_manager* game_manager, enum te_keyboard_button button,
-        te_keyboard_modifiers modifiers);
+        void* game_instance, struct te_game_manager* game_manager,
+        enum te_keyboard_button button, te_keyboard_modifiers modifiers);
     void (*on_keyboard_button_released)(
-        void* game_instance, struct te_game_manager* game_manager, enum te_keyboard_button button,
-        te_keyboard_modifiers modifiers);
+        void* game_instance, struct te_game_manager* game_manager,
+        enum te_keyboard_button button, te_keyboard_modifiers modifiers);
 
     // Called when a text input event is received. Generally happens when typing text in a "text edit" widget.
     // Text is a UTF-8 encoded string. Do not free the text pointer.
-    void (*on_keyboard_input_text)(void* game_instance, struct te_game_manager* game_manager, const char* text);
+    void (*on_keyboard_input_text)(
+        void* game_instance, struct te_game_manager* game_manager, const char* text);
 
-    void (*on_gamepad_button_pressed)(void* game_instance, struct te_game_manager* game_manager, enum te_gamepad_button button);
-    void (*on_gamepad_button_released)(void* game_instance, struct te_game_manager* game_manager, enum te_gamepad_button button);
+    void (*on_gamepad_button_pressed)(
+        void* game_instance, struct te_game_manager* game_manager,
+        enum te_gamepad_button button);
+    void (*on_gamepad_button_released)(
+        void* game_instance, struct te_game_manager* game_manager,
+        enum te_gamepad_button button);
 
     // Called when the window receives gamepad input. New pos in range [-1.0f; 1.0f].
     void (*on_gamepad_axis_moved)(
-        void* game_instance, struct te_game_manager* game_manager, enum te_gamepad_axis axis, float new_pos);
+        void* game_instance, struct te_game_manager* game_manager, enum te_gamepad_axis axis,
+        float new_pos);
 
     void (*on_mouse_button_pressed)(
-        void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button, bool was_handled_by_widget);
+        void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button,
+        bool was_handled_by_widget);
     void (*on_mouse_button_released)(
-        void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button, bool was_handled_by_widget);
-    void (*on_mouse_moved)(void* game_instance, struct te_game_manager* game_manager, float x_offset, float y_offset);
-    void (*on_mouse_scroll_moved)(void* game_instance, struct te_game_manager* game_manager, float offset);
+        void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button,
+        bool was_handled_by_widget);
+    void (*on_mouse_moved)(
+        void* game_instance, struct te_game_manager* game_manager, float x_offset,
+        float y_offset);
+    void (*on_mouse_scroll_moved)(
+        void* game_instance, struct te_game_manager* game_manager, float offset);
 
     // Called when a gamepad connects. Gamepad name string must not be freed/destroyed.
-    void (*on_gamepad_connected)(void* game_instance, struct te_game_manager* game_manager, const char* gamepad_name);
+    void (*on_gamepad_connected)(
+        void* game_instance, struct te_game_manager* game_manager, const char* gamepad_name);
     void (*on_gamepad_disconnected)(void* game_instance, struct te_game_manager* game_manager);
 
     // Called after the input device changed (keyboard+mouse/gamepad).
-    void (*on_input_source_changed)(void* game_instance, struct te_game_manager* game_manager, bool is_gamepad_current);
+    void (*on_input_source_changed)(
+        void* game_instance, struct te_game_manager* game_manager, bool is_gamepad_current);
 
-    void (*on_window_received_focus)(void* game_instance, struct te_game_manager* game_manager);
+    void (*on_window_received_focus)(
+        void* game_instance, struct te_game_manager* game_manager);
     void (*on_window_lost_focus)(void* game_instance, struct te_game_manager* game_manager);
 
     // Called before the window is closed (before the game is closed).
@@ -87,7 +102,8 @@ unsigned int window_get_display_refresh_rate(te_window* window);
 
 // Runs the window's event loop.
 // Specify callbacks and a pointer to the game's main system, this pointer will be passed to various callbacks.
-void window_process_events(te_window* window, te_window_callbacks* window_callbacks, void* game_instance);
+void window_process_events(
+    te_window* window, te_window_callbacks* window_callbacks, void* game_instance);
 
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API
