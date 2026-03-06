@@ -20,6 +20,16 @@ set(BUILD_DIRECTORY_NAME OUTPUT)
 set(DEPENDENCY_BUILD_DIR_NAME dep)
 set(RELATIVE_EXT_PATH "../../ext") # relative to a subdirectory target (from the src directory)
 
+# Enable memcheck.
+if(NOT IS_RELEASE_BUILD AND NOT MSVC)
+    # Memcheck is our silly little memory leak checker. It can be used in cases where ASan is not available or if it uses too much RAM.
+    set(ENGINE_MEMCHECK_ENABLED ON CACHE BOOL "" FORCE)
+    message(STATUS "Memcheck enabled.")
+    add_link_options(LINKER:--wrap=malloc,--wrap=realloc,--wrap=calloc,--wrap=free,--wrap=strdup,--wrap=wcsdup,--wrap=scandir,--wrap=getline)
+else()
+    set(ENGINE_MEMCHECK_ENABLED OFF CACHE BOOL "" FORCE)
+endif()
+
 # Define a function to configure engine targets (i.e. common configuration for targets).
 function(tiny_engine_configure_target TARGET_NAME)
     # Set C standard.
@@ -68,6 +78,13 @@ function(tiny_engine_configure_target TARGET_NAME)
 	if (CMAKE_COMPILER_IS_GNUCC)
 	    target_compile_options(${TARGET_NAME} PRIVATE -static-libasan)
 	endif()
+    endif()
+
+    # mutex for memcheck
+    if(ENGINE_MEMCHECK_ENABLED)
+	find_package(Threads REQUIRED)
+	target_link_libraries(${TARGET_NAME} PUBLIC Threads::Threads)
+	target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_MEMCHECK_ENABLED)
     endif()
 endfunction()
 

@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <editor.h>
 #include <window.h>
+#include <misc/memcheck.h>
 
 #if defined(WIN32)
 #include <Windows.h>
@@ -18,6 +19,10 @@ main(void) {
     // Enable run-time memory checks for debug builds (on Windows).
 #if defined(WIN32) && defined(DEBUG)
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+
+#if defined(ENGINE_MEMCHECK_ENABLED)
+    memcheck_init();
 #endif
 
     te_window* window = window_create("tiny engine editor");
@@ -51,6 +56,10 @@ main(void) {
     editor_destroy(editor);
 
     window_destroy(window);
+
+#if defined(ENGINE_MEMCHECK_ENABLED)
+    memcheck_deinit();
+#endif
 
     return 0;
 }
