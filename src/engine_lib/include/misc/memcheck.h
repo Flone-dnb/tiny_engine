@@ -3,12 +3,12 @@
 #error "memcheck should only be included in non-release builds"
 #endif
 
+#pragma once
+
 #include <stddef.h>
 #include <wchar.h>
 #include <dirent.h>
 #include <stdio.h>
-
-#pragma once
 
 void memcheck_init(void);
 void memcheck_deinit(void);
