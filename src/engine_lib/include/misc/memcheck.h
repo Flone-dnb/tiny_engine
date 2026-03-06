@@ -1,7 +1,4 @@
-#if defined(ENGINE_MEMCHECK_ENABLED)
-#if !defined(DEBUG)
-#error "memcheck should only be included in non-release builds"
-#endif
+#if defined(ENGINE_MEMCHECK_ENABLED) && defined(DEBUG)
 
 #pragma once
 

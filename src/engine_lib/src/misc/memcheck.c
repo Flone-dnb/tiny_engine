@@ -1,4 +1,4 @@
-#if defined(ENGINE_MEMCHECK_ENABLED)
+#if defined(ENGINE_MEMCHECK_ENABLED) && defined(DEBUG)
 
 #include <misc/memcheck.h>
 
