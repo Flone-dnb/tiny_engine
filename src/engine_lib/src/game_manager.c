@@ -45,20 +45,32 @@ prv_game_manager_create(struct te_window* window) {
     prv_debug_drawer_init(game_manager->renderer);
 #endif
 
+    // Log some info.
+    log_info("state:");
+
 #if defined(ENGINE_ASAN_ENABLED)
-    log_info("AddressSanitizer (ASan) is enabled, expect increased RAM usage!");
+    log_info("- AddressSanitizer (ASan) is enabled, expect increased RAM usage!");
 #endif
 
 #if defined(DEBUG)
-    log_info("DEBUG macro is defined, running debug build");
+    log_info("- DEBUG is defined, running debug build");
 #else
-    log_info("DEBUG macro is NOT defined, running release build");
+    log_info("- DEBUG is NOT defined, running release build");
 #endif
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    log_info("ENGINE_DEBUG_TOOLS macro is defined, debug tools are enabled");
+    log_info("- ENGINE_DEBUG_TOOLS is defined, debug tools are enabled");
 #else
-    log_info("ENGINE_DEBUG_TOOLS macro is NOT defined");
+    log_info("- ENGINE_DEBUG_TOOLS is NOT defined");
+#endif
+
+#if defined(ENGINE_MEMCHECK_ENABLED)
+#if !defined(DEBUG)
+#error "memcheck should be disabled in release builds"
+#endif
+    log_info("- ENGINE_MEMCHECK_ENABLED is defined, memcheck enabled");
+#else
+    log_info("- ENGINE_MEMCHECK_ENABLED is NOT defined");
 #endif
 
     return game_manager;
