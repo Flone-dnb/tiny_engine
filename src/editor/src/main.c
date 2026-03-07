@@ -7,7 +7,9 @@
 #include <stdlib.h>
 #include <editor.h>
 #include <window.h>
+#if defined(ENGINE_MEMCHECK_ENABLED)
 #include <memcheck.h>
+#endif
 
 #if defined(WIN32)
 #include <Windows.h>
