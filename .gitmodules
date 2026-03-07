@@ -3,7 +3,7 @@
 	url = https://github.com/libsdl-org/SDL.git
 [submodule "ext/cglm"]
 	path = ext/cglm
-	url = https://github.com/recp/cglm.git
+	url = https://github.com/Flone-dnb/cglm.git
 [submodule "ext/stb"]
 	path = ext/stb
 	url = https://github.com/nothings/stb.git
