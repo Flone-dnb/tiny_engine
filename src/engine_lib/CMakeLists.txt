@@ -14,7 +14,6 @@ set(PROJECT_SOURCES
     src/misc/globals.c
     src/misc/memory_usage.c
     src/misc/wchar_funcs.c
-    src/misc/memcheck.c
     src/game_manager.c
     src/world.c
     src/debug_console.c
@@ -60,7 +59,6 @@ set(PROJECT_SOURCES
     include/misc/globals.h
     include/misc/memory_usage.h
     include/misc/wchar_funcs.h
-    include/misc/memcheck.h
     include/game_manager.h
     include/render/renderer.h
     include/render/shader_manager.h
@@ -116,10 +114,19 @@ add_library(${ENGINE_LIB_DEPS_TARGET} INTERFACE)
 
 # Add SDL.
 message(STATUS "${PROJECT_NAME}: adding dependency \"SDL\"...")
-set(SDL_STATIC ON CACHE BOOL "" FORCE)
-set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+if(ENGINE_MEMCHECK_ENABLED)
+    set(SDL_STATIC OFF CACHE BOOL "" FORCE)
+    set(SDL_SHARED ON CACHE BOOL "" FORCE)
+else()
+    set(SDL_STATIC ON CACHE BOOL "" FORCE)
+    set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+endif()
 set(SDL_TEST OFF CACHE BOOL "" FORCE)
 set(SDL_AUDIO OFF CACHE BOOL "" FORCE)
+set(SDL_INSTALL OFF CACHE BOOL "" FORCE)
+set(SDL_INSTALL_DOCS OFF CACHE BOOL "" FORCE)
+set(SDL_INSTALL_TESTS OFF CACHE BOOL "" FORCE)
+set(SDL_DISABLE_INSTALL ON CACHE BOOL "" FORCE)
 target_include_directories(${ENGINE_LIB_DEPS_TARGET} SYSTEM INTERFACE ${RELATIVE_EXT_PATH}/SDL/include)
 add_subdirectory(${RELATIVE_EXT_PATH}/SDL ${DEPENDENCY_BUILD_DIR_NAME}/SDL EXCLUDE_FROM_ALL)
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE SDL3::SDL3)
@@ -142,6 +149,7 @@ set(CGLM_SHARED OFF CACHE BOOL "" FORCE)
 set(CGLM_STATIC ON CACHE BOOL "" FORCE)
 set(CGLM_USE_C99 ON CACHE BOOL "" FORCE)
 set(CGLM_USE_TEST OFF CACHE BOOL "" FORCE)
+set(CGLM_INSTALL OFF CACHE BOOL "" FORCE)
 add_subdirectory(${RELATIVE_EXT_PATH}/cglm ${DEPENDENCY_BUILD_DIR_NAME}/cglm EXCLUDE_FROM_ALL)
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE cglm_headers)
 target_compile_definitions(cglm_headers INTERFACE CGLM_ALL_UNALIGNED)
@@ -150,6 +158,7 @@ target_compile_definitions(cglm_headers INTERFACE CGLM_ALL_UNALIGNED)
 message(STATUS "${PROJECT_NAME}: adding external dependency \"FreeType\"...")
 set(FT_DISABLE_BROTLI ON CACHE BOOL "" FORCE)
 set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
+set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
 add_subdirectory(${RELATIVE_EXT_PATH}/freetype ${DEPENDENCY_BUILD_DIR_NAME}/freetype EXCLUDE_FROM_ALL)
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE freetype)
 

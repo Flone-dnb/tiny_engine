@@ -13,3 +13,6 @@
 [submodule "ext/hashmap.c"]
 	path = ext/hashmap.c
 	url = https://github.com/tidwall/hashmap.c.git
+[submodule "ext/memcheck"]
+	path = ext/memcheck
+	url = https://github.com/Flone-dnb/memcheck.git
