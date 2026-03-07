@@ -28,6 +28,7 @@
 #include <window.h>
 #include <world.h>
 #include <glad/glad.h>
+#include <SDL3/SDL_messagebox.h>
 
 // Stuff needed to calculate FPS and keep frame limit.
 typedef struct te_renderer_frame_stats {
@@ -120,12 +121,19 @@ renderer_create(struct te_window* window) {
     // Create GL context.
     renderer->gl_context = SDL_GL_CreateContext(prv_window_get_sdl_window(window));
     if (renderer->gl_context == NULL) {
+#if defined(WIN32)
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", SDL_GetError(), NULL);
+#endif
         log_error(SDL_GetError());
         abort();
     }
 
     // Initialize GLAD.
     if (gladLoadGLES2Loader((GLADloadproc)SDL_GL_GetProcAddress) == 0) {
+#if defined(WIN32)
+        SDL_ShowSimpleMessageBox(
+            SDL_MESSAGEBOX_ERROR, "Error", "failed to load OpenGL ES", NULL);
+#endif
         log_error("failed to load OpenGL ES");
         abort();
     }
