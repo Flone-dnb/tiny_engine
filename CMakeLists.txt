@@ -3,6 +3,7 @@
 project(tiny_engine C)
 
 option(ENGINE_FORCE_ENABLE_DEBUG_TOOLS "Can be useful in Release builds to measure performance, enabled in non-release builds by default" OFF)
+option(ENGINE_DISABLE_ASAN_IN_DEBUG "ASan is enabled in non-release builds, this option disables it. Note that memcheck is still enabled in non-release builds" OFF)
 
 # -------------------------------------------------------------------------------------------------
 #                              PREPARE FOR ADDING ENGINE TARGETS
@@ -71,7 +72,7 @@ function(tiny_engine_configure_target TARGET_NAME)
     target_include_directories(${TARGET_NAME} PUBLIC include)
 
     # Enable ASan.
-    if(NOT IS_RELEASE_BUILD AND NOT MSVC AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
+    if(NOT IS_RELEASE_BUILD AND NOT MSVC AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT ENGINE_DISABLE_ASAN_IN_DEBUG)
 	message(STATUS "${TARGET_NAME}: Address sanitizer is enabled.")
 	target_compile_definitions(${TARGET_NAME} PRIVATE ENGINE_ASAN_ENABLED)
 	target_compile_options(${TARGET_NAME} PRIVATE -fno-omit-frame-pointer)
@@ -83,6 +84,7 @@ function(tiny_engine_configure_target TARGET_NAME)
 	endif()
     endif()
 
+    # Memcheck macro.
     if(ENGINE_MEMCHECK_ENABLED)
 	target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_MEMCHECK_ENABLED)
     endif()
