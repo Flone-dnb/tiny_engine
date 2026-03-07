@@ -1,6 +1,6 @@
 [submodule "ext/SDL"]
 	path = ext/SDL
-	url = https://github.com/libsdl-org/SDL.git
+	url = https://github.com/Flone-dnb/SDL.git
 [submodule "ext/cglm"]
 	path = ext/cglm
 	url = https://github.com/Flone-dnb/cglm.git
