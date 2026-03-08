@@ -30,6 +30,12 @@ void widget_destroy(te_widget* widget);
 void* widget_get_owner(te_widget* widget);
 const char* widget_get_owner_type_id(te_widget* widget);
 
+// Used to add a custom (user-defined) value to the widget.
+void widget_set_custom_value(te_widget* widget, size_t value);
+void widget_set_custom_ptr(te_widget* widget, void* ptr);
+size_t widget_get_custom_value(te_widget* widget);
+void* widget_get_custom_ptr(te_widget* widget);
+
 // Sets or changes the current parent of a widget. Specify NULL to remove parent.
 // If the specified parent is spawned in some world but this widget is not spawned the widget will
 // be spawned (added to world) and attached to the specified parent.

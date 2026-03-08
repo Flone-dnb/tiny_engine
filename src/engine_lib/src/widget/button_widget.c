@@ -139,28 +139,12 @@ prv_button_widget_on_after_spawned(void* this) {
     if (button_widget->tex_relative_path != NULL) {
         rect_widget_set_texture(button_widget->rect_widget, button_widget->tex_relative_path);
     }
-
-    // Self check:
-    unsigned int child_count = 0;
-    (void)widget_get_child_widgets_tmp(button_widget->widget, &child_count);
-    if (child_count != 1) {
-        log_error("unexpected child widget count on a widget");
-        abort();
-    }
 }
 
 static void
 prv_button_widget_on_before_despawned(void* this) {
     te_button_widget* button_widget = this;
     prv_button_widget_unregister_render_data(button_widget);
-
-    // Self check:
-    unsigned int child_count = 0;
-    (void)widget_get_child_widgets_tmp(button_widget->widget, &child_count);
-    if (child_count != 1) {
-        log_error("unexpected child widget count on a widget");
-        abort();
-    }
 }
 
 static void

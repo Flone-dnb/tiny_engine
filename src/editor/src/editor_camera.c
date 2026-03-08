@@ -5,6 +5,7 @@
 #include <game/camera.h>
 #include <math_funcs.h>
 #include <misc/globals.h>
+#include <ui/theme.h>
 #include <world.h>
 
 #define DEFAULT_CAMERA_SPEED 4.0f
@@ -56,8 +57,17 @@ editor_camera_spawn(te_editor_camera* editor_camera, struct te_world* world) {
     camera_set_position(editor_camera->camera, (vec3){0.0f, 2.0f, 4.0f});
     camera_set_rotation(editor_camera->camera, (vec3){0.0f, 0.0f, 0.0f});
 
+    // Spawn.
     world_spawn_camera(world, editor_camera->camera);
     world_set_active_camera(world, editor_camera->camera);
+
+    // Set viewport.
+    vec4 viewport;
+    glm_vec4_copy(
+        (vec4){theme_get_left_panel_width(), 0.0f,
+               1.0f - (theme_get_left_panel_width() + theme_get_right_panel_width()), 1.0f},
+        viewport);
+    camera_set_viewport(editor_camera->camera, viewport);
 }
 
 void

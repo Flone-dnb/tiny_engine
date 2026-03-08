@@ -8,8 +8,13 @@ set(PROJECT_SOURCES
     src/main.c
     src/editor.c
     src/editor_camera.c
-    include/editor.h
-    include/editor_camera.h
+    src/editor.h
+    src/editor_camera.h
+    src/ui/editor_ui.c
+    src/ui/editor_ui.h
+    src/ui/theme.h
+    src/ui/world_inspector.c
+    src/ui/world_inspector.h
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})

@@ -92,9 +92,6 @@ add_library(${ENGINE_LIB_TARGET_FOR_EDITOR} STATIC ${PROJECT_SOURCES})
 tiny_engine_configure_target(${ENGINE_LIB_TARGET})
 tiny_engine_configure_target(${ENGINE_LIB_TARGET_FOR_EDITOR})
 
-target_include_directories(${ENGINE_LIB_TARGET} PRIVATE src)
-target_include_directories(${ENGINE_LIB_TARGET_FOR_EDITOR} PRIVATE src)
-
 # Define editor macros for editor's version of the engine_lib.
 target_compile_definitions(${ENGINE_LIB_TARGET_FOR_EDITOR} PUBLIC ENGINE_EDITOR)
 

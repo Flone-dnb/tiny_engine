@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <editor_camera.h>
 #include <game/model.h>
+#include <game/camera.h>
 #include <game_manager.h>
 #include <io/log.h>
 #include <misc/memory_usage.h>
@@ -13,6 +14,7 @@
 #include <widget/widget.h>
 #include <window.h>
 #include <world.h>
+#include <ui/editor_ui.h>
 
 struct te_editor {
     // Always valid pointer. Must be destroyed during the editor's destruction.
@@ -24,6 +26,12 @@ struct te_editor {
     // Not NULL if game world exists.
     te_world* game_world;
 
+    // Not NULL if exists.
+    te_world* editor_world;
+
+    // Always valid.
+    te_editor_ui* ui;
+
     // Time (in seconds) since @ref game_world_stats_widget was updated.
     float time_since_stats_update_sec;
 };
@@ -32,8 +40,10 @@ te_editor*
 editor_create() {
     te_editor* editor = malloc(sizeof(te_editor));
     editor->editor_camera = editor_camera_create();
+    editor->ui = editor_ui_create();
     editor->game_world_stats_widget = NULL;
     editor->game_world = NULL;
+    editor->editor_world = NULL;
     editor->time_since_stats_update_sec = 10.0f;
 
     return editor;
@@ -42,8 +52,21 @@ editor_create() {
 void
 editor_destroy(te_editor* editor) {
     editor_camera_destroy(editor->editor_camera);
+    editor_ui_destroy(editor->ui);
 
     free(editor);
+}
+
+static void
+editor_create_editor_world(te_editor* editor, struct te_game_manager* game_manager) {
+    editor->editor_world = game_manager_create_world(game_manager, "editor world");
+
+    // Create a dummy camera to display editor's UI.
+    te_camera* camera = camera_create();
+    world_spawn_camera(editor->editor_world, camera);
+    world_set_active_camera(editor->editor_world, camera);
+
+    ui_spawn(editor->ui, editor->editor_world);
 }
 
 void
@@ -53,8 +76,9 @@ editor_on_game_started(void* game_instance, te_game_manager* game_manager) {
     te_font_manager* font_manager = renderer_get_font_manager(renderer);
     font_manager_load_font(font_manager, "engine/font/font.ttf");
 
-    // Create default game world.
+    // Create worlds.
     te_editor* editor = game_instance;
+    editor_create_editor_world(editor, game_manager);
     editor_create_game_world(editor, game_manager);
 }
 

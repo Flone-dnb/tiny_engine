@@ -70,6 +70,7 @@ function(tiny_engine_configure_target TARGET_NAME)
     # Add includes (relative to the target's directory).
     target_include_directories(${TARGET_NAME} SYSTEM PUBLIC "../../ext")
     target_include_directories(${TARGET_NAME} PUBLIC include)
+    target_include_directories(${TARGET_NAME} PRIVATE src)
 
     # Enable ASan.
     if(NOT IS_RELEASE_BUILD AND NOT MSVC AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT ENGINE_DISABLE_ASAN_IN_DEBUG)

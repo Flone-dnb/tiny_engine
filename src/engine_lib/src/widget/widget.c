@@ -50,6 +50,9 @@ struct te_widget {
     vec2 screen_pos;
     vec2 screen_size;
 
+    size_t custom_value;
+    void* custom_ptr;
+
     unsigned int child_widget_count;
 
     // `false` if this widget (and its child widgets) should not be serialized.
@@ -87,6 +90,8 @@ widget_create(
     widget->on_after_spawned = on_after_spawned;
     widget->on_before_despawned = on_before_despawned;
     widget->on_window_size_changed = on_window_size_changed;
+    widget->custom_value = 0;
+    widget->custom_ptr = NULL;
     widget->child_widget_count = 0;
     widget->allow_serialization = true;
 
@@ -135,6 +140,26 @@ widget_get_owner(te_widget* widget) {
 const char*
 widget_get_owner_type_id(te_widget* widget) {
     return widget->get_type_id();
+}
+
+void
+widget_set_custom_value(te_widget* widget, size_t value) {
+    widget->custom_value = value;
+}
+
+void
+widget_set_custom_ptr(te_widget* widget, void* ptr) {
+    widget->custom_ptr = ptr;
+}
+
+size_t
+widget_get_custom_value(te_widget* widget) {
+    return widget->custom_value;
+}
+
+void*
+widget_get_custom_ptr(te_widget* widget) {
+    return widget->custom_ptr;
 }
 
 static void

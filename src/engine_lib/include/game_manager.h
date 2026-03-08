@@ -11,8 +11,10 @@ struct te_window;
 struct te_world;
 
 // Creates a new world.
-//
 // Specify a non-NULL world name. The name will be copied to the world's object.
+//
+// All created worlds will be automatically destroyed when the game manager is being destroyed
+// (when the window is closing) but you can manually destroy them earlier using @ref game_manager_destroy_world.
 struct te_world* game_manager_create_world(te_game_manager* game_manager, const char* name);
 
 // Destroys a world previously created using @ref game_manager_create_world.
