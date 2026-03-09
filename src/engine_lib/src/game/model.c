@@ -584,12 +584,13 @@ prv_model_add_to_model_renderer(te_model* model) {
 
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(
-            GL_ARRAY_BUFFER, sizeof(te_model_vertex) * vertex_count, vertices, GL_STATIC_DRAW);
+            GL_ARRAY_BUFFER, (unsigned int)(sizeof(te_model_vertex) * vertex_count), vertices,
+            GL_STATIC_DRAW);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
         glBufferData(
-            GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * index_count, indices,
-            GL_STATIC_DRAW);
+            GL_ELEMENT_ARRAY_BUFFER, (unsigned int)(sizeof(unsigned short) * index_count),
+            indices, GL_STATIC_DRAW);
 
         // Position.
         glBindAttribLocation(model->shader_prog_id, 0, "pos");
