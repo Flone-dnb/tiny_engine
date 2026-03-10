@@ -81,6 +81,7 @@ button_widget_create(void) {
     button_widget->tex_pressed_id = 0;
 
     button_widget->is_cursor_inside_widget = false;
+    button_widget->is_button_widget_destroy = false;
 
     button_widget->rect_widget = rect_widget_create();
     widget_set_parent(

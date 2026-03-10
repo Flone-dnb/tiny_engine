@@ -69,6 +69,8 @@ text_edit_widget_create(void) {
 
     text_edit_widget->text_cursor_index = TE_INVALID_TEXT_CURSOR_INDEX;
 
+    text_edit_widget->is_text_edit_widget_destroy = false;
+
     text_edit_widget->text_widget = text_widget_create();
     widget_set_is_serialization_allowed(
         text_widget_get_widget(text_edit_widget->text_widget), false);

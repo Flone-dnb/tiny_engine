@@ -69,6 +69,8 @@ checkbox_widget_create(void) {
     checkbox_widget->is_fixing_height = false;
     checkbox_widget->on_changed = NULL;
 
+    checkbox_widget->is_checkbox_widget_destroy = false;
+
     {
         checkbox_widget->background_rect = rect_widget_create();
         te_widget* rect = rect_widget_get_widget(checkbox_widget->background_rect);
