@@ -126,6 +126,9 @@ set(SDL_INSTALL_TESTS OFF CACHE BOOL "" FORCE)
 target_include_directories(${ENGINE_LIB_DEPS_TARGET} SYSTEM INTERFACE ${RELATIVE_EXT_PATH}/SDL/include)
 add_subdirectory(${RELATIVE_EXT_PATH}/SDL ${DEPENDENCY_BUILD_DIR_NAME}/SDL EXCLUDE_FROM_ALL)
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE SDL3::SDL3)
+if(ENGINE_MEMCHECK_ENABLED)
+    target_compile_definitions(SDL3-shared PRIVATE ENGINE_MEMCHECK_ENABLED)
+endif()
 
 # Add GLAD.
 message(STATUS "${PROJECT_NAME}: adding dependency \"GLAD\"...")
