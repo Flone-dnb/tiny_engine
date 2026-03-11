@@ -874,7 +874,26 @@ prv_world_interactable_widget_pos_size_changed(te_world* world) {
 }
 
 void
+prv_world_on_mouse_cursor_captured(te_world* world, bool captured, float cursor_pos[2]) {
+    if (captured) {
+        if (world->hovered_interactable_widget != NULL) {
+            prv_widget_on_cursor_left(world->hovered_interactable_widget, cursor_pos);
+            world->hovered_interactable_widget = NULL;
+        }
+    }
+    else {
+        prv_world_on_mouse_moved(world, cursor_pos);
+    }
+}
+
+void
 prv_world_on_mouse_moved(te_world* world, float cursor_pos[2]) {
+    // Notify widgets.
+    te_window* window = game_manager_get_window(world->game_manager);
+    if (window_is_mouse_captured(window)) {
+        return;
+    }
+
     vec2 pos;
     vec2 size;
     for (unsigned int i = 0; i < world->interactable_widget_count; i++) {
@@ -915,6 +934,12 @@ prv_world_on_mouse_moved(te_world* world, float cursor_pos[2]) {
 bool
 prv_world_on_mouse_button_pressed(
     te_world* world, enum te_mouse_button button, float cursor_pos[2]) {
+    // Notify widgets.
+    te_window* window = game_manager_get_window(world->game_manager);
+    if (window_is_mouse_captured(window)) {
+        return false;
+    }
+
     vec2 pos;
     vec2 size;
     for (unsigned int i = 0; i < world->interactable_widget_count; i++) {
@@ -938,6 +963,12 @@ prv_world_on_mouse_button_pressed(
 bool
 prv_world_on_mouse_button_released(
     te_world* world, enum te_mouse_button button, float cursor_pos[2]) {
+    // Notify widgets.
+    te_window* window = game_manager_get_window(world->game_manager);
+    if (window_is_mouse_captured(window)) {
+        return false;
+    }
+
     vec2 pos;
     vec2 size;
     for (unsigned int i = 0; i < world->interactable_widget_count; i++) {

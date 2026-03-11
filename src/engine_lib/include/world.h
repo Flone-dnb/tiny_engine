@@ -103,6 +103,7 @@ void prv_world_interactable_widget_pos_size_changed(te_world* world);
 
 // Cursor pos in range [0.0; 1.0] relative to the window.
 // Returns `true` if was handled by some widget.
+void prv_world_on_mouse_cursor_captured(te_world* world, bool captured, float cursor_pos[2]);
 void prv_world_on_mouse_moved(te_world* world, float cursor_pos[2]);
 bool prv_world_on_mouse_button_pressed(
     te_world* world, enum te_mouse_button button, float cursor_pos[2]);

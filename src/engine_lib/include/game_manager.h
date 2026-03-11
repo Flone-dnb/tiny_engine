@@ -59,6 +59,7 @@ bool prv_game_manager_on_mouse_button_pressed(
 bool prv_game_manager_on_mouse_button_released(
     te_game_manager* game_manager, enum te_mouse_button button);
 void prv_game_manager_on_mouse_moved(te_game_manager* game_manager);
+void prv_game_manager_on_mouse_cursor_captured(te_game_manager* game_manager, bool captured);
 void prv_game_manager_on_keyboard_input_text(te_game_manager* game_manager, const char* text);
 void prv_game_manager_on_keyboard_input(
     te_game_manager* game_manager, enum te_keyboard_button button, bool is_repeat);

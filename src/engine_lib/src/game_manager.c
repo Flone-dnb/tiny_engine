@@ -199,10 +199,7 @@ prv_game_manager_on_window_size_changed(te_game_manager* game_manager) {
     }
 }
 
-bool
-prv_game_manager_on_mouse_button_pressed(
-    te_game_manager* game_manager, enum te_mouse_button button) {
-    vec2 cursor_pos;
+static void get_cursor_relative_pos(te_game_manager* game_manager, vec2 cursor_pos) {
     window_get_cursor_position(game_manager->window, &cursor_pos[0], &cursor_pos[1]);
 
     unsigned int window_width;
@@ -210,6 +207,13 @@ prv_game_manager_on_mouse_button_pressed(
     window_get_size(game_manager->window, &window_width, &window_height);
 
     glm_vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
+}
+
+bool
+prv_game_manager_on_mouse_button_pressed(
+    te_game_manager* game_manager, enum te_mouse_button button) {
+    vec2 cursor_pos;
+    get_cursor_relative_pos(game_manager, cursor_pos);
 
     bool is_handled = false;
     for (unsigned int i = 0; i < game_manager->world_count; i++) {
@@ -224,13 +228,7 @@ bool
 prv_game_manager_on_mouse_button_released(
     te_game_manager* game_manager, enum te_mouse_button button) {
     vec2 cursor_pos;
-    window_get_cursor_position(game_manager->window, &cursor_pos[0], &cursor_pos[1]);
-
-    unsigned int window_width;
-    unsigned int window_height;
-    window_get_size(game_manager->window, &window_width, &window_height);
-
-    glm_vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
+    get_cursor_relative_pos(game_manager, cursor_pos);
 
     bool is_handled = false;
     for (unsigned int i = 0; i < game_manager->world_count; i++) {
@@ -244,16 +242,20 @@ prv_game_manager_on_mouse_button_released(
 void
 prv_game_manager_on_mouse_moved(te_game_manager* game_manager) {
     vec2 cursor_pos;
-    window_get_cursor_position(game_manager->window, &cursor_pos[0], &cursor_pos[1]);
-
-    unsigned int window_width;
-    unsigned int window_height;
-    window_get_size(game_manager->window, &window_width, &window_height);
-
-    glm_vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
+    get_cursor_relative_pos(game_manager, cursor_pos);
 
     for (unsigned int i = 0; i < game_manager->world_count; i++) {
         prv_world_on_mouse_moved(game_manager->worlds[i], cursor_pos);
+    }
+}
+
+void
+prv_game_manager_on_mouse_cursor_captured(te_game_manager* game_manager, bool captured) {
+    vec2 cursor_pos;
+    get_cursor_relative_pos(game_manager, cursor_pos);
+
+    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+        prv_world_on_mouse_cursor_captured(game_manager->worlds[i], captured, cursor_pos);
     }
 }
 

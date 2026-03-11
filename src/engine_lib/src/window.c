@@ -288,6 +288,8 @@ window_capture_mouse_cursor(te_window* window, bool enable) {
     }
 
     window->is_mouse_captured = enable;
+
+    prv_game_manager_on_mouse_cursor_captured(window->game_manager, enable);
 }
 
 bool
