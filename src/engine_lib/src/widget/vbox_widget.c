@@ -162,6 +162,16 @@ prv_vbox_widget_spawn(te_world* world, te_vbox_widget* text_widget) {
     world_spawn_widget(world, prv_vbox_widget_get_base(text_widget));
 }
 
+static void
+set_name(te_vbox_widget* widget, const char* name) {
+    widget_set_name(widget->widget, name);
+}
+
+static const char*
+get_name(te_vbox_widget* widget) {
+    return widget_get_name(widget->widget);
+}
+
 void
 vbox_widget_register_type(void) {
     te_type_info* info = type_info_create(
@@ -173,6 +183,7 @@ vbox_widget_register_type(void) {
         info, "size", prv_vbox_widget_set_size, prv_vbox_widget_get_size);
     type_info_add_float_variable(
         info, "child_spacing", vbox_widget_set_child_spacing, vbox_widget_get_child_spacing);
+    type_info_add_string_variable(info, "name", set_name, get_name);
 
     type_database_register_type(info);
 }

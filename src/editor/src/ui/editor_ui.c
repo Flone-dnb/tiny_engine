@@ -9,6 +9,7 @@
 
 struct te_editor_ui {
     te_world_inspector* world_inspector;
+    te_world* game_world;
 };
 
 te_editor_ui*
@@ -27,7 +28,7 @@ editor_ui_destroy(te_editor_ui* ui) {
 }
 
 void
-ui_spawn(te_editor_ui* ui, te_world* editor_world) {
+editor_ui_spawn(te_editor_ui* ui, te_world* editor_world) {
     vec4 background_color;
     theme_get_background_panel_color(background_color);
 
@@ -56,4 +57,9 @@ ui_spawn(te_editor_ui* ui, te_world* editor_world) {
     // Spawn.
     world_spawn_widget(editor_world, rect_widget_get_widget(left_rect));
     world_spawn_widget(editor_world, rect_widget_get_widget(right_rect));
+}
+
+te_world_inspector*
+editor_ui_get_world_inspector(te_editor_ui* ui) {
+    return ui->world_inspector;
 }

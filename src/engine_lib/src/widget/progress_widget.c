@@ -263,6 +263,16 @@ prv_progress_widget_spawn(te_world* world, te_progress_widget* progress_widget) 
     world_spawn_widget(world, prv_progress_widget_get_base(progress_widget));
 }
 
+static void
+set_name(te_progress_widget* widget, const char* name) {
+    widget_set_name(widget->widget, name);
+}
+
+static const char*
+get_name(te_progress_widget* widget) {
+    return widget_get_name(widget->widget);
+}
+
 void
 progress_widget_register_type(void) {
     te_type_info* info = type_info_create(
@@ -286,6 +296,7 @@ progress_widget_register_type(void) {
     type_info_add_string_variable(
         info, "foreground_texture", progress_widget_set_foreground_texture,
         progress_widget_get_foreground_texture);
+    type_info_add_string_variable(info, "name", set_name, get_name);
 
     type_database_register_type(info);
 }

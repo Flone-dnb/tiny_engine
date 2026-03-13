@@ -8,6 +8,9 @@ struct te_widget {
     // Actual widget that owns this component.
     void* owner;
 
+    // Not NULL if was set.
+    char* name;
+
     // May be NULL. Do not free/destroy this pointer.
     te_widget* parent;
 
@@ -79,6 +82,7 @@ widget_create(
 
     widget->owner = owner;
     widget->parent = NULL;
+    widget->name = NULL;
     widget->world = NULL;
     widget->child_widgets = NULL;
     widget->get_type_id = get_type_id;
@@ -128,6 +132,8 @@ widget_destroy(te_widget* widget) {
     }
     free(widget->child_widgets);
     widget->child_widget_count = 0;
+
+    free(widget->name);
 
     free(widget);
 }
@@ -307,6 +313,24 @@ te_widget**
 widget_get_child_widgets_tmp(te_widget* widget, unsigned int* count) {
     (*count) = widget->child_widget_count;
     return widget->child_widgets;
+}
+
+void
+widget_set_name(te_widget* widget, const char* name) {
+    free(widget->name);
+    widget->name = NULL;
+
+    if (name != NULL) {
+        const size_t len = strlen(name);
+        widget->name = malloc(sizeof(char) * (len + 1));
+        memcpy(widget->name, name, sizeof(char) * len);
+        widget->name[len] = 0;
+    }
+}
+
+const char*
+widget_get_name(te_widget* widget) {
+    return widget->name;
 }
 
 static void

@@ -52,8 +52,10 @@ struct te_camera* world_get_active_camera(te_world* world);
 
 // Returns NULL if no camera is spawned, otherwise all spawned cameras.
 // Do not save/store returned pointer as it might become invalid after a camera is spawned/despawned.
+// Note: returned array only contains "root" game objects (does not include attached/child game objects).
 struct te_camera** world_get_cameras_tmp(te_world* world, unsigned int* count);
 struct te_model** world_get_models_tmp(te_world* world, unsigned int* count);
+struct te_widget** world_get_widgets_tmp(te_world* world, unsigned int* count);
 
 // Do not free/destroy returned pointer, valid while the world exists.
 struct te_model_renderer* world_get_opaque_model_renderer(te_world* world);

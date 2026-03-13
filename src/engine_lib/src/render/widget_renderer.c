@@ -148,6 +148,13 @@ widgets_render_data_remove_widget(te_widgets_render_data* data, unsigned int han
 
 void*
 widgets_render_data_get_widget_data(te_widgets_render_data* data, unsigned int handle) {
+#if defined(DEBUG)
+    if (handle >= data->array_size) {
+        log_error("invalid handle specified");
+        abort();
+    }
+#endif
+
     char* render_data = data->render_data; // <- cast from void*
     return render_data + data->sizeof_render_data * data->handle_to_data[handle];
 }

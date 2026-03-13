@@ -49,6 +49,11 @@ te_widget* widget_get_parent(te_widget* widget);
 // when a new child is attached/detached thus the function has "_tmp" suffix.
 te_widget** widget_get_child_widgets_tmp(te_widget* widget, unsigned int* count);
 
+// Optionally you can set a name of the widget. The string will be copied.
+// Returns NULL if was not set previously.
+void widget_set_name(te_widget* widget, const char* name);
+const char* widget_get_name(te_widget* widget);
+
 // Sets position of the widget in range [0.0; 1.0] relative to the window's top-left corner.
 // If the widget has a parent then this position becomes relative to the parent's position/size.
 void widget_set_relative_position(te_widget* widget, vec2 position);

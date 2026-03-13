@@ -15,6 +15,7 @@
 #include <window.h>
 #include <world.h>
 #include <ui/editor_ui.h>
+#include <ui/world_inspector.h>
 
 struct te_editor {
     // Always valid pointer. Must be destroyed during the editor's destruction.
@@ -66,7 +67,7 @@ editor_create_editor_world(te_editor* editor, struct te_game_manager* game_manag
     world_spawn_camera(editor->editor_world, camera);
     world_set_active_camera(editor->editor_world, camera);
 
-    ui_spawn(editor->ui, editor->editor_world);
+    editor_ui_spawn(editor->ui, editor->editor_world);
 }
 
 void
@@ -105,11 +106,13 @@ editor_create_game_world(te_editor* editor, te_game_manager* game_manager) {
     // Prepare a sample scene.
     {
         te_model* floor = model_create();
+        model_set_name(floor, "floor");
         model_set_scale(floor, (vec3){5.0f, 1.0f, 5.0f});
         model_set_color(floor, (vec4){1.0f, 0.5f, 0.0f, 1.0f});
         world_spawn_model(editor->game_world, floor);
 
         te_model* box = model_create();
+        model_set_name(box, "box");
         model_set_position(box, (vec3){0.0f, 1.0f, -1.0f});
         world_spawn_model(editor->game_world, box);
     }
@@ -132,6 +135,10 @@ editor_create_game_world(te_editor* editor, te_game_manager* game_manager) {
     // Spawn stats widget.
     world_spawn_widget(
         editor->game_world, text_widget_get_widget(editor->game_world_stats_widget));
+
+    // Refresh world inspector.
+    te_world_inspector* inspector = editor_ui_get_world_inspector(editor->ui);
+    world_inspector_rebuild_list(inspector, editor->game_world);
 }
 
 void

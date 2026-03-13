@@ -495,6 +495,16 @@ prv_text_widget_spawn(te_world* world, te_text_widget* text_widget) {
     world_spawn_widget(world, prv_text_widget_get_base(text_widget));
 }
 
+static void
+set_name(te_text_widget* widget, const char* name) {
+    widget_set_name(widget->widget, name);
+}
+
+static const char*
+get_name(te_text_widget* widget) {
+    return widget_get_name(widget->widget);
+}
+
 void
 text_widget_register_type(void) {
     te_type_info* info = type_info_create(
@@ -513,6 +523,7 @@ text_widget_register_type(void) {
     type_info_add_float_variable(
         info, "line_spacing", text_widget_set_line_spacing, text_widget_get_line_spacing);
     type_info_add_vec4_variable(info, "color", text_widget_set_color, text_widget_get_color);
+    type_info_add_string_variable(info, "name", set_name, get_name);
 
     type_database_register_type(info);
 }

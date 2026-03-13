@@ -606,6 +606,16 @@ prv_text_edit_widget_spawn(te_world* world, te_text_edit_widget* text_edit_widge
     world_spawn_widget(world, prv_text_edit_widget_get_base(text_edit_widget));
 }
 
+static void
+set_name(te_text_edit_widget* widget, const char* name) {
+    widget_set_name(widget->widget, name);
+}
+
+static const char*
+get_name(te_text_edit_widget* widget) {
+    return widget_get_name(widget->widget);
+}
+
 void
 text_edit_widget_register_type(void) {
     te_type_info* info = type_info_create(
@@ -623,6 +633,7 @@ text_edit_widget_register_type(void) {
         text_edit_widget_get_text_height);
     type_info_add_vec4_variable(
         info, "color", text_edit_widget_set_color, text_edit_widget_get_color);
+    type_info_add_string_variable(info, "name", set_name, get_name);
 
     type_database_register_type(info);
 }

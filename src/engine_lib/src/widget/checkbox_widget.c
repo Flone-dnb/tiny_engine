@@ -281,6 +281,16 @@ prv_checkbox_widget_spawn(te_world* world, te_checkbox_widget* checkbox_widget) 
     world_spawn_widget(world, prv_checkbox_widget_get_base(checkbox_widget));
 }
 
+static void
+set_name(te_checkbox_widget* widget, const char* name) {
+    widget_set_name(widget->widget, name);
+}
+
+static const char*
+get_name(te_checkbox_widget* widget) {
+    return widget_get_name(widget->widget);
+}
+
 void
 checkbox_widget_register_type(void) {
     te_type_info* info = type_info_create(
@@ -304,6 +314,7 @@ checkbox_widget_register_type(void) {
     type_info_add_string_variable(
         info, "checked_texture", checkbox_widget_set_checked_texture,
         checkbox_widget_get_checked_texture);
+    type_info_add_string_variable(info, "name", set_name, get_name);
 
     type_database_register_type(info);
 }

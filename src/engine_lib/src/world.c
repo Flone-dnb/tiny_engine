@@ -664,6 +664,12 @@ world_get_models_tmp(te_world* world, unsigned int* count) {
     return world->spawned_models;
 }
 
+struct te_widget**
+world_get_widgets_tmp(te_world* world, unsigned int* count) {
+    (*count) = world->spawned_widget_count;
+    return world->spawned_widgets;
+}
+
 te_model_renderer*
 world_get_opaque_model_renderer(te_world* world) {
     return world->opaque_model_renderer;
@@ -880,8 +886,7 @@ prv_world_on_mouse_cursor_captured(te_world* world, bool captured, float cursor_
             prv_widget_on_cursor_left(world->hovered_interactable_widget, cursor_pos);
             world->hovered_interactable_widget = NULL;
         }
-    }
-    else {
+    } else {
         prv_world_on_mouse_moved(world, cursor_pos);
     }
 }
