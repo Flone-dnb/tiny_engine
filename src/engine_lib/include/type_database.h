@@ -143,6 +143,10 @@ void type_database_register_type(te_type_info* info);
 // Returns NULL if not registered. Do not free/destroy returned pointer.
 const te_type_info* type_database_get_type_info(const char* id);
 
+// Returns array (which you need to free) to static strings (which you don't need to free)
+// to IDs of all currently registered types.
+const char** type_database_get_all_type_ids(unsigned int* count);
+
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API
 // ------------------------------------------------------------------------------------------------

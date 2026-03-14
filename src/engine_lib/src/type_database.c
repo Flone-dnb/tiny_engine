@@ -437,3 +437,26 @@ type_database_get_type_info(const char* id) {
 
     return *found;
 }
+
+const char**
+type_database_get_all_type_ids(unsigned int* count) {
+    (*count) = (unsigned int)hashmap_count(type_database.types);
+    if ((*count) == 0) {
+        return NULL;
+    }
+
+    const char** array = malloc(sizeof(const char*) * (*count));
+
+    size_t iter = 0;
+    size_t item_idx = 0;
+    void* item;
+    while (hashmap_iter(type_database.types, &iter, &item)) {
+        const te_type_info** ptr = item;
+        te_type_info* info = (te_type_info*)*ptr;
+
+        array[item_idx] = info->id;
+        item_idx += 1;
+    }
+
+    return array;
+}
