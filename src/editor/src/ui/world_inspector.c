@@ -33,6 +33,10 @@ struct te_world_inspector {
     // NULL if not set yet.
     te_world* game_world;
 
+    // Widgets for changing @ref is_3dobj_mode_selected.
+    te_button_widget* button_3dobj;
+    te_button_widget* button_2dobj;
+
     // Valid while spawned, buttons that fill all available space (moved outside of the viewport if should not be visible).
     // Number of items in this array is @ref item_buttons_count.
     te_button_widget** item_buttons;
@@ -242,23 +246,30 @@ rebuild_item_list(te_world_inspector* inspector) {
 static void
 refresh_item_names(te_world_inspector* inspector) {
     const float hpadding = theme_get_horizontal_padding() / theme_get_left_panel_width();
+    const float button_width = 1.0f - hpadding * 2.0f;
+    const float indent_size = hpadding;
 
     unsigned int button_idx = 0;
     for (unsigned int item_idx = inspector->current_page * inspector->item_buttons_count;
          button_idx < inspector->item_buttons_count && item_idx < inspector->item_list_count;
          button_idx++, item_idx++) {
         te_button_widget* button = inspector->item_buttons[button_idx];
+        te_world_item_info* info = &inspector->item_list[item_idx];
 
-        // Fix pos of the button (in case it was hidden previously).
+        // Fix pos of the button (in case it was hidden previously or had other indentation).
         {
             te_widget* widget = button_widget_get_widget(button);
 
             vec2 pos;
             widget_get_relative_position(widget, pos);
-            pos[0] = hpadding;
+            pos[0] = hpadding + indent_size * (float)info->indent;
 
-            widget_set_relative_position(
-                button_widget_get_widget(inspector->item_buttons[button_idx]), pos);
+            vec2 size;
+            widget_get_relative_size(widget, size);
+            size[0] = button_width - indent_size * (float)info->indent;
+
+            widget_set_relative_position(widget, pos);
+            widget_set_relative_size(widget, size);
         }
 
         unsigned int child_count;
@@ -274,7 +285,6 @@ refresh_item_names(te_world_inspector* inspector) {
             break;
         }
 
-        te_world_item_info* info = &inspector->item_list[item_idx];
         const char* name = NULL;
         switch (info->type) {
             case (TE_WIT_MODEL): {
@@ -368,6 +378,13 @@ on_button_3dobj_clicked(te_button_widget* button) {
     te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
     inspector->is_3dobj_mode_selected = true;
     world_inspector_rebuild_list(inspector, inspector->game_world);
+
+    vec4 color;
+    theme_get_accent_color(color);
+    button_widget_set_color(button, color);
+
+    theme_get_button_color(color);
+    button_widget_set_color(inspector->button_2dobj, color);
 }
 
 static void
@@ -375,6 +392,13 @@ on_button_2dobj_clicked(te_button_widget* button) {
     te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
     inspector->is_3dobj_mode_selected = false;
     world_inspector_rebuild_list(inspector, inspector->game_world);
+
+    vec4 color;
+    theme_get_accent_color(color);
+    button_widget_set_color(button, color);
+
+    theme_get_button_color(color);
+    button_widget_set_color(inspector->button_3dobj, color);
 }
 
 void
@@ -425,6 +449,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
         // "3D objects" button ------------------
 
         te_button_widget* button_3dobj = button_widget_create();
+        inspector->button_3dobj = button_3dobj;
         {
             te_widget* widget = button_widget_get_widget(button_3dobj);
             widget_set_custom_ptr(widget, inspector);
@@ -452,6 +477,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
         // "2D objects" button ------------------
 
         te_button_widget* button_2dobj = button_widget_create();
+        inspector->button_2dobj = button_2dobj;
         {
             te_widget* widget = button_widget_get_widget(button_2dobj);
             widget_set_custom_ptr(widget, inspector);
