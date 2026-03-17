@@ -62,6 +62,7 @@ struct te_world_inspector {
     unsigned int item_list_count;
 
     unsigned int current_page;
+    unsigned int page_count;
 
     // `true` if should display world's "3D objects", `false` if "2D objects".
     bool is_3dobj_mode_selected;
@@ -84,6 +85,7 @@ world_inspector_create(void) {
     inspector->item_buttons_count = 0;
     inspector->item_list_count = 0;
     inspector->current_page = 0;
+    inspector->page_count = 0;
     inspector->is_3dobj_mode_selected = true;
     inspector->is_creating_new_game_obj = false;
 
@@ -136,6 +138,112 @@ count_widgets_recursive(te_widget* widget, unsigned int* count) {
     for (unsigned int i = 0; i < child_count; i++) {
         count_widgets_recursive(child_widgets[i], count);
     }
+}
+
+static void
+refresh_item_names(te_world_inspector* inspector) {
+    const float hpadding = theme_get_horizontal_padding() / theme_get_left_panel_width();
+    const float button_width = 1.0f - hpadding * 2.0f;
+    const float indent_size = hpadding;
+
+    unsigned int button_idx = 0;
+    for (unsigned int item_idx = inspector->current_page * inspector->item_buttons_count;
+         button_idx < inspector->item_buttons_count && item_idx < inspector->item_list_count;
+         button_idx++, item_idx++) {
+        te_button_widget* button = inspector->item_buttons[button_idx];
+        te_world_item_info* info = &inspector->item_list[item_idx];
+
+        // Fix pos of the button (in case it was hidden previously or had other indentation).
+        {
+            te_widget* widget = button_widget_get_widget(button);
+
+            vec2 pos;
+            widget_get_relative_position(widget, pos);
+            pos[0] = hpadding + indent_size * (float)info->indent;
+
+            vec2 size;
+            widget_get_relative_size(widget, size);
+            size[0] = button_width - indent_size * (float)info->indent;
+
+            widget_set_relative_position(widget, pos);
+            widget_set_relative_size(widget, size);
+        }
+
+        // Get button text.
+        unsigned int child_count;
+        te_widget** child_widgets =
+            widget_get_child_widgets_tmp(button_widget_get_widget(button), &child_count);
+        te_text_widget* button_text = NULL;
+        for (unsigned int i = 0; i < child_count; i++) {
+            if (!widget_is_serialization_allowed(child_widgets[i])) {
+                // Internal widget (rect) of the button.
+                continue;
+            }
+            button_text = widget_get_owner(child_widgets[i]);
+            break;
+        }
+
+        const char* name = NULL;
+        switch (info->type) {
+            case (TE_WIT_MODEL): {
+                name = model_get_name(info->obj);
+                if (name == NULL) {
+                    name = "model";
+                }
+                break;
+            }
+            case (TE_WIT_WIDGET): {
+                name = widget_get_name(info->obj);
+                if (name == NULL) {
+                    name = widget_get_owner_type_id(info->obj);
+                }
+                break;
+            }
+            case (TE_WIT_CAMERA): {
+                name = camera_get_name(info->obj);
+                if (name == NULL) {
+                    name = "camera";
+                }
+                break;
+            }
+        }
+
+        unsigned int text_len;
+        wchar_t* wtext = wchar_from_char(name, &text_len);
+        text_widget_set_text_own(button_text, wtext, text_len);
+    }
+
+    // Hide left buttons.
+    for (; button_idx < inspector->item_buttons_count; button_idx++) {
+        te_widget* widget = button_widget_get_widget(inspector->item_buttons[button_idx]);
+
+        vec2 pos;
+        widget_get_relative_position(widget, pos);
+        pos[0] = BUTTON_HIDDEN_X_POS;
+
+        widget_set_relative_position(
+            button_widget_get_widget(inspector->item_buttons[button_idx]), pos);
+    }
+}
+
+static void
+refresh_page_text(te_world_inspector* inspector) {
+    const int len =
+        snprintf(NULL, 0, "%u / %u", inspector->current_page + 1, inspector->page_count);
+    if (len < 0) {
+        log_error("snprintf error");
+        abort();
+    }
+    unsigned int text_len = (unsigned int)len;
+
+    char* text = malloc(sizeof(char) * (text_len + 1));
+    snprintf(
+        text, text_len + 1, "%u / %u", inspector->current_page + 1, inspector->page_count);
+
+    wchar_t* wtext = wchar_from_char(text, &text_len);
+    text_widget_set_text_own(inspector->page_text, wtext, text_len);
+
+    free(text);
 }
 
 static void
@@ -255,92 +363,19 @@ rebuild_item_list(te_world_inspector* inspector) {
             }
         }
     }
-}
 
-static void
-refresh_item_names(te_world_inspector* inspector) {
-    const float hpadding = theme_get_horizontal_padding() / theme_get_left_panel_width();
-    const float button_width = 1.0f - hpadding * 2.0f;
-    const float indent_size = hpadding;
-
-    unsigned int button_idx = 0;
-    for (unsigned int item_idx = inspector->current_page * inspector->item_buttons_count;
-         button_idx < inspector->item_buttons_count && item_idx < inspector->item_list_count;
-         button_idx++, item_idx++) {
-        te_button_widget* button = inspector->item_buttons[button_idx];
-        te_world_item_info* info = &inspector->item_list[item_idx];
-
-        // Fix pos of the button (in case it was hidden previously or had other indentation).
-        {
-            te_widget* widget = button_widget_get_widget(button);
-
-            vec2 pos;
-            widget_get_relative_position(widget, pos);
-            pos[0] = hpadding + indent_size * (float)info->indent;
-
-            vec2 size;
-            widget_get_relative_size(widget, size);
-            size[0] = button_width - indent_size * (float)info->indent;
-
-            widget_set_relative_position(widget, pos);
-            widget_set_relative_size(widget, size);
-        }
-
-        // Get button text.
-        unsigned int child_count;
-        te_widget** child_widgets =
-            widget_get_child_widgets_tmp(button_widget_get_widget(button), &child_count);
-        te_text_widget* button_text = NULL;
-        for (unsigned int i = 0; i < child_count; i++) {
-            if (!widget_is_serialization_allowed(child_widgets[i])) {
-                // Internal widget (rect) of the button.
-                continue;
-            }
-            button_text = widget_get_owner(child_widgets[i]);
-            break;
-        }
-
-        const char* name = NULL;
-        switch (info->type) {
-            case (TE_WIT_MODEL): {
-                name = model_get_name(info->obj);
-                if (name == NULL) {
-                    name = "model";
-                }
-                break;
-            }
-            case (TE_WIT_WIDGET): {
-                name = widget_get_name(info->obj);
-                if (name == NULL) {
-                    name = widget_get_owner_type_id(info->obj);
-                }
-                break;
-            }
-            case (TE_WIT_CAMERA): {
-                name = camera_get_name(info->obj);
-                if (name == NULL) {
-                    name = "camera";
-                }
-                break;
-            }
-        }
-
-        unsigned int text_len;
-        wchar_t* wtext = wchar_from_char(name, &text_len);
-        text_widget_set_text_own(button_text, wtext, text_len);
+    unsigned int page_count = inspector->item_list_count / inspector->item_buttons_count;
+    if (inspector->item_list_count % inspector->item_buttons_count > 0) {
+        page_count += 1;
     }
-
-    // Hide left buttons.
-    for (; button_idx < inspector->item_buttons_count; button_idx++) {
-        te_widget* widget = button_widget_get_widget(inspector->item_buttons[button_idx]);
-
-        vec2 pos;
-        widget_get_relative_position(widget, pos);
-        pos[0] = BUTTON_HIDDEN_X_POS;
-
-        widget_set_relative_position(
-            button_widget_get_widget(inspector->item_buttons[button_idx]), pos);
+    if (page_count == 0) {
+        page_count = 1;
     }
+    inspector->current_page = 0;
+    inspector->page_count = page_count;
+
+    refresh_page_text(inspector);
+    refresh_item_names(inspector);
 }
 
 void
@@ -357,35 +392,6 @@ world_inspector_rebuild_list(te_world_inspector* inspector, te_world* game_world
         // Mode changed, rebuild list.
         rebuild_item_list(inspector);
     }
-
-    unsigned int page_count = inspector->item_list_count / inspector->item_buttons_count;
-    if (inspector->item_list_count % inspector->item_buttons_count > 0) {
-        page_count += 1;
-    }
-    if (page_count == 0) {
-        page_count = 1;
-    }
-    inspector->current_page = 0;
-
-    // Update page text.
-    {
-        const int len = snprintf(NULL, 0, "1 / %u", page_count);
-        if (len < 0) {
-            log_error("snprintf error");
-            abort();
-        }
-        unsigned int text_len = (unsigned int)len;
-
-        char* text = malloc(sizeof(char) * (text_len + 1));
-        snprintf(text, text_len + 1, "1 / %u", page_count);
-
-        wchar_t* wtext = wchar_from_char(text, &text_len);
-        text_widget_set_text_own(inspector->page_text, wtext, text_len);
-
-        free(text);
-    }
-
-    refresh_item_names(inspector);
 }
 
 static void
@@ -531,9 +537,39 @@ on_button_list_item_clicked(te_button_widget* button) {
         text_widget_set_text_own(inspector->button_text_create_new_obj, wtext, text_len);
 
         rebuild_item_list(inspector);
-        refresh_item_names(inspector);
         return;
     }
+}
+
+static void
+on_button_prev_page_clicked(te_button_widget* button) {
+    te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
+    if (inspector->is_creating_new_game_obj) {
+        return;
+    }
+
+    if (inspector->current_page == 0) {
+        return;
+    }
+
+    inspector->current_page -= 1;
+    refresh_page_text(inspector);
+    refresh_item_names(inspector);
+}
+
+static void
+on_button_next_page_clicked(te_button_widget* button) {
+    te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
+    if (inspector->is_creating_new_game_obj) {
+        return;
+    }
+    if (inspector->current_page + 1 == inspector->page_count) {
+        return;
+    }
+
+    inspector->current_page += 1;
+    refresh_page_text(inspector);
+    refresh_item_names(inspector);
 }
 
 void
@@ -794,6 +830,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
             te_button_widget* button = button_widget_create();
             {
                 te_widget* widget = button_widget_get_widget(button);
+                widget_set_custom_ptr(widget, inspector);
                 widget_set_parent(widget, left_panel);
                 widget_set_relative_position(widget, (vec2){hpadding + nav_button_pad, y_pos});
                 widget_set_relative_size(
@@ -809,6 +846,8 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
 
             theme_get_button_color_pressed(color);
             button_widget_set_color_pressed(button, color);
+
+            button_widget_set_on_clicked(button, on_button_prev_page_clicked);
 
             // Button text.
             te_text_widget* text_widget = text_widget_create();
@@ -859,6 +898,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
             te_button_widget* button = button_widget_create();
             {
                 te_widget* widget = button_widget_get_widget(button);
+                widget_set_custom_ptr(widget, inspector);
                 widget_set_parent(widget, left_panel);
                 widget_set_relative_position(
                     widget,
@@ -876,6 +916,8 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
 
             theme_get_button_color_pressed(color);
             button_widget_set_color_pressed(button, color);
+
+            button_widget_set_on_clicked(button, on_button_next_page_clicked);
 
             // Button text.
             te_text_widget* text_widget = text_widget_create();
