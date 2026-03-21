@@ -16,10 +16,24 @@
 #define BUTTON_HIDDEN_X_POS 10.0f
 #define CREATE_NEW_OBJ_TEXT "Create new object"
 
+#define OBJ_MENU_OPTION_INDEX_DELETE 0
+
+enum te_object_menu_options {
+    TE_OMO_DELETE_OBJ = 0,
+
+    TE_OMO_COUNT, //< Marks the total number of options.
+};
+
 enum te_world_item_type {
     TE_WIT_MODEL,
     TE_WIT_CAMERA,
     TE_WIT_WIDGET,
+};
+
+enum te_world_inspector_state {
+    TE_WIS_SHOW_WORLD_OBJECTS, //< Default state where game objects of the world are shown.
+    TE_WIS_CREATE_NEW_OBJECT,  //< When clicked the button to create a new game object.
+    TE_WIS_OBJECT_MENU, //< When right clicked on a game object and possible options to manage the object are shown.
 };
 
 typedef struct te_world_item_info {
@@ -41,19 +55,24 @@ struct te_world_inspector {
     te_button_widget* button_3dobj;
     te_button_widget* button_2dobj;
 
-    // Text of the button to create new game objects.
-    te_text_widget* button_text_create_new_obj;
+    // "Create new game object" by default.
+    te_button_widget* top_button;
+    te_text_widget* top_button_text;
 
     // Valid while spawned, buttons that fill all available space (moved outside of the viewport if should not be visible).
     // Number of items in this array is @ref item_buttons_count.
     te_button_widget** item_buttons;
 
-    // List of spawned world items that we display in the current mode (@ref is_3dobj_mode_selected).
     // Number of items in this array is @ref item_list_count.
-    te_world_item_info* item_list;
+    // Stores different values depending on the current @ref state.
+    void* item_list;
 
     // Spawned widget that displays page number of the list.
     te_text_widget* page_text;
+
+    // If not NULL stores game object that was selected for object menu/operations (delete, attach, etc.).
+    void* selected_obj;
+    void* selected_obj_type_id;
 
     // Number of items in @ref item_buttons.
     unsigned int item_buttons_count;
@@ -64,10 +83,10 @@ struct te_world_inspector {
     unsigned int current_page;
     unsigned int page_count;
 
+    enum te_world_inspector_state state;
+
     // `true` if should display world's "3D objects", `false` if "2D objects".
     bool is_3dobj_mode_selected;
-
-    bool is_creating_new_game_obj;
 };
 
 te_world_inspector*
@@ -79,15 +98,18 @@ world_inspector_create(void) {
     inspector->button_2dobj = NULL;
     inspector->button_3dobj = NULL;
     inspector->game_world = NULL;
-    inspector->button_text_create_new_obj = NULL;
+    inspector->top_button = NULL;
+    inspector->top_button_text = NULL;
     inspector->page_text = NULL;
+    inspector->selected_obj = NULL;
+    inspector->selected_obj_type_id = NULL;
     inspector->item_buttons = NULL;
     inspector->item_buttons_count = 0;
     inspector->item_list_count = 0;
     inspector->current_page = 0;
     inspector->page_count = 0;
+    inspector->state = TE_WIS_SHOW_WORLD_OBJECTS;
     inspector->is_3dobj_mode_selected = true;
-    inspector->is_creating_new_game_obj = false;
 
     return inspector;
 }
@@ -97,6 +119,144 @@ world_inspector_destroy(te_world_inspector* inspector) {
     free(inspector->item_list);
     free(inspector->item_buttons);
     free(inspector);
+}
+
+// Uses item_list and updates text on the buttons depending on the current world inspector state.
+static void
+refresh_item_names(te_world_inspector* inspector) {
+    const float hpadding = theme_get_horizontal_padding() / theme_get_left_panel_width();
+    const float button_width = 1.0f - hpadding * 2.0f;
+    const float indent_size = hpadding;
+
+    unsigned int button_idx = 0;
+    for (unsigned int item_idx = inspector->current_page * inspector->item_buttons_count;
+         button_idx < inspector->item_buttons_count && item_idx < inspector->item_list_count;
+         button_idx++, item_idx++) {
+        te_button_widget* button = inspector->item_buttons[button_idx];
+
+        // Get button text widget.
+        unsigned int child_count;
+        te_widget** child_widgets =
+            widget_get_child_widgets_tmp(button_widget_get_widget(button), &child_count);
+        te_text_widget* button_text = NULL;
+        for (unsigned int i = 0; i < child_count; i++) {
+            if (!widget_is_serialization_allowed(child_widgets[i])) {
+                // Internal widget (rect) of the button.
+                continue;
+            }
+            button_text = widget_get_owner(child_widgets[i]);
+            break;
+        }
+
+        unsigned int indent = 0;
+
+        // Prepare new text.
+        const char* text_to_display = NULL;
+        switch (inspector->state) {
+            case (TE_WIS_SHOW_WORLD_OBJECTS): {
+                te_world_item_info* data = inspector->item_list;
+                te_world_item_info* info = &data[item_idx];
+                indent = info->indent;
+                switch (info->type) {
+                    case (TE_WIT_MODEL): {
+                        text_to_display = model_get_name(info->obj);
+                        if (text_to_display == NULL) {
+                            text_to_display = "model";
+                        }
+                        break;
+                    }
+                    case (TE_WIT_WIDGET): {
+                        text_to_display = widget_get_name(info->obj);
+                        if (text_to_display == NULL) {
+                            text_to_display = widget_get_owner_type_id(info->obj);
+                        }
+                        break;
+                    }
+                    case (TE_WIT_CAMERA): {
+                        text_to_display = camera_get_name(info->obj);
+                        if (text_to_display == NULL) {
+                            text_to_display = "camera";
+                        }
+                        break;
+                    }
+                }
+                break;
+            }
+            case (TE_WIS_CREATE_NEW_OBJECT): {
+                const char** type_ids = inspector->item_list;
+                text_to_display = type_ids[item_idx];
+                break;
+            }
+            case (TE_WIS_OBJECT_MENU): {
+                const char** option_names = inspector->item_list;
+                text_to_display = option_names[item_idx];
+                break;
+            }
+        }
+
+        // Fix pos of the button (in case it was hidden previously or had other indentation).
+        {
+            te_widget* widget = button_widget_get_widget(button);
+
+            vec2 pos;
+            widget_get_relative_position(widget, pos);
+            pos[0] = hpadding + indent_size * (float)indent;
+
+            vec2 size;
+            widget_get_relative_size(widget, size);
+            size[0] = button_width - indent_size * (float)indent;
+
+            widget_set_relative_position(widget, pos);
+            widget_set_relative_size(widget, size);
+        }
+
+        // Display new text.
+        unsigned int text_len;
+        wchar_t* wtext = wchar_from_char(text_to_display, &text_len);
+        text_widget_set_text_own(button_text, wtext, text_len);
+    }
+
+    // Hide remaining buttons.
+    for (; button_idx < inspector->item_buttons_count; button_idx++) {
+        te_widget* widget = button_widget_get_widget(inspector->item_buttons[button_idx]);
+
+        vec2 pos;
+        widget_get_relative_position(widget, pos);
+        pos[0] = BUTTON_HIDDEN_X_POS;
+
+        widget_set_relative_position(
+            button_widget_get_widget(inspector->item_buttons[button_idx]), pos);
+    }
+}
+
+static void
+refresh_page_text(te_world_inspector* inspector) {
+    // Update page count (in case list changed).
+    unsigned int page_count = inspector->item_list_count / inspector->item_buttons_count;
+    if (inspector->item_list_count % inspector->item_buttons_count > 0) {
+        page_count += 1;
+    }
+    if (page_count == 0) {
+        page_count = 1;
+    }
+    inspector->page_count = page_count;
+
+    const int len =
+        snprintf(NULL, 0, "%u / %u", inspector->current_page + 1, inspector->page_count);
+    if (len < 0) {
+        log_error("snprintf error");
+        abort();
+    }
+    unsigned int text_len = (unsigned int)len;
+
+    char* text = malloc(sizeof(char) * (text_len + 1));
+    snprintf(
+        text, text_len + 1, "%u / %u", inspector->current_page + 1, inspector->page_count);
+
+    wchar_t* wtext = wchar_from_char(text, &text_len);
+    text_widget_set_text_own(inspector->page_text, wtext, text_len);
+
+    free(text);
 }
 
 static void
@@ -141,115 +301,15 @@ count_widgets_recursive(te_widget* widget, unsigned int* count) {
 }
 
 static void
-refresh_item_names(te_world_inspector* inspector) {
-    const float hpadding = theme_get_horizontal_padding() / theme_get_left_panel_width();
-    const float button_width = 1.0f - hpadding * 2.0f;
-    const float indent_size = hpadding;
-
-    unsigned int button_idx = 0;
-    for (unsigned int item_idx = inspector->current_page * inspector->item_buttons_count;
-         button_idx < inspector->item_buttons_count && item_idx < inspector->item_list_count;
-         button_idx++, item_idx++) {
-        te_button_widget* button = inspector->item_buttons[button_idx];
-        te_world_item_info* info = &inspector->item_list[item_idx];
-
-        // Fix pos of the button (in case it was hidden previously or had other indentation).
-        {
-            te_widget* widget = button_widget_get_widget(button);
-
-            vec2 pos;
-            widget_get_relative_position(widget, pos);
-            pos[0] = hpadding + indent_size * (float)info->indent;
-
-            vec2 size;
-            widget_get_relative_size(widget, size);
-            size[0] = button_width - indent_size * (float)info->indent;
-
-            widget_set_relative_position(widget, pos);
-            widget_set_relative_size(widget, size);
-        }
-
-        // Get button text.
-        unsigned int child_count;
-        te_widget** child_widgets =
-            widget_get_child_widgets_tmp(button_widget_get_widget(button), &child_count);
-        te_text_widget* button_text = NULL;
-        for (unsigned int i = 0; i < child_count; i++) {
-            if (!widget_is_serialization_allowed(child_widgets[i])) {
-                // Internal widget (rect) of the button.
-                continue;
-            }
-            button_text = widget_get_owner(child_widgets[i]);
-            break;
-        }
-
-        const char* name = NULL;
-        switch (info->type) {
-            case (TE_WIT_MODEL): {
-                name = model_get_name(info->obj);
-                if (name == NULL) {
-                    name = "model";
-                }
-                break;
-            }
-            case (TE_WIT_WIDGET): {
-                name = widget_get_name(info->obj);
-                if (name == NULL) {
-                    name = widget_get_owner_type_id(info->obj);
-                }
-                break;
-            }
-            case (TE_WIT_CAMERA): {
-                name = camera_get_name(info->obj);
-                if (name == NULL) {
-                    name = "camera";
-                }
-                break;
-            }
-        }
-
-        unsigned int text_len;
-        wchar_t* wtext = wchar_from_char(name, &text_len);
-        text_widget_set_text_own(button_text, wtext, text_len);
-    }
-
-    // Hide left buttons.
-    for (; button_idx < inspector->item_buttons_count; button_idx++) {
-        te_widget* widget = button_widget_get_widget(inspector->item_buttons[button_idx]);
-
-        vec2 pos;
-        widget_get_relative_position(widget, pos);
-        pos[0] = BUTTON_HIDDEN_X_POS;
-
-        widget_set_relative_position(
-            button_widget_get_widget(inspector->item_buttons[button_idx]), pos);
-    }
-}
-
-static void
-refresh_page_text(te_world_inspector* inspector) {
-    const int len =
-        snprintf(NULL, 0, "%u / %u", inspector->current_page + 1, inspector->page_count);
-    if (len < 0) {
-        log_error("snprintf error");
+rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
+    if (inspector->state != TE_WIS_SHOW_WORLD_OBJECTS) {
+        log_error("unexpected state");
         abort();
     }
-    unsigned int text_len = (unsigned int)len;
 
-    char* text = malloc(sizeof(char) * (text_len + 1));
-    snprintf(
-        text, text_len + 1, "%u / %u", inspector->current_page + 1, inspector->page_count);
-
-    wchar_t* wtext = wchar_from_char(text, &text_len);
-    text_widget_set_text_own(inspector->page_text, wtext, text_len);
-
-    free(text);
-}
-
-static void
-rebuild_item_list(te_world_inspector* inspector) {
     free(inspector->item_list);
     inspector->item_list = NULL;
+    te_world_item_info* world_items = NULL;
 
     te_world* world = inspector->game_world;
     if (world == NULL) {
@@ -288,8 +348,7 @@ rebuild_item_list(te_world_inspector* inspector) {
         }
 
         if (inspector->item_list_count > 0) {
-            inspector->item_list =
-                malloc(sizeof(te_world_item_info) * inspector->item_list_count);
+            world_items = malloc(sizeof(te_world_item_info) * inspector->item_list_count);
             unsigned int item_idx = 0;
 
             // Save root cameras.
@@ -298,7 +357,7 @@ rebuild_item_list(te_world_inspector* inspector) {
                     continue;
                 }
 
-                te_world_item_info* info = &inspector->item_list[item_idx];
+                te_world_item_info* info = &world_items[item_idx];
                 info->type = TE_WIT_CAMERA;
                 info->indent = 0;
                 info->obj = root_cameras[i];
@@ -312,7 +371,7 @@ rebuild_item_list(te_world_inspector* inspector) {
                     continue;
                 }
 
-                te_world_item_info* root_info = &inspector->item_list[item_idx];
+                te_world_item_info* root_info = &world_items[item_idx];
                 root_info->type = TE_WIT_MODEL;
                 root_info->indent = 0;
                 root_info->obj = root_models[i];
@@ -322,7 +381,7 @@ rebuild_item_list(te_world_inspector* inspector) {
                 te_camera* attached_camera = model_get_attached_camera(root_models[i]);
                 if (attached_camera != NULL
                     && camera_is_serialization_allowed(attached_camera)) {
-                    te_world_item_info* info = &inspector->item_list[item_idx];
+                    te_world_item_info* info = &world_items[item_idx];
                     info->type = TE_WIT_CAMERA;
                     info->indent = 1;
                     info->obj = attached_camera;
@@ -332,7 +391,7 @@ rebuild_item_list(te_world_inspector* inspector) {
 
                 te_model* child_model = model_get_child_model(root_models[i]);
                 if (child_model != NULL && model_is_serialization_allowed(child_model)) {
-                    te_world_item_info* info = &inspector->item_list[item_idx];
+                    te_world_item_info* info = &world_items[item_idx];
                     info->type = TE_WIT_MODEL;
                     info->indent = 1;
                     info->obj = child_model;
@@ -353,27 +412,18 @@ rebuild_item_list(te_world_inspector* inspector) {
 
         // Save items.
         if (inspector->item_list_count > 0) {
-            inspector->item_list =
-                malloc(sizeof(te_world_item_info) * inspector->item_list_count);
+            world_items = malloc(sizeof(te_world_item_info) * inspector->item_list_count);
             unsigned int indent = 0;
             unsigned int item_idx = 0;
             for (unsigned int i = 0; i < root_count; i++) {
-                save_widgets_to_list_recurive(
-                    widget[i], inspector->item_list, &item_idx, &indent);
+                save_widgets_to_list_recurive(widget[i], world_items, &item_idx, &indent);
             }
         }
     }
 
-    unsigned int page_count = inspector->item_list_count / inspector->item_buttons_count;
-    if (inspector->item_list_count % inspector->item_buttons_count > 0) {
-        page_count += 1;
-    }
-    if (page_count == 0) {
-        page_count = 1;
-    }
-    inspector->current_page = 0;
-    inspector->page_count = page_count;
+    inspector->item_list = world_items;
 
+    inspector->current_page = 0;
     refresh_page_text(inspector);
     refresh_item_names(inspector);
 }
@@ -382,21 +432,30 @@ void
 world_inspector_rebuild_list(te_world_inspector* inspector, te_world* game_world) {
     inspector->game_world = game_world;
 
-    if (inspector->item_list == NULL) {
+    if (inspector->state != TE_WIS_SHOW_WORLD_OBJECTS) {
+        log_error("unexpected state");
+        abort();
+    }
+    te_world_item_info* info = inspector->item_list;
+
+    if (info == NULL) {
         // Initialize item list.
-        rebuild_item_list(inspector);
+        rebuild_item_list_to_display_world_objects(inspector);
     } else if (
-        (inspector->item_list[0].type == TE_WIT_WIDGET && inspector->is_3dobj_mode_selected)
-        || (inspector->item_list[0].type != TE_WIT_WIDGET
-            && !inspector->is_3dobj_mode_selected)) {
+        (info[0].type == TE_WIT_WIDGET && inspector->is_3dobj_mode_selected)
+        || (info[0].type != TE_WIT_WIDGET && !inspector->is_3dobj_mode_selected)) {
         // Mode changed, rebuild list.
-        rebuild_item_list(inspector);
+        rebuild_item_list_to_display_world_objects(inspector);
     }
 }
 
 static void
 on_button_3dobj_clicked(te_button_widget* button) {
     te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
+    if (inspector->state != TE_WIS_SHOW_WORLD_OBJECTS) {
+        return;
+    }
+
     inspector->is_3dobj_mode_selected = true;
     world_inspector_rebuild_list(inspector, inspector->game_world);
 
@@ -411,6 +470,10 @@ on_button_3dobj_clicked(te_button_widget* button) {
 static void
 on_button_2dobj_clicked(te_button_widget* button) {
     te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
+    if (inspector->state != TE_WIS_SHOW_WORLD_OBJECTS) {
+        return;
+    }
+
     inspector->is_3dobj_mode_selected = false;
     world_inspector_rebuild_list(inspector, inspector->game_world);
 
@@ -423,85 +486,65 @@ on_button_2dobj_clicked(te_button_widget* button) {
 }
 
 static void
-on_button_create_new_object_clicked(te_button_widget* button) {
+on_top_button_clicked(te_button_widget* button) {
     te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
 
-    inspector->is_creating_new_game_obj = !inspector->is_creating_new_game_obj;
-
-    if (inspector->is_creating_new_game_obj) {
-        // Turn this button into a "cancel" button.
-        unsigned int text_len;
-        wchar_t* wtext = wchar_from_char("Cancel object creation", &text_len);
-        text_widget_set_text_own(inspector->button_text_create_new_obj, wtext, text_len);
+    if (inspector->state == TE_WIS_SHOW_WORLD_OBJECTS) {
+        inspector->state = TE_WIS_CREATE_NEW_OBJECT;
+    } else if (
+        inspector->state == TE_WIS_CREATE_NEW_OBJECT
+        || inspector->state == TE_WIS_OBJECT_MENU) {
+        inspector->state = TE_WIS_SHOW_WORLD_OBJECTS;
     } else {
-        unsigned int text_len;
-        wchar_t* wtext = wchar_from_char(CREATE_NEW_OBJ_TEXT, &text_len);
-        text_widget_set_text_own(inspector->button_text_create_new_obj, wtext, text_len);
-
-        refresh_item_names(inspector);
         return;
     }
 
-    // First hide all world item buttons.
-    for (unsigned int button_idx = 0; button_idx < inspector->item_buttons_count;
-         button_idx++) {
-        te_widget* widget = button_widget_get_widget(inspector->item_buttons[button_idx]);
+    if (inspector->state == TE_WIS_SHOW_WORLD_OBJECTS) {
+        // Restore the original button state.
+        unsigned int text_len;
+        wchar_t* wtext = wchar_from_char(CREATE_NEW_OBJ_TEXT, &text_len);
+        text_widget_set_text_own(inspector->top_button_text, wtext, text_len);
 
-        vec2 pos;
-        widget_get_relative_position(widget, pos);
-        pos[0] = BUTTON_HIDDEN_X_POS;
+        inspector->selected_obj = NULL;
+        inspector->selected_obj_type_id = NULL;
 
-        widget_set_relative_position(
-            button_widget_get_widget(inspector->item_buttons[button_idx]), pos);
+        inspector->current_page = 0;
+        rebuild_item_list_to_display_world_objects(inspector);
+        refresh_page_text(inspector);
+        return;
     }
+
+    // Entered new game object creation.
+    // Turn this button into a "cancel" button.
+    unsigned int text_len;
+    wchar_t* wtext = wchar_from_char("Cancel object creation", &text_len);
+    text_widget_set_text_own(inspector->top_button_text, wtext, text_len);
 
     unsigned int type_count;
     const char** types = type_database_get_all_type_ids(&type_count);
 
-    // Now unhide buttons with possible options.
-    const float hpadding = theme_get_horizontal_padding() / theme_get_left_panel_width();
-    for (unsigned int type_idx = 0;
-         type_idx < type_count && type_idx < inspector->item_buttons_count; type_idx++) {
-        te_button_widget* button = inspector->item_buttons[type_idx];
-        {
-            // Show button.
-            te_widget* widget = button_widget_get_widget(button);
-
-            vec2 pos;
-            widget_get_relative_position(widget, pos);
-            pos[0] = hpadding;
-
-            widget_set_relative_position(widget, pos);
-        }
-
-        // Get button text.
-        unsigned int child_count;
-        te_widget** child_widgets =
-            widget_get_child_widgets_tmp(button_widget_get_widget(button), &child_count);
-        te_text_widget* button_text = NULL;
-        for (unsigned int i = 0; i < child_count; i++) {
-            if (!widget_is_serialization_allowed(child_widgets[i])) {
-                // Internal widget (rect) of the button.
-                continue;
-            }
-            button_text = widget_get_owner(child_widgets[i]);
-            break;
-        }
-
-        // Set text.
-        unsigned int text_len;
-        wchar_t* wtext = wchar_from_char(types[type_idx], &text_len);
-        text_widget_set_text_own(button_text, wtext, text_len);
+    // Rebuild item list.
+    free(inspector->item_list);
+    inspector->item_list_count = type_count;
+    const char** type_ids = malloc(sizeof(const char*) * type_count);
+    for (unsigned int i = 0; i < type_count; i++) {
+        type_ids[i] = (void*)(types[i]);
     }
+    inspector->item_list = type_ids;
 
     free(types);
+
+    inspector->current_page = 0;
+    refresh_page_text(inspector);
+    refresh_item_names(inspector);
 }
 
 static void
 on_button_list_item_clicked(te_button_widget* button) {
     te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
 
-    if (inspector->is_creating_new_game_obj) {
+    if (inspector->state == TE_WIS_CREATE_NEW_OBJECT) {
+        // Selected type of a new game object.
         // Button name stores type ID from type database.
 
         // Get button text.
@@ -532,22 +575,84 @@ on_button_list_item_clicked(te_button_widget* button) {
         void* new_game_obj = info->create();
         info->spawn(inspector->game_world, new_game_obj);
 
-        inspector->is_creating_new_game_obj = false;
+        inspector->state = TE_WIS_SHOW_WORLD_OBJECTS;
         wtext = wchar_from_char(CREATE_NEW_OBJ_TEXT, &text_len);
-        text_widget_set_text_own(inspector->button_text_create_new_obj, wtext, text_len);
+        text_widget_set_text_own(inspector->top_button_text, wtext, text_len);
 
-        rebuild_item_list(inspector);
-        return;
+        rebuild_item_list_to_display_world_objects(inspector);
+    } else if (inspector->state == TE_WIS_OBJECT_MENU) {
+        const size_t option_index = widget_get_custom_value(button_widget_get_widget(button));
+        if (option_index == TE_OMO_DELETE_OBJ) {
+            if (inspector->selected_obj == NULL || inspector->selected_obj_type_id == NULL) {
+                log_error("expected selected object to be valid");
+                abort();
+            }
+            const te_type_info* info =
+                type_database_get_type_info(inspector->selected_obj_type_id);
+            info->despawn(inspector->game_world, inspector->selected_obj);
+            info->destroy(inspector->selected_obj);
+            inspector->selected_obj = NULL;
+            inspector->selected_obj_type_id = NULL;
+
+            on_top_button_clicked(inspector->top_button);
+        } else {
+            log_error_fmt("unexpected option %zu", option_index);
+            abort();
+        }
+    }
+}
+
+static void
+on_button_list_item_right_clicked(te_button_widget* button) {
+    te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
+    const size_t button_index = widget_get_custom_value(button_widget_get_widget(button));
+
+    if (inspector->state == TE_WIS_SHOW_WORLD_OBJECTS) {
+        inspector->state = TE_WIS_OBJECT_MENU;
+
+        te_world_item_info* old_info =
+            &((te_world_item_info*)inspector->item_list)
+                [inspector->current_page * inspector->item_buttons_count + button_index];
+
+        inspector->selected_obj = old_info->obj;
+        switch (old_info->type) {
+            case (TE_WIT_MODEL): {
+                inspector->selected_obj_type_id = (void*)model_get_type_id();
+                break;
+            }
+            case (TE_WIT_CAMERA): {
+                inspector->selected_obj_type_id = (void*)camera_get_type_id();
+                break;
+            }
+            case (TE_WIT_WIDGET): {
+                inspector->selected_obj_type_id =
+                    (void*)widget_get_owner_type_id(old_info->obj);
+                break;
+            }
+        }
+
+        inspector->item_list_count = TE_OMO_COUNT;
+
+        const char** option_names = malloc(sizeof(const char*) * inspector->item_list_count);
+        option_names[TE_OMO_DELETE_OBJ] = "Delete object";
+
+        free(inspector->item_list);
+        inspector->item_list = option_names;
+
+        // Make top button a "cancel" button.
+        unsigned int text_len;
+        wchar_t* wtext = wchar_from_char("Cancel object options", &text_len);
+        text_widget_set_text_own(inspector->top_button_text, wtext, text_len);
+
+        inspector->current_page = 0;
+        refresh_page_text(inspector);
+        refresh_item_names(inspector);
     }
 }
 
 static void
 on_button_prev_page_clicked(te_button_widget* button) {
     te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
-    if (inspector->is_creating_new_game_obj) {
-        return;
-    }
-
     if (inspector->current_page == 0) {
         return;
     }
@@ -560,9 +665,6 @@ on_button_prev_page_clicked(te_button_widget* button) {
 static void
 on_button_next_page_clicked(te_button_widget* button) {
     te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
-    if (inspector->is_creating_new_game_obj) {
-        return;
-    }
     if (inspector->current_page + 1 == inspector->page_count) {
         return;
     }
@@ -713,6 +815,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
     // Button to create new game objects.
     {
         te_button_widget* button = button_widget_create();
+        inspector->top_button = button;
         {
             te_widget* widget = button_widget_get_widget(button);
             widget_set_custom_ptr(widget, inspector);
@@ -731,11 +834,11 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
         theme_get_button_color_pressed(color);
         button_widget_set_color_pressed(button, color);
 
-        button_widget_set_on_clicked(button, on_button_create_new_object_clicked);
+        button_widget_set_on_clicked(button, on_top_button_clicked);
 
         // Button text.
         te_text_widget* text_widget = text_widget_create();
-        inspector->button_text_create_new_obj = text_widget;
+        inspector->top_button_text = text_widget;
         {
             te_widget* widget = text_widget_get_widget(text_widget);
             widget_set_parent(widget, button_widget_get_widget(button));
@@ -799,6 +902,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
             button_widget_set_color_pressed(button, color);
 
             button_widget_set_on_clicked(button, on_button_list_item_clicked);
+            button_widget_set_on_right_clicked(button, on_button_list_item_right_clicked);
 
             // Button text.
             te_text_widget* text = text_widget_create();

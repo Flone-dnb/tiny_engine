@@ -29,6 +29,7 @@ struct te_button_widget {
 
     // May be NULL if not set.
     void (*on_clicked)(te_button_widget*);
+    void (*on_right_clicked)(te_button_widget*);
 
     // Cached textures.
     unsigned int tex_id;
@@ -71,6 +72,7 @@ button_widget_create(void) {
     glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color_pressed);
 
     button_widget->on_clicked = NULL;
+    button_widget->on_right_clicked = NULL;
 
     button_widget->tex_relative_path = NULL;
     button_widget->tex_hovered_relative_path = NULL;
@@ -238,8 +240,13 @@ prv_button_widget_get_base(te_button_widget* button_widget) {
 }
 
 static void
-prv_button_widget_spawn(te_world* world, te_button_widget* button_widget) {
+widget_spawn(te_world* world, te_button_widget* button_widget) {
     world_spawn_widget(world, prv_button_widget_get_base(button_widget));
+}
+
+static void
+widget_despawn(te_world* world, te_button_widget* button_widget) {
+    world_despawn_widget(world, prv_button_widget_get_base(button_widget));
 }
 
 static void
@@ -255,8 +262,8 @@ get_name(te_button_widget* widget) {
 void
 button_widget_register_type(void) {
     te_type_info* info = type_info_create(
-        button_widget_get_type_id(), button_widget_create, prv_button_widget_spawn,
-        prv_button_widget_get_base);
+        button_widget_get_type_id(), button_widget_create, button_widget_destroy, widget_spawn,
+        widget_despawn, prv_button_widget_get_base);
     type_info_add_vec2_variable(
         info, "position", prv_button_widget_set_position, prv_button_widget_get_position);
     type_info_add_vec2_variable(
@@ -286,6 +293,12 @@ void
 button_widget_set_on_clicked(
     te_button_widget* button_widget, void (*on_clicked)(te_button_widget*)) {
     button_widget->on_clicked = on_clicked;
+}
+
+void
+button_widget_set_on_right_clicked(
+    te_button_widget* button_widget, void (*on_right_clicked)(te_button_widget*)) {
+    button_widget->on_right_clicked = on_right_clicked;
 }
 
 void
@@ -485,7 +498,10 @@ static void
 prv_button_widget_on_mouse_button_pressed(
     void* this, enum te_mouse_button button, vec2 cursor_pos) {
     (void)cursor_pos;
-    if (button == TE_MB_LEFT) {
+    te_button_widget* button_widget = this;
+
+    if ((button_widget->on_clicked != NULL && button == TE_MB_LEFT)
+        || (button_widget->on_right_clicked != NULL && button == TE_MB_RIGHT)) {
         button_widget_enter_pressed_state(this);
     }
 }
@@ -494,15 +510,20 @@ static void
 prv_button_widget_on_mouse_button_released(
     void* this, enum te_mouse_button button, vec2 cursor_pos) {
     (void)cursor_pos;
-    if (button == TE_MB_LEFT) {
-        te_button_widget* button_widget = this;
+    te_button_widget* button_widget = this;
+
+    if ((button_widget->on_clicked != NULL && button == TE_MB_LEFT)
+        || (button_widget->on_right_clicked != NULL && button == TE_MB_RIGHT)) {
         if (button_widget->is_cursor_inside_widget) {
             button_widget_enter_hovered_state(button_widget);
         } else {
             button_widget_enter_normal_state(button_widget);
         }
-        if (button_widget->on_clicked != NULL) {
+
+        if (button == TE_MB_LEFT && button_widget->on_clicked != NULL) {
             button_widget->on_clicked(button_widget);
+        } else if (button == TE_MB_RIGHT && button_widget->on_right_clicked != NULL) {
+            button_widget->on_right_clicked(button_widget);
         }
     }
 }

@@ -384,8 +384,13 @@ prv_rect_widget_get_base(te_rect_widget* rect_widget) {
 }
 
 static void
-prv_rect_widget_spawn(te_world* world, te_rect_widget* rect_widget) {
+widget_spawn(te_world* world, te_rect_widget* rect_widget) {
     world_spawn_widget(world, prv_rect_widget_get_base(rect_widget));
+}
+
+static void
+widget_despawn(te_world* world, te_rect_widget* rect_widget) {
+    world_despawn_widget(world, prv_rect_widget_get_base(rect_widget));
 }
 
 static void
@@ -401,8 +406,8 @@ get_name(te_rect_widget* widget) {
 void
 rect_widget_register_type(void) {
     te_type_info* info = type_info_create(
-        rect_widget_get_type_id(), rect_widget_create, prv_rect_widget_spawn,
-        prv_rect_widget_get_base);
+        rect_widget_get_type_id(), rect_widget_create, rect_widget_destroy, widget_spawn,
+        widget_despawn, prv_rect_widget_get_base);
     type_info_add_vec2_variable(
         info, "position", prv_rect_widget_set_position, prv_rect_widget_get_position);
     type_info_add_vec2_variable(

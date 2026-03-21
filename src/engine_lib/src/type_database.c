@@ -60,12 +60,17 @@ prv_type_database_init(void) {
 
 te_type_info*
 type_info_create(
-    const char* id, void* (*create)(void), void (*spawn)(struct te_world* world, void* obj),
+    const char* id, void* (*create)(void), void (*destroy)(void* obj),
+    void (*spawn)(struct te_world* world, void* obj),
+    void (*despawn)(struct te_world* world, void* obj),
     struct te_widget* (*get_widget)(void*)) {
     te_type_info* info = malloc(sizeof(te_type_info));
 
     info->create = create;
+    info->destroy = destroy;
     info->spawn = spawn;
+    info->despawn = despawn;
+
     info->get_widget = get_widget;
 
     info->id = id;
@@ -427,7 +432,7 @@ type_database_get_type_info(const char* id) {
         abort();
     }
 
-    te_type_info* test = type_info_create(id, NULL, NULL, NULL);
+    te_type_info* test = type_info_create(id, NULL, NULL, NULL, NULL, NULL);
     const te_type_info* const* found = hashmap_get(type_database.types, &test);
     free(test);
 

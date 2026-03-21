@@ -131,8 +131,9 @@ camera_get_name(te_camera* camera) {
 
 void
 camera_register_type(void) {
-    te_type_info* info =
-        type_info_create(camera_get_type_id(), camera_create, world_spawn_camera, NULL);
+    te_type_info* info = type_info_create(
+        camera_get_type_id(), camera_create, camera_destroy, world_spawn_camera,
+        world_despawn_camera, NULL);
     type_info_add_vec3_variable(info, "position", camera_set_position, camera_get_position);
     type_info_add_vec3_variable(info, "rotation", camera_set_rotation, camera_get_rotation);
     type_info_add_uint_variable(

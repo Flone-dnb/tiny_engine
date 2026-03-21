@@ -259,8 +259,13 @@ prv_progress_widget_get_base(te_progress_widget* progress_widget) {
 }
 
 static void
-prv_progress_widget_spawn(te_world* world, te_progress_widget* progress_widget) {
+widget_spawn(te_world* world, te_progress_widget* progress_widget) {
     world_spawn_widget(world, prv_progress_widget_get_base(progress_widget));
+}
+
+static void
+widget_despawn(te_world* world, te_progress_widget* progress_widget) {
+    world_despawn_widget(world, prv_progress_widget_get_base(progress_widget));
 }
 
 static void
@@ -276,8 +281,8 @@ get_name(te_progress_widget* widget) {
 void
 progress_widget_register_type(void) {
     te_type_info* info = type_info_create(
-        progress_widget_get_type_id(), progress_widget_create, prv_progress_widget_spawn,
-        prv_progress_widget_get_base);
+        progress_widget_get_type_id(), progress_widget_create, progress_widget_destroy,
+        widget_spawn, widget_despawn, prv_progress_widget_get_base);
     type_info_add_vec2_variable(
         info, "position", prv_progress_widget_set_position, prv_progress_widget_get_position);
     type_info_add_vec2_variable(

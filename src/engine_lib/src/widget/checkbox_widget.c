@@ -277,8 +277,13 @@ prv_checkbox_widget_get_base(te_checkbox_widget* checkbox_widget) {
 }
 
 static void
-prv_checkbox_widget_spawn(te_world* world, te_checkbox_widget* checkbox_widget) {
+widget_spawn(te_world* world, te_checkbox_widget* checkbox_widget) {
     world_spawn_widget(world, prv_checkbox_widget_get_base(checkbox_widget));
+}
+
+static void
+widget_despawn(te_world* world, te_checkbox_widget* checkbox_widget) {
+    world_despawn_widget(world, prv_checkbox_widget_get_base(checkbox_widget));
 }
 
 static void
@@ -294,8 +299,8 @@ get_name(te_checkbox_widget* widget) {
 void
 checkbox_widget_register_type(void) {
     te_type_info* info = type_info_create(
-        checkbox_widget_get_type_id(), checkbox_widget_create, prv_checkbox_widget_spawn,
-        prv_checkbox_widget_get_base);
+        checkbox_widget_get_type_id(), checkbox_widget_create, checkbox_widget_destroy,
+        widget_spawn, widget_despawn, prv_checkbox_widget_get_base);
     type_info_add_vec2_variable(
         info, "position", prv_checkbox_widget_set_position, prv_checkbox_widget_get_position);
     type_info_add_vec2_variable(

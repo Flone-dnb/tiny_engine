@@ -602,8 +602,13 @@ prv_text_edit_widget_get_base(te_text_edit_widget* text_edit_widget) {
 }
 
 static void
-prv_text_edit_widget_spawn(te_world* world, te_text_edit_widget* text_edit_widget) {
+widget_spawn(te_world* world, te_text_edit_widget* text_edit_widget) {
     world_spawn_widget(world, prv_text_edit_widget_get_base(text_edit_widget));
+}
+
+static void
+widget_despawn(te_world* world, te_text_edit_widget* text_edit_widget) {
+    world_despawn_widget(world, prv_text_edit_widget_get_base(text_edit_widget));
 }
 
 static void
@@ -619,8 +624,8 @@ get_name(te_text_edit_widget* widget) {
 void
 text_edit_widget_register_type(void) {
     te_type_info* info = type_info_create(
-        text_edit_widget_get_type_id(), text_edit_widget_create, prv_text_edit_widget_spawn,
-        prv_text_edit_widget_get_base);
+        text_edit_widget_get_type_id(), text_edit_widget_create, text_edit_widget_destroy,
+        widget_spawn, widget_despawn, prv_text_edit_widget_get_base);
     type_info_add_vec2_variable(
         info, "position", prv_text_edit_widget_set_position,
         prv_text_edit_widget_get_position);

@@ -15,6 +15,8 @@ struct te_widget* button_widget_get_widget(te_button_widget* button_widget);
 
 void button_widget_set_on_clicked(
     te_button_widget* button_widget, void (*on_clicked)(te_button_widget*));
+void button_widget_set_on_right_clicked(
+    te_button_widget* button_widget, void (*on_right_clicked)(te_button_widget*));
 
 // Sets RGBA colors for 3 states: normal, hovered and pressed.
 void button_widget_set_color(te_button_widget* button_widget, vec4 color);

@@ -58,11 +58,11 @@ typedef struct te_type_info {
     // Unique identifier of the type.
     const char* id;
 
-    // Creates a new object of this type.
     void* (*create)(void);
+    void (*destroy)(void* obj);
 
-    // Spawns in the world.
     void (*spawn)(struct te_world* world, void* obj);
+    void (*despawn)(struct te_world* world, void* obj);
 
     // NULL if not a widget, otherwise returns base widget type.
     struct te_widget* (*get_widget)(void*);
@@ -108,7 +108,9 @@ typedef struct te_type_info {
 // Creates a new type info to be registered using @ref type_database_register_type.
 // Specify NULL to get_widget if not a widget, otherwise return base widget type.
 te_type_info* type_info_create(
-    const char* id, void* (*create)(void), void (*spawn)(struct te_world* world, void* obj),
+    const char* id, void* (*create)(void), void (*destroy)(void* obj),
+    void (*spawn)(struct te_world* world, void* obj),
+    void (*despawn)(struct te_world* world, void* obj),
     struct te_widget* (*get_widget)(void*));
 void type_info_add_bool_variable(
     te_type_info* info, const char* name, te_bool_setter setter, te_bool_getter getter);
