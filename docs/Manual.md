@@ -166,11 +166,25 @@ if (info == NULL) {
 
 # Building your game for retro handhelds (ARM64 Linux devices)
 
-## Setup
+## The easy way
 
-This section describes the build process for such devices as Anbernic RG35XX H or similar.
+Buy a Raspberry Pi Zero 2 W (it's a very cheap ARM64 computer), compile your app directly on the Raspberry Pi and just copy-paste the resulting executable to your handheld.
 
-- Based on https://github.com/Cebion/Portmaster_builds
+For building don't forget to pull submodules and install SDL dependencies (just copy-paste commands for Ubuntu, including the Wayland package): https://github.com/libsdl-org/SDL/blob/main/docs/README-linux.md#build-dependencies
+
+To build:
+
+```
+mkdir build && cd build
+cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Release ..
+cmake --build . --target <game_target_name> --config=Release -j 2
+```
+
+## The hard way
+
+### Setup
+
+This approach is not guaranteed to work.
 
 The section will describe commands for WSL2 Ubuntu 24.04.1 LTS (for Windows users, Linux users you know what to do):
 ```
@@ -214,7 +228,7 @@ sudo apt install --no-install-recommends build-essential git wget libdrm-dev lib
 
 Then install SDL dependencies: https://github.com/libsdl-org/SDL/blob/main/docs/README-linux.md#build-dependencies
 
-## Steps for each release of your game
+### Steps for each release of your game
 
 Copy your game using the Windows explorer into a new directory at ~/arm64ubuntu/tmp/game (directory inside of the chroot). Then back into the WSL:
 ```
@@ -223,7 +237,7 @@ cd tmp/game
 mkdir build
 cd build
 cmake -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Release ..
-cmake --build . --target <game_target_name> --config=Release --parallel
+cmake --build . --target <game_target_name> --config=Release -j 2
 ```
-Then copy the resulting binary (from `build/OUTPUT/game`) to your ARM64 Linux device. We don't worry about installing SDL and other libraries because we link SDL and other libraries statically. Inside of your ARM64 Linux device launch the game using some file explorer or a console.
+Then copy the resulting binary (from `build/OUTPUT/` directory) to your ARM64 Linux device. We don't worry about installing SDL and other libraries because we link SDL and other libraries statically. Inside of your ARM64 Linux device launch the game using some file explorer or a console.
 
