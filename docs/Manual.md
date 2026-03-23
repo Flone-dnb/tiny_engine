@@ -166,6 +166,10 @@ if (info == NULL) {
 
 # Building your game for retro handhelds (ARM64 Linux devices)
 
+## Before you start
+
+Some handhelds might not be supported due to their OS/drivers (in this case you will generally get the error "no available video device" in the log file). The engine works perfectly on devices that use Rocknix OS (works with both libmali and panfrost drivers).
+
 ## The easy way
 
 Buy a Raspberry Pi Zero 2 W (it's a very cheap ARM64 computer), compile your app directly on the Raspberry Pi and just copy-paste the resulting executable to your handheld.
