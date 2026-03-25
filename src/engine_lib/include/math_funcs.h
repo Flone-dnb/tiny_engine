@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <cglm/affine.h>
 #include <cglm/mat4.h>
 #include <cglm/vec3.h>
@@ -107,4 +108,39 @@ math_convert_rot_to_norm_dir(vec3 rot, vec3 out) {
     glm_mat4_mulv(rot_mat, forward, result);
 
     glm_vec3_copy(result, out);
+}
+
+// Converts a string to a float (accepts both dots and commas as a separator).
+static inline float
+math_convert_string_to_float(const char* text, char** end) {
+    if (text == NULL) {
+        (*end) = (char*)text;
+        return 0.0f;
+    }
+
+    char* curr = (char*)text;
+    float out = 0.0f;
+    float div = 1;
+    bool after_dot = false;
+
+    while(*curr != 0) {
+        if ((*curr) >= '0' && (*curr) <= '9') {
+            if (!after_dot) {
+                out *= 10.0f;
+                out += (float)((*curr) - '0');
+            }else {
+                div *= 10;
+                out += (float)((*curr) - '0') / div;
+            }
+        }else if ((*curr) == '.' || (*curr) == ',') {
+            after_dot = true;
+        } else {
+            break;
+        }
+
+        curr++;
+    }
+
+    (*end) = curr;
+    return out;
 }

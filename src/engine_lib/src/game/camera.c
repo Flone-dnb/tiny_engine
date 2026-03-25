@@ -213,14 +213,22 @@ camera_get_viewport(te_camera* camera, vec4 out) {
     glm_vec4_copy(camera->viewport, out);
 }
 
-void
+static void
 recalculate_directions(te_camera* camera) {
     mat4 rot_mat;
     math_make_rotation_mat(camera->rotation, rot_mat);
 
     if (camera->parent_model != NULL) {
         mat4* world_mat = prv_model_get_world_mat_tmp(camera->parent_model);
-        glm_mat4_mul(*world_mat, rot_mat, rot_mat);
+
+        // Ignore scale.
+        mat4 world;
+        glm_mat4_copy(*world_mat, world);
+        math_normalize_safely(world[0]);
+        math_normalize_safely(world[1]);
+        math_normalize_safely(world[2]);
+
+        glm_mat4_mul(world, rot_mat, rot_mat);
     }
 
     vec4 global_forward;

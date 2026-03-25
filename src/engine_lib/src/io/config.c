@@ -6,6 +6,7 @@
 #include <io/filesystem.h>
 #include <io/log.h>
 #include <io/paths.h>
+#include <math_funcs.h>
 
 #if defined(__GNUC__) || defined(__clang__)
 #define CONFIG_UNLIKELY(expr) __builtin_expect(!!(expr), 0)
@@ -1058,7 +1059,7 @@ prv_config_load(te_config* config, const char* relative_path) {
             do {
                 char* start = line + value_start;
                 char* end = NULL;
-                floats[item_idx] = strtof(start, &end);
+                floats[item_idx] = math_convert_string_to_float(start, &end);
                 if (CONFIG_UNLIKELY(start == end)) {
                     log_error_fmt(
                         "config \"%s\", line %u: failed to convert value to float",

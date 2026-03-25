@@ -230,7 +230,7 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
             memcpy(new_children, widget->parent->child_widgets, sizeof(te_widget*) * index);
             memcpy(
                 new_children + index, widget->parent->child_widgets + (index + 1),
-                sizeof(te_widget) * (widget->parent->child_widget_count - index - 1));
+                sizeof(te_widget*) * (widget->parent->child_widget_count - index - 1));
 
             free(widget->parent->child_widgets);
             widget->parent->child_widgets = new_children;

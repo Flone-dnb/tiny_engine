@@ -71,7 +71,6 @@ struct te_model {
     // Stores invalid value if not spawned (see @ref world). OpenGL ID of the shader program used.
     unsigned int shader_prog_id;
 
-    bool is_world_destroy;
     bool is_opaque;
     bool is_serialization_allowed;
 };
@@ -125,7 +124,6 @@ model_create() {
     model->custom_frag_relative_path = NULL;
     model->is_opaque = true;
     model->is_serialization_allowed = true;
-    model->is_world_destroy = false;
     glm_vec2_one(model->tex_tiling);
     glm_vec2_zero(model->uv_offset);
 
@@ -143,23 +141,21 @@ model_create() {
 
 void
 model_destroy(te_model* model) {
-    if (!model->is_world_destroy) {
-        if (model->child_model != NULL) {
-            if (model->child_model->world != NULL) {
-                // We should have despawned it in our despawn callback.
-                log_error("expected the child model to be despawned already");
-                abort();
-            }
-            model_destroy(model->child_model);
+    if (model->child_model != NULL) {
+        if (model->child_model->world != NULL) {
+            // We should have despawned it in our despawn callback.
+            log_error("expected the child model to be despawned already");
+            abort();
         }
+        model_destroy(model->child_model);
+    }
 
-        if (model->attached_camera != NULL) {
-            if (camera_get_world(model->attached_camera) != NULL) {
-                log_error("expected the attached camera to be despawned already");
-                abort();
-            }
-            camera_destroy(model->attached_camera);
+    if (model->attached_camera != NULL) {
+        if (camera_get_world(model->attached_camera) != NULL) {
+            log_error("expected the attached camera to be despawned already");
+            abort();
         }
+        camera_destroy(model->attached_camera);
     }
 
     free(model->name);
@@ -228,7 +224,15 @@ prv_model_calc_world_normal_matrices(te_model* model, mat4 world, mat3 normal) {
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             renderer, model->parent_model->render_data_handle);
 
-        glm_mat4_mul(data->world_mat, world, world);
+        // Ignore parent's scale.
+        mat4 parent_world;
+        glm_mat4_copy(data->world_mat, parent_world);
+        math_normalize_safely(parent_world[0]);
+        math_normalize_safely(parent_world[1]);
+        math_normalize_safely(parent_world[2]);
+
+        glm_mat4_mul(parent_world, world, world);
+
         glm_mat3_mul(data->normal_mat, normal, normal);
     }
 
@@ -437,7 +441,9 @@ model_set_parent(te_model* model, te_model* new_parent) {
     }
     model->parent_model = new_parent;
 
-    new_parent->child_model = model;
+    if (new_parent != NULL) {
+        new_parent->child_model = model;
+    }
 
     if (model->world == NULL) {
         if (new_parent != NULL && new_parent->world != NULL) {
@@ -706,18 +712,11 @@ prv_model_on_spawned(te_model* model, te_world* world) {
 
 void
 prv_model_on_despawned(te_model* model) {
-    model->is_world_destroy = prv_world_is_being_destroyed(model->world);
-
-    if (!model->is_world_destroy) {
-        if (model->child_model != NULL && model->child_model->world != NULL) {
-            world_despawn_model(model->child_model->world, model->child_model);
-        }
-        if (model->attached_camera != NULL) {
-            te_world* camera_world = camera_get_world(model->attached_camera);
-            if (camera_world != NULL) {
-                world_despawn_camera(camera_world, model->attached_camera);
-            }
-        }
+    if (model->child_model != NULL && model->child_model->world != NULL) {
+        prv_model_on_despawned(model->child_model);
+    }
+    if (model->attached_camera != NULL && camera_get_world(model->attached_camera) != NULL) {
+        prv_camera_set_world(model->attached_camera, NULL);
     }
 
     prv_model_remove_from_model_renderer(model);

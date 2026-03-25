@@ -25,7 +25,7 @@ struct te_text_edit_widget {
     te_text_widget* text_widget;
 
     // May be NULL if not set.
-    void (*on_text_changed)(wchar_t*, unsigned int);
+    void (*on_text_changed)(te_text_edit_widget*, wchar_t*, unsigned int);
 
     vec4 text_color;
 
@@ -119,7 +119,7 @@ prv_text_edit_widget_on_before_base_destroyed(void* this) {
 void
 text_edit_widget_set_on_text_changed(
     te_text_edit_widget* text_edit_widget,
-    void (*on_text_changed)(wchar_t* new_text, unsigned int strlen)) {
+    void (*on_text_changed)(te_text_edit_widget* text_edit_widget, wchar_t* new_text, unsigned int strlen)) {
     text_edit_widget->on_text_changed = on_text_changed;
 }
 
@@ -156,6 +156,7 @@ prv_text_edit_widget_despawn_destroy_cursor(te_text_edit_widget* text_edit_widge
 
     // Detach and despawn.
     widget_set_parent(rect_widget_get_widget(text_edit_widget->rect_cursor_widget), NULL);
+    world_despawn_widget(world, rect_widget_get_widget(text_edit_widget->rect_cursor_widget));
 
     rect_widget_destroy(text_edit_widget->rect_cursor_widget);
     text_edit_widget->rect_cursor_widget = NULL;
@@ -452,7 +453,7 @@ prv_text_edit_widget_on_keyboard_input_text(void* this, const char* input_text) 
     prv_text_edit_widget_update_cursor(text_edit_widget);
 
     if (text_edit_widget->on_text_changed != NULL) {
-        text_edit_widget->on_text_changed(new_text, new_text_len);
+        text_edit_widget->on_text_changed(text_edit_widget, new_text, new_text_len);
     }
 }
 
@@ -485,7 +486,7 @@ prv_text_edit_widget_on_keyboard_input(void* this, enum te_keyboard_button butto
         prv_text_edit_widget_update_cursor(text_edit_widget);
 
         if (text_edit_widget->on_text_changed != NULL) {
-            text_edit_widget->on_text_changed(new_text, new_text_len);
+            text_edit_widget->on_text_changed(text_edit_widget, new_text, new_text_len);
         }
     } else if (button == TE_KB_RIGHT) {
         te_text_edit_widget* text_edit_widget = this;

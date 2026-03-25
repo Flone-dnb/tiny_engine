@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cglm/vec4.h>
+#include <cglm/vec3.h>
 
 static inline float
 prv_theme_vertical_to_horizontal_ratio(void) {
@@ -90,4 +91,9 @@ static inline void
 theme_get_button_color_pressed(vec4 rgba) {
     theme_get_button_color(rgba);
     glm_vec4_adds(rgba, 0.1f, rgba);
+}
+
+static inline void
+theme_get_text_edit_background_color(vec4 rgba) {
+    theme_get_button_color(rgba);
 }

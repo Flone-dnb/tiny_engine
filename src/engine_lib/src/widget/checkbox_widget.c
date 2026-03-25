@@ -135,15 +135,16 @@ prv_checkbox_widget_create_checked_rect(te_checkbox_widget* checkbox_widget) {
     te_widget* rect = rect_widget_get_widget(checkbox_widget->checked_rect);
 
     widget_set_is_serialization_allowed(rect, false);
-    widget_set_parent(rect, checkbox_widget->widget);
-    widget_set_relative_position(rect, (vec2){0.1f, 0.1f});
-    widget_set_relative_size(rect, (vec2){0.8f, 0.8f});
+    widget_set_relative_position(rect, (vec2){0.2f, 0.2f});
+    widget_set_relative_size(rect, (vec2){0.6f, 0.6f});
 
     rect_widget_set_color(checkbox_widget->checked_rect, checkbox_widget->checked_color);
     if (checkbox_widget->checked_tex_relative_path != NULL) {
         rect_widget_set_texture(
             checkbox_widget->checked_rect, checkbox_widget->checked_tex_relative_path);
     }
+
+    widget_set_parent(rect, checkbox_widget->widget);
 }
 
 void
@@ -153,11 +154,15 @@ checkbox_widget_set_is_checked(te_checkbox_widget* checkbox_widget, bool is_chec
     }
     checkbox_widget->is_checked = is_checked;
 
-    if (widget_get_world(checkbox_widget->widget) != NULL) {
+    te_world* world = widget_get_world(checkbox_widget->widget);
+    if (world != NULL) {
         if (is_checked) {
             prv_checkbox_widget_create_checked_rect(checkbox_widget);
         } else {
+            // Despawn.
             widget_set_parent(rect_widget_get_widget(checkbox_widget->checked_rect), NULL);
+            world_despawn_widget(world, rect_widget_get_widget(checkbox_widget->checked_rect));
+
             rect_widget_destroy(checkbox_widget->checked_rect);
             checkbox_widget->checked_rect = NULL;
         }
@@ -344,17 +349,24 @@ prv_checkbox_fix_height(te_checkbox_widget* checkbox_widget) {
     vec2 old_screen_size;
     widget_get_screen_size(checkbox_widget->widget, old_screen_size);
 
-    const float target_pixel_count = (float)window_width * old_screen_size[0];
-    float height = target_pixel_count / (float)window_height;
-    if (height > 1.0f) {
-        height = 1.0f;
-    }
+    const float screen_height = (float)window_height * old_screen_size[1];
+    const float screen_width = (float)window_width * old_screen_size[0];
+    const float target_pixel_count =
+        screen_height < screen_width ? screen_height : screen_width;
 
-    const float multiplier = height / old_screen_size[1];
+    vec2 new_screen_size;
+    glm_vec2_copy(
+        (vec2){target_pixel_count / (float)window_width,
+               target_pixel_count / (float)window_height},
+        new_screen_size);
+
+    vec2 multiplier;
+    glm_vec2_div(new_screen_size, old_screen_size, multiplier);
+
     vec2 relative_size;
     widget_get_relative_size(checkbox_widget->widget, relative_size);
 
-    relative_size[1] *= multiplier;
+    glm_vec2_mul(relative_size, multiplier, relative_size);
     widget_set_relative_size(checkbox_widget->widget, relative_size);
 
     checkbox_widget->is_fixing_height = false;

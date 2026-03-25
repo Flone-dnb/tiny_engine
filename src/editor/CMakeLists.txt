@@ -15,6 +15,8 @@ set(PROJECT_SOURCES
     src/ui/theme.h
     src/ui/world_inspector.c
     src/ui/world_inspector.h
+    src/ui/property_inspector.c
+    src/ui/property_inspector.h
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
