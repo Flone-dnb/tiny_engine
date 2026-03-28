@@ -192,6 +192,34 @@ prv_widget_recalc_screen_pos_size(te_widget* widget) {
     }
 }
 
+static void
+prv_widget_on_parent_pos_changed(te_widget* widget) {
+    prv_widget_recalc_screen_pos_size(widget);
+
+    // Notify child widgets.
+    for (unsigned int i = 0; i < widget->child_widget_count; i++) {
+        prv_widget_on_parent_pos_changed(widget->child_widgets[i]);
+    }
+
+    if (widget->world != NULL && widget->on_pos_changed != NULL) {
+        widget->on_pos_changed(widget->owner);
+    }
+}
+
+static void
+prv_widget_on_parent_size_changed(te_widget* widget) {
+    prv_widget_recalc_screen_pos_size(widget);
+
+    // Notify child widgets.
+    for (unsigned int i = 0; i < widget->child_widget_count; i++) {
+        prv_widget_on_parent_size_changed(widget->child_widgets[i]);
+    }
+
+    if (widget->world != NULL && widget->on_size_changed != NULL) {
+        widget->on_size_changed(widget->owner);
+    }
+}
+
 void
 widget_set_parent(te_widget* widget, te_widget* new_parent) {
     if (new_parent == widget->parent) {
@@ -262,13 +290,6 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
     widget->parent = new_parent;
     prv_widget_recalc_screen_pos_size(widget);
 
-    if (widget->world != NULL && widget->on_pos_changed != NULL) {
-        widget->on_pos_changed(widget->owner);
-    }
-    if (widget->world != NULL && widget->on_size_changed != NULL) {
-        widget->on_size_changed(widget->owner);
-    }
-
     if (widget->world == NULL) {
         if (new_parent != NULL && new_parent->world != NULL) {
             world_spawn_widget(new_parent->world, widget);
@@ -302,6 +323,20 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
         && new_parent->on_children_changed != NULL) {
         new_parent->on_children_changed(new_parent->owner);
     }
+
+    // Notify.
+    for (unsigned int i = 0; i < widget->child_widget_count; i++) {
+        prv_widget_on_parent_pos_changed(widget->child_widgets[i]);
+    }
+    if (widget->world != NULL && widget->on_pos_changed != NULL) {
+        widget->on_pos_changed(widget->owner);
+    }
+    for (unsigned int i = 0; i < widget->child_widget_count; i++) {
+        prv_widget_on_parent_size_changed(widget->child_widgets[i]);
+    }
+    if (widget->world != NULL && widget->on_size_changed != NULL) {
+        widget->on_size_changed(widget->owner);
+    }
 }
 
 te_widget*
@@ -310,9 +345,16 @@ widget_get_parent(te_widget* widget) {
 }
 
 te_widget**
-widget_get_child_widgets_tmp(te_widget* widget, unsigned int* count) {
+widget_get_child_widgets(te_widget* widget, unsigned int* count) {
     (*count) = widget->child_widget_count;
-    return widget->child_widgets;
+    te_widget** children = malloc(sizeof(te_widget*) * widget->child_widget_count);
+    memcpy(children, widget->child_widgets, sizeof(te_widget*) * widget->child_widget_count);
+    return children;
+}
+
+unsigned int
+widget_get_child_widget_count(te_widget* widget) {
+    return widget->child_widget_count;
 }
 
 void
@@ -331,34 +373,6 @@ widget_set_name(te_widget* widget, const char* name) {
 const char*
 widget_get_name(te_widget* widget) {
     return widget->name;
-}
-
-static void
-prv_widget_on_parent_pos_changed(te_widget* widget) {
-    prv_widget_recalc_screen_pos_size(widget);
-
-    // Notify child widgets.
-    for (unsigned int i = 0; i < widget->child_widget_count; i++) {
-        prv_widget_on_parent_pos_changed(widget->child_widgets[i]);
-    }
-
-    if (widget->world != NULL && widget->on_pos_changed != NULL) {
-        widget->on_pos_changed(widget->owner);
-    }
-}
-
-static void
-prv_widget_on_parent_size_changed(te_widget* widget) {
-    prv_widget_recalc_screen_pos_size(widget);
-
-    // Notify child widgets.
-    for (unsigned int i = 0; i < widget->child_widget_count; i++) {
-        prv_widget_on_parent_size_changed(widget->child_widgets[i]);
-    }
-
-    if (widget->world != NULL && widget->on_size_changed != NULL) {
-        widget->on_size_changed(widget->owner);
-    }
 }
 
 void

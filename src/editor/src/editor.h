@@ -12,7 +12,8 @@ te_editor* editor_create();
 void editor_destroy(te_editor* editor);
 
 // Destroys previous game world (if existed).
-void editor_create_game_world(te_editor* editor, struct te_game_manager* game_manager);
+// Optionally specify a non-NULL path to file to load as the new world.
+void editor_create_game_world(te_editor* editor, const char* relative_path_to_world);
 
 // window callbacks -------------------------------------------------------------------------------
 void editor_on_game_started(void* game_instance, struct te_game_manager* game_manager);

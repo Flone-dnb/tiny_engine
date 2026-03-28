@@ -44,10 +44,10 @@ void* widget_get_custom_ptr(te_widget* widget);
 void widget_set_parent(te_widget* widget, te_widget* new_parent);
 te_widget* widget_get_parent(te_widget* widget);
 
-// Returns a pointer to an array of child widgets.
-// Do not free/destroy returned pointer. Never store/save returned pointer as it may become invalid
-// when a new child is attached/detached thus the function has "_tmp" suffix.
-te_widget** widget_get_child_widgets_tmp(te_widget* widget, unsigned int* count);
+// Returns a pointer to a new array of child widgets.
+// You must free returned array (but not the items in the array).
+te_widget** widget_get_child_widgets(te_widget* widget, unsigned int* count);
+unsigned int widget_get_child_widget_count(te_widget* widget);
 
 // Optionally you can set a name of the widget. The string will be copied.
 // Returns NULL if was not set previously.

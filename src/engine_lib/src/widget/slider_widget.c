@@ -244,9 +244,7 @@ prv_slider_widget_on_after_spawned(void* this) {
     te_slider_widget* slider_widget = this;
 
     // Self check:
-    unsigned int child_count = 0;
-    (void)widget_get_child_widgets_tmp(slider_widget->widget, &child_count);
-    if (child_count != 2) {
+    if (widget_get_child_widget_count(slider_widget->widget) != 2) {
         log_error("unexpected child widget count on a widget");
         abort();
     }
@@ -280,9 +278,7 @@ prv_slider_widget_on_before_despawned(void* this) {
     te_slider_widget* slider_widget = this;
 
     // Self check:
-    unsigned int child_count = 0;
-    (void)widget_get_child_widgets_tmp(slider_widget->widget, &child_count);
-    if (child_count != 2) {
+    if (widget_get_child_widget_count(slider_widget->widget) != 2) {
         log_error("unexpected child widget count on a widget");
         abort();
     }

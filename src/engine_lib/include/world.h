@@ -50,12 +50,12 @@ void world_add_from_file(te_world* world, const char* relative_path);
 // Do not free/destroy returned pointer, valid until the camera is not destroyed.
 struct te_camera* world_get_active_camera(te_world* world);
 
-// Returns NULL if no camera is spawned, otherwise all spawned cameras.
-// Do not save/store returned pointer as it might become invalid after a camera is spawned/despawned.
+// Returns NULL if no objects are spawned, otherwise all spawned objects.
+// You must free returned array (but not the items in the array).
 // Note: returned array only contains "root" game objects (does not include attached/child game objects).
-struct te_camera** world_get_cameras_tmp(te_world* world, unsigned int* count);
-struct te_model** world_get_models_tmp(te_world* world, unsigned int* count);
-struct te_widget** world_get_widgets_tmp(te_world* world, unsigned int* count);
+struct te_camera** world_get_cameras(te_world* world, unsigned int* count);
+struct te_model** world_get_models(te_world* world, unsigned int* count);
+struct te_widget** world_get_widgets(te_world* world, unsigned int* count);
 
 // Do not free/destroy returned pointer, valid while the world exists.
 struct te_model_renderer* world_get_opaque_model_renderer(te_world* world);

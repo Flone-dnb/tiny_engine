@@ -77,8 +77,9 @@ static void
 prv_vbox_widget_update_children(te_vbox_widget* vbox_widget) {
     unsigned int child_count;
     te_widget** child_widgets =
-        widget_get_child_widgets_tmp(vbox_widget->widget, &child_count);
+        widget_get_child_widgets(vbox_widget->widget, &child_count);
     if (child_count == 0) {
+        free(child_widgets);
         return;
     }
 
@@ -96,6 +97,8 @@ prv_vbox_widget_update_children(te_vbox_widget* vbox_widget) {
         widget_set_relative_position(child_widgets[i], relative_pos);
         relative_pos[1] += child_relative_size[1] + relative_spacing;
     }
+
+    free(child_widgets);
 }
 
 void

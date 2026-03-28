@@ -192,9 +192,7 @@ prv_progress_widget_on_after_spawned(void* this) {
     te_progress_widget* progress_widget = this;
 
     // Self check:
-    unsigned int child_count = 0;
-    (void)widget_get_child_widgets_tmp(progress_widget->widget, &child_count);
-    if (child_count != 2) {
+    if (widget_get_child_widget_count(progress_widget->widget) != 2) {
         log_error("unexpected child widget count on a widget");
         abort();
     }
@@ -220,9 +218,7 @@ prv_progress_widget_on_before_despawned(void* this) {
     te_progress_widget* progress_widget = this;
 
     // Self check:
-    unsigned int child_count = 0;
-    (void)widget_get_child_widgets_tmp(progress_widget->widget, &child_count);
-    if (child_count != 2) {
+    if (widget_get_child_widget_count(progress_widget->widget) != 2) {
         log_error("unexpected child widget count on a widget");
         abort();
     }

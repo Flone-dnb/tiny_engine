@@ -43,7 +43,7 @@ theme_get_horizontal_padding(void) {
 
 static inline float
 theme_get_vertical_padding(void) {
-    return 0.001f;
+    return theme_get_horizontal_padding() * prv_theme_vertical_to_horizontal_ratio() * 3.0f;
 }
 
 static inline float
@@ -52,18 +52,18 @@ theme_get_horizontal_padding_in_button(void) {
 }
 
 static inline float
+theme_get_horizontal_spacing(void) {
+    return 0.0025f;
+}
+
+static inline float
 theme_get_vertical_padding_in_button(void) {
     return theme_get_horizontal_padding_in_button() * prv_theme_vertical_to_horizontal_ratio();
 }
 
 static inline float
-theme_get_horizontal_spacing(void) {
-    return 0.002f;
-}
-
-static inline float
 theme_get_vertical_spacing(void) {
-    return theme_get_horizontal_spacing() * prv_theme_vertical_to_horizontal_ratio();
+    return theme_get_horizontal_spacing() * prv_theme_vertical_to_horizontal_ratio() * 3.0f;
 }
 
 static inline float

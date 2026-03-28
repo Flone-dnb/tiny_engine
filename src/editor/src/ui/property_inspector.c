@@ -540,14 +540,14 @@ property_inspector_hide(te_property_inspector* inspector) {
     }
 
     unsigned int count;
-    te_widget** widgets = widget_get_child_widgets_tmp(inspector->right_panel, &count);
+    te_widget** widgets = widget_get_child_widgets(inspector->right_panel, &count);
 
     for (unsigned int i = 0; i < count; i++) {
-	te_widget* widget = widgets[i];
+        widget_set_parent(widgets[i], NULL);
 
-        widget_set_parent(widget, NULL);
-
-        world_despawn_widget(world, widget);
-        widget_destroy(widget);
+        world_despawn_widget(world, widgets[i]);
+        widget_destroy(widgets[i]);
     }
+
+    free(widgets);
 }

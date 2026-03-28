@@ -18,6 +18,9 @@
 #include <ui/world_inspector.h>
 
 struct te_editor {
+    // NULL if the game is not started yet.
+    te_game_manager* game_manager;
+
     // Always valid pointer. Must be destroyed during the editor's destruction.
     te_editor_camera* editor_camera;
 
@@ -41,7 +44,8 @@ te_editor*
 editor_create() {
     te_editor* editor = malloc(sizeof(te_editor));
     editor->editor_camera = editor_camera_create();
-    editor->ui = editor_ui_create();
+    editor->game_manager = NULL;
+    editor->ui = editor_ui_create(editor);
     editor->game_world_stats_widget = NULL;
     editor->game_world = NULL;
     editor->editor_world = NULL;
@@ -77,10 +81,12 @@ editor_on_game_started(void* game_instance, te_game_manager* game_manager) {
     te_font_manager* font_manager = renderer_get_font_manager(renderer);
     font_manager_load_font(font_manager, "engine/font/font.ttf");
 
-    // Create worlds.
     te_editor* editor = game_instance;
+    editor->game_manager = game_manager;
+
+    // Create worlds.
     editor_create_editor_world(editor, game_manager);
-    editor_create_game_world(editor, game_manager);
+    editor_create_game_world(editor, NULL);
 }
 
 static void
@@ -95,16 +101,18 @@ prv_editor_destroy_game_world(te_editor* editor, te_game_manager* game_manager) 
 }
 
 void
-editor_create_game_world(te_editor* editor, te_game_manager* game_manager) {
+editor_create_game_world(te_editor* editor, const char* relative_path_to_world) {
+    // Cleanup.
+    editor_ui_reset(editor->ui);
     if (editor->game_world != NULL) {
-        prv_editor_destroy_game_world(editor, game_manager);
+        prv_editor_destroy_game_world(editor, editor->game_manager);
     }
 
-    editor->game_world = game_manager_create_world(game_manager, "game");
+    editor->game_world = game_manager_create_world(editor->game_manager, "game");
     editor_camera_spawn(editor->editor_camera, editor->game_world);
 
-    // Prepare a sample scene.
-    {
+    if (relative_path_to_world == NULL) {
+        // Prepare a sample scene.
         te_model* floor = model_create();
         model_set_name(floor, "floor");
         model_set_scale(floor, (vec3){5.0f, 1.0f, 5.0f});
@@ -115,6 +123,8 @@ editor_create_game_world(te_editor* editor, te_game_manager* game_manager) {
         model_set_name(box, "box");
         model_set_position(box, (vec3){0.0f, 1.0f, -1.0f});
         world_spawn_model(editor->game_world, box);
+    } else {
+        world_add_from_file(editor->game_world, relative_path_to_world);
     }
 
     // Prepare stats widget.
@@ -358,8 +368,10 @@ editor_on_input_source_changed(
 
 void
 editor_on_window_received_focus(void* game_instance, struct te_game_manager* game_manager) {
-    (void)game_instance;
     (void)game_manager;
+
+    te_editor* editor = game_instance;
+    editor_ui_refresh_filesystem_view(editor->ui);
 }
 
 void

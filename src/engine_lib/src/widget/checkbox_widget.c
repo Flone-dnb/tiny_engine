@@ -392,9 +392,7 @@ prv_checkbox_widget_on_after_spawned(void* this) {
     te_checkbox_widget* checkbox_widget = this;
 
     // Self check:
-    unsigned int child_count = 0;
-    (void)widget_get_child_widgets_tmp(checkbox_widget->widget, &child_count);
-    if (child_count != 1) {
+    if (widget_get_child_widget_count(checkbox_widget->widget) != 1) {
         log_error("unexpected child widget count on a widget");
         abort();
     }
@@ -424,9 +422,7 @@ prv_checkbox_widget_on_before_despawned(void* this) {
     te_checkbox_widget* checkbox_widget = this;
 
     // Self check:
-    unsigned int child_count = 0;
-    (void)widget_get_child_widgets_tmp(checkbox_widget->widget, &child_count);
-    if (child_count > 2) {
+    if (widget_get_child_widget_count(checkbox_widget->widget) > 2) {
         log_error("unexpected child widget count on a widget");
         abort();
     }

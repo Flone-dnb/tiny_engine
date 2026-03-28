@@ -144,7 +144,7 @@ refresh_item_names(te_world_inspector* inspector) {
         // Get button text widget.
         unsigned int child_count;
         te_widget** child_widgets =
-            widget_get_child_widgets_tmp(button_widget_get_widget(button), &child_count);
+            widget_get_child_widgets(button_widget_get_widget(button), &child_count);
         te_text_widget* button_text = NULL;
         for (unsigned int i = 0; i < child_count; i++) {
             if (!widget_is_serialization_allowed(child_widgets[i])) {
@@ -154,6 +154,7 @@ refresh_item_names(te_world_inspector* inspector) {
             button_text = widget_get_owner(child_widgets[i]);
             break;
         }
+        free(child_widgets);
 
         unsigned int indent = 0;
 
@@ -285,10 +286,11 @@ save_widgets_to_list_recurive(
     (*indent) += 1;
 
     unsigned int child_count;
-    te_widget** child_widgets = widget_get_child_widgets_tmp(widget, &child_count);
+    te_widget** child_widgets = widget_get_child_widgets(widget, &child_count);
     for (unsigned int i = 0; i < child_count; i++) {
         save_widgets_to_list_recurive(child_widgets[i], items, item_idx, indent);
     }
+    free(child_widgets);
 
     (*indent) -= 1;
 }
@@ -302,10 +304,11 @@ count_widgets_recursive(te_widget* widget, unsigned int* count) {
     (*count) += 1;
 
     unsigned int child_count;
-    te_widget** child_widgets = widget_get_child_widgets_tmp(widget, &child_count);
+    te_widget** child_widgets = widget_get_child_widgets(widget, &child_count);
     for (unsigned int i = 0; i < child_count; i++) {
         count_widgets_recursive(child_widgets[i], count);
     }
+    free(child_widgets);
 }
 
 static void
@@ -342,11 +345,11 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
         unsigned int root_camera_count = 0;
         te_camera** root_cameras = NULL;
         if (inspector->state != TE_WIS_SHOW_ATTACH_TO) {
-            root_cameras = world_get_cameras_tmp(world, &root_camera_count);
+            root_cameras = world_get_cameras(world, &root_camera_count);
         }
 
         unsigned int root_model_count;
-        te_model** root_models = world_get_models_tmp(world, &root_model_count);
+        te_model** root_models = world_get_models(world, &root_model_count);
 
         // Count items.
         inspector->item_list_count = 0;
@@ -477,18 +480,21 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
                 }
             }
         }
+
+        free(root_cameras);
+        free(root_models);
     } else {
         unsigned int root_count = 0;
-        te_widget** widgets = NULL;
+        te_widget** root_widgets = NULL;
         if (inspector->state != TE_WIS_SHOW_ATTACH_TO
             || inspector->selected_obj_type == TE_WIT_WIDGET) {
-            widgets = world_get_widgets_tmp(world, &root_count);
+            root_widgets = world_get_widgets(world, &root_count);
         }
 
         // Count how much items we have in total.
         inspector->item_list_count = 0;
         for (unsigned int i = 0; i < root_count; i++) {
-            count_widgets_recursive(widgets[i], &inspector->item_list_count);
+            count_widgets_recursive(root_widgets[i], &inspector->item_list_count);
         }
 
         // Save items.
@@ -497,9 +503,11 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
             unsigned int indent = 0;
             unsigned int item_idx = 0;
             for (unsigned int i = 0; i < root_count; i++) {
-                save_widgets_to_list_recurive(widgets[i], world_items, &item_idx, &indent);
+                save_widgets_to_list_recurive(root_widgets[i], world_items, &item_idx, &indent);
             }
         }
+
+        free(root_widgets);
     }
 
     inspector->item_list = world_items;
@@ -667,7 +675,7 @@ on_button_list_item_clicked(te_button_widget* button) {
             // Get button text.
             unsigned int child_count;
             te_widget** child_widgets =
-                widget_get_child_widgets_tmp(button_widget_get_widget(button), &child_count);
+                widget_get_child_widgets(button_widget_get_widget(button), &child_count);
             te_text_widget* button_text = NULL;
             for (unsigned int i = 0; i < child_count; i++) {
                 if (!widget_is_serialization_allowed(child_widgets[i])) {
@@ -677,6 +685,7 @@ on_button_list_item_clicked(te_button_widget* button) {
                 button_text = widget_get_owner(child_widgets[i]);
                 break;
             }
+            free(child_widgets);
 
             unsigned int text_len;
             wchar_t* wtext = text_widget_get_text(button_text, &text_len);
@@ -916,36 +925,15 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
     inspector->left_panel = left_panel;
 
     // Relative to the left panel.
-    const float title_height = theme_get_text_height();
     const float hspacing = theme_get_horizontal_spacing() / theme_get_left_panel_width();
-    const float vspacing = theme_get_vertical_spacing() / theme_get_left_panel_width();
+    const float vspacing = theme_get_vertical_spacing();
     const float hpadding = theme_get_horizontal_padding() / theme_get_left_panel_width();
-    const float vpadding = theme_get_vertical_padding();
     const float hpadding_in_button = theme_get_horizontal_padding_in_button();
     const float vpadding_in_button = theme_get_vertical_padding_in_button();
     const float total_width = 1.0f - hpadding * 2.0f;
 
     // Title text.
-    float y_pos = 0.0f;
-    {
-        y_pos += vpadding;
-
-        te_text_widget* title = text_widget_create();
-        {
-            te_widget* widget = text_widget_get_widget(title);
-            widget_set_parent(widget, left_panel);
-            widget_set_relative_position(widget, (vec2){hpadding, y_pos});
-            widget_set_relative_size(widget, (vec2){1.0f - hpadding, title_height});
-            y_pos += title_height;
-        }
-
-        text_widget_set_text_height(title, theme_get_text_height());
-
-        unsigned int title_len;
-        wchar_t* title_text = wchar_from_char("World inspector:", &title_len);
-        text_widget_set_text_own(title, title_text, title_len);
-    }
-    y_pos += vspacing / 2.0f;
+    float y_pos = vspacing;
 
     // World object type buttons: 3D objects or 2D objects.
     {
@@ -1042,7 +1030,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
         text = wchar_from_char("2D objects", &text_len);
         text_widget_set_text_own(text_2dobj, text, text_len);
     }
-    y_pos += theme_get_button_height() + vspacing / 2.0f;
+    y_pos += theme_get_button_height() + vspacing;
 
     // Button to create new game objects.
     {
@@ -1095,7 +1083,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
         // Count how much buttons for world items we can fit in the list.
         const float list_and_nav_menu_height =
             theme_get_world_inspector_height() - world_item_list_y_pos - nav_menu_height;
-        const float list_item_spacing = vspacing / 2.0f;
+        const float list_item_spacing = vspacing;
         unsigned int button_count = 0;
         {
             float test_y = y_pos;

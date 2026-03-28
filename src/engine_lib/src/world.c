@@ -474,7 +474,7 @@ prv_save_widget_recursive(te_config* config, te_widget* widget) {
         type_info_save_to_config(type_info, config, widget_get_owner(widget));
 
     unsigned int count;
-    te_widget** child_widgets = widget_get_child_widgets_tmp(widget, &count);
+    te_widget** child_widgets = widget_get_child_widgets(widget, &count);
     if (count == 0) {
         return;
     }
@@ -484,6 +484,7 @@ prv_save_widget_recursive(te_config* config, te_widget* widget) {
         te_widget* widget = child_widgets[i];
         prv_save_widget_recursive(config, widget);
     }
+    free(child_widgets);
 }
 
 void
@@ -653,21 +654,27 @@ world_get_active_camera(te_world* world) {
 }
 
 struct te_camera**
-world_get_cameras_tmp(te_world* world, unsigned int* count) {
+world_get_cameras(te_world* world, unsigned int* count) {
     (*count) = world->spawned_camera_count;
-    return world->spawned_cameras;
+    te_camera** out = malloc(sizeof(te_camera*) * (*count));
+    memcpy(out, world->spawned_cameras, sizeof(te_camera*) * (*count));
+    return out;
 }
 
 struct te_model**
-world_get_models_tmp(te_world* world, unsigned int* count) {
+world_get_models(te_world* world, unsigned int* count) {
     (*count) = world->spawned_model_count;
-    return world->spawned_models;
+    te_model** out = malloc(sizeof(te_model*) * (*count));
+    memcpy(out, world->spawned_models, sizeof(te_model*) * (*count));
+    return out;
 }
 
 struct te_widget**
-world_get_widgets_tmp(te_world* world, unsigned int* count) {
+world_get_widgets(te_world* world, unsigned int* count) {
     (*count) = world->spawned_widget_count;
-    return world->spawned_widgets;
+    te_widget** out = malloc(sizeof(te_widget*) * (*count));
+    memcpy(out, world->spawned_widgets, sizeof(te_widget*) * (*count));
+    return out;
 }
 
 te_model_renderer*
