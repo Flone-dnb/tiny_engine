@@ -10,7 +10,7 @@ Supported platforms: Windows (x32, x64), Linux (x32, x64 and ARM64).
 - [X] Config management
 - [X] GUI
 - [X] Type reflection
-- [ ] Simple editor
+- [X] Simple editor
 - [ ] GLTF/GLB import
 - [ ] Audio
 - [ ] Simple physics engine
