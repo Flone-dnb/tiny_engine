@@ -123,16 +123,16 @@ math_convert_string_to_float(const char* text, char** end) {
     float div = 1;
     bool after_dot = false;
 
-    while(*curr != 0) {
+    while (*curr != 0) {
         if ((*curr) >= '0' && (*curr) <= '9') {
             if (!after_dot) {
                 out *= 10.0f;
                 out += (float)((*curr) - '0');
-            }else {
+            } else {
                 div *= 10;
                 out += (float)((*curr) - '0') / div;
             }
-        }else if ((*curr) == '.' || (*curr) == ',') {
+        } else if ((*curr) == '.' || (*curr) == ',') {
             after_dot = true;
         } else {
             break;
@@ -141,6 +141,6 @@ math_convert_string_to_float(const char* text, char** end) {
         curr++;
     }
 
-    (*end) = curr;
+    (*end) = curr - 1;
     return out;
 }

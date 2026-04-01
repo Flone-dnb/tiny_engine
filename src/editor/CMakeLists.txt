@@ -19,6 +19,8 @@ set(PROJECT_SOURCES
     src/ui/property_inspector.h
     src/ui/filesystem_view.c
     src/ui/filesystem_view.h
+    src/ui/file_dialog.c
+    src/ui/file_dialog.h
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})

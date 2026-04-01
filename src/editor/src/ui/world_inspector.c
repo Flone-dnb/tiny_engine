@@ -313,8 +313,8 @@ count_widgets_recursive(te_widget* widget, unsigned int* count) {
 
 static void
 rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
-    if (inspector->state != TE_WIS_SHOW_WORLD_OBJECTS &&
-        inspector->state != TE_WIS_SHOW_ATTACH_TO) {
+    if (inspector->state != TE_WIS_SHOW_WORLD_OBJECTS
+        && inspector->state != TE_WIS_SHOW_ATTACH_TO) {
         log_error("unexpected state");
         abort();
     }
@@ -374,7 +374,7 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
                     inspector->item_list_count += 1;
                 }
             }
-        }else {
+        } else {
             for (unsigned int i = 0; i < root_model_count; i++) {
                 if (!model_is_serialization_allowed(root_models[i])) {
                     continue;
@@ -389,7 +389,8 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
 
                 if (inspector->selected_obj_type == TE_WIT_MODEL && child_model != NULL) {
                     continue;
-                } else if (inspector->selected_obj_type == TE_WIT_CAMERA && attached_camera != NULL) {
+                } else if (
+                    inspector->selected_obj_type == TE_WIT_CAMERA && attached_camera != NULL) {
                     continue;
                 }
 
@@ -431,7 +432,8 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
                     item_idx += 1;
 
                     te_camera* attached_camera = model_get_attached_camera(root_models[i]);
-                    if (attached_camera != NULL && camera_is_serialization_allowed(attached_camera)) {
+                    if (attached_camera != NULL
+                        && camera_is_serialization_allowed(attached_camera)) {
                         te_world_item_info* info = &world_items[item_idx];
                         info->type = TE_WIT_CAMERA;
                         info->indent = 1;
@@ -450,7 +452,7 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
                         item_idx += 1;
                     }
                 }
-            }else {
+            } else {
                 for (unsigned int i = 0; i < root_model_count; i++) {
                     if (!model_is_serialization_allowed(root_models[i])) {
                         continue;
@@ -503,7 +505,8 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
             unsigned int indent = 0;
             unsigned int item_idx = 0;
             for (unsigned int i = 0; i < root_count; i++) {
-                save_widgets_to_list_recurive(root_widgets[i], world_items, &item_idx, &indent);
+                save_widgets_to_list_recurive(
+                    root_widgets[i], world_items, &item_idx, &indent);
             }
         }
 
@@ -538,7 +541,8 @@ world_inspector_rebuild_list(te_world_inspector* inspector, te_world* game_world
     }
 }
 
-void world_inspector_refresh_names(te_world_inspector* inspector) {
+void
+world_inspector_refresh_names(te_world_inspector* inspector) {
     if (inspector->state == TE_WIS_SHOW_WORLD_OBJECTS
         || inspector->state == TE_WIS_SHOW_ATTACH_TO) {
         refresh_item_names(inspector);
@@ -548,7 +552,8 @@ void world_inspector_refresh_names(te_world_inspector* inspector) {
 static void
 on_button_3dobj_clicked(te_button_widget* button) {
     te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
-    if (inspector->state != TE_WIS_SHOW_WORLD_OBJECTS && inspector->state != TE_WIS_SHOW_ATTACH_TO) {
+    if (inspector->state != TE_WIS_SHOW_WORLD_OBJECTS
+        && inspector->state != TE_WIS_SHOW_ATTACH_TO) {
         return;
     }
 
@@ -566,7 +571,8 @@ on_button_3dobj_clicked(te_button_widget* button) {
 static void
 on_button_2dobj_clicked(te_button_widget* button) {
     te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
-    if (inspector->state != TE_WIS_SHOW_WORLD_OBJECTS && inspector->state != TE_WIS_SHOW_ATTACH_TO) {
+    if (inspector->state != TE_WIS_SHOW_WORLD_OBJECTS
+        && inspector->state != TE_WIS_SHOW_ATTACH_TO) {
         return;
     }
 
@@ -588,9 +594,8 @@ on_top_button_clicked(te_button_widget* button) {
     if (inspector->state == TE_WIS_SHOW_WORLD_OBJECTS) {
         inspector->state = TE_WIS_CREATE_NEW_OBJECT;
     } else if (
-        inspector->state == TE_WIS_CREATE_NEW_OBJECT ||
-        inspector->state == TE_WIS_OBJECT_MENU ||
-        inspector->state == TE_WIS_SHOW_ATTACH_TO) {
+        inspector->state == TE_WIS_CREATE_NEW_OBJECT || inspector->state == TE_WIS_OBJECT_MENU
+        || inspector->state == TE_WIS_SHOW_ATTACH_TO) {
         inspector->state = TE_WIS_SHOW_WORLD_OBJECTS;
     } else {
         return;
@@ -665,7 +670,8 @@ on_button_list_item_clicked(te_button_widget* button) {
                 }
             }
 
-            property_inspector_show(inspector->property_inspector, selected_info->obj, type_id);
+            property_inspector_show(
+                inspector->property_inspector, selected_info->obj, type_id);
             break;
         }
         case (TE_WIS_CREATE_NEW_OBJECT): {
@@ -928,8 +934,8 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
     const float hspacing = theme_get_horizontal_spacing() / theme_get_left_panel_width();
     const float vspacing = theme_get_vertical_spacing();
     const float hpadding = theme_get_horizontal_padding() / theme_get_left_panel_width();
-    const float hpadding_in_button = theme_get_horizontal_padding_in_button();
-    const float vpadding_in_button = theme_get_vertical_padding_in_button();
+    const float hpadding_in_button = hpadding;
+    const float vpadding_in_button = 0.0f;
     const float total_width = 1.0f - hpadding * 2.0f;
 
     // Title text.

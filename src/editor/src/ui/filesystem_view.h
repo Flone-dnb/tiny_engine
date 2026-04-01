@@ -1,5 +1,6 @@
 #pragma once
 
+// Filesystem widget in the bottom-left corner of the editor's UI.
 typedef struct te_filesystem_view te_filesystem_view;
 struct te_widget;
 struct te_editor;

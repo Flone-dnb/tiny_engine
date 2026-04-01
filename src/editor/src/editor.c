@@ -6,6 +6,7 @@
 #include <game/camera.h>
 #include <game_manager.h>
 #include <io/log.h>
+#include <io/filesystem.h>
 #include <misc/memory_usage.h>
 #include <misc/wchar_funcs.h>
 #include <render/font_manager.h>
@@ -14,10 +15,15 @@
 #include <widget/widget.h>
 #include <window.h>
 #include <world.h>
+#include <ui/file_dialog.h>
 #include <ui/editor_ui.h>
 #include <ui/world_inspector.h>
+#include <ui/file_dialog.h>
 
 struct te_editor {
+    // Not NULL if @ref game_world was loaded from a file (relative to the `res` directory).
+    char* game_world_relative_path;
+
     // NULL if the game is not started yet.
     te_game_manager* game_manager;
 
@@ -32,6 +38,12 @@ struct te_editor {
 
     // Not NULL if exists.
     te_world* editor_world;
+
+    // Not NULL if world for dialog widgets exists.
+    te_world* dialog_world;
+
+    // Not NULL if showing a file dialog.
+    te_file_dialog* file_dialog;
 
     // Always valid.
     te_editor_ui* ui;
@@ -48,6 +60,9 @@ editor_create() {
     editor->ui = editor_ui_create(editor);
     editor->game_world_stats_widget = NULL;
     editor->game_world = NULL;
+    editor->dialog_world = NULL;
+    editor->file_dialog = NULL;
+    editor->game_world_relative_path = NULL;
     editor->editor_world = NULL;
     editor->time_since_stats_update_sec = 10.0f;
 
@@ -59,7 +74,46 @@ editor_destroy(te_editor* editor) {
     editor_camera_destroy(editor->editor_camera);
     editor_ui_destroy(editor->ui);
 
+    free(editor->game_world_relative_path);
+
     free(editor);
+}
+
+static void
+destroy_game_world(te_editor* editor, te_game_manager* game_manager) {
+    if (editor->file_dialog != NULL) {
+        file_dialog_destroy(editor->file_dialog);
+        editor->file_dialog = NULL;
+
+        game_manager_destroy_world(editor->game_manager, editor->dialog_world);
+        editor->dialog_world = NULL;
+    }
+
+    // Despawn editor camera because we manage its destruction manually.
+    editor_camera_despawn(editor->editor_camera, editor->game_world);
+
+    // Destroy world.
+    game_manager_destroy_world(game_manager, editor->game_world);
+    editor->game_world = NULL;
+    editor->game_world_stats_widget = NULL;
+}
+
+void
+editor_on_window_close(void* game_instance, struct te_game_manager* game_manager) {
+    te_editor* editor = game_instance;
+
+    if (editor->game_world != NULL) {
+        destroy_game_world(editor, game_manager);
+        editor->game_world = NULL;
+    }
+
+    if (editor->file_dialog != NULL) {
+        file_dialog_destroy(editor->file_dialog);
+        editor->file_dialog = NULL;
+
+        game_manager_destroy_world(editor->game_manager, editor->dialog_world);
+        editor->dialog_world = NULL;
+    }
 }
 
 static void
@@ -89,28 +143,15 @@ editor_on_game_started(void* game_instance, te_game_manager* game_manager) {
     editor_create_game_world(editor, NULL);
 }
 
-static void
-prv_editor_destroy_game_world(te_editor* editor, te_game_manager* game_manager) {
-    // Despawn editor camera because we manage its destruction manually.
-    editor_camera_despawn(editor->editor_camera, editor->game_world);
-
-    // Destroy world.
-    game_manager_destroy_world(game_manager, editor->game_world);
-    editor->game_world = NULL;
-    editor->game_world_stats_widget = NULL;
-}
-
 void
 editor_create_game_world(te_editor* editor, const char* relative_path_to_world) {
     // Cleanup.
     editor_ui_reset(editor->ui);
     if (editor->game_world != NULL) {
-        prv_editor_destroy_game_world(editor, editor->game_manager);
+        destroy_game_world(editor, editor->game_manager);
     }
 
     editor->game_world = game_manager_create_world(editor->game_manager, "game");
-    editor_camera_spawn(editor->editor_camera, editor->game_world);
-
     if (relative_path_to_world == NULL) {
         // Prepare a sample scene.
         te_model* floor = model_create();
@@ -126,6 +167,8 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
     } else {
         world_add_from_file(editor->game_world, relative_path_to_world);
     }
+
+    editor_camera_spawn(editor->editor_camera, editor->game_world);
 
     // Prepare stats widget.
     editor->game_world_stats_widget = text_widget_create();
@@ -199,14 +242,68 @@ editor_on_game_tick(void* game_instance, te_game_manager* game_manager, float de
     }
 }
 
+static void
+on_new_world_file_selected(void* custom, const char* path_to_file) {
+    te_editor* editor = custom;
+
+    file_dialog_destroy(editor->file_dialog);
+    editor->file_dialog = NULL;
+
+    game_manager_destroy_world(editor->game_manager, editor->dialog_world);
+    editor->dialog_world = NULL;
+
+    if (editor->game_world == NULL) {
+        return;
+    }
+
+    char* relative_path = filesystem_convert_path_to_relative(path_to_file);
+    if (relative_path == NULL) {
+        log_warn("new world must be in the \"res\" directory");
+        return;
+    }
+
+    world_save_to_file(editor->game_world, relative_path);
+
+    free(relative_path);
+
+    editor_ui_refresh_filesystem_view(editor->ui);
+}
+
+static void
+on_new_world_file_cancel(void* custom) {
+    te_editor* editor = custom;
+
+    file_dialog_destroy(editor->file_dialog);
+    editor->file_dialog = NULL;
+
+    game_manager_destroy_world(editor->game_manager, editor->dialog_world);
+    editor->dialog_world = NULL;
+}
+
 void
 editor_on_keyboard_button_pressed(
     void* game_instance, struct te_game_manager* game_manager, enum te_keyboard_button button,
     te_keyboard_modifiers modifiers) {
-    (void)game_manager;
-    (void)modifiers;
-
     te_editor* editor = game_instance;
+
+    if (editor->game_world != NULL && keyboard_modifiers_is_ctrl_pressed(&modifiers)
+        && button == TE_KB_S) {
+        if (editor->game_world_relative_path == NULL) {
+            // Create a new world for dialog widget to be displayed on top of both the editor and the game worlds.
+            editor->dialog_world = game_manager_create_world(game_manager, "dialog");
+            te_camera* camera = camera_create();
+            world_spawn_camera(editor->dialog_world, camera);
+            world_set_active_camera(editor->dialog_world, camera);
+
+            editor->file_dialog = file_dialog_create(
+                editor->dialog_world, editor, on_new_world_file_selected,
+                on_new_world_file_cancel, TE_FDM_SELECT_NEW_FILE);
+        } else {
+            world_save_to_file(editor->game_world, editor->game_world_relative_path);
+        }
+        return;
+    }
+
     editor_camera_on_keyboard_button_pressed(editor->editor_camera, button);
 }
 
@@ -388,13 +485,4 @@ editor_on_window_lost_focus(void* game_instance, struct te_game_manager* game_ma
     window_capture_mouse_cursor(window, false);
 
     editor_camera_enable_input(editor->editor_camera, false);
-}
-
-void
-editor_on_window_close(void* game_instance, struct te_game_manager* game_manager) {
-    te_editor* editor = game_instance;
-
-    if (editor->game_world != NULL) {
-        prv_editor_destroy_game_world(editor, game_manager);
-    }
 }

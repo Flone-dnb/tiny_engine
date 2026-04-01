@@ -25,6 +25,14 @@ void filesystem_rename_file(const char* old_path, const char* new_path);
 
 void filesystem_copy_file(const char* src, const char* dst);
 
+// Returns a new string that you must free.
+char* filesystem_convert_path_to_absolute(const char* src);
+
+// Converts the specified path to be relative to the `res` directory.
+// Returns NULL if unable to convert, otherwise a new string that you must free.
+char* filesystem_convert_path_to_relative(const char* src);
+
 // Returns all filesystem entries (files and directories) in the specified directory (not recursive).
 // You must free returned array and entry names.
-te_filesystem_entry* filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count);
+te_filesystem_entry*
+filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count);

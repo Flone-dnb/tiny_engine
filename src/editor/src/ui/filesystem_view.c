@@ -59,7 +59,8 @@ filesystem_view_create(te_editor* editor) {
     return explorer;
 }
 
-void filesystem_view_destroy(te_filesystem_view* explorer) {
+void
+filesystem_view_destroy(te_filesystem_view* explorer) {
     for (unsigned int i = 0; i < explorer->dir_entry_count; i++) {
         free(explorer->dir_entries[i].name);
     }
@@ -82,7 +83,8 @@ refresh_page_text(te_filesystem_view* explorer) {
     }
     explorer->page_count = page_count;
 
-    const int len = snprintf(NULL, 0, "%u / %u", explorer->current_page + 1, explorer->page_count);
+    const int len =
+        snprintf(NULL, 0, "%u / %u", explorer->current_page + 1, explorer->page_count);
     if (len < 0) {
         log_error("snprintf error");
         abort();
@@ -98,7 +100,8 @@ refresh_page_text(te_filesystem_view* explorer) {
     free(text);
 }
 
-static void refresh_dir_entry_names(te_filesystem_view* explorer) {
+static void
+refresh_dir_entry_names(te_filesystem_view* explorer) {
     const float hpadding = theme_get_horizontal_padding() / theme_get_left_panel_width();
 
     unsigned int button_idx = 0;
@@ -147,7 +150,7 @@ static void refresh_dir_entry_names(te_filesystem_view* explorer) {
                 memcpy(text, "[d] ", sizeof(char) * 4);
                 memcpy(text + 4, entry->name, sizeof(char) * name_len);
                 text[4 + name_len] = 0;
-            }else {
+            } else {
                 memcpy(text, entry->name, sizeof(char) * name_len);
                 text[name_len] = 0;
             }
@@ -174,7 +177,8 @@ static void refresh_dir_entry_names(te_filesystem_view* explorer) {
     }
 }
 
-static void refresh_current_path_text(te_filesystem_view* explorer) {
+static void
+refresh_current_path_text(te_filesystem_view* explorer) {
     size_t relative_path_len = 0;
     if (explorer->relative_path != NULL) {
         relative_path_len = strlen(explorer->relative_path);
@@ -266,8 +270,7 @@ on_button_dir_entry_clicked(te_button_widget* button) {
         if (slash_pos == 0) {
             free(explorer->relative_path);
             explorer->relative_path = NULL;
-        }
-        else {
+        } else {
             char* new_path = malloc(sizeof(char) * (slash_pos + 2));
             memcpy(new_path, explorer->relative_path, sizeof(char) * slash_pos);
             new_path[slash_pos] = '/';
@@ -287,7 +290,9 @@ on_button_dir_entry_clicked(te_button_widget* button) {
         button_index -= 1;
     }
 
-    te_filesystem_entry* entry = &explorer->dir_entries[explorer->current_page * explorer->dir_entry_button_count + button_index];
+    te_filesystem_entry* entry =
+        &explorer->dir_entries
+             [explorer->current_page * explorer->dir_entry_button_count + button_index];
     const unsigned int name_len = (unsigned int)strlen(entry->name);
 
     if (entry->is_dir) {
@@ -326,31 +331,37 @@ on_button_dir_entry_clicked(te_button_widget* button) {
                 relative_path_len = strlen(explorer->relative_path);
             }
 
-            char* path = malloc(sizeof(char) * (4 + relative_path_len + 1));
-            memcpy(path, "res/", sizeof(char) * 4);
+            char* file_relative_path =
+                malloc(sizeof(char) * (relative_path_len + name_len + 1));
             if (explorer->relative_path != NULL) {
-                memcpy(path + 4, explorer->relative_path, sizeof(char) * relative_path_len);
+                memcpy(
+                    file_relative_path, explorer->relative_path,
+                    sizeof(char) * relative_path_len);
             }
-            path[4 + relative_path_len] = 0;
+            memcpy(
+                file_relative_path + relative_path_len, entry->name, sizeof(char) * name_len);
+            file_relative_path[relative_path_len + name_len] = 0;
 
-            editor_create_game_world(explorer->editor, path);
-            free(path);
+            editor_create_game_world(explorer->editor, file_relative_path);
+            free(file_relative_path);
         }
     }
 }
 
-void filesystem_view_refresh(te_filesystem_view* explorer) {
+void
+filesystem_view_refresh(te_filesystem_view* explorer) {
     collect_dir_entries(explorer);
 }
 
-void filesystem_view_add(te_filesystem_view* explorer, te_widget* left_panel) {
+void
+filesystem_view_add(te_filesystem_view* explorer, te_widget* left_panel) {
     const float hpadding = theme_get_horizontal_padding() / theme_get_left_panel_width();
     const float vpadding = theme_get_vertical_padding();
     const float hspacing = theme_get_horizontal_spacing() / theme_get_left_panel_width();
     const float dir_item_spacing = theme_get_vertical_spacing() / 2.0f;
     const float nav_menu_height = theme_get_button_height();
-    const float hpadding_in_button = theme_get_horizontal_padding_in_button();
-    const float vpadding_in_button = theme_get_vertical_padding_in_button();
+    const float hpadding_in_button = hpadding;
+    const float vpadding_in_button = 0.0f;
 
     vec2 pos;
     pos[0] = hpadding;
@@ -386,7 +397,8 @@ void filesystem_view_add(te_filesystem_view* explorer, te_widget* left_panel) {
         do {
             test_y += dir_item_spacing + theme_get_button_height();
             explorer->dir_entry_button_count += 1;
-        } while (test_y + dir_item_spacing + theme_get_button_height() <= 1.0f - nav_menu_height);
+        } while (test_y + dir_item_spacing + theme_get_button_height()
+                 <= 1.0f - nav_menu_height);
 
         explorer->dir_entry_buttons =
             malloc(sizeof(te_button_widget*) * explorer->dir_entry_button_count);
@@ -444,7 +456,8 @@ void filesystem_view_add(te_filesystem_view* explorer, te_widget* left_panel) {
             te_button_widget* button = button_widget_create();
             {
                 te_widget* widget = button_widget_get_widget(button);
-                widget_set_relative_position(widget, (vec2){hpadding + nav_button_pad, pos[1]});
+                widget_set_relative_position(
+                    widget, (vec2){hpadding + nav_button_pad, pos[1]});
                 widget_set_relative_size(
                     widget, (vec2){nav_button_width, theme_get_button_height()});
                 widget_set_parent(widget, left_panel);
@@ -482,7 +495,9 @@ void filesystem_view_add(te_filesystem_view* explorer, te_widget* left_panel) {
 
         // Page text.
         {
-            const float nav_tex_total_width = 1.0f - (hpadding + nav_button_pad + nav_button_width + hspacing * 2.0f
+            const float nav_tex_total_width =
+                1.0f
+                - (hpadding + nav_button_pad + nav_button_width + hspacing * 2.0f
                    + nav_button_width + nav_button_pad + hpadding);
             const float nav_tex_width = nav_tex_total_width / 2.0f;
             const float nav_tex_pad = nav_tex_total_width / 4.0f;
@@ -494,7 +509,8 @@ void filesystem_view_add(te_filesystem_view* explorer, te_widget* left_panel) {
                 widget_set_parent(widget, left_panel);
                 widget_set_relative_position(
                     widget, (vec2){hpadding + nav_button_pad + nav_button_width + hspacing
-                                       + nav_tex_pad, pos[1]});
+                                       + nav_tex_pad,
+                                   pos[1]});
                 widget_set_relative_size(widget, (vec2){nav_tex_width, nav_menu_height});
             }
             text_widget_set_text_height(text_widget, theme_get_text_height());

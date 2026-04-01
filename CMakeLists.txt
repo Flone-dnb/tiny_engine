@@ -26,7 +26,7 @@ if(NOT IS_RELEASE_BUILD AND NOT MSVC)
     # Memcheck is our silly little memory leak checker. It can be used in cases where ASan is not available or if it uses too much RAM.
     set(ENGINE_MEMCHECK_ENABLED ON CACHE BOOL "" FORCE)
     message(STATUS "Memcheck enabled.")
-    add_link_options(LINKER:--wrap=malloc,--wrap=realloc,--wrap=calloc,--wrap=free,--wrap=strdup,--wrap=wcsdup,--wrap=scandir,--wrap=getline)
+    add_link_options(LINKER:--wrap=malloc,--wrap=realloc,--wrap=calloc,--wrap=free,--wrap=strdup,--wrap=wcsdup,--wrap=scandir,--wrap=getline,--wrap=realpath)
     add_subdirectory(ext/memcheck ${DEPENDENCY_BUILD_DIR_NAME}/memcheck EXCLUDE_FROM_ALL)
     link_libraries(memcheck)
     link_libraries(m)

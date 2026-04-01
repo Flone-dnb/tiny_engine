@@ -102,6 +102,43 @@ filesystem_copy_file(const char* src, const char* dst) {
     fclose(dp);
 }
 
+char*
+filesystem_convert_path_to_absolute(const char* src) {
+#if defined(__linux__)
+    return realpath(src, NULL);
+#elif defined(WIN32)
+    return _fullpath(NULL, src, 0);
+#else
+#error "unsupported OS"
+#endif
+}
+
+char* filesystem_convert_path_to_relative(const char* src) {
+    // Find `res/` in the path.
+    const size_t len = strlen(src);
+    size_t start_pos = 0xFFFFFFFF;
+    for (size_t i = 0; i < len; i++) {
+#if defined(__linux__)
+        if (strncmp(src + i, "/res/", 5) == 0)
+#else
+        if (strncmp(src + i, "\\res\\", 5) == 0 || strncmp(src + i, "/res/", 5) == 0)
+#endif
+        {
+            start_pos = i + 5;
+            break;
+        }
+    }
+    if (start_pos == 0xFFFFFFFF) {
+        return NULL;
+    }
+
+    char* dst = malloc(sizeof(char) * (len - start_pos + 1));
+    memcpy(dst, src + start_pos, sizeof(char) * (len - start_pos));
+    dst[len - start_pos] = 0;
+
+    return dst;
+}
+
 te_filesystem_entry*
 filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count) {
     (*entry_count) = 0;
@@ -154,7 +191,17 @@ filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count) {
 #elif defined(WIN32)
     char abs_path[MAX_PATH * 2 + 2] = {0};
     _fullpath(abs_path, path_to_dir, MAX_PATH * 2);
-    abs_path[strlen(abs_path)] = '*';
+
+    // Prepare path for FindFirstFile.
+    {
+        const size_t len = strlen(abs_path);
+        if (abs_path[len - 1] == '\\' || abs_path[len - 1] == '/') {
+            abs_path[len] = '*';
+        }else {
+            abs_path[len] = '\\';
+            abs_path[len + 1] = '*';
+        }
+    }
 
     // Count entries.
     {
