@@ -7,6 +7,7 @@
 typedef struct te_model te_model;
 struct te_world;
 struct te_camera;
+struct te_model_renderer;
 
 te_model* model_create();
 void model_destroy(te_model* model);
@@ -114,3 +115,11 @@ void prv_model_on_despawned(te_model* model);
 mat4* prv_model_get_world_mat_tmp(te_model* model);
 
 void prv_model_set_vertex_attributes();
+
+// Returns 0xFFFFFFFF if the model is not being rendered,
+// otherwise handle into the model renderer's data array.
+unsigned int prv_model_get_render_data_handle(te_model* model);
+
+// Returns NULL if the model is not being rendered,
+// otherwise returns model renderer used to render the model.
+struct te_model_renderer* prv_model_get_model_renderer(te_model* model);

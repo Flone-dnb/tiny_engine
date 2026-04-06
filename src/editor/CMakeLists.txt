@@ -10,6 +10,8 @@ set(PROJECT_SOURCES
     src/editor_camera.c
     src/editor.h
     src/editor_camera.h
+    src/obj_picking.c
+    src/obj_picking.h
     src/ui/editor_ui.c
     src/ui/editor_ui.h
     src/ui/theme.h

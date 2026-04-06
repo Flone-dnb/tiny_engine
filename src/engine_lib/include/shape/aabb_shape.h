@@ -29,6 +29,55 @@ aabb_shape_is_behind_plane(te_aabb_shape* aabb, te_plane_shape* plane) {
     return !(-proj_radius <= dist_to_plane);
 }
 
+// Returns `true` if AABBs are intersecting.
+static inline bool
+aabb_shape_intersect(te_aabb_shape* a, te_aabb_shape* b) {
+    return a->center[0] - a->extents[0] <= b->center[0] + b->extents[0]
+           && a->center[0] + a->extents[0] >= b->center[0] - b->extents[0]
+           && a->center[1] - a->extents[1] <= b->center[1] + b->extents[1]
+           && a->center[1] + a->extents[1] >= b->center[1] - b->extents[1]
+           && a->center[2] - a->extents[2] <= b->center[2] + b->extents[2]
+           && a->center[2] + a->extents[2] >= b->center[2] - b->extents[2];
+}
+
+// Returns `true` if the ray intersects AABB.
+// Also (if hit is found) writes distance along the ray until the hit position.
+static inline bool
+aabb_shape_intersect_ray(te_aabb_shape* aabb, vec3 ray_origin, vec3 ray_dir, float* hit_dist_along_ray) {
+    vec3 min;
+    vec3 max;
+    glm_vec3_sub(aabb->center, aabb->extents, min);
+    glm_vec3_add(aabb->center, aabb->extents, max);
+
+    vec3 tmin;
+    glm_vec3_sub(min, ray_origin, tmin);
+    glm_vec3_div(tmin, ray_dir, tmin);
+
+    vec3 tmax;
+    glm_vec3_sub(max, ray_origin, tmax);
+    glm_vec3_div(tmax, ray_dir, tmax);
+
+    vec3 t1;
+    t1[0] = glm_min(tmin[0], tmax[0]);
+    t1[1] = glm_min(tmin[1], tmax[1]);
+    t1[2] = glm_min(tmin[2], tmax[2]);
+
+    vec3 t2;
+    t2[0] = glm_max(tmin[0], tmax[0]);
+    t2[1] = glm_max(tmin[1], tmax[1]);
+    t2[2] = glm_max(tmin[2], tmax[2]);
+
+    float t_near = glm_max(glm_max(t1[0], t1[1]), t1[2]);
+    float t_far = glm_min(glm_min(t2[0], t2[1]), t2[2]);
+
+    if (t_near > t_far) {
+        return false;
+    }
+
+    (*hit_dist_along_ray) = t_near;
+    return true;
+}
+
 // Transforms AABB from model space to world space.
 static inline te_aabb_shape
 aabb_shape_convert_to_world(te_aabb_shape* aabb, mat4 world_mat) {

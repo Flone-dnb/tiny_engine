@@ -24,6 +24,7 @@ typedef struct te_model_vertex {
     vec3 pos;
     vec3 normal;
     vec2 uv;
+    // NOTE: if changing this struct also update gl vertex attribute description and offsets
 } te_model_vertex;
 
 // 3D model.
@@ -836,6 +837,19 @@ prv_model_set_vertex_attributes() {
     // UV.
     glVertexAttribPointer(
         2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)(sizeof(vec3) * 2));
+}
+
+unsigned int
+prv_model_get_render_data_handle(te_model* model) {
+    return model->render_data_handle;
+}
+
+te_model_renderer* prv_model_get_model_renderer(te_model* model) {
+    if (model->render_data_handle == 0xFFFFFFFF) {
+        return NULL;
+    }
+
+    return prv_model_get_renderer(model);
 }
 
 te_aabb_shape

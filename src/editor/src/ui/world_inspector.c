@@ -542,6 +542,50 @@ world_inspector_rebuild_list(te_world_inspector* inspector, te_world* game_world
 }
 
 void
+world_inspector_select_obj(te_world_inspector* inspector, void* obj) {
+    if (inspector->state != TE_WIS_SHOW_WORLD_OBJECTS) {
+        return;
+    }
+
+    if (obj == NULL) {
+        property_inspector_hide(inspector->property_inspector);
+        return;
+    }
+
+    te_world_item_info* item_list = inspector->item_list;
+    unsigned int obj_idx = 0xFFFFFFFF;
+    for (unsigned int i = 0; i < inspector->item_list_count; i++) {
+        if (item_list[i].obj == obj) {
+            obj_idx = i;
+            break;
+        }
+    }
+    if (obj_idx == 0xFFFFFFFF) {
+        return;
+    }
+
+    te_world_item_info* selected_info = &item_list[obj_idx];
+
+    const char* type_id = NULL;
+    switch (selected_info->type) {
+        case (TE_WIT_MODEL): {
+            type_id = model_get_type_id();
+            break;
+        }
+        case (TE_WIT_CAMERA): {
+            type_id = camera_get_type_id();
+            break;
+        }
+        case (TE_WIT_WIDGET): {
+            type_id = widget_get_owner_type_id(selected_info->obj);
+            break;
+        }
+    }
+
+    property_inspector_show(inspector->property_inspector, selected_info->obj, type_id);
+}
+
+void
 world_inspector_refresh_names(te_world_inspector* inspector) {
     if (inspector->state == TE_WIS_SHOW_WORLD_OBJECTS
         || inspector->state == TE_WIS_SHOW_ATTACH_TO) {

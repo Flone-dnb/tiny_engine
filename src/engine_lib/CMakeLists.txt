@@ -19,7 +19,6 @@ set(PROJECT_SOURCES
     src/debug_console.c
     src/type_database.c
     src/render/renderer.c
-    src/render/model_renderer.h
     src/render/model_renderer.c
     src/render/shader_manager.c
     src/render/texture_manager.c
@@ -65,6 +64,7 @@ set(PROJECT_SOURCES
     include/render/texture_manager.h
     include/render/font_manager.h
     include/render/debug_drawer.h
+    include/render/model_renderer.h
     include/world.h
     include/game/camera.h
     include/game/model.h

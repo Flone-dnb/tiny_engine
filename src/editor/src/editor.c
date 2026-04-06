@@ -18,7 +18,7 @@
 #include <ui/file_dialog.h>
 #include <ui/editor_ui.h>
 #include <ui/world_inspector.h>
-#include <ui/file_dialog.h>
+#include <obj_picking.h>
 
 struct te_editor {
     // Not NULL if @ref game_world was loaded from a file (relative to the `res` directory).
@@ -364,38 +364,39 @@ editor_on_mouse_button_pressed(
     (void)was_handled_by_widget;
     te_editor* editor = game_instance;
 
+    if (editor->game_world == NULL) {
+        return;
+    }
+    te_camera* game_camera = world_get_active_camera(editor->game_world);
+    if (game_camera == NULL) {
+        return;
+    }
+
+    vec4 viewport;
+    camera_get_viewport(game_camera, viewport);
+
+    vec2 cursor_pos;
+    te_window* window = game_manager_get_window(game_manager);
+    window_get_cursor_position(window, &cursor_pos[0], &cursor_pos[1]);
+
+    unsigned int window_width;
+    unsigned int window_height;
+    window_get_size(window, &window_width, &window_height);
+    glm_vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
+
+    if (cursor_pos[0] < viewport[0] || cursor_pos[1] < viewport[1]
+        || cursor_pos[0] > viewport[0] + viewport[2]
+        || cursor_pos[1] > viewport[1] + viewport[3]) {
+        // Outside of the game viewport.
+        return;
+    }
+
     if (button == TE_MB_RIGHT) {
-        if (editor->game_world == NULL) {
-            return;
-        }
-        te_camera* game_camera = world_get_active_camera(editor->game_world);
-        if (game_camera == NULL) {
-            return;
-        }
-
-        vec4 viewport;
-        camera_get_viewport(game_camera, viewport);
-
-        vec2 cursor_pos;
-        te_window* window = game_manager_get_window(game_manager);
-        window_get_cursor_position(window, &cursor_pos[0], &cursor_pos[1]);
-
-        unsigned int window_width;
-        unsigned int window_height;
-        window_get_size(window, &window_width, &window_height);
-        glm_vec2_div(
-            cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
-
-        if (cursor_pos[0] < viewport[0] || cursor_pos[1] < viewport[1]
-            || cursor_pos[0] > viewport[0] + viewport[2]
-            || cursor_pos[1] > viewport[1] + viewport[3]) {
-            // Outside of the viewport.
-            return;
-        }
-
         window_capture_mouse_cursor(window, true);
-
         editor_camera_enable_input(editor->editor_camera, true);
+    }else if (button == TE_MB_LEFT) {
+        void* obj = obj_picking_find_obj_under_cursor(cursor_pos, game_camera, editor->game_world);
+        world_inspector_select_obj(editor_ui_get_world_inspector(editor->ui), obj);
     }
 }
 
@@ -414,7 +415,6 @@ editor_on_mouse_button_released(
         }
 
         window_capture_mouse_cursor(window, false);
-
         editor_camera_enable_input(editor->editor_camera, false);
     }
 }
