@@ -7,6 +7,7 @@
 struct te_game_manager;
 
 typedef struct te_editor te_editor;
+struct te_model;
 
 te_editor* editor_create();
 void editor_destroy(te_editor* editor);
@@ -14,6 +15,10 @@ void editor_destroy(te_editor* editor);
 // Destroys previous game world (if existed).
 // Optionally specify a non-NULL path to file to load as the new world.
 void editor_create_game_world(te_editor* editor, const char* relative_path_to_world);
+
+// Shows or hides gizmo around the specified model.
+// Specify NULL to hide the gizmo.
+void editor_set_gizmo(te_editor* editor, struct te_model* target);
 
 // window callbacks -------------------------------------------------------------------------------
 void editor_on_game_started(void* game_instance, struct te_game_manager* game_manager);

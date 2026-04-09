@@ -18,15 +18,6 @@
 
 #define MODEL_TEX_LOAD_OPTION TE_TLO_GENERATE_MIPMAPS
 
-// Vertex of a model.
-typedef struct te_model_vertex {
-    // NOTE: if changing this struct also update gl vertex attribute description and offsets
-    vec3 pos;
-    vec3 normal;
-    vec2 uv;
-    // NOTE: if changing this struct also update gl vertex attribute description and offsets
-} te_model_vertex;
-
 // 3D model.
 struct te_model {
     // AABB in model space.
@@ -55,6 +46,13 @@ struct te_model {
     te_model* child_model;
     te_model* parent_model;
     te_camera* attached_camera;
+
+    // Custom user-specified pointer.
+    void* custom_ptr;
+    void (*custom_on_before_destroyed)(te_model*);
+    void (*custom_get_geometry)(
+        te_model* model, te_model_vertex** vertices, unsigned short** indices,
+        unsigned int* vertex_count, unsigned int* index_count, bool* free_custom_geometry);
 
     // Color in RGBA format in range [0.0; 1.0].
     vec4 color;
@@ -123,6 +121,9 @@ model_create() {
     model->path_to_geo = NULL;
     model->custom_vert_relative_path = NULL;
     model->custom_frag_relative_path = NULL;
+    model->custom_ptr = NULL;
+    model->custom_on_before_destroyed = NULL;
+    model->custom_get_geometry = NULL;
     model->is_opaque = true;
     model->is_serialization_allowed = true;
     glm_vec2_one(model->tex_tiling);
@@ -142,6 +143,10 @@ model_create() {
 
 void
 model_destroy(te_model* model) {
+    if (model->custom_on_before_destroyed != NULL) {
+        model->custom_on_before_destroyed(model);
+    }
+
     if (model->child_model != NULL) {
         if (model->child_model->world != NULL) {
             // We should have despawned it in our despawn callback.
@@ -406,6 +411,18 @@ model_get_scale(te_model* model, vec3 out) {
     glm_vec3_copy(model->scale, out);
 }
 
+void model_get_world_position(te_model* model, vec3 out) {
+    if (model->render_data_handle == 0xFFFFFFFF) {
+        model_get_position(model, out);
+        return;
+    }
+
+    te_model_render_data* target_data = model_renderer_get_render_data_tmp(
+        prv_model_get_model_renderer(model), prv_model_get_render_data_handle(model));
+
+    glm_vec3_copy(target_data->world_mat[3], out);
+}
+
 void
 model_get_color(te_model* model, vec4 out) {
     glm_vec4_copy(model->color, out);
@@ -545,6 +562,20 @@ model_get_attached_camera(te_model* model) {
     return model->attached_camera;
 }
 
+void model_set_custom_ptr(te_model* model, void* ptr) {
+    model->custom_ptr = ptr;
+}
+
+void*
+model_get_custom_ptr(te_model* model) {
+    return model->custom_ptr;
+}
+
+void model_set_custom_on_before_destroyed(
+    te_model* model, void (*custom_on_before_destroyed)(te_model*)) {
+    model->custom_on_before_destroyed = custom_on_before_destroyed;
+}
+
 te_world*
 model_get_world(te_model* model) {
     return model->world;
@@ -585,7 +616,14 @@ prv_model_add_to_model_renderer(te_model* model) {
         te_model_vertex* vertices;
         unsigned int vertex_count;
         unsigned short* indices;
-        prv_model_generate_cube(&vertices, &indices, &vertex_count, &index_count);
+        bool free_custom_geometry = false;
+        if (model->custom_get_geometry == NULL) {
+            prv_model_generate_cube(&vertices, &indices, &vertex_count, &index_count);
+        } else {
+            model->custom_get_geometry(
+                model, &vertices, &indices, &vertex_count, &index_count,
+                &free_custom_geometry);
+        }
 
         glGenBuffers(1, &vbo);
         glGenBuffers(1, &ebo);
@@ -614,8 +652,10 @@ prv_model_add_to_model_renderer(te_model* model) {
         // Calculate local AABB.
         model->aabb_local = prv_model_calc_aabb(vertices, vertex_count);
 
-        free(vertices);
-        free(indices);
+        if (model->custom_get_geometry == NULL || free_custom_geometry) {
+            free(vertices);
+            free(indices);
+        }
     }
 
     // Add to rendering.
@@ -818,6 +858,13 @@ model_set_geometry(te_model* model, const char* relative_path) {
 const char*
 model_get_geometry(te_model* model) {
     return model->path_to_geo;
+}
+
+void model_set_custom_geometry_provider(
+    te_model* model, void (*custom_get_geometry)(
+        te_model* model, te_model_vertex** vertices, unsigned short** indices,
+        unsigned int* vertex_count, unsigned int* index_count, bool* free_custom_geometry)) {
+    model->custom_get_geometry = custom_get_geometry;
 }
 
 const char*

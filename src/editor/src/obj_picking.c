@@ -1,39 +1,24 @@
 #include "obj_picking.h"
 
-#include "world.h"
-#include "game/camera.h"
-#include "game/model.h"
-#include "render/model_renderer.h"
-#include "shape/frustum_shape.h"
+#include <world.h>
+#include <game/camera.h>
+#include <game/model.h>
+#include <render/model_renderer.h>
+#include <shape/frustum_shape.h>
+#include <gizmo.h>
 
-void* obj_picking_find_obj_under_cursor(vec2 cursor_pos_rel, te_camera* camera, te_world* world) {
+void*
+obj_picking_find_obj_under_cursor(
+    vec2 cursor_pos_rel, te_camera* camera, te_world* world, te_gizmo* gizmo) {
     te_frustum_shape* frustum = camera_get_frustum(camera);
+
+    vec3 camera_world_ray;
+    if (!camera_calc_cursor_world_dir(camera, cursor_pos_rel, camera_world_ray)) {
+        return NULL;
+    }
+
     vec3 camera_world_pos;
-    camera_get_position(camera, camera_world_pos);
-
-    // Convert mouse pos to NDC [-1; 1] space.
-    vec2 ndc;
-    glm_vec2_mul(cursor_pos_rel, (vec2){2.0f, 2.0f}, ndc);
-    ndc[1] = 2.0f - ndc[1]; // flip Y
-    glm_vec2_sub(ndc, (vec2){1.0f, 1.0f}, ndc);
-
-    // Construct a point in clip space.
-    vec4 camera_ray;
-    camera_ray[0] = ndc[0];
-    camera_ray[1] = ndc[1];
-    camera_ray[2] = -1.0f; // forward axis in clip space
-    camera_ray[3] = 1.0f;
-
-    // Apply inverse view/proj matrix.
-    mat4* view_proj_mat = camera_get_view_proj_mat(camera);
-    mat4 inv_view_proj_mat;
-    glm_mat4_inv(*view_proj_mat, inv_view_proj_mat);
-    glm_mat4_mulv(inv_view_proj_mat, camera_ray, camera_ray);
-    glm_vec3_divs(camera_ray, camera_ray[3], camera_ray);
-
-    // Get direction from camera pos.
-    glm_vec3_sub(camera_ray, camera_world_pos, camera_ray);
-    glm_vec3_normalize(camera_ray);
+    camera_get_world_position(camera, camera_world_pos);
 
     unsigned int count;
     te_model** models = world_get_models(world, &count);
@@ -66,14 +51,24 @@ void* obj_picking_find_obj_under_cursor(vec2 cursor_pos_rel, te_camera* camera, 
 
         float distance;
         if (!aabb_shape_intersect_ray(
-                &data->aabb_world, camera_world_pos, camera_ray, &distance)) {
+                &data->aabb_world, camera_world_pos, camera_world_ray, &distance)) {
             continue;
         }
 
-        // TODO: for now just do a bunch of simple tests (no ray-triangle intersection
-        // because we don't store the geometry on the CPU).
+        if (gizmo != NULL) {
+            if (models[i] == gizmo_get_model_x(gizmo) || models[i] == gizmo_get_model_y(gizmo)
+                || models[i] == gizmo_get_model_z(gizmo)) {
+                // Always prioritize gizmo.
+                info.model = models[i];
+                break;
+            }
+        }
+
         const float bb_size = data->aabb_world.extents[0] * 2.0f * data->aabb_world.extents[1]
                               * 2.0f * data->aabb_world.extents[2] * 2.0f;
+
+        // TODO: for now just do a bunch of simple tests (no ray-triangle intersection
+        // because we don't store the geometry on the CPU).
         if (info.model != NULL) {
             if (!aabb_shape_intersect(&data->aabb_world, &info.aabb_world)) {
                 if (distance >= info.distance) {

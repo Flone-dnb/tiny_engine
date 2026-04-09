@@ -19,6 +19,7 @@
 #include <ui/editor_ui.h>
 #include <ui/world_inspector.h>
 #include <obj_picking.h>
+#include <gizmo.h>
 
 struct te_editor {
     // Not NULL if @ref game_world was loaded from a file (relative to the `res` directory).
@@ -48,6 +49,9 @@ struct te_editor {
     // Always valid.
     te_editor_ui* ui;
 
+    // Not NULL if shown.
+    te_gizmo* gizmo;
+
     // Time (in seconds) since @ref game_world_stats_widget was updated.
     float time_since_stats_update_sec;
 };
@@ -64,6 +68,7 @@ editor_create() {
     editor->file_dialog = NULL;
     editor->game_world_relative_path = NULL;
     editor->editor_world = NULL;
+    editor->gizmo = NULL;
     editor->time_since_stats_update_sec = 10.0f;
 
     return editor;
@@ -96,6 +101,8 @@ destroy_game_world(te_editor* editor, te_game_manager* game_manager) {
     game_manager_destroy_world(game_manager, editor->game_world);
     editor->game_world = NULL;
     editor->game_world_stats_widget = NULL;
+
+    editor->gizmo = NULL;
 }
 
 void
@@ -104,7 +111,6 @@ editor_on_window_close(void* game_instance, struct te_game_manager* game_manager
 
     if (editor->game_world != NULL) {
         destroy_game_world(editor, game_manager);
-        editor->game_world = NULL;
     }
 
     if (editor->file_dialog != NULL) {
@@ -192,6 +198,23 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
     // Refresh world inspector.
     te_world_inspector* inspector = editor_ui_get_world_inspector(editor->ui);
     world_inspector_rebuild_list(inspector, editor->game_world);
+}
+
+void
+editor_set_gizmo(te_editor* editor, te_model* target) {
+    if (editor->game_world == NULL){
+        log_error("expected the game world to be valid");
+        abort();
+    }
+
+    if (editor->gizmo != NULL) {
+        gizmo_destroy_in_world_now(editor->gizmo, editor->game_world);
+        editor->gizmo = NULL;
+    }
+
+    if (target != NULL) {
+        editor->gizmo = gizmo_create_in_world(editor->game_world, target);
+    }
 }
 
 void
@@ -395,7 +418,20 @@ editor_on_mouse_button_pressed(
         window_capture_mouse_cursor(window, true);
         editor_camera_enable_input(editor->editor_camera, true);
     }else if (button == TE_MB_LEFT) {
-        void* obj = obj_picking_find_obj_under_cursor(cursor_pos, game_camera, editor->game_world);
+        void* obj = obj_picking_find_obj_under_cursor(cursor_pos, game_camera, editor->game_world, editor->gizmo);
+
+        if (editor->gizmo != NULL) {
+            if (obj == gizmo_get_model_x(editor->gizmo)) {
+                gizmo_start_grab_x(editor->gizmo);
+                return;
+            } else if (obj == gizmo_get_model_y(editor->gizmo)) {
+                gizmo_start_grab_y(editor->gizmo);
+                return;
+            } else if (obj == gizmo_get_model_z(editor->gizmo)) {
+                gizmo_start_grab_z(editor->gizmo);
+                return;
+            }
+        }
         world_inspector_select_obj(editor_ui_get_world_inspector(editor->ui), obj);
     }
 }
@@ -409,13 +445,20 @@ editor_on_mouse_button_released(
     te_editor* editor = game_instance;
     te_window* window = game_manager_get_window(game_manager);
 
-    if (button == TE_MB_RIGHT && window_is_mouse_captured(window)) {
-        if (editor->game_world == NULL) {
+    if (button == TE_MB_RIGHT) {
+        if (window_is_mouse_captured(window)) {
+            if (editor->game_world == NULL) {
+                return;
+            }
+
+            window_capture_mouse_cursor(window, false);
+            editor_camera_enable_input(editor->editor_camera, false);
+        }
+    }else if (button == TE_MB_LEFT) {
+        if (editor->gizmo == NULL) {
             return;
         }
-
-        window_capture_mouse_cursor(window, false);
-        editor_camera_enable_input(editor->editor_camera, false);
+        gizmo_end_grab(editor->gizmo);
     }
 }
 
@@ -426,7 +469,15 @@ editor_on_mouse_moved(
     (void)game_manager;
 
     te_editor* editor = game_instance;
+    if (editor->game_world == NULL) {
+        return;
+    }
+
     editor_camera_on_mouse_moved(editor->editor_camera, x_offset, y_offset);
+
+    if (editor->gizmo != NULL && gizmo_is_grabbed(editor->gizmo)) {
+        gizmo_move(editor->gizmo, editor_camera_get_camera(editor->editor_camera), x_offset, y_offset);
+    }
 }
 
 void

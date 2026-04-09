@@ -20,6 +20,9 @@ const char* camera_get_name(te_camera* camera);
 void camera_set_position(te_camera* camera, vec3 position);
 void camera_get_position(te_camera* camera, vec3 out);
 
+// Unlike @ref camera_get_position this function considers parent model (if it was set).
+void camera_get_world_position(te_camera* camera, vec3 out);
+
 // Sets rotation (in degrees) of the camera.
 void camera_set_rotation(te_camera* camera, vec3 rotation);
 void camera_get_rotation(te_camera* camera, vec3 out);
@@ -43,6 +46,11 @@ void camera_get_viewport(te_camera* camera, vec4 out);
 void camera_get_forward(te_camera* camera, vec3 out);
 void camera_get_right(te_camera* camera, vec3 out);
 void camera_get_up(te_camera* camera, vec3 out);
+
+// Uses mouse cursor's position in range [0.0; 1.0] (relative to the window)
+// and converts it into a world space direction from the camera along the cursor.
+// Returns `false` if the cursor is outside of the camera's viewport.
+bool camera_calc_cursor_world_dir(te_camera* camera, vec2 cursor_relative_pos, vec3 out);
 
 // Allows disabling serialization of the camera (enabled by default).
 void camera_set_is_serialization_allowed(te_camera* camera, bool enable);

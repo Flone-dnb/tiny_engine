@@ -12,6 +12,7 @@
 #include <widget/button_widget.h>
 #include <misc/wchar_funcs.h>
 #include <type_database.h>
+#include <editor.h>
 #include <io/log.h>
 
 #define BUTTON_HIDDEN_X_POS 10.0f
@@ -49,6 +50,8 @@ typedef struct te_world_item_info {
 struct te_world_inspector {
     // Do not free/destroy, parent widget.
     te_widget* left_panel;
+
+    te_editor* editor;
 
     // Do not free/destroy.
     te_property_inspector* property_inspector;
@@ -96,11 +99,12 @@ struct te_world_inspector {
 };
 
 te_world_inspector*
-world_inspector_create(te_property_inspector* property_inspector) {
+world_inspector_create(te_editor* editor, te_property_inspector* property_inspector) {
     te_world_inspector* inspector = malloc(sizeof(te_world_inspector));
 
     inspector->property_inspector = property_inspector;
     inspector->left_panel = NULL;
+    inspector->editor = editor;
     inspector->item_list = NULL;
     inspector->button_2dobj = NULL;
     inspector->button_3dobj = NULL;
@@ -549,6 +553,7 @@ world_inspector_select_obj(te_world_inspector* inspector, void* obj) {
 
     if (obj == NULL) {
         property_inspector_hide(inspector->property_inspector);
+        editor_set_gizmo(inspector->editor, NULL);
         return;
     }
 
@@ -570,6 +575,7 @@ world_inspector_select_obj(te_world_inspector* inspector, void* obj) {
     switch (selected_info->type) {
         case (TE_WIT_MODEL): {
             type_id = model_get_type_id();
+            editor_set_gizmo(inspector->editor, selected_info->obj);
             break;
         }
         case (TE_WIT_CAMERA): {

@@ -4,8 +4,10 @@
 
 #include <cglm/vec2.h>
 #include <cglm/vec3.h>
+#include <cglm/mat4.h>
 
 struct te_renderer;
+struct te_aabb_shape;
 
 // Draws a text for a certain amount of time. Specify 0 as time to draw for just 1 frame.
 // The text string is copied.
@@ -17,6 +19,12 @@ struct te_renderer;
 void debug_drawer_draw_text(const char* text, float time_sec);
 void debug_drawer_draw_text_color(const char* text, float time_sec, vec3 color);
 void debug_drawer_draw_text_color_pos(const char* text, float time_sec, vec3 color, vec2 pos);
+
+// Specify 0 as time to draw for just 1 frame.
+void debug_drawer_draw_aabb(struct te_aabb_shape* aabb, float time_sec);
+
+// Specify 0 as time to draw for just 1 frame.
+void debug_drawer_draw_line(vec3 from, vec3 to, float time_sec);
 
 float debug_drawer_get_default_text_height();
 
@@ -30,6 +38,6 @@ void prv_debug_drawer_init(struct te_renderer* renderer);
 void prv_debug_drawer_deinit(struct te_renderer* renderer);
 
 // Must be called every frame to draw debug objects.
-void prv_debug_drawer_draw(struct te_renderer* renderer, float delta_time_sec);
+void prv_debug_drawer_draw(struct te_renderer* renderer, float delta_time_sec, mat4* view_proj_mat);
 
 #endif

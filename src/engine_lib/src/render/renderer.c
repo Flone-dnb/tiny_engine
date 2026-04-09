@@ -524,25 +524,47 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     }
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    // Draw debug.
-    GPU_SECTION_BEGIN("debug");
-    if (record_new_queries) {
-        GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_debug);
-    }
-    {
-        const Uint64 cpu_start_counter = SDL_GetPerformanceCounter();
+    te_camera* debug_camera = NULL;
+    for (unsigned int i = 0; i < world_count; i++) {
+        debug_camera = world_get_active_camera(worlds[i]);
+        if (debug_camera == NULL) {
+            continue;
+        }
 
-        prv_debug_console_draw(delta_time_sec);
-        prv_debug_drawer_draw(renderer, delta_time_sec);
+#if defined(ENGINE_EDITOR)
+        // First camera in the game world.
+        if (strcmp(world_get_name(worlds[i]), "game") == 0) {
+            break;
+        } else {
+            debug_camera = NULL;
+        }
+#else
+        // Just use the first active camera.
+        break;
+#endif
+    }
 
-        debug_stats->cpu_time_submit_debug_ms =
-            (float)(SDL_GetPerformanceCounter() - cpu_start_counter) * 1000.0f
-            / (float)(SDL_GetPerformanceFrequency());
+    if (debug_camera != NULL) {
+        // Draw debug.
+        GPU_SECTION_BEGIN("debug");
+        if (record_new_queries) {
+            GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_debug);
+        }
+        {
+            const Uint64 cpu_start_counter = SDL_GetPerformanceCounter();
+
+            prv_debug_console_draw(delta_time_sec);
+            prv_debug_drawer_draw(renderer, delta_time_sec, camera_get_view_proj_mat(debug_camera));
+
+            debug_stats->cpu_time_submit_debug_ms =
+                (float)(SDL_GetPerformanceCounter() - cpu_start_counter) * 1000.0f
+                / (float)(SDL_GetPerformanceFrequency());
+        }
+        if (record_new_queries) {
+            GPU_TIME_SECTION_END;
+        }
+        GPU_SECTION_END;
     }
-    if (record_new_queries) {
-        GPU_TIME_SECTION_END;
-    }
-    GPU_SECTION_END;
 
     if (GLAD_GL_EXT_disjoint_timer_query == 1 && record_new_queries) {
         glQueryCounterEXT(renderer->gl_timestamp_frame_end, GL_TIMESTAMP_EXT);

@@ -188,6 +188,27 @@ camera_get_position(te_camera* camera, vec3 out) {
     glm_vec3_copy(camera->position, out);
 }
 
+void camera_get_world_position(te_camera* camera, vec3 out) {
+    // Get camera world pos.
+    vec4 camera_pos;
+    glm_vec3_copy(camera->position, camera_pos);
+    if (camera->parent_model != NULL) {
+        mat4* world_mat = prv_model_get_world_mat_tmp(camera->parent_model);
+
+        // Ignore scale.
+        mat4 world;
+        glm_mat4_copy(*world_mat, world);
+        math_normalize_safely(world[0]);
+        math_normalize_safely(world[1]);
+        math_normalize_safely(world[2]);
+
+        glm_mat4_mulv(world, camera_pos, camera_pos);
+    }
+    camera_pos[3] = 1.0f;
+
+    glm_vec3_copy(camera_pos, out);
+}
+
 void
 camera_get_rotation(te_camera* camera, vec3 out) {
     glm_vec3_copy(camera->rotation, out);
@@ -280,6 +301,54 @@ camera_get_up(te_camera* camera, vec3 out) {
     }
 
     glm_vec3_copy(camera->up, out);
+}
+
+bool
+camera_calc_cursor_world_dir(
+    te_camera* camera, vec2 cursor_relative_pos, vec3 out) {
+    if (cursor_relative_pos[0] < camera->viewport[0]
+        || cursor_relative_pos[1] < camera->viewport[1]
+        || cursor_relative_pos[0] > camera->viewport[0] + camera->viewport[2]
+        || cursor_relative_pos[1] > camera->viewport[1] + camera->viewport[3]) {
+        // Outside of the game viewport.
+        glm_vec3_zero(out);
+        return false;
+    }
+
+    // Remap to viewport.
+    glm_vec2_sub(cursor_relative_pos, camera->viewport, cursor_relative_pos);
+    glm_vec2_div(cursor_relative_pos, &camera->viewport[2], cursor_relative_pos);
+
+    // Convert mouse pos to NDC [-1; 1] space.
+    vec2 ndc;
+    glm_vec2_mul(cursor_relative_pos, (vec2){2.0f, 2.0f}, ndc);
+    ndc[1] = 2.0f - ndc[1]; // flip Y
+    glm_vec2_sub(ndc, (vec2){1.0f, 1.0f}, ndc);
+
+    // Construct a point in clip space.
+    vec4 camera_ray;
+    camera_ray[0] = ndc[0];
+    camera_ray[1] = ndc[1];
+    camera_ray[2] = -1.0f; // forward axis in clip space
+    camera_ray[3] = 1.0f;
+
+    // Apply inverse view/proj matrix.
+    mat4* view_proj_mat = camera_get_view_proj_mat(camera);
+    mat4 inv_view_proj_mat;
+    glm_mat4_inv(*view_proj_mat, inv_view_proj_mat);
+    glm_mat4_mulv(inv_view_proj_mat, camera_ray, camera_ray);
+    glm_vec3_divs(camera_ray, camera_ray[3], camera_ray);
+
+    vec3 camera_pos;
+    camera_get_world_position(camera, camera_pos);
+
+    // Get direction from camera pos.
+    glm_vec3_sub(camera_ray, camera_pos, camera_ray);
+    glm_vec3_normalize(camera_ray);
+
+    glm_vec3_copy(camera_ray, out);
+
+    return true;
 }
 
 void

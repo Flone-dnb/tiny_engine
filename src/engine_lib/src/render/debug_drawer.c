@@ -7,8 +7,11 @@
 #include <render/font_manager.h>
 #include <render/renderer.h>
 #include <render/shader_manager.h>
+#include <shape/aabb_shape.h>
 #include <window.h>
 #include <glad/glad.h>
+
+#define TE_DEBUG_DRAWER_AABB_INDEX_COUNT 24
 
 // Fixed text height for drawing text, in range [0.0; 1.0].
 static float debug_drawer_default_text_height = 0.0275f;
@@ -24,6 +27,7 @@ typedef struct te_debug_drawer_glyph {
     float distance_to_next_glyph;
 } te_debug_drawer_glyph;
 
+// Data needed to draw a text.
 typedef struct te_debug_drawer_text {
     // Must be freed.
     char* text;
@@ -43,7 +47,24 @@ typedef struct te_debug_drawer_text {
     vec2 pos;
 } te_debug_drawer_text;
 
-// Groups data related to the text shader program.
+// Data needed to draw AABB.
+typedef struct te_debug_drawer_aabb {
+    te_aabb_shape aabb;
+
+    // If less than zero then item should be destroyed.
+    float time_left_sec;
+} te_debug_drawer_aabb;
+
+// Data needed to draw a line.
+typedef struct te_debug_drawer_line {
+    vec3 from;
+    vec3 to;
+
+    // If less than zero then item should be destroyed.
+    float time_left_sec;
+} te_debug_drawer_line;
+
+// Data for the text shader program.
 typedef struct te_debug_drawer_text_shader {
     unsigned int prog_id;
 
@@ -54,6 +75,24 @@ typedef struct te_debug_drawer_text_shader {
     int uniform_text_color;
 } te_debug_drawer_text_shader;
 
+// Data for the AABB shader program.
+typedef struct te_debug_drawer_aabb_shader {
+    unsigned int prog_id;
+
+    int uniform_pos_offset;
+    int uniform_extents;
+    int uniform_view_proj_mat;
+} te_debug_drawer_aabb_shader;
+
+// Data for the line shader program.
+typedef struct te_debug_drawer_line_shader {
+    unsigned int prog_id;
+
+    int uniform_from;
+    int uniform_to;
+    int uniform_view_proj_mat;
+} te_debug_drawer_line_shader;
+
 // Groups debug drawer data.
 typedef struct te_debug_drawer {
     // Do not free this pointer.
@@ -62,14 +101,36 @@ typedef struct te_debug_drawer {
     // Array of text to draw. Size of this array is @ref text_count.
     te_debug_drawer_text* texts;
 
+    // Array of AABBs to draw. Size of this array is @ref aabb_count.
+    te_debug_drawer_aabb* aabbs;
+
+    // Array of lines to draw. Size of this array is @ref line_count.
+    te_debug_drawer_line* lines;
+
     // Size of the array @ref texts.
     unsigned int text_count;
 
+    // Size of the array @ref aabbs.
+    unsigned int aabb_count;
+
+    // Size of the array @ref lines.
+    unsigned int line_count;
+
     // Quad geometry.
-    unsigned int vbo;
-    unsigned int ebo;
+    unsigned int vbo_quad;
+    unsigned int ebo_quad;
+
+    // AABB geometry.
+    unsigned int vbo_aabb;
+    unsigned int ebo_aabb;
+
+    // Line geometry.
+    unsigned int vbo_line;
+    unsigned int ebo_line;
 
     te_debug_drawer_text_shader text_shader;
+    te_debug_drawer_aabb_shader aabb_shader;
+    te_debug_drawer_line_shader line_shader;
 } te_debug_drawer;
 
 // Static to allow drawing easily from various places.
@@ -78,7 +139,17 @@ static te_debug_drawer drawer;
 void
 prv_debug_drawer_init(struct te_renderer* renderer) {
     drawer.texts = NULL;
+    drawer.aabbs = NULL;
+    drawer.lines = NULL;
     drawer.text_count = 0;
+    drawer.aabb_count = 0;
+    drawer.line_count = 0;
+    drawer.vbo_quad = 0;
+    drawer.ebo_quad = 0;
+    drawer.vbo_aabb = 0;
+    drawer.ebo_aabb = 0;
+    drawer.vbo_line = 0;
+    drawer.ebo_line = 0;
     drawer.renderer = renderer;
 
     // Load text shader.
@@ -99,6 +170,35 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
             get_uniform_location(drawer.text_shader.prog_id, "text_color");
     }
 
+    // Load AABB shader.
+    {
+        te_shader_manager* shader_manager = renderer_get_shader_manager(renderer);
+        drawer.aabb_shader.prog_id = shader_manager_request_shader(
+            shader_manager, "engine/shader/debug/aabb.vert.glsl", "engine/shader/debug/aabb.frag.glsl");
+
+        drawer.aabb_shader.uniform_pos_offset =
+            get_uniform_location(drawer.aabb_shader.prog_id, "pos_offset");
+        drawer.aabb_shader.uniform_extents =
+            get_uniform_location(drawer.aabb_shader.prog_id, "extents");
+        drawer.aabb_shader.uniform_view_proj_mat =
+            get_uniform_location(drawer.aabb_shader.prog_id, "view_proj_mat");
+    }
+
+    // Load line shader.
+    {
+        te_shader_manager* shader_manager = renderer_get_shader_manager(renderer);
+        drawer.line_shader.prog_id = shader_manager_request_shader(
+            shader_manager, "engine/shader/debug/line.vert.glsl",
+            "engine/shader/debug/line.frag.glsl");
+
+        drawer.line_shader.uniform_from =
+            get_uniform_location(drawer.line_shader.prog_id, "from");
+        drawer.line_shader.uniform_to =
+            get_uniform_location(drawer.line_shader.prog_id, "to");
+        drawer.line_shader.uniform_view_proj_mat =
+            get_uniform_location(drawer.line_shader.prog_id, "view_proj_mat");
+    }
+
     // Create quad geometry.
     {
         vec4 vertices[4]; // XY pos, ZW uv
@@ -108,17 +208,83 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
         glm_vec4_copy((vec4){1.0f, 0.0f, 1.0f, 0.0f}, &vertices[3][0]);
         const unsigned short indices[6] = {0, 1, 2, 0, 2, 3};
 
-        glGenBuffers(1, &drawer.vbo);
-        glGenBuffers(1, &drawer.ebo);
+        glGenBuffers(1, &drawer.vbo_quad);
+        glGenBuffers(1, &drawer.ebo_quad);
 
-        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo);
+        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_quad);
         glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(vec4), &vertices[0][0], GL_STATIC_DRAW);
 
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_quad);
         glBufferData(
             GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
 
         glBindAttribLocation(drawer.text_shader.prog_id, 0, "vertex");
+        glEnableVertexAttribArray(0);
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    }
+
+    // Create AABB geometry (using lines).
+    {
+        vec3 extents;
+        glm_vec3_copy((vec3){1.0f, 1.0f, 1.0f}, extents);
+
+        vec3 vertices[8];
+
+        glm_vec3_copy((vec3){-extents[0], -extents[1], -extents[2]}, &vertices[0][0]);
+        glm_vec3_copy((vec3){+extents[0], -extents[1], -extents[2]}, &vertices[1][0]);
+        glm_vec3_copy((vec3){+extents[0], -extents[1], +extents[2]}, &vertices[2][0]);
+        glm_vec3_copy((vec3){-extents[0], -extents[1], +extents[2]}, &vertices[3][0]);
+
+        glm_vec3_copy((vec3){-extents[0], +extents[1], -extents[2]}, &vertices[4][0]);
+        glm_vec3_copy((vec3){+extents[0], +extents[1], -extents[2]}, &vertices[5][0]);
+        glm_vec3_copy((vec3){+extents[0], +extents[1], +extents[2]}, &vertices[6][0]);
+        glm_vec3_copy((vec3){-extents[0], +extents[1], +extents[2]}, &vertices[7][0]);
+
+        const unsigned short indices[TE_DEBUG_DRAWER_AABB_INDEX_COUNT] = {
+            0, 1, 1, 2, 2, 3, 3, 0, // lower quad
+            4, 5, 5, 6, 6, 7, 7, 4, // upper quad
+            0, 4, 1, 5, 2, 6, 3, 7  // vertical lines
+        };
+
+        glGenBuffers(1, &drawer.vbo_aabb);
+        glGenBuffers(1, &drawer.ebo_aabb);
+
+        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_aabb);
+        glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(vec3), &vertices[0][0], GL_STATIC_DRAW);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_aabb);
+        glBufferData(
+            GL_ELEMENT_ARRAY_BUFFER, 24 * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
+
+        glBindAttribLocation(drawer.aabb_shader.prog_id, 0, "local_pos");
+        glEnableVertexAttribArray(0);
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    }
+
+    // Create line geometry.
+    {
+        vec3 vertices[2];
+
+        glm_vec3_copy((vec3){0.0f, 0.0f, 0.0f}, &vertices[0][0]);
+        glm_vec3_copy((vec3){1.0f, 1.0f, 1.0f}, &vertices[1][0]);
+
+        const unsigned short indices[2] = {0, 1};
+
+        glGenBuffers(1, &drawer.vbo_line);
+        glGenBuffers(1, &drawer.ebo_line);
+
+        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_line);
+        glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(vec3), &vertices[0][0], GL_STATIC_DRAW);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_line);
+        glBufferData(
+            GL_ELEMENT_ARRAY_BUFFER, 2 * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
+
+        glBindAttribLocation(drawer.line_shader.prog_id, 0, "local_pos");
         glEnableVertexAttribArray(0);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -139,17 +305,64 @@ prv_debug_drawer_deinit(struct te_renderer* renderer) {
         prv_debug_drawer_free_text(&drawer.texts[i]);
     }
     free(drawer.texts);
+    drawer.texts = NULL;
     drawer.text_count = 0;
+
+    free(drawer.aabbs);
+    drawer.aabbs = NULL;
+    drawer.aabb_count = 0;
+
+    free(drawer.lines);
+    drawer.lines = NULL;
+    drawer.line_count = 0;
 
     // Free shaders.
     te_shader_manager* shader_manager = renderer_get_shader_manager(renderer);
     shader_manager_mark_unused_shader(shader_manager, drawer.text_shader.prog_id);
+    shader_manager_mark_unused_shader(shader_manager, drawer.aabb_shader.prog_id);
+    shader_manager_mark_unused_shader(shader_manager, drawer.line_shader.prog_id);
 
     // Free geometry.
-    glDeleteBuffers(1, &drawer.vbo);
-    glDeleteBuffers(1, &drawer.ebo);
+    glDeleteBuffers(1, &drawer.vbo_quad);
+    glDeleteBuffers(1, &drawer.ebo_quad);
+    glDeleteBuffers(1, &drawer.vbo_aabb);
+    glDeleteBuffers(1, &drawer.ebo_aabb);
+    glDeleteBuffers(1, &drawer.vbo_line);
+    glDeleteBuffers(1, &drawer.ebo_line);
 
     drawer.renderer = NULL;
+}
+
+void debug_drawer_draw_aabb(te_aabb_shape* aabb, float time_sec) {
+    te_debug_drawer_aabb* aabbs = malloc(sizeof(te_debug_drawer_aabb) * (drawer.aabb_count + 1));
+    memcpy(
+        aabbs, drawer.aabbs,
+        sizeof(te_debug_drawer_aabb) * drawer.aabb_count);
+
+    free(drawer.aabbs);
+    drawer.aabbs = aabbs;
+
+    te_debug_drawer_aabb* new_item = &drawer.aabbs[drawer.aabb_count];
+    new_item->aabb = *aabb;
+    new_item->time_left_sec = time_sec;
+
+    drawer.aabb_count += 1;
+}
+
+void debug_drawer_draw_line(vec3 from, vec3 to, float time_sec) {
+    te_debug_drawer_line* lines =
+        malloc(sizeof(te_debug_drawer_line) * (drawer.line_count + 1));
+    memcpy(lines, drawer.lines, sizeof(te_debug_drawer_line) * drawer.line_count);
+
+    free(drawer.lines);
+    drawer.lines = lines;
+
+    te_debug_drawer_line* new_item = &drawer.lines[drawer.line_count];
+    new_item->time_left_sec = time_sec;
+    glm_vec3_copy(from, new_item->from);
+    glm_vec3_copy(to, new_item->to);
+
+    drawer.line_count += 1;
 }
 
 void
@@ -221,7 +434,8 @@ debug_drawer_get_default_text_height() {
 }
 
 void
-prv_debug_drawer_draw(struct te_renderer* renderer, float delta_time_sec) {
+prv_debug_drawer_draw(
+    struct te_renderer* renderer, float delta_time_sec, mat4* view_proj_mat) {
     unsigned int window_width;
     unsigned int window_height;
     window_get_size(renderer_get_window(renderer), &window_width, &window_height);
@@ -230,13 +444,101 @@ prv_debug_drawer_draw(struct te_renderer* renderer, float delta_time_sec) {
 
     glDisable(GL_DEPTH_TEST);
 
+    if (drawer.line_count > 0) {
+        glUseProgram(drawer.line_shader.prog_id);
+        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_line);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_line);
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), NULL);
+
+        glUniformMatrix4fv(
+            drawer.line_shader.uniform_view_proj_mat, 1, GL_FALSE, (*view_proj_mat)[0]);
+
+        for (unsigned int i = 0; i < drawer.line_count;) {
+            te_debug_drawer_line* line = &drawer.lines[i];
+
+            glUniform3fv(drawer.line_shader.uniform_from, 1, line->from);
+            glUniform3fv(drawer.line_shader.uniform_to, 1, line->to);
+
+            glDrawElements(GL_LINES, 2, GL_UNSIGNED_SHORT, NULL);
+
+            // Update state.
+            line->time_left_sec -= delta_time_sec;
+            if (line->time_left_sec < 0.0f) {
+                // No longer render this item.
+                // Note: nothing to free inside of the line item.
+                if (drawer.line_count == 1) {
+                    free(drawer.lines);
+                    drawer.lines = NULL;
+                } else {
+                    te_debug_drawer_line* new_lines =
+                        malloc(sizeof(te_debug_drawer_line) * (drawer.line_count - 1));
+                    memcpy(new_lines, drawer.lines, sizeof(te_debug_drawer_line) * i);
+                    memcpy(
+                        new_lines + i, drawer.lines + (i + 1),
+                        sizeof(te_debug_drawer_line) * (drawer.line_count - i - 1));
+                    free(drawer.lines);
+                    drawer.lines = new_lines;
+                }
+                drawer.line_count -= 1;
+            } else {
+                i += 1;
+            }
+        }
+    }
+
+    if (drawer.aabb_count > 0) {
+        glUseProgram(drawer.aabb_shader.prog_id);
+        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_aabb);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_aabb);
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), NULL);
+
+        glUniformMatrix4fv(drawer.aabb_shader.uniform_view_proj_mat, 1, GL_FALSE, (*view_proj_mat)[0]);
+
+        for (unsigned int i = 0; i < drawer.aabb_count;) {
+            te_debug_drawer_aabb* wireframe = &drawer.aabbs[i];
+
+            glUniform3fv(drawer.aabb_shader.uniform_pos_offset, 1, wireframe->aabb.center);
+            glUniform3fv(drawer.aabb_shader.uniform_extents, 1, wireframe->aabb.extents);
+
+            glDrawElements(
+                GL_LINES, TE_DEBUG_DRAWER_AABB_INDEX_COUNT, GL_UNSIGNED_SHORT, NULL);
+
+            // Update state.
+            wireframe->time_left_sec -= delta_time_sec;
+            if (wireframe->time_left_sec < 0.0f) {
+                // No longer render this item.
+                // Note: nothing to free inside of the AABB item.
+                if (drawer.aabb_count == 1) {
+                    free(drawer.aabbs);
+                    drawer.aabbs = NULL;
+                } else {
+                    te_debug_drawer_aabb* new_wireframes = malloc(
+                        sizeof(te_debug_drawer_aabb) * (drawer.aabb_count - 1));
+                    memcpy(
+                        new_wireframes, drawer.aabbs,
+                        sizeof(te_debug_drawer_aabb) * i);
+                    memcpy(
+                        new_wireframes + i, drawer.aabbs + (i + 1),
+                        sizeof(te_debug_drawer_aabb) * (drawer.aabb_count - i - 1));
+                    free(drawer.aabbs);
+                    drawer.aabbs = new_wireframes;
+                }
+                drawer.aabb_count -= 1;
+            } else {
+                i += 1;
+            }
+        }
+    }
+
     if (drawer.text_count > 0) {
         const float font_height = prv_font_manager_get_font_height_to_load();
         const float font_scale = debug_drawer_default_text_height / font_height;
 
         glUseProgram(drawer.text_shader.prog_id);
-        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo);
+        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_quad);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_quad);
         glActiveTexture(GL_TEXTURE0); // glyph's bitmap
 
         glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(vec4), NULL);

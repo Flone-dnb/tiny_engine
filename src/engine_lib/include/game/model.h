@@ -9,6 +9,15 @@ struct te_world;
 struct te_camera;
 struct te_model_renderer;
 
+// Vertex of a model.
+typedef struct te_model_vertex {
+    // NOTE: if changing this struct also update gl vertex attribute description and offsets
+    vec3 pos;
+    vec3 normal;
+    vec2 uv;
+    // NOTE: if changing this struct also update gl vertex attribute description and offsets
+} te_model_vertex;
+
 te_model* model_create();
 void model_destroy(te_model* model);
 
@@ -16,6 +25,18 @@ void model_destroy(te_model* model);
 // Specify NULL to use default model instead.
 void model_set_geometry(te_model* model, const char* relative_path);
 const char* model_get_geometry(te_model* model);
+
+// This geometry provider callback is useful for procedural CPU-generated meshes,
+// if you have static geometry on the disk use @ref model_set_geometry instead.
+//
+// This callback function will be triggered when the model is being spawned,
+// in this case this callback has to provide vertices and indices for the model.
+//
+// If you specify `free_geometry` as `true` the model will free provided geometry.
+void model_set_custom_geometry_provider(
+    te_model* model, void (*custom_get_geometry)(
+        te_model* model, te_model_vertex** vertices, unsigned short** indices,
+        unsigned int* vertex_count, unsigned int* index_count, bool* free_custom_geometry));
 
 // Optionally you can set a name of the model. The string will be copied.
 // Returns NULL if was not set previously.
@@ -29,6 +50,9 @@ void model_set_scale(te_model* model, vec3 scale);
 void model_get_position(te_model* model, vec3 out);
 void model_get_rotation(te_model* model, vec3 out); // in degrees
 void model_get_scale(te_model* model, vec3 out);
+
+// Unlike @ref model_get_position this function considers possible parent models.
+void model_get_world_position(te_model* model, vec3 out);
 
 // Sets color of the model in the RGBA format in range [0.0; 1.0].
 // Note that alpha will be ignored if @ref model_enable_transparency is disabled.
@@ -67,6 +91,15 @@ te_model* model_get_child_model(te_model* model);
 // In order to despawn such camera first detach it from the parent to make it "root" camera and then despawn using the world.
 void model_attach_camera(te_model* model, struct te_camera* camera);
 struct te_camera* model_get_attached_camera(te_model* model);
+
+// Optionally you can set a custom pointer to be stored in the model.
+void model_set_custom_ptr(te_model* model, void* ptr);
+void* model_get_custom_ptr(te_model* model);
+
+// Optionally you can set a custom callback that will be called before the model
+// is destroyed.
+void model_set_custom_on_before_destroyed(
+    te_model* model, void (*custom_on_before_destroyed)(te_model*));
 
 // Sets custom vertex shader.
 //

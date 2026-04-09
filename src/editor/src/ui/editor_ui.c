@@ -20,7 +20,7 @@ editor_ui_create(struct te_editor* editor) {
     te_editor_ui* ui = malloc(sizeof(te_editor_ui));
 
     ui->property_inspector = property_inspector_create(ui);
-    ui->world_inspector = world_inspector_create(ui->property_inspector);
+    ui->world_inspector = world_inspector_create(editor, ui->property_inspector);
     ui->filesystem_view = filesystem_view_create(editor);
 
     return ui;

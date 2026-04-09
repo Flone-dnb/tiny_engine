@@ -267,7 +267,7 @@ prv_world_remove_root_model_no_notify(
 
     // Remove from array (shift other elements).
     if (world->spawned_model_count > 1) {
-        memcpy(
+        memmove(
             world->spawned_models + model_idx, world->spawned_models + (model_idx + 1),
             sizeof(te_model*) * (world->spawned_model_count - model_idx - 1));
     }
