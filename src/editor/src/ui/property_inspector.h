@@ -12,3 +12,6 @@ void property_inspector_set_parent(te_property_inspector* inspector, struct te_w
 // Displays/hides properties of the specified object.
 void property_inspector_show(te_property_inspector* inspector, void* obj, const char* obj_type_id);
 void property_inspector_hide(te_property_inspector* inspector);
+
+// Returns NULL or the currently displayed game object.
+void* property_inspector_get_inspected_obj(te_property_inspector* inspector);

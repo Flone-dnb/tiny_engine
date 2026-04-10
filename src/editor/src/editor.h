@@ -20,6 +20,9 @@ void editor_create_game_world(te_editor* editor, const char* relative_path_to_wo
 // Specify NULL to hide the gizmo.
 void editor_set_gizmo(te_editor* editor, struct te_model* target);
 
+// Called before a game object (for example: te_model) is deleted from the game world.
+void editor_on_before_game_obj_deleted(te_editor* editor, void* game_obj);
+
 // window callbacks -------------------------------------------------------------------------------
 void editor_on_game_started(void* game_instance, struct te_game_manager* game_manager);
 void editor_on_game_tick(

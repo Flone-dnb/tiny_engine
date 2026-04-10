@@ -217,6 +217,17 @@ editor_set_gizmo(te_editor* editor, te_model* target) {
     }
 }
 
+void editor_on_before_game_obj_deleted(te_editor* editor, void* game_obj) {
+    if (editor->gizmo == NULL) {
+        return;
+    }
+
+    if (gizmo_get_target(editor->gizmo) == game_obj) {
+        gizmo_destroy_in_world_now(editor->gizmo, editor->game_world);
+        editor->gizmo = NULL;
+    }
+}
+
 void
 editor_on_game_tick(void* game_instance, te_game_manager* game_manager, float delta_time_sec) {
     (void)game_manager;

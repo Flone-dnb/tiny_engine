@@ -166,6 +166,8 @@ model_destroy(te_model* model) {
 
     free(model->name);
     free(model->tex_relative_path);
+    free(model->custom_frag_relative_path);
+    free(model->custom_vert_relative_path);
     free(model->path_to_geo);
     free(model);
 }
@@ -411,7 +413,8 @@ model_get_scale(te_model* model, vec3 out) {
     glm_vec3_copy(model->scale, out);
 }
 
-void model_get_world_position(te_model* model, vec3 out) {
+void
+model_get_world_position(te_model* model, vec3 out) {
     if (model->render_data_handle == 0xFFFFFFFF) {
         model_get_position(model, out);
         return;
@@ -562,7 +565,8 @@ model_get_attached_camera(te_model* model) {
     return model->attached_camera;
 }
 
-void model_set_custom_ptr(te_model* model, void* ptr) {
+void
+model_set_custom_ptr(te_model* model, void* ptr) {
     model->custom_ptr = ptr;
 }
 
@@ -571,7 +575,8 @@ model_get_custom_ptr(te_model* model) {
     return model->custom_ptr;
 }
 
-void model_set_custom_on_before_destroyed(
+void
+model_set_custom_on_before_destroyed(
     te_model* model, void (*custom_on_before_destroyed)(te_model*)) {
     model->custom_on_before_destroyed = custom_on_before_destroyed;
 }
@@ -860,8 +865,10 @@ model_get_geometry(te_model* model) {
     return model->path_to_geo;
 }
 
-void model_set_custom_geometry_provider(
-    te_model* model, void (*custom_get_geometry)(
+void
+model_set_custom_geometry_provider(
+    te_model* model,
+    void (*custom_get_geometry)(
         te_model* model, te_model_vertex** vertices, unsigned short** indices,
         unsigned int* vertex_count, unsigned int* index_count, bool* free_custom_geometry)) {
     model->custom_get_geometry = custom_get_geometry;
@@ -891,7 +898,8 @@ prv_model_get_render_data_handle(te_model* model) {
     return model->render_data_handle;
 }
 
-te_model_renderer* prv_model_get_model_renderer(te_model* model) {
+te_model_renderer*
+prv_model_get_model_renderer(te_model* model) {
     if (model->render_data_handle == 0xFFFFFFFF) {
         return NULL;
     }

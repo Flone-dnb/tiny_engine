@@ -243,11 +243,12 @@ model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
         bool found = false;
         for (unsigned int i = 0; i < renderer->shader_group_count; i++) {
             if (data_index >= start_index
-                && data_index < (start_index + renderer->shader_groups[i].count)) {
+                && data_index < start_index + renderer->shader_groups[i].count) {
                 group_index = i;
                 found = true;
                 break;
             }
+            start_index += renderer->shader_groups[i].count;
         }
         if (!found) {
             log_error("unable to find shader group from the specified handle");

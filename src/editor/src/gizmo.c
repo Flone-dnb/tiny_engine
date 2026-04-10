@@ -34,6 +34,7 @@ create_gizmo_model(te_gizmo* gizmo) {
     model_set_is_serialization_allowed(model, false);
     model_set_custom_ptr(model, gizmo);
     model_set_custom_geometry_provider(model, get_geometry);
+    model_set_custom_vert_shader(model, "editor/shader/gizmo.vert.glsl");
 
     return model;
 }
@@ -82,6 +83,11 @@ gizmo_destroy_in_world_now(te_gizmo* gizmo, te_world* world) {
     model_destroy(gizmo->model_x);
     model_destroy(gizmo->model_y);
     model_destroy(gizmo->model_z); // <- triggers gizmo destroy
+}
+
+void*
+gizmo_get_target(te_gizmo* gizmo) {
+    return gizmo->target;
 }
 
 void
@@ -281,7 +287,7 @@ get_geometry(
 
     // Make origin around 0.
     for (unsigned int k = 0; k < (*vertex_count); k++) {
-        (*vertices)[k].pos[0] += half_width;
+        (*vertices)[k].pos[0] += half_width + half_width / 4.0f;
     }
 
     (*index_count) = 36;

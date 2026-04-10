@@ -551,3 +551,8 @@ property_inspector_hide(te_property_inspector* inspector) {
 
     free(widgets);
 }
+
+void*
+property_inspector_get_inspected_obj(te_property_inspector* inspector) {
+    return inspector->obj;
+}

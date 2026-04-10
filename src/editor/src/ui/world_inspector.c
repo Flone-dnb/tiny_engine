@@ -132,6 +132,38 @@ world_inspector_destroy(te_world_inspector* inspector) {
     free(inspector);
 }
 
+static void
+refresh_button_highlight(te_world_inspector* inspector) {
+    // Clear highlight.
+    vec4 color;
+    theme_get_button_color(color);
+    for (unsigned int i = 0; i < inspector->item_buttons_count; i++) {
+        button_widget_set_color(inspector->item_buttons[i], color);
+    }
+
+    if (inspector->state != TE_WIS_SHOW_WORLD_OBJECTS) {
+        return;
+    }
+
+    void* game_obj = property_inspector_get_inspected_obj(inspector->property_inspector);
+    if (game_obj == NULL) {
+        return;
+    }
+
+    for (unsigned int i = 0; i < inspector->item_buttons_count; i++) {
+        te_world_item_info* info =
+            &((te_world_item_info*)inspector->item_list)
+                [inspector->current_page * inspector->item_buttons_count + i];
+        if (info->obj != game_obj) {
+            continue;
+        }
+
+        theme_get_accent_color(color);
+        button_widget_set_color(inspector->item_buttons[i], color);
+        break;
+    }
+}
+
 // Uses item_list and updates text on the buttons depending on the current world inspector state.
 static void
 refresh_item_names(te_world_inspector* inspector) {
@@ -240,6 +272,8 @@ refresh_item_names(te_world_inspector* inspector) {
         widget_set_relative_position(
             button_widget_get_widget(inspector->item_buttons[button_idx]), pos);
     }
+
+    refresh_button_highlight(inspector);
 }
 
 static void
@@ -331,6 +365,7 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
     }
 
     property_inspector_hide(inspector->property_inspector);
+    editor_set_gizmo(inspector->editor, NULL);
 
     free(inspector->item_list);
     inspector->item_list = NULL;
@@ -553,6 +588,7 @@ world_inspector_select_obj(te_world_inspector* inspector, void* obj) {
 
     if (obj == NULL) {
         property_inspector_hide(inspector->property_inspector);
+        refresh_button_highlight(inspector);
         editor_set_gizmo(inspector->editor, NULL);
         return;
     }
@@ -588,7 +624,29 @@ world_inspector_select_obj(te_world_inspector* inspector, void* obj) {
         }
     }
 
+    // Switch the current page to show the selected item.
+    bool found = false;
+    for (unsigned int page_idx = 0; page_idx < inspector->page_count; page_idx++) {
+        for (unsigned int i = 0; i < inspector->item_buttons_count; i++) {
+            te_world_item_info* info = &(
+                (te_world_item_info*)inspector
+                    ->item_list)[page_idx * inspector->item_buttons_count + i];
+            if (info->obj != selected_info->obj) {
+                continue;
+            }
+
+            inspector->current_page = page_idx;
+            found = true;
+            break;
+        }
+        if (found) {
+            break;
+        }
+    }
+
     property_inspector_show(inspector->property_inspector, selected_info->obj, type_id);
+    refresh_item_names(inspector);
+    refresh_page_text(inspector);
 }
 
 void
@@ -640,6 +698,9 @@ on_button_2dobj_clicked(te_button_widget* button) {
 static void
 on_top_button_clicked(te_button_widget* button) {
     te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
+
+    property_inspector_hide(inspector->property_inspector);
+    editor_set_gizmo(inspector->editor, NULL);
 
     if (inspector->state == TE_WIS_SHOW_WORLD_OBJECTS) {
         inspector->state = TE_WIS_CREATE_NEW_OBJECT;
@@ -708,6 +769,7 @@ on_button_list_item_clicked(te_button_widget* button) {
             switch (selected_info->type) {
                 case (TE_WIT_MODEL): {
                     type_id = model_get_type_id();
+                    editor_set_gizmo(inspector->editor, selected_info->obj);
                     break;
                 }
                 case (TE_WIT_CAMERA): {
@@ -722,6 +784,7 @@ on_button_list_item_clicked(te_button_widget* button) {
 
             property_inspector_show(
                 inspector->property_inspector, selected_info->obj, type_id);
+            refresh_button_highlight(inspector);
             break;
         }
         case (TE_WIS_CREATE_NEW_OBJECT): {
@@ -777,6 +840,9 @@ on_button_list_item_clicked(te_button_widget* button) {
                 rebuild_item_list_to_display_world_objects(inspector);
                 refresh_page_text(inspector);
             } else if (option_index == TE_OMO_DELETE_OBJ) {
+                // First check if we have gizmo on the object we are about to delete.
+                editor_on_before_game_obj_deleted(inspector->editor, inspector->selected_obj);
+
                 const te_type_info* info =
                     type_database_get_type_info(inspector->selected_obj_type_id);
                 info->despawn(inspector->game_world, inspector->selected_obj);
@@ -819,7 +885,7 @@ on_button_list_item_clicked(te_button_widget* button) {
 
             const size_t button_index =
                 widget_get_custom_value(button_widget_get_widget(button));
-            te_world_item_info* selected_info =
+            te_world_item_info* target_info =
                 &((te_world_item_info*)inspector->item_list)
                     [inspector->current_page * inspector->item_buttons_count + button_index];
 
@@ -828,14 +894,14 @@ on_button_list_item_clicked(te_button_widget* button) {
 
             switch (inspector->selected_obj_type) {
                 case (TE_WIT_CAMERA): {
-                    switch (selected_info->type) {
+                    switch (target_info->type) {
                         case (TE_WIT_CAMERA): {
                             log_error("unexpected state");
                             abort();
                             break;
                         }
                         case (TE_WIT_MODEL): {
-                            model_attach_camera(inspector->selected_obj, selected_info->obj);
+                            model_attach_camera(target_info->obj, inspector->selected_obj);
                             break;
                         }
                         case (TE_WIT_WIDGET): {
@@ -847,14 +913,14 @@ on_button_list_item_clicked(te_button_widget* button) {
                     break;
                 }
                 case (TE_WIT_MODEL): {
-                    switch (selected_info->type) {
+                    switch (target_info->type) {
                         case (TE_WIT_CAMERA): {
                             log_error("unexpected state");
                             abort();
                             break;
                         }
                         case (TE_WIT_MODEL): {
-                            model_set_parent(inspector->selected_obj, selected_info->obj);
+                            model_set_parent(inspector->selected_obj, target_info->obj);
                             break;
                         }
                         case (TE_WIT_WIDGET): {
@@ -866,7 +932,7 @@ on_button_list_item_clicked(te_button_widget* button) {
                     break;
                 }
                 case (TE_WIT_WIDGET): {
-                    switch (selected_info->type) {
+                    switch (target_info->type) {
                         case (TE_WIT_CAMERA): {
                             log_error("unexpected state");
                             abort();
@@ -879,8 +945,8 @@ on_button_list_item_clicked(te_button_widget* button) {
                         }
                         case (TE_WIT_WIDGET): {
                             widget_set_parent(
-                                selected_info->obj,
-                                selected_type_info->get_widget(inspector->selected_obj));
+                                selected_type_info->get_widget(inspector->selected_obj),
+                                target_info->obj);
                             break;
                         }
                     }
@@ -898,6 +964,8 @@ static void
 on_button_list_item_right_clicked(te_button_widget* button) {
     te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
     property_inspector_hide(inspector->property_inspector);
+    editor_set_gizmo(inspector->editor, NULL);
+    refresh_button_highlight(inspector);
 
     const size_t button_index = widget_get_custom_value(button_widget_get_widget(button));
 

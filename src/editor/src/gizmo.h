@@ -16,6 +16,9 @@ te_gizmo* gizmo_create_in_world(struct te_world* world, struct te_model* target)
 // you can call this function to do it right now.
 void gizmo_destroy_in_world_now(te_gizmo* gizmo, struct te_world* world);
 
+// Returns game object that the gizmo controls.
+void* gizmo_get_target(te_gizmo* gizmo);
+
 void gizmo_start_grab_x(te_gizmo* gizmo);
 void gizmo_start_grab_y(te_gizmo* gizmo);
 void gizmo_start_grab_z(te_gizmo* gizmo);
