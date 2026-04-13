@@ -150,10 +150,36 @@ refresh_button_highlight(te_world_inspector* inspector) {
         return;
     }
 
+    {
+        // For widgets, property inspector stores the final type (not the base type te_widget) but
+        // world inspector expects the base type (te_widget), check if this is the case:
+        const char* game_obj_type_id =
+            property_inspector_get_inspected_obj_type_id(inspector->property_inspector);
+        if (game_obj_type_id == NULL) {
+            log_error("expected type id to be valid");
+            abort();
+        }
+
+        const te_type_info* type_info = type_database_get_type_info(game_obj_type_id);
+        if (type_info == NULL) {
+            log_error("expected type info to be valid");
+            abort();
+        }
+
+        if (type_info->get_widget != NULL) {
+            // To compare base type obj pointers:
+            game_obj = type_info->get_widget(game_obj);
+        }
+    }
+
     for (unsigned int i = 0; i < inspector->item_buttons_count; i++) {
-        te_world_item_info* info =
-            &((te_world_item_info*)inspector->item_list)
-                [inspector->current_page * inspector->item_buttons_count + i];
+        const unsigned int item_idx =
+            inspector->current_page * inspector->item_buttons_count + i;
+        if (item_idx >= inspector->item_list_count) {
+            break;
+        }
+
+        te_world_item_info* info = &((te_world_item_info*)inspector->item_list)[item_idx];
         if (info->obj != game_obj) {
             continue;
         }
@@ -199,8 +225,8 @@ refresh_item_names(te_world_inspector* inspector) {
         switch (inspector->state) {
             case (TE_WIS_SHOW_WORLD_OBJECTS):
             case (TE_WIS_SHOW_ATTACH_TO): {
-                te_world_item_info* data = inspector->item_list;
-                te_world_item_info* info = &data[item_idx];
+                te_world_item_info* info =
+                    &((te_world_item_info*)inspector->item_list)[item_idx];
                 indent = info->indent;
                 switch (info->type) {
                     case (TE_WIT_MODEL): {
@@ -628,9 +654,9 @@ world_inspector_select_obj(te_world_inspector* inspector, void* obj) {
     bool found = false;
     for (unsigned int page_idx = 0; page_idx < inspector->page_count; page_idx++) {
         for (unsigned int i = 0; i < inspector->item_buttons_count; i++) {
-            te_world_item_info* info = &(
-                (te_world_item_info*)inspector
-                    ->item_list)[page_idx * inspector->item_buttons_count + i];
+            te_world_item_info* info =
+                &((te_world_item_info*)
+                      inspector->item_list)[page_idx * inspector->item_buttons_count + i];
             if (info->obj != selected_info->obj) {
                 continue;
             }
@@ -766,6 +792,7 @@ on_button_list_item_clicked(te_button_widget* button) {
                     [inspector->current_page * inspector->item_buttons_count + button_index];
 
             const char* type_id = NULL;
+            void* obj = selected_info->obj;
             switch (selected_info->type) {
                 case (TE_WIT_MODEL): {
                     type_id = model_get_type_id();
@@ -778,12 +805,12 @@ on_button_list_item_clicked(te_button_widget* button) {
                 }
                 case (TE_WIT_WIDGET): {
                     type_id = widget_get_owner_type_id(selected_info->obj);
+                    obj = widget_get_owner(selected_info->obj);
                     break;
                 }
             }
 
-            property_inspector_show(
-                inspector->property_inspector, selected_info->obj, type_id);
+            property_inspector_show(inspector->property_inspector, obj, type_id);
             refresh_button_highlight(inspector);
             break;
         }

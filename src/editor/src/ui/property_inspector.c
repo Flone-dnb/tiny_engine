@@ -16,7 +16,7 @@
 #include <math_funcs.h>
 #include <world.h>
 
-struct te_property_inspector{
+struct te_property_inspector {
     // Not NULL if inspecting some object.
     void* obj;
     const char* obj_type_id;
@@ -49,7 +49,8 @@ property_inspector_set_parent(te_property_inspector* inspector, te_widget* right
     inspector->right_panel = right_panel;
 }
 
-static void on_variable_checkbox_changed(te_checkbox_widget* checkbox, bool is_checked) {
+static void
+on_variable_checkbox_changed(te_checkbox_widget* checkbox, bool is_checked) {
     te_widget* widget = checkbox_widget_get_widget(checkbox);
     te_property_inspector* inspector = widget_get_custom_ptr(widget);
 
@@ -69,7 +70,9 @@ static void on_variable_checkbox_changed(te_checkbox_widget* checkbox, bool is_c
     info->bool_setters[info->variables[var_idx].set_get_index](inspector->obj, is_checked);
 }
 
-static void on_variable_text_edit_changed(te_text_edit_widget* text_edit, wchar_t* src_text, unsigned int src_len) {
+static void
+on_variable_text_edit_changed(
+    te_text_edit_widget* text_edit, wchar_t* src_text, unsigned int src_len) {
     (void)src_len;
 
     te_widget* widget = text_edit_widget_get_widget(text_edit);
@@ -108,20 +111,20 @@ static void on_variable_text_edit_changed(te_text_edit_widget* text_edit, wchar_
         }
         case (TE_VT_UINT): {
             const unsigned long test = strtoul(text, &endptr, 10);
-	    unsigned int value = 0;
-	    if (test < 0xFFFFFFFFu){
-		value = (unsigned int)test;
-	    }
+            unsigned int value = 0;
+            if (test < 0xFFFFFFFFu) {
+                value = (unsigned int)test;
+            }
 
             info->uint_setters[set_get_index](inspector->obj, value);
             break;
         }
-        case (TE_VT_FLOAT):{
+        case (TE_VT_FLOAT): {
             const float value = math_convert_string_to_float(text, &endptr);
             info->float_setters[set_get_index](inspector->obj, value);
             break;
         }
-        case (TE_VT_VEC2):{
+        case (TE_VT_VEC2): {
             const float item = math_convert_string_to_float(text, &endptr);
             vec2 value;
             info->vec2_getters[set_get_index](inspector->obj, value);
@@ -182,7 +185,9 @@ add_name_widget(te_widget* parent, const char* name, vec2 pos, vec2 size) {
 }
 
 static void
-add_float_widget(te_property_inspector* inspector, unsigned int var_idx, unsigned int comp_idx, te_widget* parent, float value, vec2 pos, vec2 size) {
+add_float_widget(
+    te_property_inspector* inspector, unsigned int var_idx, unsigned int comp_idx,
+    te_widget* parent, float value, vec2 pos, vec2 size) {
     te_text_edit_widget* text_edit = text_edit_widget_create();
     {
         te_widget* widget = text_edit_widget_get_widget(text_edit);
@@ -195,13 +200,13 @@ add_float_widget(te_property_inspector* inspector, unsigned int var_idx, unsigne
 
         if (comp_idx == 1) {
             widget_set_name(widget, "\1");
-        }else if (comp_idx == 2) {
+        } else if (comp_idx == 2) {
             widget_set_name(widget, "\2");
         } else if (comp_idx == 3) {
             widget_set_name(widget, "\3");
         }
     }
-    text_edit_widget_set_text_height(text_edit, theme_get_text_height());
+    text_edit_widget_set_text_height(text_edit, theme_get_text_height() * 0.95f);
     text_edit_widget_set_on_text_changed(text_edit, on_variable_text_edit_changed);
 
     int len = snprintf(NULL, 0, "%.2f", value);
@@ -278,7 +283,8 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 }
                 checkbox_widget_set_background_color(checkbox, text_edit_background_color);
                 checkbox_widget_set_checked_color(checkbox, checkbox_checked_color);
-                checkbox_widget_set_is_checked(checkbox, type_info->bool_getters[var_info->set_get_index](obj));
+                checkbox_widget_set_is_checked(
+                    checkbox, type_info->bool_getters[var_info->set_get_index](obj));
                 checkbox_widget_set_on_changed(checkbox, on_variable_checkbox_changed);
                 break;
             }
@@ -340,12 +346,11 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
                 // Text edit ----------------------------------------
 
-                const float value =
-                    type_info->float_getters[var_info->set_get_index](obj);
+                const float value = type_info->float_getters[var_info->set_get_index](obj);
 
-                add_float_widget(inspector, var_idx, 0,
-                    rect_widget_get_widget(rect), value, (vec2){hpadding, 0.0f},
-                    (vec2){1.0f - hpadding, 1.0f});
+                add_float_widget(
+                    inspector, var_idx, 0, rect_widget_get_widget(rect), value,
+                    (vec2){hpadding, 0.0f}, (vec2){1.0f - hpadding, 1.0f});
                 break;
             }
             case (TE_VT_VEC2): {
@@ -366,11 +371,11 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 // Text edit ----------------------------------------
 
                 add_float_widget(
-                    inspector, var_idx, 0,
-                    widget, value[0], (vec2){hpadding, 0.0f}, (vec2){vec_item_width, 1.0f});
+                    inspector, var_idx, 0, widget, value[0], (vec2){hpadding, 0.0f},
+                    (vec2){vec_item_width, 1.0f});
                 add_float_widget(
-                    inspector, var_idx, 1,
-                    widget, value[1], (vec2){hpadding + vec_item_width + hpadding, 0.0f},
+                    inspector, var_idx, 1, widget, value[1],
+                    (vec2){hpadding + vec_item_width + hpadding, 0.0f},
                     (vec2){vec_item_width, 1.0f});
 
                 break;
@@ -393,15 +398,14 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 // Text edit ----------------------------------------
 
                 add_float_widget(
-                    inspector, var_idx, 0,
-                    widget, value[0], (vec2){hpadding, 0.0f}, (vec2){vec_item_width, 1.0f});
-                add_float_widget(
-                    inspector, var_idx, 1,
-                    widget, value[1], (vec2){hpadding + vec_item_width + hpadding, 0.0f},
+                    inspector, var_idx, 0, widget, value[0], (vec2){hpadding, 0.0f},
                     (vec2){vec_item_width, 1.0f});
                 add_float_widget(
-                    inspector, var_idx, 2,
-                    widget, value[2],
+                    inspector, var_idx, 1, widget, value[1],
+                    (vec2){hpadding + vec_item_width + hpadding, 0.0f},
+                    (vec2){vec_item_width, 1.0f});
+                add_float_widget(
+                    inspector, var_idx, 2, widget, value[2],
                     (vec2){hpadding + vec_item_width + hpadding + vec_item_width + hpadding,
                            0.0f},
                     (vec2){vec_item_width, 1.0f});
@@ -426,22 +430,22 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 // Text edit ----------------------------------------
 
                 add_float_widget(
-                    inspector, var_idx, 0,
-                    widget, value[0], (vec2){hpadding, 0.0f}, (vec2){vec_item_width, 1.0f});
-                add_float_widget(
-                    inspector, var_idx, 1,
-                    widget, value[1], (vec2){hpadding + vec_item_width + hpadding, 0.0f},
+                    inspector, var_idx, 0, widget, value[0], (vec2){hpadding, 0.0f},
                     (vec2){vec_item_width, 1.0f});
                 add_float_widget(
-                    inspector, var_idx, 2,
-                    widget, value[2],
-                    (vec2){hpadding + vec_item_width + hpadding + vec_item_width + hpadding, 0.0f},
+                    inspector, var_idx, 1, widget, value[1],
+                    (vec2){hpadding + vec_item_width + hpadding, 0.0f},
                     (vec2){vec_item_width, 1.0f});
                 add_float_widget(
-                    inspector, var_idx, 3,
-                    widget, value[3],
+                    inspector, var_idx, 2, widget, value[2],
+                    (vec2){hpadding + vec_item_width + hpadding + vec_item_width + hpadding,
+                           0.0f},
+                    (vec2){vec_item_width, 1.0f});
+                add_float_widget(
+                    inspector, var_idx, 3, widget, value[3],
                     (vec2){hpadding + vec_item_width + hpadding + vec_item_width + hpadding
-                               + vec_item_width + hpadding, 0.0f},
+                               + vec_item_width + hpadding,
+                           0.0f},
                     (vec2){vec_item_width, 1.0f});
 
                 break;
@@ -475,7 +479,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 text_edit_widget_set_text_height(text_edit, theme_get_text_height());
                 text_edit_widget_set_on_text_changed(text_edit, on_variable_text_edit_changed);
 
-                if (var_text == NULL){
+                if (var_text == NULL) {
                     text_edit_widget_set_text(text_edit, L"");
                 } else {
                     unsigned int text_len;
@@ -485,7 +489,8 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 break;
             }
             case (TE_VT_WSTRING): {
-                const wchar_t* var_text = type_info->wstring_getters[var_info->set_get_index](obj);
+                const wchar_t* var_text =
+                    type_info->wstring_getters[var_info->set_get_index](obj);
 
                 // Text edit background  ----------------------------
 
@@ -555,4 +560,9 @@ property_inspector_hide(te_property_inspector* inspector) {
 void*
 property_inspector_get_inspected_obj(te_property_inspector* inspector) {
     return inspector->obj;
+}
+
+const char*
+property_inspector_get_inspected_obj_type_id(te_property_inspector* inspector) {
+    return inspector->obj_type_id;
 }

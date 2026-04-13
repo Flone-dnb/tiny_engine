@@ -152,6 +152,13 @@ prv_text_edit_widget_despawn_destroy_cursor(te_text_edit_widget* text_edit_widge
         abort();
     }
 
+    if (prv_world_is_being_destroyed(world)) {
+        // Just disable input, child widgets will be destroyed anyway.
+        te_window* window = game_manager_get_window(world_get_game_manager(world));
+        SDL_StopTextInput(prv_window_get_sdl_window(window));
+        return;
+    }
+
     // Detach and despawn.
     widget_set_parent(rect_widget_get_widget(text_edit_widget->rect_cursor_widget), NULL);
     world_despawn_widget(world, rect_widget_get_widget(text_edit_widget->rect_cursor_widget));
@@ -544,6 +551,10 @@ void
 text_edit_widget_set_text_height(te_text_edit_widget* text_edit_widget, float height) {
     text_edit_widget->text_height = height;
     text_widget_set_text_height(text_edit_widget->text_widget, height);
+
+    if (text_edit_widget->rect_cursor_widget != NULL) {
+        prv_text_edit_widget_despawn_destroy_cursor(text_edit_widget);
+    }
 }
 
 float
