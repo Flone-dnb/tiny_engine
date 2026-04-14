@@ -118,9 +118,6 @@ prv_world_on_keyboard_input(te_world* world, enum te_keyboard_button button, boo
 // Called by game manager after user input device was changed (keyboard+mouse/gamepad).
 void prv_world_on_input_source_changed(te_world* world);
 
-// Looks if the specified widget is spawned as one of the root widgets.
-bool prv_world_find_root_widget(te_world* world, struct te_widget* widget);
-
 #if defined(ENGINE_DEBUG_TOOLS)
 unsigned int prv_world_get_gl_query_draw_models(te_world* world);
 unsigned int prv_world_get_gl_query_draw_widgets(te_world* world);

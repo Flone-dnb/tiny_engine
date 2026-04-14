@@ -246,7 +246,11 @@ widget_spawn(te_world* world, te_button_widget* button_widget) {
 
 static void
 widget_despawn(te_world* world, te_button_widget* button_widget) {
-    world_despawn_widget(world, prv_button_widget_get_base(button_widget));
+    if (widget_get_parent(button_widget->widget) != NULL) {
+        widget_set_parent(button_widget->widget, NULL);
+    }
+
+    world_despawn_widget(world, button_widget->widget);
 }
 
 static void

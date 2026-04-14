@@ -79,6 +79,7 @@ struct te_world_inspector {
     te_text_widget* page_text;
 
     // If not NULL stores game object that was selected for object menu/operations (delete, attach, etc.).
+    // For widgets stores pointer to te_widget object while type_id stores the owner's type ID.
     void* selected_obj;
     void* selected_obj_type_id;
     enum te_world_item_type selected_obj_type;
@@ -588,22 +589,21 @@ void
 world_inspector_rebuild_list(te_world_inspector* inspector, te_world* game_world) {
     inspector->game_world = game_world;
 
-    if (inspector->state != TE_WIS_SHOW_WORLD_OBJECTS
-        && inspector->state != TE_WIS_SHOW_ATTACH_TO) {
-        log_error("unexpected state");
-        abort();
-    }
-    te_world_item_info* info = inspector->item_list;
+    if (inspector->state != TE_WIS_SHOW_WORLD_OBJECTS) {
+        inspector->state = TE_WIS_SHOW_WORLD_OBJECTS;
 
-    if (info == NULL) {
-        // Initialize item list.
-        rebuild_item_list_to_display_world_objects(inspector);
-    } else if (
-        (info[0].type == TE_WIT_WIDGET && inspector->is_3dobj_mode_selected)
-        || (info[0].type != TE_WIT_WIDGET && !inspector->is_3dobj_mode_selected)) {
-        // Mode changed, rebuild list.
-        rebuild_item_list_to_display_world_objects(inspector);
+        // Restore the original button state.
+        unsigned int text_len;
+        wchar_t* wtext = wchar_from_char(CREATE_NEW_OBJ_TEXT, &text_len);
+        text_widget_set_text_own(inspector->top_button_text, wtext, text_len);
+
+        inspector->selected_obj = NULL;
+        inspector->selected_obj_type_id = NULL;
+
+        inspector->current_page = 0;
     }
+
+    rebuild_item_list_to_display_world_objects(inspector);
 }
 
 void
@@ -781,6 +781,7 @@ on_top_button_clicked(te_button_widget* button) {
 static void
 on_button_list_item_clicked(te_button_widget* button) {
     te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
+    editor_set_gizmo(inspector->editor, NULL);
 
     switch (inspector->state) {
         case (TE_WIS_SHOW_WORLD_OBJECTS): {
@@ -872,8 +873,16 @@ on_button_list_item_clicked(te_button_widget* button) {
 
                 const te_type_info* info =
                     type_database_get_type_info(inspector->selected_obj_type_id);
-                info->despawn(inspector->game_world, inspector->selected_obj);
-                info->destroy(inspector->selected_obj);
+
+                if (info->get_widget != NULL) {
+                    void* widget_owner = widget_get_owner(inspector->selected_obj);
+                    info->despawn(inspector->game_world, widget_owner);
+                    info->destroy(widget_owner);
+                } else {
+                    info->despawn(inspector->game_world, inspector->selected_obj);
+                    info->destroy(inspector->selected_obj);
+                }
+
                 inspector->selected_obj = NULL;
                 inspector->selected_obj_type_id = NULL;
 
@@ -915,9 +924,6 @@ on_button_list_item_clicked(te_button_widget* button) {
             te_world_item_info* target_info =
                 &((te_world_item_info*)inspector->item_list)
                     [inspector->current_page * inspector->item_buttons_count + button_index];
-
-            const te_type_info* selected_type_info =
-                type_database_get_type_info(inspector->selected_obj_type_id);
 
             switch (inspector->selected_obj_type) {
                 case (TE_WIT_CAMERA): {
@@ -971,9 +977,7 @@ on_button_list_item_clicked(te_button_widget* button) {
                             break;
                         }
                         case (TE_WIT_WIDGET): {
-                            widget_set_parent(
-                                selected_type_info->get_widget(inspector->selected_obj),
-                                target_info->obj);
+                            widget_set_parent(inspector->selected_obj, target_info->obj);
                             break;
                         }
                     }

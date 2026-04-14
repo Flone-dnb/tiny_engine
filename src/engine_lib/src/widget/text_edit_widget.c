@@ -616,7 +616,11 @@ widget_spawn(te_world* world, te_text_edit_widget* text_edit_widget) {
 
 static void
 widget_despawn(te_world* world, te_text_edit_widget* text_edit_widget) {
-    world_despawn_widget(world, prv_text_edit_widget_get_base(text_edit_widget));
+    if (widget_get_parent(text_edit_widget->widget) != NULL) {
+        widget_set_parent(text_edit_widget->widget, NULL);
+    }
+
+    world_despawn_widget(world, text_edit_widget->widget);
 }
 
 static void

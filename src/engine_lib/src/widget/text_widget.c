@@ -497,7 +497,11 @@ widget_spawn(te_world* world, te_text_widget* text_widget) {
 
 static void
 widget_despawn(te_world* world, te_text_widget* text_widget) {
-    world_despawn_widget(world, prv_text_widget_get_base(text_widget));
+    if (widget_get_parent(text_widget->widget) != NULL) {
+        widget_set_parent(text_widget->widget, NULL);
+    }
+
+    world_despawn_widget(world, text_widget->widget);
 }
 
 static void

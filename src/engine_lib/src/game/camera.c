@@ -129,11 +129,24 @@ camera_get_name(te_camera* camera) {
     return camera->name;
 }
 
+static void
+camera_despawn(te_world* world, te_camera* camera) {
+    if (camera->world != world) {
+        log_error("the model is spawned in the different world");
+        abort();
+    }
+
+    if (camera->parent_model != NULL) {
+        model_attach_camera(camera->parent_model, NULL); // make camera to be in the array of root world objects
+    }
+    world_despawn_camera(camera->world, camera); // despawn root world object
+}
+
 void
 camera_register_type(void) {
     te_type_info* info = type_info_create(
         camera_get_type_id(), camera_create, camera_destroy, world_spawn_camera,
-        world_despawn_camera, NULL);
+        camera_despawn, NULL);
     type_info_add_vec3_variable(info, "position", camera_set_position, camera_get_position);
     type_info_add_vec3_variable(info, "rotation", camera_set_rotation, camera_get_rotation);
     type_info_add_uint_variable(

@@ -359,19 +359,6 @@ prv_world_add_root_camera_no_notify(
         }
     }
 
-    te_world* old_camera_world = camera_get_world(camera);
-    if (old_camera_world != NULL) {
-        if (old_camera_world == world) {
-            log_error("the camera is already spawned in this world");
-            abort();
-        } else {
-            log_error(
-                "the specified camera cannot be spawned in this world because the camera "
-                "must be first despawned from the world it currently resides in");
-            abort();
-        }
-    }
-
     te_camera** new_cameras = malloc(sizeof(te_camera*) * (world->spawned_camera_count + 1));
     memcpy(
         new_cameras, world->spawned_cameras, sizeof(te_camera*) * world->spawned_camera_count);
@@ -478,6 +465,14 @@ prv_save_widget_recursive(te_config* config, te_widget* widget) {
     if (count == 0) {
         return;
     }
+
+    // Don't count non serializable children.
+    for (unsigned int i = 0; i < count; i++) {
+        if (!widget_is_serialization_allowed(child_widgets[i])) {
+            count -= 1;
+        }
+    }
+
     config_section_set_uint(config, section_idx, CONFIG_VAR_NAME_CHILD_WIDGET_COUNT, count);
 
     for (unsigned int i = 0; i < count; i++) {
@@ -551,6 +546,14 @@ prv_load_child_widgets_recursive(
     const char* relative_path, te_config* config, unsigned int section_count,
     te_widget* parent_widget, unsigned int parent_child_count, unsigned int* section_idx) {
     for (unsigned int child_idx = 0; child_idx < parent_child_count; child_idx++) {
+        if ((*section_idx) >= section_count) {
+            log_error_fmt(
+                "unexpected end of file \"%s\", have %u sections while expected to have "
+                "more",
+                relative_path, section_count);
+            abort();
+        }
+
         const char* id = config_section_get_name(config, (*section_idx));
         const te_type_info* type_info = type_database_get_type_info(id);
         void* widget_owner = type_info->create();
@@ -567,15 +570,11 @@ prv_load_child_widgets_recursive(
             config, (*section_idx), CONFIG_VAR_NAME_CHILD_WIDGET_COUNT, 0);
 
         (*section_idx) += 1;
-        if ((*section_idx) >= section_count) {
-            log_error_fmt(
-                "unexpected end of file \"%s\", have %u sections while expected to have more",
-                relative_path, section_count);
-            abort();
-        }
 
-        prv_load_child_widgets_recursive(
-            relative_path, config, section_count, child_widget, count, section_idx);
+        if (count > 0) {
+            prv_load_child_widgets_recursive(
+                relative_path, config, section_count, child_widget, count, section_idx);
+        }
     }
 }
 
@@ -602,7 +601,7 @@ world_add_from_file(te_world* world, const char* relative_path) {
             config, section_idx, CONFIG_VAR_NAME_CHILD_WIDGET_COUNT, 0);
         section_idx += 1;
 
-        if (strcmp(id, model_get_type_id())) {
+        if (strcmp(id, model_get_type_id()) == 0) {
             te_model* model = obj;
             if (has_child_model) {
                 if (section_idx >= section_count) {
@@ -751,6 +750,19 @@ world_spawn_camera(te_world* world, te_camera* camera) {
         abort();
     }
 #endif
+
+    te_world* old_camera_world = camera_get_world(camera);
+    if (old_camera_world != NULL) {
+        if (old_camera_world == world) {
+            log_error("the camera is already spawned in this world");
+            abort();
+        } else {
+            log_error(
+                "the specified camera cannot be spawned in this world because the camera "
+                "must be first despawned from the world it currently resides in");
+            abort();
+        }
+    }
 
 #if defined(DEBUG)
     prv_world_add_root_camera_no_notify(world, camera, true);
@@ -1041,17 +1053,6 @@ prv_world_on_input_source_changed(te_world* world) {
         prv_widget_on_cursor_left(world->hovered_interactable_widget, cursor_pos);
         world->hovered_interactable_widget = NULL;
     }
-}
-
-bool
-prv_world_find_root_widget(te_world* world, te_widget* widget) {
-    for (unsigned int i = 0; i < world->spawned_widget_count; i++) {
-        if (world->spawned_widgets[i] == widget) {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 #if defined(ENGINE_DEBUG_TOOLS)

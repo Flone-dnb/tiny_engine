@@ -7,6 +7,7 @@
 #include <io/log.h>
 #include <render/debug_drawer.h>
 #include <render/renderer.h>
+#include <game/camera.h>
 #include <type_database.h>
 #include <window.h>
 #include <world.h>
@@ -199,7 +200,9 @@ prv_game_manager_on_window_size_changed(te_game_manager* game_manager) {
     }
 }
 
-static void get_cursor_relative_pos(te_game_manager* game_manager, vec2 cursor_pos) {
+// Returns `false` if the cursor is outside of the world's viewport (or if there's no active camera).
+// Otherwise returns cursor pos relative to the world camera's viewport.
+static bool get_cursor_relative_pos_for_world(te_game_manager* game_manager, te_world* world, vec2 cursor_pos) {
     window_get_cursor_position(game_manager->window, &cursor_pos[0], &cursor_pos[1]);
 
     unsigned int window_width;
@@ -207,16 +210,38 @@ static void get_cursor_relative_pos(te_game_manager* game_manager, vec2 cursor_p
     window_get_size(game_manager->window, &window_width, &window_height);
 
     glm_vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
+
+    te_camera* camera = world_get_active_camera(world);
+    if (camera == NULL) {
+        return false;
+    }
+
+    vec4 viewport;
+    camera_get_viewport(camera, viewport);
+
+    if (cursor_pos[0] < viewport[0] || cursor_pos[1] < viewport[1]
+        || cursor_pos[0] > viewport[0] + viewport[2]
+        || cursor_pos[1] > viewport[1] + viewport[3]) {
+        // Outside of the game viewport.
+        return false;
+    }
+
+    // Remap to viewport.
+    glm_vec2_sub(cursor_pos, viewport, cursor_pos);
+    glm_vec2_div(cursor_pos, &viewport[2], cursor_pos);
+
+    return true;
 }
 
 bool
 prv_game_manager_on_mouse_button_pressed(
     te_game_manager* game_manager, enum te_mouse_button button) {
     vec2 cursor_pos;
-    get_cursor_relative_pos(game_manager, cursor_pos);
-
     bool is_handled = false;
     for (unsigned int i = 0; i < game_manager->world_count; i++) {
+        if (!get_cursor_relative_pos_for_world(game_manager, game_manager->worlds[i], cursor_pos)) {
+            continue;
+        }
         is_handled |=
             prv_world_on_mouse_button_pressed(game_manager->worlds[i], button, cursor_pos);
     }
@@ -228,10 +253,11 @@ bool
 prv_game_manager_on_mouse_button_released(
     te_game_manager* game_manager, enum te_mouse_button button) {
     vec2 cursor_pos;
-    get_cursor_relative_pos(game_manager, cursor_pos);
-
     bool is_handled = false;
     for (unsigned int i = 0; i < game_manager->world_count; i++) {
+        if (!get_cursor_relative_pos_for_world(game_manager, game_manager->worlds[i], cursor_pos)) {
+            continue;
+        }
         is_handled |=
             prv_world_on_mouse_button_released(game_manager->worlds[i], button, cursor_pos);
     }
@@ -242,9 +268,10 @@ prv_game_manager_on_mouse_button_released(
 void
 prv_game_manager_on_mouse_moved(te_game_manager* game_manager) {
     vec2 cursor_pos;
-    get_cursor_relative_pos(game_manager, cursor_pos);
-
     for (unsigned int i = 0; i < game_manager->world_count; i++) {
+        if (!get_cursor_relative_pos_for_world(game_manager, game_manager->worlds[i], cursor_pos)) {
+            continue;
+        }
         prv_world_on_mouse_moved(game_manager->worlds[i], cursor_pos);
     }
 }
@@ -252,9 +279,10 @@ prv_game_manager_on_mouse_moved(te_game_manager* game_manager) {
 void
 prv_game_manager_on_mouse_cursor_captured(te_game_manager* game_manager, bool captured) {
     vec2 cursor_pos;
-    get_cursor_relative_pos(game_manager, cursor_pos);
-
     for (unsigned int i = 0; i < game_manager->world_count; i++) {
+        if (!get_cursor_relative_pos_for_world(game_manager, game_manager->worlds[i], cursor_pos)) {
+            continue;
+        }
         prv_world_on_mouse_cursor_captured(game_manager->worlds[i], captured, cursor_pos);
     }
 }

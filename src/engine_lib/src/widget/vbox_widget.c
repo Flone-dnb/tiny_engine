@@ -167,7 +167,11 @@ widget_spawn(te_world* world, te_vbox_widget* vbox_widget) {
 
 static void
 widget_despawn(te_world* world, te_vbox_widget* vbox_widget) {
-    world_despawn_widget(world, prv_vbox_widget_get_base(vbox_widget));
+    if (widget_get_parent(vbox_widget->widget) != NULL) {
+        widget_set_parent(vbox_widget->widget, NULL);
+    }
+
+    world_despawn_widget(world, vbox_widget->widget);
 }
 
 static void

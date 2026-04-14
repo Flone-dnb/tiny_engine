@@ -288,7 +288,11 @@ widget_spawn(te_world* world, te_checkbox_widget* checkbox_widget) {
 
 static void
 widget_despawn(te_world* world, te_checkbox_widget* checkbox_widget) {
-    world_despawn_widget(world, prv_checkbox_widget_get_base(checkbox_widget));
+    if (widget_get_parent(checkbox_widget->widget) != NULL) {
+        widget_set_parent(checkbox_widget->widget, NULL);
+    }
+
+    world_despawn_widget(world, checkbox_widget->widget);
 }
 
 static void

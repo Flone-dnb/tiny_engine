@@ -403,7 +403,11 @@ widget_spawn(te_world* world, te_slider_widget* slider_widget) {
 
 static void
 widget_despawn(te_world* world, te_slider_widget* slider_widget) {
-    world_despawn_widget(world, prv_slider_widget_get_base(slider_widget));
+    if (widget_get_parent(slider_widget->widget) != NULL) {
+        widget_set_parent(slider_widget->widget, NULL);
+    }
+
+    world_despawn_widget(world, slider_widget->widget);
 }
 
 static void

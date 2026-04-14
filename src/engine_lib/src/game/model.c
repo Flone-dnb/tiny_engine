@@ -74,38 +74,6 @@ struct te_model {
     bool is_serialization_allowed;
 };
 
-const char*
-model_get_type_id(void) {
-    return "model";
-}
-
-void
-model_register_type(void) {
-    te_type_info* info = type_info_create(
-        model_get_type_id(), model_create, model_destroy, world_spawn_model,
-        world_despawn_model, NULL);
-    type_info_add_vec3_variable(info, "position", model_set_position, model_get_position);
-    type_info_add_vec3_variable(info, "rotation", model_set_rotation, model_get_rotation);
-    type_info_add_vec3_variable(info, "scale", model_set_scale, model_get_scale);
-    type_info_add_vec4_variable(info, "color", model_set_color, model_get_color);
-    type_info_add_string_variable(info, "texture", model_set_texture, model_get_texture);
-    type_info_add_vec2_variable(
-        info, "texture_tiling", model_set_texture_tiling, model_get_texture_tiling);
-    type_info_add_vec2_variable(info, "uv_offset", model_set_uv_offset, model_get_uv_offset);
-    type_info_add_bool_variable(
-        info, "transparent", model_enable_transparency, model_is_transparency_enabled);
-    type_info_add_string_variable(info, "geometry", model_set_geometry, model_get_geometry);
-    type_info_add_string_variable(
-        info, "custom_vert_shader", model_set_custom_vert_shader,
-        model_get_custom_vert_shader);
-    type_info_add_string_variable(
-        info, "custom_frag_shader", model_set_custom_frag_shader,
-        model_get_custom_frag_shader);
-    type_info_add_string_variable(info, "name", model_set_name, model_get_name);
-
-    type_database_register_type(info);
-}
-
 te_model*
 model_create() {
     te_model* model = malloc(sizeof(te_model));
@@ -527,8 +495,9 @@ model_attach_camera(te_model* model, te_camera* camera) {
     }
 
     if (model->attached_camera != NULL) {
-        prv_camera_on_parent_model_world_mat_changed(camera, NULL);
+        prv_camera_on_parent_model_world_mat_changed(model->attached_camera, NULL);
     }
+    te_camera* old_camera = model->attached_camera;
     model->attached_camera = camera;
     if (camera != NULL) {
         prv_camera_on_parent_model_world_mat_changed(camera, model);
@@ -552,10 +521,10 @@ model_attach_camera(te_model* model, te_camera* camera) {
             }
             prv_world_remove_root_camera_no_notify(model->world, camera, true);
         }
-    } else {
-        te_world* camera_world = camera_get_world(camera);
+    } else if (old_camera != NULL) {
+        te_world* camera_world = camera_get_world(old_camera);
         if (camera_world != NULL) {
-            prv_world_add_root_camera_no_notify(camera_world, camera, true);
+            prv_world_add_root_camera_no_notify(camera_world, old_camera, true);
         }
     }
 }
@@ -744,7 +713,7 @@ prv_model_on_spawned(te_model* model, te_world* world) {
             log_error("expected the child model to not be spawned yet");
             abort();
         }
-        world_spawn_model(world, model->child_model);
+        prv_model_on_spawned(model->child_model, world);
     }
 
     if (model->attached_camera != NULL) {
@@ -752,7 +721,7 @@ prv_model_on_spawned(te_model* model, te_world* world) {
             log_error("expected the attached camera to not be spawned yet");
             abort();
         }
-        world_spawn_camera(world, model->attached_camera);
+        prv_camera_set_world(model->attached_camera, world);
     }
 }
 
@@ -929,6 +898,50 @@ prv_model_calc_aabb(te_model_vertex* vertices, unsigned int vertex_count) {
     aabb.extents[2] = max[2] - aabb.center[2];
 
     return aabb;
+}
+
+const char*
+model_get_type_id(void) {
+    return "model";
+}
+
+static void model_despawn(te_world* world, te_model* model) {
+    if (model->world != world) {
+        log_error("the model is spawned in the different world");
+        abort();
+    }
+
+    if (model->parent_model != NULL) {
+        model_set_parent(model, NULL); // make model to be in the array of root world objects
+    }
+    world_despawn_model(model->world, model); // despawn root world object
+}
+
+void
+model_register_type(void) {
+    te_type_info* info = type_info_create(
+        model_get_type_id(), model_create, model_destroy, world_spawn_model, model_despawn,
+        NULL);
+    type_info_add_vec3_variable(info, "position", model_set_position, model_get_position);
+    type_info_add_vec3_variable(info, "rotation", model_set_rotation, model_get_rotation);
+    type_info_add_vec3_variable(info, "scale", model_set_scale, model_get_scale);
+    type_info_add_vec4_variable(info, "color", model_set_color, model_get_color);
+    type_info_add_string_variable(info, "texture", model_set_texture, model_get_texture);
+    type_info_add_vec2_variable(
+        info, "texture_tiling", model_set_texture_tiling, model_get_texture_tiling);
+    type_info_add_vec2_variable(info, "uv_offset", model_set_uv_offset, model_get_uv_offset);
+    type_info_add_bool_variable(
+        info, "transparent", model_enable_transparency, model_is_transparency_enabled);
+    type_info_add_string_variable(info, "geometry", model_set_geometry, model_get_geometry);
+    type_info_add_string_variable(
+        info, "custom_vert_shader", model_set_custom_vert_shader,
+        model_get_custom_vert_shader);
+    type_info_add_string_variable(
+        info, "custom_frag_shader", model_set_custom_frag_shader,
+        model_get_custom_frag_shader);
+    type_info_add_string_variable(info, "name", model_set_name, model_get_name);
+
+    type_database_register_type(info);
 }
 
 void

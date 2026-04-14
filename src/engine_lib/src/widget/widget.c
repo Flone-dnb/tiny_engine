@@ -265,11 +265,6 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
 
             widget->parent->child_widget_count -= 1;
         }
-    } else if (widget->world != NULL) {
-        if (prv_world_find_root_widget(widget->world, widget)) {
-            log_error("attaching a spawned root widgets to another widget is not allowed");
-            abort();
-        }
     }
 
     // Add self to new parent's array of child widgets.

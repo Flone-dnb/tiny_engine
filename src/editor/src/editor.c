@@ -102,6 +102,9 @@ destroy_game_world(te_editor* editor, te_game_manager* game_manager) {
     editor->game_world = NULL;
     editor->game_world_stats_widget = NULL;
 
+    free(editor->game_world_relative_path);
+    editor->game_world_relative_path = NULL;
+
     editor->gizmo = NULL;
 }
 
@@ -172,6 +175,13 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
         world_spawn_model(editor->game_world, box);
     } else {
         world_add_from_file(editor->game_world, relative_path_to_world);
+
+        free(editor->game_world_relative_path);
+        const size_t len = strlen(relative_path_to_world);
+
+        editor->game_world_relative_path = malloc(sizeof(char) * (len + 1));
+        memcpy(editor->game_world_relative_path, relative_path_to_world, sizeof(char) * len);
+        editor->game_world_relative_path[len] = 0;
     }
 
     editor_camera_spawn(editor->editor_camera, editor->game_world);
@@ -298,7 +308,7 @@ on_new_world_file_selected(void* custom, const char* path_to_file) {
 
     world_save_to_file(editor->game_world, relative_path);
 
-    free(relative_path);
+    editor->game_world_relative_path = relative_path;
 
     editor_ui_refresh_filesystem_view(editor->ui);
 }

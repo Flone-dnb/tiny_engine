@@ -261,7 +261,11 @@ widget_spawn(te_world* world, te_progress_widget* progress_widget) {
 
 static void
 widget_despawn(te_world* world, te_progress_widget* progress_widget) {
-    world_despawn_widget(world, prv_progress_widget_get_base(progress_widget));
+    if (widget_get_parent(progress_widget->widget) != NULL) {
+        widget_set_parent(progress_widget->widget, NULL);
+    }
+
+    world_despawn_widget(world, progress_widget->widget);
 }
 
 static void
