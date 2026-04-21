@@ -23,6 +23,11 @@ struct te_camera {
     // NULL if not set.
     char* name;
 
+#if defined(ENGINE_EDITOR)
+    // Model to visualize the camera in the editor.
+    te_model* editor_model;
+#endif
+
     // View matrix. May be outdated, see @ref is_view_mat_outdated.
     mat4 view_mat;
 
@@ -78,6 +83,9 @@ camera_create() {
     camera->world = NULL;
     camera->name = NULL;
     camera->parent_model = NULL;
+#if defined(ENGINE_EDITOR)
+    camera->editor_model = NULL;
+#endif
     glm_vec3_zero(camera->position);
     glm_vec3_zero(camera->rotation);
     glm_vec3_zero(camera->forward);
@@ -137,7 +145,9 @@ camera_despawn(te_world* world, te_camera* camera) {
     }
 
     if (camera->parent_model != NULL) {
-        model_attach_camera(camera->parent_model, NULL); // make camera to be in the array of root world objects
+        model_attach_camera(
+            camera->parent_model,
+            NULL); // make camera to be in the array of root world objects
     }
     world_despawn_camera(camera->world, camera); // despawn root world object
 }
@@ -163,6 +173,14 @@ void
 camera_set_position(te_camera* camera, vec3 position) {
     glm_vec3_copy(position, camera->position);
     camera->is_view_mat_outdated = true;
+
+#if defined(ENGINE_EDITOR)
+    if (camera->editor_model != NULL) {
+        vec3 pos;
+        camera_get_world_position(camera, pos);
+        model_set_position(camera->editor_model, pos);
+    }
+#endif
 }
 
 void
@@ -201,9 +219,11 @@ camera_get_position(te_camera* camera, vec3 out) {
     glm_vec3_copy(camera->position, out);
 }
 
-void camera_get_world_position(te_camera* camera, vec3 out) {
+void
+camera_get_world_position(te_camera* camera, vec3 out) {
     // Get camera world pos.
     vec4 camera_pos;
+    camera_pos[3] = 1.0f;
     glm_vec3_copy(camera->position, camera_pos);
     if (camera->parent_model != NULL) {
         mat4* world_mat = prv_model_get_world_mat_tmp(camera->parent_model);
@@ -217,7 +237,6 @@ void camera_get_world_position(te_camera* camera, vec3 out) {
 
         glm_mat4_mulv(world, camera_pos, camera_pos);
     }
-    camera_pos[3] = 1.0f;
 
     glm_vec3_copy(camera_pos, out);
 }
@@ -317,8 +336,7 @@ camera_get_up(te_camera* camera, vec3 out) {
 }
 
 bool
-camera_calc_cursor_world_dir(
-    te_camera* camera, vec2 cursor_relative_pos, vec3 out) {
+camera_calc_cursor_world_dir(te_camera* camera, vec2 cursor_relative_pos, vec3 out) {
     if (cursor_relative_pos[0] < camera->viewport[0]
         || cursor_relative_pos[1] < camera->viewport[1]
         || cursor_relative_pos[0] > camera->viewport[0] + camera->viewport[2]
@@ -382,9 +400,17 @@ prv_camera_recalc_frustum(te_camera* camera) {
         abort();
     }
 #endif
+    vec3 forward;
+    vec3 up;
+    camera_get_forward(camera, forward);
+    camera_get_up(camera, up);
+
+    vec3 pos;
+    camera_get_world_position(camera, pos);
+
     camera->frustum = frustum_shape_create(
-        camera->position, camera->forward, camera->up, camera->near_clip, camera->far_clip,
-        camera->vertical_fov, (float)camera->render_width / (float)camera->render_height);
+        pos, forward, up, camera->near_clip, camera->far_clip, camera->vertical_fov,
+        (float)camera->render_width / (float)camera->render_height);
 }
 
 mat4*
@@ -396,7 +422,10 @@ camera_get_view_proj_mat(te_camera* camera) {
             camera_get_forward(camera, forward);
             camera_get_up(camera, up);
 
-            glm_look_rh(camera->position, forward, up, camera->view_mat);
+            vec3 pos;
+            camera_get_world_position(camera, pos);
+
+            glm_look_rh(pos, forward, up, camera->view_mat);
             camera->is_view_mat_outdated = false;
         }
 
@@ -435,29 +464,8 @@ camera_get_frustum(te_camera* camera) {
     }
 #endif
 
-    if (camera->is_view_mat_outdated || camera->is_proj_mat_outdated) {
-        if (camera->is_view_mat_outdated) {
-            vec3 forward;
-            vec3 up;
-            camera_get_forward(camera, forward);
-            camera_get_up(camera, up);
-
-            glm_look_rh(camera->position, forward, up, camera->view_mat);
-
-            camera->is_view_mat_outdated = false;
-        }
-
-        if (camera->is_proj_mat_outdated) {
-            glm_perspective_rh_no(
-                glm_rad(camera->vertical_fov),
-                (float)camera->render_width / (float)camera->render_height, camera->near_clip,
-                camera->far_clip, camera->proj_mat);
-
-            camera->is_proj_mat_outdated = false;
-        }
-
-        prv_camera_recalc_frustum(camera);
-    }
+    // This makes sure the frustum is recalculated if needed.
+    (void)camera_get_view_proj_mat(camera);
 
     return &camera->frustum;
 }
@@ -480,7 +488,45 @@ prv_camera_set_render_target_size(te_camera* camera, unsigned int width, unsigne
 
 void
 prv_camera_set_world(te_camera* camera, struct te_world* world) {
+    if (world == camera->world) {
+        return;
+    }
+
+#if defined(ENGINE_EDITOR)
+    if (world != NULL) {
+        camera->editor_model = model_create();
+
+        model_set_is_serialization_allowed(camera->editor_model, false);
+        model_enable_transparency(camera->editor_model, true);
+        model_set_color(camera->editor_model, (vec4){1.0f, 1.0f, 1.0f, 0.25f});
+        model_set_scale(camera->editor_model, (vec3){0.5f, 0.5f, 0.5f});
+
+        world_spawn_model(world, camera->editor_model);
+
+        vec3 pos;
+        camera_get_world_position(camera, pos);
+        model_set_position(camera->editor_model, pos);
+    } else if (camera->editor_model != NULL) {
+        if (!prv_world_is_being_destroyed(camera->world)) {
+            world_despawn_model(camera->world, camera->editor_model);
+            model_destroy(camera->editor_model);
+        }
+        camera->editor_model = NULL;
+    }
+#endif
+
     camera->world = world;
+}
+
+void
+prv_camera_on_active(te_camera* camera) {
+#if defined(ENGINE_EDITOR)
+    if (camera->editor_model != NULL) {
+        world_despawn_model(camera->world, camera->editor_model);
+        model_destroy(camera->editor_model);
+        camera->editor_model = NULL;
+    }
+#endif
 }
 
 void
@@ -489,4 +535,12 @@ prv_camera_on_parent_model_world_mat_changed(te_camera* camera, te_model* parent
     camera->is_view_mat_outdated = true;
 
     camera->parent_model = parent;
+
+#if defined(ENGINE_EDITOR)
+    if (camera->editor_model != NULL) {
+        vec3 pos;
+        camera_get_world_position(camera, pos);
+        model_set_position(camera->editor_model, pos);
+    }
+#endif
 }

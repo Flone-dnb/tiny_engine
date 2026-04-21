@@ -368,8 +368,6 @@ prv_world_add_root_camera_no_notify(
 
     new_cameras[world->spawned_camera_count] = camera;
     world->spawned_camera_count += 1;
-
-    prv_camera_set_world(camera, world);
 }
 
 void
@@ -378,7 +376,6 @@ prv_world_remove_root_camera_no_notify(
     if (world->active_camera == camera) {
         world->active_camera = NULL;
     }
-    prv_camera_set_world(camera, NULL);
 
     if (world->spawned_camera_count == 1) {
         if (world->spawned_cameras[0] != camera) {
@@ -447,6 +444,8 @@ world_set_active_camera(te_world* world, te_camera* camera) {
     }
 
     world->active_camera = camera;
+
+    prv_camera_on_active(world->active_camera);
 }
 
 static void
@@ -769,6 +768,8 @@ world_spawn_camera(te_world* world, te_camera* camera) {
 #else
     prv_world_add_root_camera_no_notify(world, camera, false);
 #endif
+
+    prv_camera_set_world(camera, world);
 }
 
 void
@@ -787,6 +788,8 @@ world_despawn_camera(te_world* world, te_camera* camera) {
     }
 
     prv_world_remove_root_camera_no_notify(world, camera, true);
+
+    prv_camera_set_world(camera, NULL);
 }
 
 void

@@ -17,6 +17,7 @@ void camera_set_name(te_camera* camera, const char* name);
 const char* camera_get_name(te_camera* camera);
 
 // Sets position of the camera.
+// Returns relative position if the camera has a parent.
 void camera_set_position(te_camera* camera, vec3 position);
 void camera_get_position(te_camera* camera, vec3 out);
 
@@ -42,7 +43,7 @@ float camera_get_far_clip(te_camera* camera);
 void camera_set_viewport(te_camera* camera, vec4 viewport);
 void camera_get_viewport(te_camera* camera, vec4 out);
 
-// Returns direction of the camera.
+// Returns direction of the camera in the world.
 void camera_get_forward(te_camera* camera, vec3 out);
 void camera_get_right(te_camera* camera, vec3 out);
 void camera_get_up(te_camera* camera, vec3 out);
@@ -88,3 +89,6 @@ void prv_camera_set_world(te_camera* camera, struct te_world* world);
 
 // Called by model after attached (parent is NULL if detached) and after model's world matrix changed.
 void prv_camera_on_parent_model_world_mat_changed(te_camera* camera, struct te_model* parent);
+
+// Called when the camera became the active camera in a world.
+void prv_camera_on_active(te_camera* camera);

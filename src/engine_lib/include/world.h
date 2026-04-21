@@ -83,7 +83,7 @@ bool prv_world_is_being_destroyed(te_world* world);
 void prv_world_on_window_size_changed(te_world* world);
 
 // Adds/removes the specified item to/from the array of spawned root item
-// (does nothing if already added/removed). Does not notify the item.
+// (does nothing if already added/removed). Does not notify the item being removed.
 void prv_world_add_root_model_no_notify(
     te_world* world, struct te_model* model, bool check_if_already_added);
 void prv_world_remove_root_model_no_notify(

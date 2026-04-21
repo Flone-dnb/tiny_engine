@@ -191,7 +191,7 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
     widget_set_relative_position(
         text_widget_get_widget(editor->game_world_stats_widget), (vec2){0.01f, 0.01f});
     widget_set_relative_size(
-        text_widget_get_widget(editor->game_world_stats_widget), (vec2){0.4f, 0.2f});
+        text_widget_get_widget(editor->game_world_stats_widget), (vec2){0.5f, 0.2f});
     widget_set_is_serialization_allowed(
         text_widget_get_widget(editor->game_world_stats_widget), false);
     text_widget_set_is_multiline(editor->game_world_stats_widget, true);
@@ -212,7 +212,7 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
 
 void
 editor_set_gizmo(te_editor* editor, te_model* target) {
-    if (editor->game_world == NULL){
+    if (editor->game_world == NULL) {
         log_error("expected the game world to be valid");
         abort();
     }
@@ -227,7 +227,8 @@ editor_set_gizmo(te_editor* editor, te_model* target) {
     }
 }
 
-void editor_on_before_game_obj_deleted(te_editor* editor, void* game_obj) {
+void
+editor_on_before_game_obj_deleted(te_editor* editor, void* game_obj) {
     if (editor->gizmo == NULL) {
         return;
     }
@@ -438,8 +439,9 @@ editor_on_mouse_button_pressed(
     if (button == TE_MB_RIGHT) {
         window_capture_mouse_cursor(window, true);
         editor_camera_enable_input(editor->editor_camera, true);
-    }else if (button == TE_MB_LEFT) {
-        void* obj = obj_picking_find_obj_under_cursor(cursor_pos, game_camera, editor->game_world, editor->gizmo);
+    } else if (button == TE_MB_LEFT) {
+        void* obj = obj_picking_find_obj_under_cursor(
+            cursor_pos, game_camera, editor->game_world, editor->gizmo);
 
         if (editor->gizmo != NULL) {
             if (obj == gizmo_get_model_x(editor->gizmo)) {
@@ -475,7 +477,7 @@ editor_on_mouse_button_released(
             window_capture_mouse_cursor(window, false);
             editor_camera_enable_input(editor->editor_camera, false);
         }
-    }else if (button == TE_MB_LEFT) {
+    } else if (button == TE_MB_LEFT) {
         if (editor->gizmo == NULL) {
             return;
         }
@@ -497,7 +499,9 @@ editor_on_mouse_moved(
     editor_camera_on_mouse_moved(editor->editor_camera, x_offset, y_offset);
 
     if (editor->gizmo != NULL && gizmo_is_grabbed(editor->gizmo)) {
-        gizmo_move(editor->gizmo, editor_camera_get_camera(editor->editor_camera), x_offset, y_offset);
+        gizmo_move(
+            editor->gizmo, editor_camera_get_camera(editor->editor_camera), x_offset,
+            y_offset);
     }
 }
 
