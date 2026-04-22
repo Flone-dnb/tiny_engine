@@ -3,6 +3,7 @@
 #include <game/model.h>
 #include <world.h>
 #include <game/camera.h>
+#include <math_funcs.h>
 
 struct te_gizmo {
     te_model* model_x;
@@ -28,11 +29,12 @@ static void get_geometry(
     unsigned int* vertex_count, unsigned int* index_count, bool* free_geometry);
 
 static te_model*
-create_gizmo_model(te_gizmo* gizmo) {
+create_gizmo_model(te_gizmo* gizmo, unsigned int axis_idx) {
     te_model* model = model_create();
 
     model_set_is_serialization_allowed(model, false);
     model_set_custom_ptr(model, gizmo);
+    model_set_custom_value(model, axis_idx);
     model_set_custom_geometry_provider(model, get_geometry);
     model_set_custom_vert_shader(model, "editor/shader/gizmo.vert.glsl");
 
@@ -42,9 +44,9 @@ create_gizmo_model(te_gizmo* gizmo) {
 te_gizmo*
 gizmo_create_in_world(struct te_world* world, te_model* target) {
     te_gizmo* gizmo = malloc(sizeof(te_gizmo));
-    gizmo->model_x = create_gizmo_model(gizmo);
-    gizmo->model_y = create_gizmo_model(gizmo);
-    gizmo->model_z = create_gizmo_model(gizmo);
+    gizmo->model_x = create_gizmo_model(gizmo, 0);
+    gizmo->model_y = create_gizmo_model(gizmo, 1);
+    gizmo->model_z = create_gizmo_model(gizmo, 2);
     gizmo->grab_x = false;
     gizmo->grab_y = false;
     gizmo->grab_z = false;
@@ -58,18 +60,27 @@ gizmo_create_in_world(struct te_world* world, te_model* target) {
     world_spawn_model(world, gizmo->model_z);
 
     vec3 target_pos;
-    model_get_position(target, target_pos);
+    model_get_world_position(target, target_pos);
 
     model_set_position(gizmo->model_x, target_pos);
     model_set_position(gizmo->model_y, target_pos);
     model_set_position(gizmo->model_z, target_pos);
 
-    model_set_rotation(gizmo->model_y, (vec3){0.0f, 0.0f, 90.0f});
-    model_set_rotation(gizmo->model_z, (vec3){0.0f, -90.0f, 0.0f});
-
     model_set_color(gizmo->model_x, (vec4){1.0f, 0.0f, 0.0f, 1.0f});
     model_set_color(gizmo->model_y, (vec4){0.0f, 1.0f, 0.0f, 1.0f});
     model_set_color(gizmo->model_z, (vec4){0.0f, 0.0f, 1.0f, 1.0f});
+
+    vec3 rot;
+    te_model* parent = model_get_parent(gizmo->target);
+    if (parent == NULL) {
+        glm_vec3_zero(rot);
+    } else {
+        model_get_rotation(parent, rot);
+    }
+
+    model_set_rotation(gizmo->model_x, rot);
+    model_set_rotation(gizmo->model_y, rot);
+    model_set_rotation(gizmo->model_z, rot);
 
     return gizmo;
 }
@@ -134,32 +145,31 @@ gizmo_move(te_gizmo* gizmo, te_camera* camera, float x_offset, float y_offset) {
     glm_vec3_add(right, up, dir);
     glm_vec3_normalize(dir);
 
+    mat4* world_mat = prv_model_get_world_mat_tmp(gizmo->target);
+
     vec3 gizmo_offset;
     glm_vec3_zero(gizmo_offset);
     if (gizmo->grab_x) {
-        gizmo_offset[0] = glm_vec3_dot(dir, (vec3){1.0f, 0.0f, 0.0f});
+        gizmo_offset[0] = glm_vec3_dot(dir, (*world_mat)[0]);
     } else if (gizmo->grab_y) {
-        gizmo_offset[1] = glm_vec3_dot(dir, (vec3){0.0f, 1.0f, 0.0f});
+        gizmo_offset[1] = glm_vec3_dot(dir, (*world_mat)[1]);
     } else if (gizmo->grab_z) {
-        gizmo_offset[2] = glm_vec3_dot(dir, (vec3){0.0f, 0.0f, 1.0f});
+        gizmo_offset[2] = glm_vec3_dot(dir, (*world_mat)[2]);
     }
     glm_vec3_scale(
         gizmo_offset, 0.01f * fabsf(x_offset + y_offset),
         gizmo_offset); // apply movement speed
 
+    vec3 pos;
+    model_get_position(gizmo->target, pos);
+    glm_vec3_add(pos, gizmo_offset, pos);
+    model_set_position(gizmo->target, pos);
+
     vec3 target_pos;
-    model_get_position(gizmo->target, target_pos);
-
-    glm_vec3_add(target_pos, gizmo_offset, target_pos);
-
-    model_set_position(gizmo->target, target_pos);
-
+    model_get_world_position(gizmo->target, target_pos);
     model_set_position(gizmo->model_x, target_pos);
     model_set_position(gizmo->model_y, target_pos);
     model_set_position(gizmo->model_z, target_pos);
-
-    model_set_rotation(gizmo->model_y, (vec3){0.0f, 0.0f, 90.0f});
-    model_set_rotation(gizmo->model_z, (vec3){0.0f, -90.0f, 0.0f});
 }
 
 te_model*
@@ -181,10 +191,7 @@ static void
 get_geometry(
     te_model* model, te_model_vertex** vertices, unsigned short** indices,
     unsigned int* vertex_count, unsigned int* index_count, bool* free_geometry) {
-    (void)model;
-
     // Geometry of single axis gizmo.
-    // Start with a wide cube and then add an arrow.
     (*free_geometry) = true;
 
     const float half_width = 1.0f;
@@ -328,4 +335,25 @@ get_geometry(
     (*indices)[33] = 23;
     (*indices)[34] = 22;
     (*indices)[35] = 21;
+
+    // Rotate if needed.
+    const size_t axis_idx = model_get_custom_value(model);
+    if (axis_idx > 0) {
+        mat4 rot_mat;
+        if (axis_idx == 1) {
+            math_make_rotation_mat((vec3){0.0f, 0.0f, 90.0f}, rot_mat);
+        } else {
+            math_make_rotation_mat((vec3){0.0f, -90.0f, 0.0f}, rot_mat);
+        }
+
+        for (unsigned int k = 0; k < (*vertex_count); k++) {
+            vec4 pos;
+            glm_vec3_copy((*vertices)[k].pos, pos);
+            pos[3] = 1.0f;
+
+            glm_mat4_mulv(rot_mat, pos, pos);
+
+            glm_vec3_copy(pos, (*vertices)[k].pos);
+        }
+    }
 }

@@ -47,12 +47,13 @@ struct te_model {
     te_model* parent_model;
     te_camera* attached_camera;
 
-    // Custom user-specified pointer.
+    // Custom user-specified data.
     void* custom_ptr;
     void (*custom_on_before_destroyed)(te_model*);
     void (*custom_get_geometry)(
         te_model* model, te_model_vertex** vertices, unsigned short** indices,
         unsigned int* vertex_count, unsigned int* index_count, bool* free_custom_geometry);
+    size_t custom_value;
 
     // Color in RGBA format in range [0.0; 1.0].
     vec4 color;
@@ -90,6 +91,7 @@ model_create() {
     model->custom_vert_relative_path = NULL;
     model->custom_frag_relative_path = NULL;
     model->custom_ptr = NULL;
+    model->custom_value = 0;
     model->custom_on_before_destroyed = NULL;
     model->custom_get_geometry = NULL;
     model->is_opaque = true;
@@ -545,6 +547,16 @@ model_get_custom_ptr(te_model* model) {
 }
 
 void
+model_set_custom_value(te_model* model, size_t value) {
+    model->custom_value = value;
+}
+
+size_t
+model_get_custom_value(te_model* model) {
+    return model->custom_value;
+}
+
+void
 model_set_custom_on_before_destroyed(
     te_model* model, void (*custom_on_before_destroyed)(te_model*)) {
     model->custom_on_before_destroyed = custom_on_before_destroyed;
@@ -905,7 +917,8 @@ model_get_type_id(void) {
     return "model";
 }
 
-static void model_despawn(te_world* world, te_model* model) {
+static void
+model_despawn(te_world* world, te_model* model) {
     if (model->world != world) {
         log_error("the model is spawned in the different world");
         abort();

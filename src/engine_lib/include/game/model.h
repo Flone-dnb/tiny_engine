@@ -34,7 +34,8 @@ const char* model_get_geometry(te_model* model);
 //
 // If you specify `free_geometry` as `true` the model will free provided geometry.
 void model_set_custom_geometry_provider(
-    te_model* model, void (*custom_get_geometry)(
+    te_model* model,
+    void (*custom_get_geometry)(
         te_model* model, te_model_vertex** vertices, unsigned short** indices,
         unsigned int* vertex_count, unsigned int* index_count, bool* free_custom_geometry));
 
@@ -95,6 +96,10 @@ struct te_camera* model_get_attached_camera(te_model* model);
 // Optionally you can set a custom pointer to be stored in the model.
 void model_set_custom_ptr(te_model* model, void* ptr);
 void* model_get_custom_ptr(te_model* model);
+
+// Optionally you can set a custom value to be stored in the model.
+void model_set_custom_value(te_model* model, size_t value);
+size_t model_get_custom_value(te_model* model);
 
 // Optionally you can set a custom callback that will be called before the model
 // is destroyed.
