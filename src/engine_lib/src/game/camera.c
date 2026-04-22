@@ -526,6 +526,8 @@ prv_camera_on_active(te_camera* camera) {
         model_destroy(camera->editor_model);
         camera->editor_model = NULL;
     }
+#else
+    (void)camera;
 #endif
 }
 
