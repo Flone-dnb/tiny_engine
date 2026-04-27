@@ -364,6 +364,45 @@ editor_on_keyboard_button_released(
     if (button == TE_KB_ESCAPE) {
         window_close(game_manager_get_window(game_manager));
     }
+
+    if (editor->game_world == NULL) {
+        return;
+    }
+    te_camera* game_camera = world_get_active_camera(editor->game_world);
+    if (game_camera == NULL) {
+        return;
+    }
+
+    vec4 viewport;
+    camera_get_viewport(game_camera, viewport);
+
+    vec2 cursor_pos;
+    te_window* window = game_manager_get_window(game_manager);
+    window_get_cursor_position(window, &cursor_pos[0], &cursor_pos[1]);
+
+    unsigned int window_width;
+    unsigned int window_height;
+    window_get_size(window, &window_width, &window_height);
+    glm_vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
+
+    if (cursor_pos[0] < viewport[0] || cursor_pos[1] < viewport[1]
+        || cursor_pos[0] > viewport[0] + viewport[2]
+        || cursor_pos[1] > viewport[1] + viewport[3]) {
+        // Outside of the game viewport.
+        return;
+    }
+
+    if ((button == TE_KB_W || button == TE_KB_E || button == TE_KB_R)
+        && !window_is_mouse_captured(game_manager_get_window(game_manager))
+        && editor->gizmo != NULL) {
+        if (button == TE_KB_W) {
+            gizmo_set_mode(editor->gizmo, TE_GM_MOVE);
+        } else if (button == TE_KB_E) {
+            gizmo_set_mode(editor->gizmo, TE_GM_ROTATE);
+        } else if (button == TE_KB_R) {
+            gizmo_set_mode(editor->gizmo, TE_GM_SCALE);
+        }
+    }
 }
 
 void
