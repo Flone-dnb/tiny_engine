@@ -2,6 +2,7 @@
 
 #include <input/keyboard_button.h>
 #include <input/mouse_button.h>
+#include <cglm/vec3.h>
 
 typedef struct te_world te_world;
 
@@ -44,7 +45,9 @@ void world_save_to_file(te_world* world, const char* relative_path);
 
 // Deserializes game entities from the specified file
 // (path relative to the `res` directory) and spawns them in the world.
+// Additionally can add a location offset to 3D game objects.
 void world_add_from_file(te_world* world, const char* relative_path);
+void world_add_from_file_with_offset(te_world* world, const char* relative_path, vec3 location_offset);
 
 // Returns NULL if the world has no active camera.
 // Do not free/destroy returned pointer, valid until the camera is not destroyed.

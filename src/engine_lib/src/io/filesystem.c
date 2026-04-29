@@ -139,6 +139,20 @@ char* filesystem_convert_path_to_relative(const char* src) {
     return dst;
 }
 
+char*
+filesystem_prepend_res_to_path(const char* relative_path) {
+    const size_t len = strlen(relative_path);
+
+    char* new_path = malloc(sizeof(char) * (len + 4 + 1));
+
+    memcpy(new_path, "res/", sizeof(char) * 4);
+    memcpy(new_path + 4, relative_path, sizeof(char) * len);
+
+    new_path[len + 4] = 0;
+
+    return new_path;
+}
+
 te_filesystem_entry*
 filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count) {
     (*entry_count) = 0;

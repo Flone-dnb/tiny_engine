@@ -134,7 +134,7 @@ font_manager_load_font(te_font_manager* manager, const char* relative_path) {
         manager->ft_face = NULL;
     }
 
-    char* path_to_font = paths_prepend_res_to_path(relative_path);
+    char* path_to_font = filesystem_prepend_res_to_path(relative_path);
     if (!filesystem_does_path_exists(path_to_font)) {
         log_error_fmt("the path \"%s\" does not exist", path_to_font);
     }

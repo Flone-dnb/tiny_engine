@@ -5,7 +5,6 @@
 #include <string.h>
 #include <io/filesystem.h>
 #include <io/log.h>
-#include <io/paths.h>
 #include <math_funcs.h>
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -779,7 +778,7 @@ config_save(te_config* config, const char* relative_path, bool create_backup) {
         return;
     }
 
-    char* path_to_config = paths_prepend_res_to_path(relative_path);
+    char* path_to_config = filesystem_prepend_res_to_path(relative_path);
     const size_t path_len = strlen(path_to_config);
 
     char* path_to_bak = malloc(sizeof(char) * (path_len + 4 + 1)); // ".bak"
@@ -898,7 +897,7 @@ config_save(te_config* config, const char* relative_path, bool create_backup) {
 
 static void
 prv_config_load(te_config* config, const char* relative_path) {
-    char* path_to_config = paths_prepend_res_to_path(relative_path);
+    char* path_to_config = filesystem_prepend_res_to_path(relative_path);
 
     FILE* fp = fopen(path_to_config, "r");
     if (fp == NULL) {

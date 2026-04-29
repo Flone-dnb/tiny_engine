@@ -6,6 +6,9 @@
 #include <game/camera.h>
 #include <game_manager.h>
 #include <io/log.h>
+#if defined(ENGINE_EDITOR)
+#include <io/filesystem.h>
+#endif
 #include <math_funcs.h>
 #include <render/model_renderer.h>
 #include <render/renderer.h>
@@ -287,6 +290,18 @@ model_set_color(te_model* model, vec4 color) {
 void
 model_set_texture(te_model* model, const char* relative_path) {
     free(model->tex_relative_path);
+    model->tex_relative_path = NULL;
+
+#if defined(ENGINE_EDITOR)
+    // Check if path exists.
+    char* res_path = filesystem_prepend_res_to_path(relative_path);
+    if (!filesystem_does_path_exists(res_path)) {
+        // Do nothing, probably user typing the path.
+        free(res_path);
+        return;
+    }
+    free(res_path);
+#endif
 
     if (relative_path == NULL) {
         // Remove current texture.

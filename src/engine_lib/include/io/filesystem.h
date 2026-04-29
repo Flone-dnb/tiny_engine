@@ -32,6 +32,10 @@ char* filesystem_convert_path_to_absolute(const char* src);
 // Returns NULL if unable to convert, otherwise a new string that you must free.
 char* filesystem_convert_path_to_relative(const char* src);
 
+// Takes a path relative to the `res` directory and appends "res/" before it.
+// You must free returned pointer.
+char* filesystem_prepend_res_to_path(const char* relative_path);
+
 // Returns all filesystem entries (files and directories) in the specified directory (not recursive).
 // You must free returned array and entry names.
 te_filesystem_entry*

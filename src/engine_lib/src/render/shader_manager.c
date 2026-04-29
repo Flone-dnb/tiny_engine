@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <io/log.h>
-#include <io/paths.h>
+#include <io/filesystem.h>
 #include <glad/glad.h>
 
 // Groups information about a shader program.
@@ -184,8 +184,8 @@ shader_manager_request_shader(
     }
     if (!found) {
         // Compile new program.
-        char* vert_path = paths_prepend_res_to_path(vert_relative_path);
-        char* frag_path = paths_prepend_res_to_path(frag_relative_path);
+        char* vert_path = filesystem_prepend_res_to_path(vert_relative_path);
+        char* frag_path = filesystem_prepend_res_to_path(frag_relative_path);
 
         const unsigned int vert_id = prv_shader_manager_compile_shader(vert_path, false);
         const unsigned int frag_id = prv_shader_manager_compile_shader(frag_path, true);

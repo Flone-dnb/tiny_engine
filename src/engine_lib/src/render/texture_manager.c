@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <io/log.h>
-#include <io/paths.h>
+#include <io/filesystem.h>
 #include <glad/glad.h>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -77,7 +77,7 @@ texture_manager_request_texture(
     }
     if (!found) {
         // Load new texture.
-        char* tex_path = paths_prepend_res_to_path(relative_path);
+        char* tex_path = filesystem_prepend_res_to_path(relative_path);
         unsigned int tex_id = 0;
 
         if (opt != TE_TLO_CUBEMAP_NO_MIPMAPS) {

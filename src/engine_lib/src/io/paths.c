@@ -128,17 +128,3 @@ paths_get_log_file(void) {
 
     return &cached_path_to_log_file[0];
 }
-
-char*
-paths_prepend_res_to_path(const char* relative_path) {
-    const size_t len = strlen(relative_path);
-
-    char* new_path = malloc(sizeof(char) * (len + 4 + 1));
-
-    memcpy(new_path, "res/", sizeof(char) * 4);
-    memcpy(new_path + 4, relative_path, sizeof(char) * len);
-
-    new_path[len + 4] = 0;
-
-    return new_path;
-}

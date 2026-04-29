@@ -579,6 +579,12 @@ prv_load_child_widgets_recursive(
 
 void
 world_add_from_file(te_world* world, const char* relative_path) {
+    world_add_from_file_with_offset(world, relative_path, (vec3){0.0f, 0.0f, 0.0f});
+}
+
+void
+world_add_from_file_with_offset(
+    te_world* world, const char* relative_path, vec3 location_offset) {
     te_config* config = config_create(relative_path);
 
     const te_type_info* model_type_info = type_database_get_type_info(model_get_type_id());
@@ -602,6 +608,12 @@ world_add_from_file(te_world* world, const char* relative_path) {
 
         if (strcmp(id, model_get_type_id()) == 0) {
             te_model* model = obj;
+
+            vec3 pos;
+            model_get_position(model, pos);
+            glm_vec3_add(pos, location_offset, pos);
+            model_set_position(model, pos);
+
             if (has_child_model) {
                 if (section_idx >= section_count) {
                     log_error_fmt(
@@ -628,6 +640,13 @@ world_add_from_file(te_world* world, const char* relative_path) {
                 model_attach_camera(model, camera);
                 section_idx += 1;
             }
+        } else if (strcmp(id, camera_get_type_id()) == 0) {
+            te_camera* camera = obj;
+
+            vec3 pos;
+            camera_get_position(camera, pos);
+            glm_vec3_add(pos, location_offset, pos);
+            camera_set_position(camera, pos);
         } else if (child_widget_count > 0) {
             if (type_info->get_widget == NULL) {
                 log_error("found widget section that specified child count but the type does "

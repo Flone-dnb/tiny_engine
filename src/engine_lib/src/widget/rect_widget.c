@@ -3,6 +3,9 @@
 #include <string.h>
 #include <game_manager.h>
 #include <io/log.h>
+#if defined(ENGINE_EDITOR)
+#include <io/filesystem.h>
+#endif
 #include <render/renderer.h>
 #include <render/texture_manager.h>
 #include <render/widget_renderer.h>
@@ -130,6 +133,18 @@ rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) 
     }
 
     free(rect_widget->tex_relative_path);
+    rect_widget->tex_relative_path = NULL;
+
+#if defined(ENGINE_EDITOR)
+    // Check if path exists.
+    char* res_path = filesystem_prepend_res_to_path(relative_path);
+    if (!filesystem_does_path_exists(res_path)) {
+        // Do nothing, probably user typing the path.
+        free(res_path);
+        return;
+    }
+    free(res_path);
+#endif
 
     if (relative_path == NULL) {
         // Remove current texture.
