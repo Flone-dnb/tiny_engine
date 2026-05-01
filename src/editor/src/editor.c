@@ -84,6 +84,11 @@ editor_destroy(te_editor* editor) {
     free(editor);
 }
 
+te_game_manager*
+editor_get_game_manager(te_editor* editor) {
+    return editor->game_manager;
+}
+
 static void
 destroy_game_world(te_editor* editor, te_game_manager* game_manager) {
     if (editor->file_dialog != NULL) {
@@ -210,6 +215,56 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
     world_inspector_rebuild_list(inspector, editor->game_world);
 }
 
+// ------------------------------------------------------------------------------------------------
+static void* file_dialog_custom = NULL;
+static void (*file_dialog_on_selected)(void* custom, const char* path) = NULL;
+static void (*file_dialog_on_cancel)(void* custom) = NULL;
+void
+prv_file_dialog_on_selected(void* custom, const char* path) {
+    te_editor* editor = custom;
+
+    file_dialog_destroy(editor->file_dialog);
+    editor->file_dialog = NULL;
+
+    game_manager_destroy_world(editor->game_manager, editor->dialog_world);
+    editor->dialog_world = NULL;
+
+    file_dialog_on_selected(file_dialog_custom, path);
+}
+void
+prv_file_dialog_on_cancel(void* custom) {
+    te_editor* editor = custom;
+
+    file_dialog_destroy(editor->file_dialog);
+    editor->file_dialog = NULL;
+
+    game_manager_destroy_world(editor->game_manager, editor->dialog_world);
+    editor->dialog_world = NULL;
+
+    if (file_dialog_on_cancel != NULL) {
+        file_dialog_on_cancel(file_dialog_custom);
+    }
+}
+void
+editor_show_file_dialog(
+    te_editor* editor, void* custom, void (*on_selected)(void* custom, const char* path),
+    void (*on_cancel)(void* custom), enum te_file_dialog_mode mode) {
+    // Create a new world for dialog widget to be displayed on top of both the editor and the game worlds.
+    editor->dialog_world = game_manager_create_world(editor->game_manager, "dialog");
+    te_camera* camera = camera_create();
+    world_spawn_camera(editor->dialog_world, camera);
+    world_set_active_camera(editor->dialog_world, camera);
+
+    file_dialog_custom = custom;
+    file_dialog_on_selected = on_selected;
+    file_dialog_on_cancel = on_cancel;
+
+    editor->file_dialog = file_dialog_create(
+        editor->dialog_world, editor, prv_file_dialog_on_selected, prv_file_dialog_on_cancel,
+        mode);
+}
+// ------------------------------------------------------------------------------------------------
+
 void
 editor_set_gizmo(te_editor* editor, te_model* target) {
     if (editor->game_world == NULL) {
@@ -291,12 +346,6 @@ static void
 on_new_world_file_selected(void* custom, const char* path_to_file) {
     te_editor* editor = custom;
 
-    file_dialog_destroy(editor->file_dialog);
-    editor->file_dialog = NULL;
-
-    game_manager_destroy_world(editor->game_manager, editor->dialog_world);
-    editor->dialog_world = NULL;
-
     if (editor->game_world == NULL) {
         return;
     }
@@ -314,35 +363,19 @@ on_new_world_file_selected(void* custom, const char* path_to_file) {
     editor_ui_refresh_filesystem_view(editor->ui);
 }
 
-static void
-on_new_world_file_cancel(void* custom) {
-    te_editor* editor = custom;
-
-    file_dialog_destroy(editor->file_dialog);
-    editor->file_dialog = NULL;
-
-    game_manager_destroy_world(editor->game_manager, editor->dialog_world);
-    editor->dialog_world = NULL;
-}
-
 void
 editor_on_keyboard_button_pressed(
     void* game_instance, struct te_game_manager* game_manager, enum te_keyboard_button button,
     te_keyboard_modifiers modifiers) {
+    (void)game_manager;
+
     te_editor* editor = game_instance;
 
     if (editor->game_world != NULL && keyboard_modifiers_is_ctrl_pressed(&modifiers)
         && button == TE_KB_S) {
         if (editor->game_world_relative_path == NULL) {
-            // Create a new world for dialog widget to be displayed on top of both the editor and the game worlds.
-            editor->dialog_world = game_manager_create_world(game_manager, "dialog");
-            te_camera* camera = camera_create();
-            world_spawn_camera(editor->dialog_world, camera);
-            world_set_active_camera(editor->dialog_world, camera);
-
-            editor->file_dialog = file_dialog_create(
-                editor->dialog_world, editor, on_new_world_file_selected,
-                on_new_world_file_cancel, TE_FDM_SELECT_NEW_FILE);
+            editor_show_file_dialog(
+                editor, editor, on_new_world_file_selected, NULL, TE_FDM_SELECT_NEW_FILE);
         } else {
             world_save_to_file(editor->game_world, editor->game_world_relative_path);
         }
@@ -447,6 +480,10 @@ editor_on_mouse_button_pressed(
     bool was_handled_by_widget) {
     (void)was_handled_by_widget;
     te_editor* editor = game_instance;
+
+    if (editor->dialog_world != NULL) {
+        return;
+    }
 
     if (editor->game_world == NULL) {
         return;

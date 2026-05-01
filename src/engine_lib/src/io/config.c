@@ -778,10 +778,10 @@ config_save(te_config* config, const char* relative_path, bool create_backup) {
         return;
     }
 
-    char* path_to_config = filesystem_prepend_res_to_path(relative_path);
-    const size_t path_len = strlen(path_to_config);
+    unsigned int path_len;
+    char* path_to_config = filesystem_prepend_res_to_path(relative_path, &path_len);
 
-    char* path_to_bak = malloc(sizeof(char) * (path_len + 4 + 1)); // ".bak"
+    char* path_to_bak = malloc(sizeof(char) * (path_len + 4 + 1));
     memcpy(path_to_bak, path_to_config, sizeof(char) * path_len);
     memcpy(path_to_bak + path_len, ".bak", 4);
     path_to_bak[path_len + 4] = 0;
@@ -897,14 +897,13 @@ config_save(te_config* config, const char* relative_path, bool create_backup) {
 
 static void
 prv_config_load(te_config* config, const char* relative_path) {
-    char* path_to_config = filesystem_prepend_res_to_path(relative_path);
+    unsigned int path_len;
+    char* path_to_config = filesystem_prepend_res_to_path(relative_path, &path_len);
 
     FILE* fp = fopen(path_to_config, "r");
     if (fp == NULL) {
         // Check if backup file exists.
-        const size_t path_len = strlen(path_to_config);
-
-        char* path_to_bak = malloc(sizeof(char) * (path_len + 4 + 1)); // ".bak"
+        char* path_to_bak = malloc(sizeof(char) * (path_len + 4 + 1));
         memcpy(path_to_bak, path_to_config, sizeof(char) * path_len);
         memcpy(path_to_bak + path_len, ".bak", 4);
         path_to_bak[path_len + 4] = 0;

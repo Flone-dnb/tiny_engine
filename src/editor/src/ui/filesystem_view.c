@@ -5,6 +5,7 @@
 #include <editor.h>
 #include <io/log.h>
 #include <io/filesystem.h>
+#include <io/import.h>
 #include <widget/widget.h>
 #include <widget/text_widget.h>
 #include <widget/button_widget.h>
@@ -227,6 +228,25 @@ collect_dir_entries(te_filesystem_view* explorer) {
 }
 
 static void
+on_import_gltf_dir_selected(void* custom, const char* path) {
+    te_filesystem_view* explorer = custom;
+
+    const char* relative_path = explorer->relative_path == NULL ? "" : explorer->relative_path;
+    import_file_as_world(editor_get_game_manager(explorer->editor), path, relative_path);
+
+    collect_dir_entries(explorer);
+}
+
+static void
+on_button_import_gltf_clicked(te_button_widget* button) {
+    te_filesystem_view* explorer = widget_get_custom_ptr(button_widget_get_widget(button));
+
+    editor_show_file_dialog(
+        explorer->editor, explorer, on_import_gltf_dir_selected, NULL,
+        TE_FDM_SELECT_EXISTING_FILE);
+}
+
+static void
 on_button_prev_page_clicked(te_button_widget* button) {
     te_filesystem_view* explorer = widget_get_custom_ptr(button_widget_get_widget(button));
     if (explorer->current_page == 0) {
@@ -370,6 +390,47 @@ filesystem_view_add(te_filesystem_view* explorer, te_widget* left_panel) {
     vec2 size;
     size[0] = 1.0f - hpadding * 2.0f;
     size[1] = theme_get_button_height();
+
+    // Import GLTF button.
+    {
+        te_button_widget* button = button_widget_create();
+        {
+            te_widget* widget = button_widget_get_widget(button);
+            widget_set_relative_position(widget, pos);
+            widget_set_relative_size(widget, size);
+            widget_set_parent(widget, left_panel);
+            widget_set_custom_ptr(widget, explorer);
+        }
+
+        vec4 color;
+        theme_get_button_color(color);
+        button_widget_set_color(button, color);
+
+        theme_get_button_color_hovered(color);
+        button_widget_set_color_hovered(button, color);
+
+        theme_get_button_color_pressed(color);
+        button_widget_set_color_pressed(button, color);
+
+        button_widget_set_on_clicked(button, on_button_import_gltf_clicked);
+
+        // Button text.
+        te_text_widget* text = text_widget_create();
+        {
+            te_widget* widget = text_widget_get_widget(text);
+            widget_set_parent(widget, button_widget_get_widget(button));
+            widget_set_relative_position(
+                widget, (vec2){hpadding_in_button, vpadding_in_button});
+            widget_set_relative_size(
+                widget, (vec2){1.0f - hpadding_in_button, 1.0f - vpadding_in_button});
+        }
+        text_widget_set_text_height(text, theme_get_text_height());
+
+        unsigned int text_len;
+        wchar_t* wtext = wchar_from_char("Import GLTF here", &text_len);
+        text_widget_set_text_own(text, wtext, text_len);
+    }
+    pos[1] += size[1];
 
     // Current dir name text.
     {

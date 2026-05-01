@@ -11,6 +11,7 @@ set(PROJECT_SOURCES
     src/io/paths.c
     src/io/filesystem.c
     src/io/config.c
+    src/io/import.c
     src/misc/globals.c
     src/misc/memory_usage.c
     src/misc/wchar_funcs.c
@@ -55,6 +56,7 @@ set(PROJECT_SOURCES
     include/io/paths.h
     include/io/filesystem.h
     include/io/config.h
+    include/io/import.h
     include/misc/globals.h
     include/misc/memory_usage.h
     include/misc/wchar_funcs.h

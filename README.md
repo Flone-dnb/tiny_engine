@@ -11,12 +11,11 @@ Supported platforms: Windows (x32, x64), Linux (x32, x64 and ARM64).
 - [X] GUI
 - [X] Type reflection
 - [X] Simple editor
-- [ ] GLTF/GLB import
+- [X] GLTF/GLB import
+- [ ] Skeletal animations
+- [ ] Particle effects
 - [ ] Audio
 - [ ] Simple physics engine
-- [ ] Skeletal animations
-- [ ] Minimal scripting
-- [ ] Particle effects
 
 # Documentation
 

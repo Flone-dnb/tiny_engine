@@ -88,6 +88,10 @@ camera_destroy(camera);
 
 Other game objects include things like models (AKA meshes), their usage is similar.
 
+# Import GLTF
+
+The editor provides a button to import GLTF/GLB files (`io/import.h` is used). Imported GLTF scene will appear in a new directory as a new world file. You can then load this GLTF scene by creating a new world and using the `world_add_from_file` function or you can add this imported GLTF scene to your already existing game world by using the same `world_add_from_file` function.
+
 # Debug tools
 
 Debug tools include things like `debug_drawer` (for rendering debug shapes) and `debug_console` (for registering new dev cheat commands and performance stats). In order to show/hide `debug_console` press the tilde (~) button on your keyboard.

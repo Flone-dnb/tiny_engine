@@ -40,6 +40,11 @@ filesystem_ensure_dirs_exist(const char* file_path) {
     free(dir_path);
 }
 
+void
+filesystem_create_directory(const char* path) {
+    mkdir(path, 0755);
+}
+
 bool
 filesystem_does_path_exists(const char* path) {
 #if defined(WIN32)
@@ -102,6 +107,41 @@ filesystem_copy_file(const char* src, const char* dst) {
     fclose(dp);
 }
 
+const char*
+filesystem_find_filename(const char* path, bool include_extension, unsigned int* ret_len) {
+    const size_t len = strlen(path);
+
+    size_t idx = len;
+    for (size_t i = len - 1; i > 0; i--) {
+#if defined(WIN32)
+        if (path[i] == '/' || path[i] == '\\') {
+#else
+        if (path[i] == '/') {
+#endif
+            idx = i + 1;
+            break;
+        }
+    }
+    if (idx >= len) {
+        (*ret_len) = 0;
+        return NULL;
+    }
+
+    if (include_extension) {
+        (*ret_len) = (unsigned int)(len - idx);
+        return path + idx;
+    }
+
+    for (size_t i = idx; i < len; i++) {
+        if (path[i] == '.') {
+            (*ret_len) = (unsigned int)(i - idx);
+            break;
+        }
+    }
+
+    return path + idx;
+}
+
 char*
 filesystem_convert_path_to_absolute(const char* src) {
 #if defined(__linux__)
@@ -113,19 +153,30 @@ filesystem_convert_path_to_absolute(const char* src) {
 #endif
 }
 
-char* filesystem_convert_path_to_relative(const char* src) {
+char*
+filesystem_convert_path_to_relative(const char* src) {
     // Find `res/` in the path.
     const size_t len = strlen(src);
     size_t start_pos = 0xFFFFFFFF;
-    for (size_t i = 0; i < len; i++) {
+
 #if defined(__linux__)
-        if (strncmp(src + i, "/res/", 5) == 0)
+    if (strncmp(src, "res/", 4) == 0)
 #else
-        if (strncmp(src + i, "\\res\\", 5) == 0 || strncmp(src + i, "/res/", 5) == 0)
+    if (strncmp(src, "res\\", 4) == 0 || strncmp(src + i, "res/", 4) == 0)
 #endif
-        {
-            start_pos = i + 5;
-            break;
+    {
+        start_pos = 4;
+    } else {
+        for (size_t i = 1; i < len; i++) {
+#if defined(__linux__)
+            if (strncmp(src + i, "/res/", 5) == 0)
+#else
+            if (strncmp(src + i, "\\res\\", 5) == 0 || strncmp(src + i, "/res/", 5) == 0)
+#endif
+            {
+                start_pos = i + 5;
+                break;
+            }
         }
     }
     if (start_pos == 0xFFFFFFFF) {
@@ -140,17 +191,90 @@ char* filesystem_convert_path_to_relative(const char* src) {
 }
 
 char*
-filesystem_prepend_res_to_path(const char* relative_path) {
-    const size_t len = strlen(relative_path);
+filesystem_prepend_res_to_path(const char* relative_path, unsigned int* ret_strlen) {
+    unsigned int len = (unsigned int)strlen(relative_path);
 
     char* new_path = malloc(sizeof(char) * (len + 4 + 1));
 
     memcpy(new_path, "res/", sizeof(char) * 4);
     memcpy(new_path + 4, relative_path, sizeof(char) * len);
 
-    new_path[len + 4] = 0;
+    len += 4;
+    new_path[len] = 0;
+
+    if (ret_strlen != NULL) {
+        (*ret_strlen) = len;
+    }
 
     return new_path;
+}
+
+char*
+filesystem_append_path(
+    const char* path, unsigned int path_len, const char* add, unsigned int add_len,
+    unsigned int* ret_strlen) {
+    const bool have_slash = path[path_len - 1] == '/' || path[path_len - 1] == '\\';
+    if (path_len == 0) {
+        path_len = (unsigned int)strlen(path);
+    }
+    if (add_len == 0) {
+        add_len = (unsigned int)strlen(add);
+    }
+
+    const unsigned int out_len = path_len + !have_slash + add_len;
+    char* out = malloc(sizeof(char) * (out_len + 1));
+
+    memcpy(out, path, sizeof(char) * path_len);
+#if defined(WIN32)
+    memcpy(out + path_len, "\\", sizeof(char) * !have_slash);
+#else
+    memcpy(out + path_len, "/", sizeof(char) * !have_slash);
+#endif
+    memcpy(out + path_len + !have_slash, add, sizeof(char) * add_len);
+
+    out[out_len] = 0;
+
+    if (ret_strlen != NULL) {
+        (*ret_strlen) = out_len;
+    }
+
+    return out;
+}
+
+char*
+filesystem_append_path_ext(
+    const char* path, unsigned int path_len, const char* add, unsigned int add_len,
+    const char* extension, unsigned int extension_len, unsigned int* ret_strlen) {
+    const bool have_slash = path[path_len - 1] == '/' || path[path_len - 1] == '\\';
+    if (path_len == 0) {
+        path_len = (unsigned int)strlen(path);
+    }
+    if (add_len == 0) {
+        add_len = (unsigned int)strlen(add);
+    }
+    if (extension_len == 0) {
+        extension_len = (unsigned int)strlen(extension);
+    }
+
+    const unsigned int out_len = path_len + !have_slash + add_len + extension_len;
+    char* out = malloc(sizeof(char) * (out_len + 1));
+
+    memcpy(out, path, sizeof(char) * path_len);
+#if defined(WIN32)
+    memcpy(out + path_len, "\\", sizeof(char) * !have_slash);
+#else
+    memcpy(out + path_len, "/", sizeof(char) * !have_slash);
+#endif
+    memcpy(out + path_len + !have_slash, add, sizeof(char) * add_len);
+    memcpy(out + path_len + !have_slash + add_len, extension, sizeof(char) * extension_len);
+
+    out[out_len] = 0;
+
+    if (ret_strlen != NULL) {
+        (*ret_strlen) = out_len;
+    }
+
+    return out;
 }
 
 te_filesystem_entry*
@@ -211,7 +335,7 @@ filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count) {
         const size_t len = strlen(abs_path);
         if (abs_path[len - 1] == '\\' || abs_path[len - 1] == '/') {
             abs_path[len] = '*';
-        }else {
+        } else {
             abs_path[len] = '\\';
             abs_path[len + 1] = '*';
         }

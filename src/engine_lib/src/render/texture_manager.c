@@ -77,7 +77,7 @@ texture_manager_request_texture(
     }
     if (!found) {
         // Load new texture.
-        char* tex_path = filesystem_prepend_res_to_path(relative_path);
+        char* tex_path = filesystem_prepend_res_to_path(relative_path, NULL);
         unsigned int tex_id = 0;
 
         if (opt != TE_TLO_CUBEMAP_NO_MIPMAPS) {

@@ -137,7 +137,7 @@ rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) 
 
 #if defined(ENGINE_EDITOR)
     // Check if path exists.
-    char* res_path = filesystem_prepend_res_to_path(relative_path);
+    char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
     if (!filesystem_does_path_exists(res_path)) {
         // Do nothing, probably user typing the path.
         free(res_path);

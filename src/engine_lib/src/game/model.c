@@ -2,13 +2,12 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include <cglm/mat4.h>
 #include <game/camera.h>
 #include <game_manager.h>
 #include <io/log.h>
-#if defined(ENGINE_EDITOR)
 #include <io/filesystem.h>
-#endif
 #include <math_funcs.h>
 #include <render/model_renderer.h>
 #include <render/renderer.h>
@@ -294,7 +293,7 @@ model_set_texture(te_model* model, const char* relative_path) {
 
 #if defined(ENGINE_EDITOR)
     // Check if path exists.
-    char* res_path = filesystem_prepend_res_to_path(relative_path);
+    char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
     if (!filesystem_does_path_exists(res_path)) {
         // Do nothing, probably user typing the path.
         free(res_path);
@@ -582,9 +581,12 @@ model_get_world(te_model* model) {
     return model->world;
 }
 
-void prv_model_generate_cube(
+static void prv_model_generate_cube(
     te_model_vertex** vertices, unsigned short** indices, unsigned int* vertex_count,
     unsigned int* index_count);
+static void prv_model_load_geo(
+    const char* path_to_geo, te_model_vertex** vertices, unsigned short** indices,
+    unsigned int* vertex_count, unsigned int* index_count);
 
 te_aabb_shape prv_model_calc_aabb(te_model_vertex* vertices, unsigned int vertex_count);
 
@@ -618,12 +620,16 @@ prv_model_add_to_model_renderer(te_model* model) {
         unsigned int vertex_count;
         unsigned short* indices;
         bool free_custom_geometry = false;
-        if (model->custom_get_geometry == NULL) {
-            prv_model_generate_cube(&vertices, &indices, &vertex_count, &index_count);
-        } else {
+        if (model->custom_get_geometry != NULL) {
             model->custom_get_geometry(
                 model, &vertices, &indices, &vertex_count, &index_count,
                 &free_custom_geometry);
+        } else if (model->path_to_geo != NULL) {
+            prv_model_load_geo(
+                model->path_to_geo, &vertices, &indices, &vertex_count, &index_count);
+            free_custom_geometry = true;
+        } else {
+            prv_model_generate_cube(&vertices, &indices, &vertex_count, &index_count);
         }
 
         glGenBuffers(1, &vbo);
@@ -972,7 +978,41 @@ model_register_type(void) {
     type_database_register_type(info);
 }
 
-void
+static void
+prv_model_load_geo(
+    const char* path_to_geo, te_model_vertex** vertices, unsigned short** indices,
+    unsigned int* vertex_count, unsigned int* index_count) {
+    char* res_path = filesystem_prepend_res_to_path(path_to_geo, NULL);
+
+    FILE* fp = fopen(res_path, "r");
+    if (fp == NULL) {
+        log_error_fmt(
+            "failed to load model geometry from file %s: unable to open file", path_to_geo);
+        abort();
+    }
+
+    unsigned char id = 0;
+    fread(&id, sizeof(id), 1, fp);
+    if (id != 0) {
+        log_error_fmt(
+            "failed to load model geometry from file %s: unexpected file type ID %u",
+            path_to_geo, (unsigned int)id);
+        abort();
+    }
+
+    fread(vertex_count, sizeof(*vertex_count), 1, fp);
+    (*vertices) = malloc(sizeof(te_model_vertex) * (*vertex_count));
+    fread(*vertices, sizeof(te_model_vertex), (*vertex_count), fp);
+
+    fread(index_count, sizeof(*index_count), 1, fp);
+    (*indices) = malloc(sizeof(unsigned short) * (*index_count));
+    fread(*indices, sizeof(unsigned short), (*index_count), fp);
+
+    fclose(fp);
+    free(res_path);
+}
+
+static void
 prv_model_generate_cube(
     te_model_vertex** vertices, unsigned short** indices, unsigned int* vertex_count,
     unsigned int* index_count) {

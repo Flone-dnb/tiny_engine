@@ -3,18 +3,27 @@
 #include <input/gamepad_button.h>
 #include <input/keyboard_button.h>
 #include <input/mouse_button.h>
-
-struct te_game_manager;
+#include <ui/file_dialog.h>
 
 typedef struct te_editor te_editor;
+struct te_game_manager;
 struct te_model;
 
 te_editor* editor_create();
 void editor_destroy(te_editor* editor);
 
+struct te_game_manager* editor_get_game_manager(te_editor* editor);
+
 // Destroys previous game world (if existed).
 // Optionally specify a non-NULL path to file to load as the new world.
 void editor_create_game_world(te_editor* editor, const char* relative_path_to_world);
+
+// Shows a file dialog on top of everything.
+// Specify NULL as `on_cancel` if you don't need it.
+// Do not free the path variable passed to you in the callback.
+void editor_show_file_dialog(
+    te_editor* editor, void* custom, void (*on_selected)(void* custom, const char* path),
+    void (*on_cancel)(void* custom), enum te_file_dialog_mode mode);
 
 // Shows or hides gizmo around the specified model.
 // Specify NULL to hide the gizmo.

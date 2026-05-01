@@ -16,3 +16,6 @@
 [submodule "ext/memcheck"]
 	path = ext/memcheck
 	url = https://github.com/Flone-dnb/memcheck.git
+[submodule "ext/cgltf"]
+	path = ext/cgltf
+	url = https://github.com/jkuhlmann/cgltf.git
