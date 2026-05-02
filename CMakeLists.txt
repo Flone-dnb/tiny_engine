@@ -53,7 +53,7 @@ function(tiny_engine_configure_target TARGET_NAME)
 	endif()
     endif()
 
-    # Add `DEBUG` macro in debug builds.
+    # Add `DEBUG` macro in non-release builds.
     if(NOT IS_RELEASE_BUILD)
 	message(STATUS "${PROJECT_NAME}: adding DEBUG macro")
 	target_compile_definitions(${TARGET_NAME} PUBLIC DEBUG)
@@ -72,8 +72,15 @@ function(tiny_engine_configure_target TARGET_NAME)
     target_include_directories(${TARGET_NAME} PUBLIC include)
     target_include_directories(${TARGET_NAME} PRIVATE src)
 
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "v8|arm64|aarch64")
+	set(IS_ARM64 1)
+    else()
+	set(IS_ARM64 0)
+    endif()
+    message(STATUS "${TARGET_NAME}: is running ARM64: ${IS_ARM64}")
+
     # Enable ASan.
-    if(NOT IS_RELEASE_BUILD AND NOT MSVC AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT ENGINE_DISABLE_ASAN_IN_DEBUG)
+    if(IS_ARM64 EQUAL 0 AND NOT IS_RELEASE_BUILD AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT ENGINE_DISABLE_ASAN_IN_DEBUG AND (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER MATCHES "clang"))
 	message(STATUS "${TARGET_NAME}: Address sanitizer is enabled.")
 	target_compile_definitions(${TARGET_NAME} PRIVATE ENGINE_ASAN_ENABLED)
 	target_compile_options(${TARGET_NAME} PRIVATE -fno-omit-frame-pointer)
@@ -82,6 +89,12 @@ function(tiny_engine_configure_target TARGET_NAME)
 	target_link_libraries(${TARGET_NAME} PRIVATE -fsanitize=address)
 	if (CMAKE_COMPILER_IS_GNUCC)
 	    target_compile_options(${TARGET_NAME} PRIVATE -static-libasan)
+	endif()
+    else()
+	if (NOT IS_RELEASE_BUILD AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
+	    message(WARNING "${TARGET_NAME}: Address sanitizer is disabled.")
+	else()
+	    message(STATUS "${TARGET_NAME}: Address sanitizer is disabled.")
 	endif()
     endif()
 
