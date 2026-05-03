@@ -191,6 +191,50 @@ filesystem_convert_path_to_relative(const char* src) {
 }
 
 char*
+filesystem_get_parent_path(const char* path, unsigned int path_len, unsigned int* ret_strlen) {
+    if (path_len == 0) {
+        path_len = (unsigned int)strlen(path);
+    }
+    if (path_len <= 1) {
+        return NULL;
+    }
+
+    unsigned int pos = path_len - 1;
+#if defined(WIN32)
+    if (path[pos] == '\\' || path[pos] == '/')
+#else
+    if (path[pos] == '/')
+#endif
+    {
+        pos -= 1;
+    }
+
+    for (; pos > 0; pos--) {
+#if defined(WIN32)
+        if (path[pos] == '\\' || path[pos] == '/')
+#else
+        if (path[pos] == '/')
+#endif
+        {
+            break;
+        }
+    }
+    if (pos == 0) {
+        return NULL;
+    }
+
+    char* out = malloc(sizeof(char) * (pos + 1));
+    memcpy(out, path, sizeof(char) * pos);
+    out[pos] = 0;
+
+    if (ret_strlen != NULL) {
+        (*ret_strlen) = pos;
+    }
+
+    return out;
+}
+
+char*
 filesystem_prepend_res_to_path(const char* relative_path, unsigned int* ret_strlen) {
     unsigned int len = (unsigned int)strlen(relative_path);
 

@@ -7,9 +7,112 @@
 #include <io/filesystem.h>
 #define CGLTF_IMPLEMENTATION
 #include <cgltf/cgltf.h>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb/stb_image_write.h>
+#include <stb/stb_image.h>
+
+// Returns absolute path to the destination texture (located in the "res" directory).
+// You must free returned pointer.
+static char*
+save_texture(
+    size_t node_idx, size_t prim_idx, const char* path_to_gltf_dir,
+    unsigned int path_to_gltf_dir_len, cgltf_image* image, const char* path_to_tex_dir,
+    unsigned int path_to_tex_dir_len) {
+    // Check image URI.
+    if (image->uri != NULL && image->uri[0] != '\0') {
+        // Don't handle slashes in URI (for now).
+        const unsigned int uri_len = (unsigned int)strlen(image->uri);
+        for (unsigned int i = 0; i < uri_len; i++) {
+            if (image->uri[i] == '/' || image->uri[i] == '\\') {
+                log_error_fmt(
+                    "found path in the image path (paths in images not supported): %s",
+                    image->uri);
+                abort();
+            }
+        }
+
+        char* path_to_src_image = filesystem_append_path(
+            path_to_gltf_dir, path_to_gltf_dir_len, image->uri, uri_len, NULL);
+        if (filesystem_does_path_exists(path_to_src_image)) {
+            char* path_to_dst_image = filesystem_append_path(
+                path_to_tex_dir, path_to_tex_dir_len, image->uri, uri_len, NULL);
+
+            if (filesystem_does_path_exists(path_to_dst_image)) {
+                // Multiple primitives using the same texture that we already saved.
+                free(path_to_src_image);
+                return path_to_dst_image;
+            }
+
+            filesystem_copy_file(path_to_src_image, path_to_dst_image);
+
+            free(path_to_src_image);
+            return path_to_dst_image;
+        }
+
+        free(path_to_src_image);
+    }
+
+    // Prepare a new texture name.
+    const int tex_name_len = snprintf(NULL, 0, "tex_%zu_%zu", node_idx, prim_idx);
+    if (tex_name_len < 0) {
+        log_error("snprintf error");
+        abort();
+    }
+    char* tex_name = malloc(sizeof(char) * ((unsigned int)tex_name_len + 1));
+    snprintf(tex_name, (unsigned int)tex_name_len + 1, "tex_%zu_%zu", node_idx, prim_idx);
+
+    // Load texture.
+    int width;
+    int height;
+    int channel_count;
+    unsigned char* image_data = stbi_load_from_memory(
+        image->buffer_view->buffer->data + image->buffer_view->offset,
+        (int)image->buffer_view->size, &width, &height, &channel_count, 0);
+    if (image_data == NULL) {
+        log_error("failed to load image data");
+        abort();
+    }
+
+    // Write texture to disk.
+    char* absolute_tex_path = NULL;
+    if (strcmp(image->mime_type, "image/jpeg") == 0) {
+        absolute_tex_path = filesystem_append_path_ext(
+            path_to_tex_dir, path_to_tex_dir_len, tex_name, (unsigned int)tex_name_len, ".jpg",
+            4, NULL);
+        if (stbi_write_jpg(absolute_tex_path, width, height, channel_count, image_data, 100)
+            != 1) {
+            log_error("failed to write image");
+            abort();
+        }
+    } else if (strcmp(image->mime_type, "image/png") == 0) {
+        absolute_tex_path = filesystem_append_path_ext(
+            path_to_tex_dir, path_to_tex_dir_len, tex_name, (unsigned int)tex_name_len, ".png",
+            4, NULL);
+        if (stbi_write_png(
+                absolute_tex_path, width, height, channel_count, image_data,
+                width * channel_count)
+            != 1) {
+            log_error("failed to write image");
+            abort();
+        }
+    } else {
+        stbi_image_free(image_data);
+        free(tex_name);
+        log_error_fmt("unknown image type %s", image->mime_type);
+        abort();
+    }
+
+    stbi_image_free(image_data);
+
+    free(tex_name);
+    return absolute_tex_path;
+}
 
 static bool
-save_primitive(cgltf_primitive* primitive, const char* path_to_file) {
+save_primitive(
+    const char* path_to_gltf_dir, unsigned int path_to_gltf_dir_len,
+    cgltf_primitive* primitive, size_t node_idx, size_t prim_idx, const char* path_to_file,
+    te_model* model, const char* path_to_tex_dir, unsigned int path_to_tex_dir_len) {
     // Do a few checks.
 
     // Check index type.
@@ -193,6 +296,35 @@ save_primitive(cgltf_primitive* primitive, const char* path_to_file) {
     free(vertices);
     free(indices);
 
+    // Save material.
+    if (primitive->material != NULL) {
+        // Color.
+        vec4 rgba;
+        glm_vec3_copy(primitive->material->pbr_metallic_roughness.base_color_factor, rgba);
+        rgba[3] = 1.0f;
+        model_set_color(model, rgba);
+
+        // Texture.
+        if (primitive->material->pbr_metallic_roughness.base_color_texture.texture != NULL) {
+            cgltf_texture* tex =
+                primitive->material->pbr_metallic_roughness.base_color_texture.texture;
+
+            if (!filesystem_does_path_exists(path_to_tex_dir)) {
+                filesystem_create_directory(path_to_tex_dir);
+            }
+
+            char* absolute_tex_path = save_texture(
+                node_idx, prim_idx, path_to_gltf_dir, path_to_gltf_dir_len, tex->image,
+                path_to_tex_dir, path_to_tex_dir_len);
+            char* relative_path = filesystem_convert_path_to_relative(absolute_tex_path);
+
+            model_set_texture(model, relative_path);
+
+            free(absolute_tex_path);
+            free(relative_path);
+        }
+    }
+
     return true;
 }
 
@@ -271,6 +403,23 @@ import_file_as_world(
         return false;
     }
 
+    te_world* world = game_manager_create_world(game_manager, "import_gltf_world");
+    if (world == NULL) {
+        log_error_fmt("failed to create a new world to import %s", path_to_file);
+        free(res_out_dir);
+        return false;
+    }
+
+    // Get GLTF parent dir for later use.
+    unsigned int path_to_gltf_dir_len;
+    char* path_to_gltf_dir =
+        filesystem_get_parent_path(path_to_file, 0, &path_to_gltf_dir_len);
+    if (path_to_gltf_dir == NULL) {
+        log_error_fmt("failed to get parent directory of %s", path_to_file);
+        free(res_out_dir);
+        return false;
+    }
+
     filesystem_create_directory(res_out_dir);
 
     // Prepare path for newly imported geometry files.
@@ -279,12 +428,11 @@ import_file_as_world(
         filesystem_append_path(res_out_dir, res_out_dir_len, "geo", 3, &geo_dir_len);
     filesystem_create_directory(geo_dir);
 
-    te_world* world = game_manager_create_world(game_manager, "import_gltf_world");
-    if (world == NULL) {
-        log_error_fmt("failed to create a new world to import %s", path_to_file);
-        free(res_out_dir);
-        return false;
-    }
+    // Prepare path for newly imported texture files.
+    unsigned int tex_dir_len;
+    char* tex_dir =
+        filesystem_append_path(res_out_dir, res_out_dir_len, "tex", 3, &tex_dir_len);
+    // Note: don't create tex directory, we will create it if textures found.
 
     bool failed = false;
     for (size_t node_idx = 0; node_idx < data->scene->nodes_count; node_idx++) {
@@ -294,35 +442,40 @@ import_file_as_world(
             continue;
         }
 
-        if (node->mesh->primitives_count == 0) {
-            continue;
+        for (size_t prim_idx = 0; prim_idx < node->mesh->primitives_count; prim_idx++) {
+            cgltf_primitive* primitive = &node->mesh->primitives[prim_idx];
+            te_model* model = model_create();
+
+            // Prepare geometry bin file name.
+            int len = snprintf(NULL, 0, "%zu_%zu", node_idx, prim_idx);
+            if (len < 0) {
+                log_error("snprintf error");
+                abort();
+            }
+            unsigned int geo_name_len = (unsigned int)len;
+            char* geo_name = malloc(sizeof(char) * (geo_name_len + 1));
+            snprintf(geo_name, geo_name_len + 1, "%zu_%zu", node_idx, prim_idx);
+
+            char* geo_path = filesystem_append_path_ext(
+                geo_dir, geo_dir_len, geo_name, geo_name_len, ".bin", 4, NULL);
+            failed = !save_primitive(
+                path_to_gltf_dir, path_to_gltf_dir_len, primitive, node_idx, prim_idx,
+                geo_path, model, tex_dir, tex_dir_len);
+            if (failed) {
+                free(geo_path);
+                break;
+            }
+
+            char* geo_relative = filesystem_convert_path_to_relative(geo_path);
+
+            model_set_geometry(model, geo_relative);
+
+            world_spawn_model(world, model);
+
+            free(geo_path);
+            free(geo_relative);
+            free(geo_name);
         }
-        if (node->mesh->primitives_count > 1) {
-            // For now this way is simpler.
-            log_warn_fmt(
-                "GLTF node %s has more that 1 primitive, currently only a single primitive "
-                "per node is imported",
-                node->name);
-        }
-        cgltf_primitive* primitive = &node->mesh->primitives[0];
-
-        char* prim_path =
-            filesystem_append_path_ext(geo_dir, geo_dir_len, node->name, 0, ".bin", 4, NULL);
-        failed = !save_primitive(primitive, prim_path);
-        if (failed) {
-            free(prim_path);
-            break;
-        }
-
-        char* geo_relative = filesystem_convert_path_to_relative(prim_path);
-
-        te_model* model = model_create();
-        model_set_geometry(model, geo_relative);
-
-        world_spawn_model(world, model);
-
-        free(prim_path);
-        free(geo_relative);
     }
 
     if (!failed) {
@@ -347,6 +500,8 @@ import_file_as_world(
     cgltf_free(data);
     free(res_out_dir);
     free(geo_dir);
+    free(tex_dir);
+    free(path_to_gltf_dir);
 
     return true;
 }

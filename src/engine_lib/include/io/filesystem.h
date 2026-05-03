@@ -38,6 +38,15 @@ char* filesystem_convert_path_to_absolute(const char* src);
 // Returns NULL if unable to convert, otherwise a new string that you must free.
 char* filesystem_convert_path_to_relative(const char* src);
 
+// For files returns path to the directory where the file is stored,
+// for directories returns path to the parent directory.
+// Specify 0 as `path_len` to determine automatically.
+// Specify NULL as `ret_strlen` to ignore returned string strlen.
+// Returns NULL if unable to find.
+// You must free returned pointer.
+char*
+filesystem_get_parent_path(const char* path, unsigned int path_len, unsigned int* ret_strlen);
+
 // ------------------------------------------------------------------------------------------------
 
 // Takes a path relative to the `res` directory and appends "res/" before it.

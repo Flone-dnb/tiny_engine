@@ -121,8 +121,10 @@ void model_set_custom_frag_shader(te_model* model, const char* frag_relative_pat
 const char* model_get_custom_frag_shader(te_model* model);
 
 // Transparency is disabled by default.
-// Note that this option should only be used for semi-transparent 2D planes
-// (such as grass planes) because there's no sorting for transparent geometry.
+// Note that this options is not required to draw something like grass blades
+// (for such case just import grass texture with alpha channel), this option is
+// used for cases where you need something like a glass (semi-transparent object).
+// Note that there's no sorting for transparent geometry.
 void model_enable_transparency(te_model* model, bool enable);
 bool model_is_transparency_enabled(te_model* model);
 

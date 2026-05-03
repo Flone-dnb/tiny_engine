@@ -307,13 +307,10 @@ model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int han
     return &renderer->render_data[renderer->handle_to_data[handle]];
 }
 
-void
+unsigned int
 model_renderer_draw(
     te_model_renderer* renderer, mat4* view_proj_mat, te_frustum_shape* camera_frustum) {
-#if defined(ENGINE_DEBUG_TOOLS)
-    te_debug_stats* debug_stats = prv_debug_console_get_stats();
-#endif
-
+    unsigned int model_count = 0;
     unsigned int render_data_idx = 0;
 
     for (unsigned int group_idx = 0; group_idx < renderer->shader_group_count; group_idx++) {
@@ -346,9 +343,9 @@ model_renderer_draw(
             prv_model_set_vertex_attributes();
 
             glDrawElements(GL_TRIANGLES, data->index_count, GL_UNSIGNED_SHORT, NULL);
-#if defined(ENGINE_DEBUG_TOOLS)
-            debug_stats->rendered_model_count += 1;
-#endif
+            model_count += 1;
         }
     }
+
+    return model_count;
 }

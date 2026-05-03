@@ -283,7 +283,8 @@ prv_renderer_calc_frame_stats(te_renderer* renderer, float delta_time_sec) {
     stats->fps = renderer->frame_stats.fps;
 
     // Reset some stats to accumulate on the next frame.
-    stats->rendered_model_count = 0;
+    stats->rendered_opaque_model_count = 0;
+    stats->rendered_transparent_model_count = 0;
 #endif
 
     // FPS limit.
@@ -471,7 +472,10 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 #endif
 
             GPU_SECTION_BEGIN("opaque models");
-            model_renderer_draw(opaque_model_renderer, view_proj_mat, camera_frustum);
+#if defined(ENGINE_DEBUG_TOOLS)
+            debug_stats->rendered_opaque_model_count =
+#endif
+                model_renderer_draw(opaque_model_renderer, view_proj_mat, camera_frustum);
             GPU_SECTION_END;
 
             if (model_renderer_has_models(transparent_model_renderer)) {
@@ -481,7 +485,11 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 
                 glEnable(GL_BLEND);
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                model_renderer_draw(transparent_model_renderer, view_proj_mat, camera_frustum);
+#if defined(ENGINE_DEBUG_TOOLS)
+                debug_stats->rendered_transparent_model_count =
+#endif
+                    model_renderer_draw(
+                        transparent_model_renderer, view_proj_mat, camera_frustum);
                 glDisable(GL_BLEND);
 
                 glEnable(GL_CULL_FACE);
@@ -554,7 +562,8 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
             const Uint64 cpu_start_counter = SDL_GetPerformanceCounter();
 
             prv_debug_console_draw(delta_time_sec);
-            prv_debug_drawer_draw(renderer, delta_time_sec, camera_get_view_proj_mat(debug_camera));
+            prv_debug_drawer_draw(
+                renderer, delta_time_sec, camera_get_view_proj_mat(debug_camera));
 
             debug_stats->cpu_time_submit_debug_ms =
                 (float)(SDL_GetPerformanceCounter() - cpu_start_counter) * 1000.0f

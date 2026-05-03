@@ -55,7 +55,8 @@ typedef struct te_debug_stats {
     unsigned int total_mem;
     unsigned int total_used_mem;
 
-    unsigned int rendered_model_count;
+    unsigned int rendered_opaque_model_count;
+    unsigned int rendered_transparent_model_count;
     unsigned int cpu_ahead_gpu_frame_count;
 
     float cpu_time_frame_ms;

@@ -301,7 +301,10 @@ prv_debug_console_draw(float delta_time_sec) {
 
         // Rendered model count.
         prv_debug_console_draw_stat(
-            screen_pos, "rendered model count: %u", stats->rendered_model_count);
+            screen_pos, "rendered opaque model count: %u", stats->rendered_opaque_model_count);
+        prv_debug_console_draw_stat(
+            screen_pos, "rendered transparent model count: %u",
+            stats->rendered_transparent_model_count);
 
         // CPU stats.
         prv_debug_console_draw_stat(
