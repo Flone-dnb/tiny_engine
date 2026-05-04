@@ -3,8 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <game/camera.h>
 #include <game/model.h>
+#include <game/camera.h>
+#include <game/game_object_info.h>
 #include <game_manager.h>
 #include <io/log.h>
 #include <io/config.h>
@@ -30,16 +31,12 @@ struct te_world {
     // NULL if no active camera. Do not free/destroy this pointer. The camera will register/unregister itself.
     te_camera* active_camera;
 
-    // Always valid pointer, size of this array is @ref spawned_models_array_size but the actually
-    // used number of elements is @ref spawned_model_count. If some model despawned some pointers
+    // Always valid pointer, size of this array is @ref spawned_root_game_object_array_size but the actually
+    // used number of elements is @ref spawned_root_game_object_count. If some game object despawned some pointers
     // will be shifted to keep the array valid without any "holes". This array does not shrink
     // but the number of used (valid) elements may decrease.
-    // Just like @ref spawned_widgets stores only root models.
-    te_model** spawned_models;
-
-    // NULL if nothing spawned, size of this array is @ref spawned_camera_count.
-    // Just like @ref spawned_widgets stores only root cameras.
-    te_camera** spawned_cameras;
+    // Just like @ref spawned_widgets stores only root game objects.
+    te_game_object_info** spawned_root_game_objects;
 
     // NULL if nothing spawned, size of this array is @ref spawned_widget_count.
     // Each widget here can have child widgets, this array only stores root widgets.
@@ -62,14 +59,11 @@ struct te_world {
     // World name.
     char* name;
 
-    // Number of spawned models (valid elements) in @ref spawned_models.
-    unsigned int spawned_model_count;
+    // Number of spawned game objects (valid elements) in @ref spawned_root_game_objects.
+    unsigned int spawned_root_game_object_count;
 
-    // Total number of elements that @ref spawned_models can hold.
-    unsigned int spawned_models_array_size;
-
-    // Size of the array @ref spawned_cameras.
-    unsigned int spawned_camera_count;
+    // Total number of elements that @ref spawned_root_game_objects can hold.
+    unsigned int spawned_root_game_object_array_size;
 
     // Size of the array @ref spawned_widgets.
     unsigned int spawned_widget_count;
@@ -100,9 +94,6 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
 
     world->active_camera = NULL;
 
-    world->spawned_cameras = NULL;
-    world->spawned_camera_count = 0;
-
     world->spawned_widgets = NULL;
     world->spawned_widget_count = 0;
 
@@ -110,9 +101,9 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
     world->hovered_interactable_widget = NULL;
     world->interactable_widget_count = 0;
 
-    world->spawned_model_count = 0;
-    world->spawned_models_array_size = 128;
-    world->spawned_models = malloc(sizeof(te_model*) * world->spawned_models_array_size);
+    world->spawned_root_game_object_count = 0;
+    world->spawned_root_game_object_array_size = 128;
+    world->spawned_root_game_objects = malloc(sizeof(te_game_object_info*) * world->spawned_root_game_object_array_size);
 
     world->opaque_model_renderer = model_renderer_create(128, 128);
     world->transparent_model_renderer = model_renderer_create(4, 4);
@@ -147,22 +138,13 @@ prv_world_destroy(te_world* world) {
 
     // Despawn and destroy world objects.
     {
-        // Models.
-        while (world->spawned_model_count > 0) {
-            te_model* model = world->spawned_models[world->spawned_model_count - 1];
-            world->spawned_model_count -= 1;
-            prv_model_on_despawned(model);
-            model_destroy(model);
+        // Game objects.
+        for (unsigned int i = 0; i < world->spawned_root_game_object_count; i++) {
+            te_game_object_info* info = world->spawned_root_game_objects[i];
+            info->on_despawned(info->game_object);
+            info->destroy(info->game_object);
         }
-        free(world->spawned_models);
-
-        // Cameras.
-        while (world->spawned_camera_count > 0) {
-            te_camera* camera = world->spawned_cameras[world->spawned_camera_count - 1];
-            world->spawned_camera_count -= 1;
-            camera_destroy(camera);
-        }
-        free(world->spawned_cameras);
+        free(world->spawned_root_game_objects);
 
         // Widgets.
         while (world->spawned_widget_count > 0) {
@@ -212,53 +194,55 @@ prv_world_on_window_size_changed(te_world* world) {
 }
 
 void
-prv_world_add_root_model_no_notify(
-    te_world* world, struct te_model* model, bool check_if_already_added) {
-    if (check_if_already_added) {
-        for (unsigned int i = 0; i < world->spawned_model_count; i++) {
-            if (world->spawned_models[i] == model) {
+prv_world_add_root_game_object_no_notify(
+    te_world* world, struct te_game_object_info* info, bool ignore_if_already_added) {
+    if (ignore_if_already_added) {
+        for (unsigned int i = 0; i < world->spawned_root_game_object_count; i++) {
+            if (world->spawned_root_game_objects[i] == info) {
                 return;
             }
         }
     }
 
-    if (world->spawned_model_count == world->spawned_models_array_size) {
+    if (world->spawned_root_game_object_count == world->spawned_root_game_object_array_size) {
         // Expand array.
         const unsigned int grow_size = 128;
-        te_model** new_models =
-            malloc(sizeof(te_model*) * (world->spawned_models_array_size + grow_size));
+        te_game_object_info** new_items = malloc(
+            sizeof(te_game_object_info*)
+            * (world->spawned_root_game_object_array_size + grow_size));
         memcpy(
-            new_models, world->spawned_models, sizeof(te_model*) * world->spawned_model_count);
+            new_items, world->spawned_root_game_objects,
+            sizeof(te_game_object_info*) * world->spawned_root_game_object_count);
 
-        free(world->spawned_models);
-        world->spawned_models = new_models;
-        world->spawned_models_array_size += grow_size;
+        free(world->spawned_root_game_objects);
+        world->spawned_root_game_objects = new_items;
+        world->spawned_root_game_object_array_size += grow_size;
     }
 
-    world->spawned_models[world->spawned_model_count] = model;
-    world->spawned_model_count += 1;
+    world->spawned_root_game_objects[world->spawned_root_game_object_count] = info;
+    world->spawned_root_game_object_count += 1;
 }
 
 void
-prv_world_remove_root_model_no_notify(
-    te_world* world, struct te_model* model, bool must_exist_in_array) {
+prv_world_remove_root_game_object_no_notify(
+    te_world* world, struct te_game_object_info* info, bool must_exist_in_array) {
     // Find model.
-    unsigned int model_idx = 0;
+    unsigned int idx = 0;
     bool found = false;
-    for (unsigned int i = 0; i < world->spawned_model_count; i++) {
-        if (world->spawned_models[i] != model) {
+    for (unsigned int i = 0; i < world->spawned_root_game_object_count; i++) {
+        if (world->spawned_root_game_objects[i] != info) {
             continue;
         }
 
-        model_idx = i;
+        idx = i;
         found = true;
     }
     if (!found) {
         if (must_exist_in_array) {
-            log_error("unable to despawn the specified model: the model was not spawned "
-                      "previously or is a child model (despawn root "
-                      "model to despawn child modes or detach child model from parent first, "
-                      "then despawn the model)");
+            log_error("unable to despawn the specified game object: the object was not spawned "
+                      "previously or is a child object (despawn root "
+                      "object to despawn child objects or detach child object from parent first, "
+                      "then despawn the game object)");
             abort();
         } else {
             return;
@@ -266,12 +250,13 @@ prv_world_remove_root_model_no_notify(
     }
 
     // Remove from array (shift other elements).
-    if (world->spawned_model_count > 1) {
+    if (world->spawned_root_game_object_count > 1) {
         memmove(
-            world->spawned_models + model_idx, world->spawned_models + (model_idx + 1),
-            sizeof(te_model*) * (world->spawned_model_count - model_idx - 1));
+            world->spawned_root_game_objects + idx,
+            world->spawned_root_game_objects + (idx + 1),
+            sizeof(te_game_object_info*) * (world->spawned_root_game_object_count - idx - 1));
     }
-    world->spawned_model_count -= 1;
+    world->spawned_root_game_object_count -= 1;
 }
 
 void
@@ -348,84 +333,6 @@ prv_world_remove_root_widget_no_notify(
     }
 }
 
-void
-prv_world_add_root_camera_no_notify(
-    te_world* world, struct te_camera* camera, bool check_if_already_added) {
-    if (check_if_already_added) {
-        for (unsigned int i = 0; i < world->spawned_camera_count; i++) {
-            if (world->spawned_cameras[i] == camera) {
-                return;
-            }
-        }
-    }
-
-    te_camera** new_cameras = malloc(sizeof(te_camera*) * (world->spawned_camera_count + 1));
-    memcpy(
-        new_cameras, world->spawned_cameras, sizeof(te_camera*) * world->spawned_camera_count);
-
-    free(world->spawned_cameras);
-    world->spawned_cameras = new_cameras;
-
-    new_cameras[world->spawned_camera_count] = camera;
-    world->spawned_camera_count += 1;
-}
-
-void
-prv_world_remove_root_camera_no_notify(
-    te_world* world, struct te_camera* camera, bool must_exist_in_array) {
-    if (world->active_camera == camera) {
-        world->active_camera = NULL;
-    }
-
-    if (world->spawned_camera_count == 1) {
-        if (world->spawned_cameras[0] != camera) {
-            if (must_exist_in_array) {
-                log_error("expected the camera to be spawned in this world");
-                abort();
-            } else {
-                return;
-            }
-        }
-        free(world->spawned_cameras);
-        world->spawned_cameras = NULL;
-        world->spawned_camera_count = 0;
-    } else {
-        unsigned int i = 0;
-        bool found = false;
-        for (; i < world->spawned_camera_count; i++) {
-            if (world->spawned_cameras[i] != camera) {
-                continue;
-            }
-
-            found = true;
-            break;
-        }
-        if (!found) {
-            if (must_exist_in_array) {
-                log_error("unable to despawn the specified camera: the camera was not spawned "
-                          "previously or is a child camera "
-                          "(despawn root object to despawn child objects or detach child "
-                          "camera from parent first, then despawn "
-                          "the camera)");
-                abort();
-            } else {
-                return;
-            }
-        }
-
-        te_camera** new_cameras =
-            malloc(sizeof(te_camera*) * (world->spawned_model_count - 1));
-        memcpy(new_cameras, world->spawned_cameras, sizeof(te_camera*) * i);
-        memcpy(
-            new_cameras + i, world->spawned_cameras + (i + 1),
-            sizeof(te_camera*) * (world->spawned_camera_count - i - 1));
-
-        free(world->spawned_cameras);
-        world->spawned_cameras = new_cameras;
-        world->spawned_camera_count -= 1;
-    }
-}
-
 const char*
 world_get_name(te_world* world) {
     return world->name;
@@ -485,45 +392,39 @@ void
 world_save_to_file(te_world* world, const char* relative_path) {
     te_config* config = config_create(NULL);
 
-    const te_type_info* model_type_info = type_database_get_type_info(model_get_type_id());
-    const te_type_info* camera_type_info = type_database_get_type_info(camera_get_type_id());
+    // Save game objects.
+    if (world->spawned_root_game_object_count > 0) {
+        for (unsigned int idx = 0; idx < world->spawned_root_game_object_count; idx++) {
+            te_game_object_info* info = world->spawned_root_game_objects[idx];
 
-    // Save models.
-    if (world->spawned_model_count > 0) {
-        for (unsigned int model_idx = 0; model_idx < world->spawned_model_count; model_idx++) {
-            te_model* model = world->spawned_models[model_idx];
-            if (!model_is_serialization_allowed(model)) {
+            const te_type_info* type_info = type_database_get_type_info(info->type_id);
+            if (type_info == NULL) {
+                continue;
+            }
+
+            if (!type_info->is_serialization_allowed(info->game_object)) {
                 continue;
             }
 
             const unsigned int section_idx =
-                type_info_save_to_config(model_type_info, config, model);
+                type_info_save_to_config(type_info, config, info->game_object);
 
-            te_model* child_model = model_get_child_model(model);
-            te_camera* attached_camera = model_get_attached_camera(model);
-            if (child_model != NULL) {
-                config_section_set_bool(
-                    config, section_idx, CONFIG_VAR_NAME_HAS_CHILD_MODEL, true);
-                (void)type_info_save_to_config(model_type_info, config, child_model);
+            if (info->type == TE_GOT_MODEL) {
+                // Special case for models.
+                te_model* model = info->game_object;
+                te_model* child_model = model_get_child_model(model);
+                te_camera* attached_camera = model_get_attached_camera(model);
+                if (child_model != NULL) {
+                    config_section_set_bool(
+                        config, section_idx, CONFIG_VAR_NAME_HAS_CHILD_MODEL, true);
+                    (void)type_info_save_to_config(type_info, config, child_model);
+                }
+                if (attached_camera != NULL) {
+                    config_section_set_bool(
+                        config, section_idx, CONFIG_VAR_NAME_HAS_ATTACHED_CAMERA, true);
+                    (void)type_info_save_to_config(type_info, config, attached_camera);
+                }
             }
-            if (attached_camera != NULL) {
-                config_section_set_bool(
-                    config, section_idx, CONFIG_VAR_NAME_HAS_ATTACHED_CAMERA, true);
-                (void)type_info_save_to_config(camera_type_info, config, attached_camera);
-            }
-        }
-    }
-
-    // Save cameras.
-    if (world->spawned_camera_count > 0) {
-        for (unsigned int camera_idx = 0; camera_idx < world->spawned_camera_count;
-             camera_idx++) {
-            te_camera* camera = world->spawned_cameras[camera_idx];
-            if (!camera_is_serialization_allowed(camera)) {
-                continue;
-            }
-
-            (void)type_info_save_to_config(camera_type_info, config, camera);
         }
     }
 
@@ -670,23 +571,15 @@ world_get_active_camera(te_world* world) {
     return world->active_camera;
 }
 
-struct te_camera**
-world_get_cameras(te_world* world, unsigned int* count) {
-    (*count) = world->spawned_camera_count;
-    te_camera** out = malloc(sizeof(te_camera*) * (*count));
-    memcpy(out, world->spawned_cameras, sizeof(te_camera*) * (*count));
+te_game_object_info**
+world_get_root_game_objects(te_world* world, unsigned int* count) {
+    (*count) = world->spawned_root_game_object_count;
+    te_game_object_info** out = malloc(sizeof(te_game_object_info*) * (*count));
+    memcpy(out, world->spawned_root_game_objects, sizeof(te_game_object_info*) * (*count));
     return out;
 }
 
-struct te_model**
-world_get_models(te_world* world, unsigned int* count) {
-    (*count) = world->spawned_model_count;
-    te_model** out = malloc(sizeof(te_model*) * (*count));
-    memcpy(out, world->spawned_models, sizeof(te_model*) * (*count));
-    return out;
-}
-
-struct te_widget**
+te_widget**
 world_get_widgets(te_world* world, unsigned int* count) {
     (*count) = world->spawned_widget_count;
     te_widget** out = malloc(sizeof(te_widget*) * (*count));
@@ -715,100 +608,44 @@ world_get_game_manager(te_world* world) {
 }
 
 void
-world_spawn_model(te_world* world, te_model* model) {
+world_spawn_game_object(te_world* world, te_game_object_info* info) {
     if (world->is_being_destroyed) {
         return;
     }
 
-    te_world* old_model_world = model_get_world(model);
-    if (old_model_world != NULL) {
-        if (old_model_world == world) {
-            log_error("the model is already spawned in this world");
+    te_world* old_obj_world = info->get_world(info->game_object);
+    if (old_obj_world != NULL) {
+        if (old_obj_world == world) {
+            log_error("the game object is already spawned in this world");
             abort();
         } else {
-            log_error("the specified model cannot be spawned in this world because the model "
+            log_error("the specified game object cannot be spawned in this world because the game object "
                       "must be first despawned from the world it currently resides in");
             abort();
         }
     }
 
 #if defined(DEBUG)
-    prv_world_add_root_model_no_notify(world, model, true);
+    prv_world_add_root_game_object_no_notify(world, info, true);
 #else
-    prv_world_add_root_model_no_notify(world, model, false);
+    prv_world_add_root_game_object_no_notify(world, info, false);
 #endif
 
-    // Notify model as the last step as it can spawn a child model here.
-    prv_model_on_spawned(model, world);
+    info->on_spawned(info->game_object, world);
 }
 
 void
-world_despawn_model(te_world* world, te_model* model) {
-    if (model_get_world(model) != world) {
+world_despawn_game_object(te_world* world, te_game_object_info* info) {
+    te_world* obj_world = info->get_world(info->game_object);
+    if (obj_world != world) {
         log_error("the specified model cannot be despawned from this world as it's not "
                   "spawned in this world");
         abort();
     }
 
-    prv_world_remove_root_model_no_notify(world, model, true);
+    prv_world_remove_root_game_object_no_notify(world, info, true);
 
-    // Notify model as the last step as it can cause a child model to be despawned here.
-    prv_model_on_despawned(model);
-}
-
-void
-world_spawn_camera(te_world* world, te_camera* camera) {
-    if (world->is_being_destroyed) {
-        return;
-    }
-
-#if defined(DEBUG)
-    if (camera == NULL) {
-        log_error("NULL camera specified to spawn");
-        abort();
-    }
-#endif
-
-    te_world* old_camera_world = camera_get_world(camera);
-    if (old_camera_world != NULL) {
-        if (old_camera_world == world) {
-            log_error("the camera is already spawned in this world");
-            abort();
-        } else {
-            log_error(
-                "the specified camera cannot be spawned in this world because the camera "
-                "must be first despawned from the world it currently resides in");
-            abort();
-        }
-    }
-
-#if defined(DEBUG)
-    prv_world_add_root_camera_no_notify(world, camera, true);
-#else
-    prv_world_add_root_camera_no_notify(world, camera, false);
-#endif
-
-    prv_camera_set_world(camera, world);
-}
-
-void
-world_despawn_camera(te_world* world, te_camera* camera) {
-#if defined(DEBUG)
-    if (camera == NULL) {
-        log_error("NULL camera specified to despawn");
-        abort();
-    }
-#endif
-
-    if (camera_get_world(camera) != world) {
-        log_error("the specified camera cannot be despawned from this world as it's not "
-                  "spawned in this world");
-        abort();
-    }
-
-    prv_world_remove_root_camera_no_notify(world, camera, true);
-
-    prv_camera_set_world(camera, NULL);
+    info->on_despawned(info->game_object);
 }
 
 void

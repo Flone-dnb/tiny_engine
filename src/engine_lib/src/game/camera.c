@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <game/model.h>
+#include <game/game_object_info.h>
 #include <math_funcs.h>
 #include <misc/globals.h>
 #include <shape/frustum_shape.h>
@@ -22,6 +23,9 @@ struct te_camera {
 
     // NULL if not set.
     char* name;
+
+    // Always valid.
+    te_game_object_info* game_object_info;
 
 #if defined(ENGINE_EDITOR)
     // Model to visualize the camera in the editor.
@@ -76,6 +80,9 @@ struct te_camera {
     bool is_serialization_allowed;
 };
 
+static void on_spawned(te_camera* camera, struct te_world* world);
+static void on_despawned(te_camera* camera);
+
 te_camera*
 camera_create() {
     te_camera* camera = malloc(sizeof(te_camera));
@@ -105,13 +112,77 @@ camera_create() {
     camera->is_directions_outdated = true;
     camera->is_serialization_allowed = true;
 
+    camera->game_object_info = malloc(sizeof(te_game_object_info));
+    camera->game_object_info->type_id = camera_get_type_id();
+    camera->game_object_info->type = TE_GOT_CAMERA;
+    camera->game_object_info->game_object = camera;
+    camera->game_object_info->get_world = camera_get_world;
+    camera->game_object_info->get_name = camera_get_name;
+    camera->game_object_info->on_spawned = on_spawned;
+    camera->game_object_info->on_despawned = on_despawned;
+    camera->game_object_info->destroy = camera_destroy;
+
     return camera;
 }
 
 void
 camera_destroy(te_camera* camera) {
     free(camera->name);
+    free(camera->game_object_info);
+
     free(camera);
+}
+
+static void
+on_spawned(te_camera* camera, struct te_world* world) {
+    if (world == camera->world) {
+        return;
+    }
+
+    if (world == NULL) {
+        log_error("expected world to be valid");
+        abort();
+    }
+
+#if defined(ENGINE_EDITOR)
+    if (world != NULL) {
+        camera->editor_model = model_create();
+
+        model_set_is_serialization_allowed(camera->editor_model, false);
+        model_enable_transparency(camera->editor_model, true);
+        model_set_color(camera->editor_model, (vec4){1.0f, 1.0f, 1.0f, 0.25f});
+        model_set_scale(camera->editor_model, (vec3){0.5f, 0.5f, 0.5f});
+
+        world_spawn_game_object(world, model_get_game_object_info(camera->editor_model));
+
+        vec3 pos;
+        camera_get_world_position(camera, pos);
+        model_set_position(camera->editor_model, pos);
+    }
+#endif
+
+    camera->world = world;
+}
+
+static void
+on_despawned(te_camera* camera) {
+#if defined(ENGINE_EDITOR)
+    if (camera->world != NULL && camera->editor_model != NULL) {
+        if (!prv_world_is_being_destroyed(camera->world)) {
+            world_despawn_game_object(
+                camera->world, model_get_game_object_info(camera->editor_model));
+            model_destroy(camera->editor_model);
+        }
+        camera->editor_model = NULL;
+    }
+#endif
+
+    camera->world = NULL;
+}
+
+te_game_object_info*
+camera_get_game_object_info(te_camera* camera) {
+    return camera->game_object_info;
 }
 
 const char*
@@ -138,7 +209,17 @@ camera_get_name(te_camera* camera) {
 }
 
 static void
-camera_despawn(te_world* world, te_camera* camera) {
+type_spawn(te_world* world, te_camera* camera) {
+    if (camera->world != NULL) {
+        log_error("the camera is already spawned in the different world");
+        abort();
+    }
+
+    world_spawn_game_object(world, camera->game_object_info);
+}
+
+static void
+type_despawn(te_world* world, te_camera* camera) {
     if (camera->world != world) {
         log_error("the model is spawned in the different world");
         abort();
@@ -149,14 +230,15 @@ camera_despawn(te_world* world, te_camera* camera) {
             camera->parent_model,
             NULL); // make camera to be in the array of root world objects
     }
-    world_despawn_camera(camera->world, camera); // despawn root world object
+    world_despawn_game_object(
+        camera->world, camera->game_object_info); // despawn root world object
 }
 
 void
 camera_register_type(void) {
     te_type_info* info = type_info_create(
-        camera_get_type_id(), camera_create, camera_destroy, world_spawn_camera,
-        camera_despawn, NULL);
+        camera_get_type_id(), camera_create, camera_destroy, type_spawn, type_despawn, NULL,
+        camera_is_serialization_allowed);
     type_info_add_vec3_variable(info, "position", camera_set_position, camera_get_position);
     type_info_add_vec3_variable(info, "rotation", camera_set_rotation, camera_get_rotation);
     type_info_add_uint_variable(
@@ -487,42 +569,11 @@ prv_camera_set_render_target_size(te_camera* camera, unsigned int width, unsigne
 }
 
 void
-prv_camera_set_world(te_camera* camera, struct te_world* world) {
-    if (world == camera->world) {
-        return;
-    }
-
-#if defined(ENGINE_EDITOR)
-    if (world != NULL) {
-        camera->editor_model = model_create();
-
-        model_set_is_serialization_allowed(camera->editor_model, false);
-        model_enable_transparency(camera->editor_model, true);
-        model_set_color(camera->editor_model, (vec4){1.0f, 1.0f, 1.0f, 0.25f});
-        model_set_scale(camera->editor_model, (vec3){0.5f, 0.5f, 0.5f});
-
-        world_spawn_model(world, camera->editor_model);
-
-        vec3 pos;
-        camera_get_world_position(camera, pos);
-        model_set_position(camera->editor_model, pos);
-    } else if (camera->editor_model != NULL) {
-        if (!prv_world_is_being_destroyed(camera->world)) {
-            world_despawn_model(camera->world, camera->editor_model);
-            model_destroy(camera->editor_model);
-        }
-        camera->editor_model = NULL;
-    }
-#endif
-
-    camera->world = world;
-}
-
-void
 prv_camera_on_active(te_camera* camera) {
 #if defined(ENGINE_EDITOR)
     if (camera->editor_model != NULL) {
-        world_despawn_model(camera->world, camera->editor_model);
+        world_despawn_game_object(
+            camera->world, model_get_game_object_info(camera->editor_model));
         model_destroy(camera->editor_model);
         camera->editor_model = NULL;
     }

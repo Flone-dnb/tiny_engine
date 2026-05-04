@@ -14,6 +14,10 @@
 #elif __linux__
 #include <dirent.h>
 #include <sys/stat.h>
+#include <sys/sendfile.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <limits.h>
 #else
 #error "unsupported OS"
 #endif
@@ -85,26 +89,32 @@ filesystem_rename_file(const char* old_path, const char* new_path) {
 
 void
 filesystem_copy_file(const char* src, const char* dst) {
-    FILE* sp = fopen(src, "r");
-    if (sp == NULL) {
-        log_error_fmt("failed to open the file for reading \"%s\"", src);
-        abort();
+#if defined(WIN32)
+    CopyFile(src, dst, 0);
+#else
+    int input, output;
+    if ((input = open(src, O_RDONLY)) == -1) {
+        return;
+    }
+    if ((output = creat(dst, 0660)) == -1) {
+        close(input);
+        return;
     }
 
-    FILE* dp = fopen(dst, "w");
-    if (dp == NULL) {
-        fclose(sp);
-        log_error_fmt("failed to open the file for writing \"%s\"", src);
-        abort();
+    struct stat file_stat = {0};
+    int result = fstat(input, &file_stat);
+    off_t copied = 0;
+    while (result == 0 && copied < file_stat.st_size) {
+        ssize_t written = sendfile(output, input, &copied, SSIZE_MAX);
+        copied += written;
+        if (written == -1) {
+            result = -1;
+        }
     }
 
-    int ch;
-    while ((ch = fgetc(sp)) != EOF) {
-        fputc(ch, dp);
-    }
-
-    fclose(sp);
-    fclose(dp);
+    close(input);
+    close(output);
+#endif
 }
 
 const char*
@@ -162,7 +172,7 @@ filesystem_convert_path_to_relative(const char* src) {
 #if defined(__linux__)
     if (strncmp(src, "res/", 4) == 0)
 #else
-    if (strncmp(src, "res\\", 4) == 0 || strncmp(src + i, "res/", 4) == 0)
+    if (strncmp(src, "res\\", 4) == 0 || strncmp(src, "res/", 4) == 0)
 #endif
     {
         start_pos = 4;
@@ -240,7 +250,11 @@ filesystem_prepend_res_to_path(const char* relative_path, unsigned int* ret_strl
 
     char* new_path = malloc(sizeof(char) * (len + 4 + 1));
 
+#if defined(WIN32)
+    memcpy(new_path, "res\\", sizeof(char) * 4);
+#else
     memcpy(new_path, "res/", sizeof(char) * 4);
+#endif
     memcpy(new_path + 4, relative_path, sizeof(char) * len);
 
     len += 4;

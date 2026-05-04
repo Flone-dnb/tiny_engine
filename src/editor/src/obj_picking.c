@@ -3,6 +3,7 @@
 #include <world.h>
 #include <game/camera.h>
 #include <game/model.h>
+#include <game/game_object_info.h>
 #include <render/model_renderer.h>
 #include <shape/frustum_shape.h>
 #include <gizmo.h>
@@ -75,7 +76,7 @@ test_model_hit(
     return false;
 }
 
-void*
+te_game_object_info*
 obj_picking_find_obj_under_cursor(
     vec2 cursor_pos_rel, te_camera* camera, te_world* world, te_gizmo* gizmo) {
     te_frustum_shape* frustum = camera_get_frustum(camera);
@@ -89,7 +90,7 @@ obj_picking_find_obj_under_cursor(
     camera_get_world_position(camera, camera_world_pos);
 
     unsigned int count;
-    te_model** models = world_get_models(world, &count);
+    te_game_object_info** root_game_objects = world_get_root_game_objects(world, &count);
     if (count == 0) {
         return NULL;
     }
@@ -98,7 +99,11 @@ obj_picking_find_obj_under_cursor(
     info.model = NULL;
 
     for (unsigned int i = 0; i < count; i++) {
-        te_model* model = models[i];
+        te_game_object_info* root_game_object = root_game_objects[i];
+        if (root_game_object->type != TE_GOT_MODEL) {
+            continue;
+        }
+        te_model* model = root_game_object->game_object;
 
         if (test_model_hit(&info, frustum, gizmo, camera_world_pos, camera_world_ray, model)) {
             break;
@@ -113,7 +118,7 @@ obj_picking_find_obj_under_cursor(
         }
     }
 
-    free(models);
+    free(root_game_objects);
 
-    return info.model;
+    return info.model == NULL ? NULL : model_get_game_object_info(info.model);
 }

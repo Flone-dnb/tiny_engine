@@ -70,6 +70,7 @@ set(PROJECT_SOURCES
     include/world.h
     include/game/camera.h
     include/game/model.h
+    include/game/game_object_info.h
     include/widget/widget.h
     include/widget/text_widget.h
     include/widget/rect_widget.h

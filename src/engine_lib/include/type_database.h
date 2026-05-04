@@ -65,7 +65,10 @@ typedef struct te_type_info {
     void (*despawn)(struct te_world* world, void* obj);
 
     // NULL if not a widget, otherwise returns base widget type.
-    struct te_widget* (*get_widget)(void*);
+    struct te_widget* (*get_widget)(void* obj);
+
+    // Returns `false` if this object should not be serialized.
+    bool (*is_serialization_allowed)(void* obj);
 
     te_variable_info* variables;
 
@@ -108,10 +111,13 @@ typedef struct te_type_info {
 // Creates a new type info to be registered using @ref type_database_register_type.
 // Specify NULL to get_widget if not a widget, otherwise return base widget type.
 te_type_info* type_info_create(
-    const char* id, void* (*create)(void), void (*destroy)(void* obj),
+    const char* id,
+    void* (*create)(void),
+    void (*destroy)(void* obj),
     void (*spawn)(struct te_world* world, void* obj),
     void (*despawn)(struct te_world* world, void* obj),
-    struct te_widget* (*get_widget)(void*));
+    struct te_widget* (*get_widget)(void*),
+    bool (*is_serialization_allowed)(void* obj));
 void type_info_add_bool_variable(
     te_type_info* info, const char* name, te_bool_setter setter, te_bool_getter getter);
 void type_info_add_uint_variable(

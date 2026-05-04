@@ -65,8 +65,8 @@ save_texture(
     int width;
     int height;
     int channel_count;
-    unsigned char* image_data = stbi_load_from_memory(
-        image->buffer_view->buffer->data + image->buffer_view->offset,
+    stbi_uc* image_data = stbi_load_from_memory(
+        (const stbi_uc*)image->buffer_view->buffer->data + image->buffer_view->offset,
         (int)image->buffer_view->size, &width, &height, &channel_count, 0);
     if (image_data == NULL) {
         log_error("failed to load image data");
@@ -203,6 +203,10 @@ save_primitive(
         log_error_fmt("GLTF mesh vertex count exceeds limit of %u", 0xFFFFFFFFu);
         return false;
     }
+    if (primitive->attributes[pos_attribute_idx].data->count == 0) {
+        log_error("GLTF mesh vertex count is zero");
+        return false;
+    }
 
     // Load indices.
     unsigned int index_count = (unsigned int)primitive->indices->count;
@@ -275,7 +279,7 @@ save_primitive(
         }
     }
 
-    FILE* fp = fopen(path_to_file, "w");
+    FILE* fp = fopen(path_to_file, "wb");
     if (fp == NULL) {
         log_error_fmt("failed to open file for writing %s", path_to_file);
         free(vertices);
@@ -470,7 +474,7 @@ import_file_as_world(
 
             model_set_geometry(model, geo_relative);
 
-            world_spawn_model(world, model);
+            world_spawn_game_object(world, model_get_game_object_info(model));
 
             free(geo_path);
             free(geo_relative);

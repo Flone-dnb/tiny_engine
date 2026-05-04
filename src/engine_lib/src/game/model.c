@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <cglm/mat4.h>
 #include <game/camera.h>
+#include <game/game_object_info.h>
 #include <game_manager.h>
 #include <io/log.h>
 #include <io/filesystem.h>
@@ -40,6 +41,9 @@ struct te_model {
 
     // NULL if not set.
     char* name;
+
+    // Always valid pointer.
+    te_game_object_info* game_object_info;
 
     // NULL if not spawned. Do not free/destroy this pointer.
     te_world* world;
@@ -77,6 +81,9 @@ struct te_model {
     bool is_serialization_allowed;
 };
 
+static void on_spawned(te_model* model, te_world* world);
+static void on_despawned(te_model* model);
+
 te_model*
 model_create() {
     te_model* model = malloc(sizeof(te_model));
@@ -107,8 +114,15 @@ model_create() {
     glm_vec3_zero(model->rotation);
     glm_vec3_one(model->scale);
 
-    free(model->custom_vert_relative_path);
-    free(model->custom_frag_relative_path);
+    model->game_object_info = malloc(sizeof(te_game_object_info));
+    model->game_object_info->type_id = model_get_type_id();
+    model->game_object_info->type = TE_GOT_MODEL;
+    model->game_object_info->game_object = model;
+    model->game_object_info->get_world = model_get_world;
+    model->game_object_info->get_name = model_get_name;
+    model->game_object_info->on_spawned = on_spawned;
+    model->game_object_info->on_despawned = on_despawned;
+    model->game_object_info->destroy = model_destroy;
 
     return model;
 }
@@ -141,7 +155,14 @@ model_destroy(te_model* model) {
     free(model->custom_frag_relative_path);
     free(model->custom_vert_relative_path);
     free(model->path_to_geo);
+    free(model->game_object_info);
+
     free(model);
+}
+
+te_game_object_info*
+model_get_game_object_info(te_model* model) {
+    return model->game_object_info;
 }
 
 void
@@ -452,12 +473,14 @@ model_set_parent(te_model* model, te_model* new_parent) {
 
     if (model->world == NULL) {
         if (new_parent != NULL && new_parent->world != NULL) {
-            world_spawn_model(new_parent->world, model);
-            prv_world_remove_root_model_no_notify(new_parent->world, model, true);
+            world_spawn_game_object(new_parent->world, model_get_game_object_info(model));
+            prv_world_remove_root_game_object_no_notify(
+                new_parent->world, model_get_game_object_info(model), true);
         }
     } else {
         if (new_parent == NULL) {
-            prv_world_add_root_model_no_notify(model->world, model, true);
+            prv_world_add_root_game_object_no_notify(
+                model->world, model_get_game_object_info(model), true);
         } else {
             if (new_parent->world != NULL) {
                 if (new_parent->world != model->world) {
@@ -465,10 +488,11 @@ model_set_parent(te_model* model, te_model* new_parent) {
                               "model first");
                     abort();
                 } else {
-                    prv_world_remove_root_model_no_notify(model->world, model, false);
+                    prv_world_remove_root_game_object_no_notify(
+                        model->world, model_get_game_object_info(model), false);
                 }
             } else {
-                world_despawn_model(model->world, model);
+                world_despawn_game_object(model->world, model_get_game_object_info(model));
             }
         }
     }
@@ -529,18 +553,20 @@ model_attach_camera(te_model* model, te_camera* camera) {
 
         if (model->world == NULL) {
             if (camera_world != NULL) {
-                world_despawn_camera(camera_world, camera);
+                world_despawn_game_object(camera_world, camera_get_game_object_info(camera));
             }
         } else {
             if (camera_world == NULL) {
-                world_spawn_camera(model->world, camera);
+                world_spawn_game_object(model->world, camera_get_game_object_info(camera));
             }
-            prv_world_remove_root_camera_no_notify(model->world, camera, true);
+            prv_world_remove_root_game_object_no_notify(
+                model->world, camera_get_game_object_info(camera), true);
         }
     } else if (old_camera != NULL) {
         te_world* camera_world = camera_get_world(old_camera);
         if (camera_world != NULL) {
-            prv_world_add_root_camera_no_notify(camera_world, old_camera, true);
+            prv_world_add_root_game_object_no_notify(
+                camera_world, camera_get_game_object_info(old_camera), true);
         }
     }
 }
@@ -736,41 +762,6 @@ prv_model_remove_from_model_renderer(te_model* model) {
     model->shader_prog_id = 0xffffffff;
 }
 
-void
-prv_model_on_spawned(te_model* model, te_world* world) {
-    model->world = world;
-    prv_model_add_to_model_renderer(model);
-
-    if (model->child_model != NULL) {
-        if (model->child_model->world != NULL) {
-            log_error("expected the child model to not be spawned yet");
-            abort();
-        }
-        prv_model_on_spawned(model->child_model, world);
-    }
-
-    if (model->attached_camera != NULL) {
-        if (camera_get_world(model->attached_camera) != NULL) {
-            log_error("expected the attached camera to not be spawned yet");
-            abort();
-        }
-        prv_camera_set_world(model->attached_camera, world);
-    }
-}
-
-void
-prv_model_on_despawned(te_model* model) {
-    if (model->child_model != NULL && model->child_model->world != NULL) {
-        prv_model_on_despawned(model->child_model);
-    }
-    if (model->attached_camera != NULL && camera_get_world(model->attached_camera) != NULL) {
-        prv_camera_set_world(model->attached_camera, NULL);
-    }
-
-    prv_model_remove_from_model_renderer(model);
-    model->world = NULL;
-}
-
 mat4*
 prv_model_get_world_mat_tmp(te_model* model) {
     if (model->render_data_handle == 0xffffffff) {
@@ -933,13 +924,60 @@ prv_model_calc_aabb(te_model_vertex* vertices, unsigned int vertex_count) {
     return aabb;
 }
 
+static void
+on_spawned(te_model* model, te_world* world) {
+    model->world = world;
+    prv_model_add_to_model_renderer(model);
+
+    if (model->child_model != NULL) {
+        if (model->child_model->world != NULL) {
+            log_error("expected the child model to not be spawned yet");
+            abort();
+        }
+        on_spawned(model->child_model, world);
+    }
+
+    if (model->attached_camera != NULL) {
+        if (camera_get_world(model->attached_camera) != NULL) {
+            log_error("expected the attached camera to not be spawned yet");
+            abort();
+        }
+        camera_get_game_object_info(model->attached_camera)
+            ->on_spawned(model->attached_camera, world);
+    }
+}
+
+static void
+on_despawned(te_model* model) {
+    if (model->child_model != NULL && model->child_model->world != NULL) {
+        on_despawned(model->child_model);
+    }
+    if (model->attached_camera != NULL && camera_get_world(model->attached_camera) != NULL) {
+        camera_get_game_object_info(model->attached_camera)
+            ->on_despawned(model->attached_camera);
+    }
+
+    prv_model_remove_from_model_renderer(model);
+    model->world = NULL;
+}
+
 const char*
 model_get_type_id(void) {
     return "model";
 }
 
 static void
-model_despawn(te_world* world, te_model* model) {
+type_spawn(te_world* world, te_model* model) {
+    if (model->world != NULL) {
+        log_error("the model is already spawned in the different world");
+        abort();
+    }
+
+    world_spawn_game_object(world, model->game_object_info);
+}
+
+static void
+type_despawn(te_world* world, te_model* model) {
     if (model->world != world) {
         log_error("the model is spawned in the different world");
         abort();
@@ -948,14 +986,15 @@ model_despawn(te_world* world, te_model* model) {
     if (model->parent_model != NULL) {
         model_set_parent(model, NULL); // make model to be in the array of root world objects
     }
-    world_despawn_model(model->world, model); // despawn root world object
+    world_despawn_game_object(
+        model->world, model->game_object_info); // despawn root world object
 }
 
 void
 model_register_type(void) {
     te_type_info* info = type_info_create(
-        model_get_type_id(), model_create, model_destroy, world_spawn_model, model_despawn,
-        NULL);
+        model_get_type_id(), model_create, model_destroy, type_spawn, type_despawn, NULL,
+        model_is_serialization_allowed);
     type_info_add_vec3_variable(info, "position", model_set_position, model_get_position);
     type_info_add_vec3_variable(info, "rotation", model_set_rotation, model_get_rotation);
     type_info_add_vec3_variable(info, "scale", model_set_scale, model_get_scale);
@@ -984,7 +1023,7 @@ prv_model_load_geo(
     unsigned int* vertex_count, unsigned int* index_count) {
     char* res_path = filesystem_prepend_res_to_path(path_to_geo, NULL);
 
-    FILE* fp = fopen(res_path, "r");
+    FILE* fp = fopen(res_path, "rb");
     if (fp == NULL) {
         log_error_fmt(
             "failed to load model geometry from file %s: unable to open file", path_to_geo);
@@ -1002,11 +1041,11 @@ prv_model_load_geo(
 
     fread(vertex_count, sizeof(*vertex_count), 1, fp);
     (*vertices) = malloc(sizeof(te_model_vertex) * (*vertex_count));
-    fread(*vertices, sizeof(te_model_vertex), (*vertex_count), fp);
+    fread(*vertices, sizeof(te_model_vertex), *vertex_count, fp);
 
     fread(index_count, sizeof(*index_count), 1, fp);
     (*indices) = malloc(sizeof(unsigned short) * (*index_count));
-    fread(*indices, sizeof(unsigned short), (*index_count), fp);
+    fread(*indices, sizeof(unsigned short), *index_count, fp);
 
     fclose(fp);
     free(res_path);

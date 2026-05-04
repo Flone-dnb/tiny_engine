@@ -4,6 +4,7 @@
 #include <editor_camera.h>
 #include <game/model.h>
 #include <game/camera.h>
+#include <game/game_object_info.h>
 #include <game_manager.h>
 #include <io/log.h>
 #include <io/filesystem.h>
@@ -136,7 +137,7 @@ editor_create_editor_world(te_editor* editor, struct te_game_manager* game_manag
 
     // Create a dummy camera to display editor's UI.
     te_camera* camera = camera_create();
-    world_spawn_camera(editor->editor_world, camera);
+    world_spawn_game_object(editor->editor_world, camera_get_game_object_info(camera));
     world_set_active_camera(editor->editor_world, camera);
 
     editor_ui_spawn(editor->ui, editor->editor_world);
@@ -172,12 +173,12 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
         model_set_name(floor, "floor");
         model_set_scale(floor, (vec3){5.0f, 1.0f, 5.0f});
         model_set_color(floor, (vec4){1.0f, 0.5f, 0.0f, 1.0f});
-        world_spawn_model(editor->game_world, floor);
+        world_spawn_game_object(editor->game_world, model_get_game_object_info(floor));
 
         te_model* box = model_create();
         model_set_name(box, "box");
         model_set_position(box, (vec3){0.0f, 1.0f, -1.0f});
-        world_spawn_model(editor->game_world, box);
+        world_spawn_game_object(editor->game_world, model_get_game_object_info(box));
     } else {
         world_add_from_file(editor->game_world, relative_path_to_world);
 
@@ -252,7 +253,7 @@ editor_show_file_dialog(
     // Create a new world for dialog widget to be displayed on top of both the editor and the game worlds.
     editor->dialog_world = game_manager_create_world(editor->game_manager, "dialog");
     te_camera* camera = camera_create();
-    world_spawn_camera(editor->dialog_world, camera);
+    world_spawn_game_object(editor->dialog_world, camera_get_game_object_info(camera));
     world_set_active_camera(editor->dialog_world, camera);
 
     file_dialog_custom = custom;
@@ -283,12 +284,12 @@ editor_set_gizmo(te_editor* editor, te_model* target) {
 }
 
 void
-editor_on_before_game_obj_deleted(te_editor* editor, void* game_obj) {
+editor_on_before_game_obj_deleted(te_editor* editor, te_game_object_info* info) {
     if (editor->gizmo == NULL) {
         return;
     }
 
-    if (gizmo_get_target(editor->gizmo) == game_obj) {
+    if (gizmo_get_target(editor->gizmo) == info->game_object) {
         gizmo_destroy_in_world_now(editor->gizmo, editor->game_world);
         editor->gizmo = NULL;
     }
@@ -516,22 +517,23 @@ editor_on_mouse_button_pressed(
         window_capture_mouse_cursor(window, true);
         editor_camera_enable_input(editor->editor_camera, true);
     } else if (button == TE_MB_LEFT) {
-        void* obj = obj_picking_find_obj_under_cursor(
+        te_game_object_info* obj_info = obj_picking_find_obj_under_cursor(
             cursor_pos, game_camera, editor->game_world, editor->gizmo);
 
-        if (editor->gizmo != NULL) {
-            if (obj == gizmo_get_model_x(editor->gizmo)) {
+        if (editor->gizmo != NULL && obj_info != NULL) {
+            if (obj_info->game_object == gizmo_get_model_x(editor->gizmo)) {
                 gizmo_start_grab_x(editor->gizmo);
                 return;
-            } else if (obj == gizmo_get_model_y(editor->gizmo)) {
+            } else if (obj_info->game_object == gizmo_get_model_y(editor->gizmo)) {
                 gizmo_start_grab_y(editor->gizmo);
                 return;
-            } else if (obj == gizmo_get_model_z(editor->gizmo)) {
+            } else if (obj_info->game_object == gizmo_get_model_z(editor->gizmo)) {
                 gizmo_start_grab_z(editor->gizmo);
                 return;
             }
         }
-        world_inspector_select_obj(editor_ui_get_world_inspector(editor->ui), obj);
+        world_inspector_select_obj(
+            editor_ui_get_world_inspector(editor->ui), obj_info);
     }
 }
 

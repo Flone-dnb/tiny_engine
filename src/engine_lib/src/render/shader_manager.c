@@ -85,9 +85,9 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
 
     // Read content.
     char* file_content = malloc(sizeof(char) * (file_size + 1));
-    const size_t bytes_read = fread(file_content, 1, file_size, f);
+    const size_t elem_count_read = fread(file_content, 1, file_size, f);
     file_content[file_size] = 0;
-    if (bytes_read != file_size) {
+    if (elem_count_read != file_size) {
         log_error_fmt("failed to read the shader file \"%s\"", path);
         abort();
     }

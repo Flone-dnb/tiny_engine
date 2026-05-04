@@ -7,9 +7,14 @@
 
 typedef struct te_camera te_camera;
 struct te_model;
+struct te_game_object_info;
 
 te_camera* camera_create();
 void camera_destroy(te_camera* camera);
+
+// Returns game object info.
+// Returned pointer is valid while the game object is valid.
+struct te_game_object_info* camera_get_game_object_info(te_camera* camera);
 
 // Optionally you can set a name of the camera. The string will be copied.
 // Returns NULL if was not set previously.
@@ -83,9 +88,6 @@ void camera_register_type(void);
 // Does nothing if the specified render target size is already set to the same value.
 void
 prv_camera_set_render_target_size(te_camera* camera, unsigned int width, unsigned int height);
-
-// Sets world the camera is spawned in (specify NULL to mark despawn).
-void prv_camera_set_world(te_camera* camera, struct te_world* world);
 
 // Called by model after attached (parent is NULL if detached) and after model's world matrix changed.
 void prv_camera_on_parent_model_world_mat_changed(te_camera* camera, struct te_model* parent);

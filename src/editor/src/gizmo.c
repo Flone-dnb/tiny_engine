@@ -66,9 +66,9 @@ spawn_gizmo_models(te_gizmo* gizmo, te_world* world) {
     // Only 1 model should call this.
     model_set_custom_on_before_destroyed(gizmo->model_z, on_before_model_destroyed);
 
-    world_spawn_model(world, gizmo->model_x);
-    world_spawn_model(world, gizmo->model_y);
-    world_spawn_model(world, gizmo->model_z);
+    world_spawn_game_object(world, model_get_game_object_info(gizmo->model_x));
+    world_spawn_game_object(world, model_get_game_object_info(gizmo->model_y));
+    world_spawn_game_object(world, model_get_game_object_info(gizmo->model_z));
 
     vec3 target_pos;
     model_get_world_position(gizmo->target, target_pos);
@@ -103,9 +103,9 @@ gizmo_create_in_world(te_world* world, te_model* target) {
 
 void
 gizmo_destroy_in_world_now(te_gizmo* gizmo, te_world* world) {
-    world_despawn_model(world, gizmo->model_x);
-    world_despawn_model(world, gizmo->model_y);
-    world_despawn_model(world, gizmo->model_z);
+    world_despawn_game_object(world, model_get_game_object_info(gizmo->model_x));
+    world_despawn_game_object(world, model_get_game_object_info(gizmo->model_y));
+    world_despawn_game_object(world, model_get_game_object_info(gizmo->model_z));
 
     model_destroy(gizmo->model_x);
     model_destroy(gizmo->model_y);
@@ -129,9 +129,9 @@ gizmo_set_mode(te_gizmo* gizmo, enum te_gizmo_mode mode) {
 
     te_world* world = model_get_world(gizmo->model_x);
 
-    world_despawn_model(world, gizmo->model_x);
-    world_despawn_model(world, gizmo->model_y);
-    world_despawn_model(world, gizmo->model_z);
+    world_despawn_game_object(world, model_get_game_object_info(gizmo->model_x));
+    world_despawn_game_object(world, model_get_game_object_info(gizmo->model_y));
+    world_despawn_game_object(world, model_get_game_object_info(gizmo->model_z));
 
     model_destroy(gizmo->model_x);
     model_destroy(gizmo->model_y);

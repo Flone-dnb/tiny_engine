@@ -9,23 +9,18 @@ typedef struct te_world te_world;
 struct te_game_manager;
 struct te_model_renderer;
 struct te_widget_renderer;
-struct te_camera;
-struct te_model;
+struct te_game_object_info;
 struct te_widget;
+struct te_camera;
 
 // Returns world's name.
 // Do not free/destroy returned pointer.
 const char* world_get_name(te_world* world);
 
-// The model will be automatically despawned and destroyed when the world is being destroyed
-// but you can despawn the model earlier to manually manage its destruction.
-void world_spawn_model(te_world* world, struct te_model* model);
-void world_despawn_model(te_world* world, struct te_model* model);
-
-// The camera will be automatically despawned and destroyed when the world is being destroyed
-// but you can despawn the camera earlier to manually manage its destruction.
-void world_spawn_camera(te_world* world, struct te_camera* camera);
-void world_despawn_camera(te_world* world, struct te_camera* camera);
+// The game object will be automatically despawned and destroyed when the world is being destroyed
+// but you can despawn the game object earlier to manually manage its destruction.
+void world_spawn_game_object(te_world* world, struct te_game_object_info* info);
+void world_despawn_game_object(te_world* world, struct te_game_object_info* info);
 
 // The widget will be automatically despawned and destroyed when the world is being destroyed
 // but you can despawn the widget earlier to manually manage its destruction.
@@ -47,7 +42,8 @@ void world_save_to_file(te_world* world, const char* relative_path);
 // (path relative to the `res` directory) and spawns them in the world.
 // Additionally can add a location offset to 3D game objects.
 void world_add_from_file(te_world* world, const char* relative_path);
-void world_add_from_file_with_offset(te_world* world, const char* relative_path, vec3 location_offset);
+void world_add_from_file_with_offset(
+    te_world* world, const char* relative_path, vec3 location_offset);
 
 // Returns NULL if the world has no active camera.
 // Do not free/destroy returned pointer, valid until the camera is not destroyed.
@@ -56,8 +52,7 @@ struct te_camera* world_get_active_camera(te_world* world);
 // Returns NULL if no objects are spawned, otherwise all spawned objects.
 // You must free returned array (but not the items in the array).
 // Note: returned array only contains "root" game objects (does not include attached/child game objects).
-struct te_camera** world_get_cameras(te_world* world, unsigned int* count);
-struct te_model** world_get_models(te_world* world, unsigned int* count);
+struct te_game_object_info** world_get_root_game_objects(te_world* world, unsigned int* count);
 struct te_widget** world_get_widgets(te_world* world, unsigned int* count);
 
 // Do not free/destroy returned pointer, valid while the world exists.
@@ -85,20 +80,16 @@ bool prv_world_is_being_destroyed(te_world* world);
 // Called to possibly notify widgets.
 void prv_world_on_window_size_changed(te_world* world);
 
-// Adds/removes the specified item to/from the array of spawned root item
+// Adds/removes the specified item to/from the array of spawned root game objects
 // (does nothing if already added/removed). Does not notify the item being removed.
-void prv_world_add_root_model_no_notify(
-    te_world* world, struct te_model* model, bool check_if_already_added);
-void prv_world_remove_root_model_no_notify(
-    te_world* world, struct te_model* model, bool must_exist_in_array);
+void prv_world_add_root_game_object_no_notify(
+    te_world* world, struct te_game_object_info* info, bool ignore_if_already_added);
+void prv_world_remove_root_game_object_no_notify(
+    te_world* world, struct te_game_object_info* info, bool must_exist_in_array);
 void prv_world_add_root_widget_no_notify(
     te_world* world, struct te_widget* widget, bool check_if_already_added);
 void prv_world_remove_root_widget_no_notify(
     te_world* world, struct te_widget* widget, bool must_exist_in_array);
-void prv_world_add_root_camera_no_notify(
-    te_world* world, struct te_camera* camera, bool check_if_already_added);
-void prv_world_remove_root_camera_no_notify(
-    te_world* world, struct te_camera* camera, bool must_exist_in_array);
 
 // Called by spawned widgets that receive input (for example buttons).
 // Note: these functions are not called from the base te_widget type (base type does not implement such functionality).

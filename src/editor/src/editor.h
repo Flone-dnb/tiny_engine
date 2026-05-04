@@ -8,6 +8,7 @@
 typedef struct te_editor te_editor;
 struct te_game_manager;
 struct te_model;
+struct te_game_object_info;
 
 te_editor* editor_create();
 void editor_destroy(te_editor* editor);
@@ -29,8 +30,8 @@ void editor_show_file_dialog(
 // Specify NULL to hide the gizmo.
 void editor_set_gizmo(te_editor* editor, struct te_model* target);
 
-// Called before a game object (for example: te_model) is deleted from the game world.
-void editor_on_before_game_obj_deleted(te_editor* editor, void* game_obj);
+// Called before a game object is deleted from the game world.
+void editor_on_before_game_obj_deleted(te_editor* editor, struct te_game_object_info* info);
 
 // window callbacks -------------------------------------------------------------------------------
 void editor_on_game_started(void* game_instance, struct te_game_manager* game_manager);

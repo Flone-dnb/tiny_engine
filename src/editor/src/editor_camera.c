@@ -58,7 +58,7 @@ editor_camera_spawn(te_editor_camera* editor_camera, struct te_world* world) {
     camera_set_rotation(editor_camera->camera, (vec3){0.0f, 0.0f, 0.0f});
 
     // Spawn.
-    world_spawn_camera(world, editor_camera->camera);
+    world_spawn_game_object(world, camera_get_game_object_info(editor_camera->camera));
     world_set_active_camera(world, editor_camera->camera);
 
     // Set viewport.
@@ -72,7 +72,7 @@ editor_camera_spawn(te_editor_camera* editor_camera, struct te_world* world) {
 
 void
 editor_camera_despawn(te_editor_camera* editor_camera, struct te_world* world) {
-    world_despawn_camera(world, editor_camera->camera);
+    world_despawn_game_object(world, camera_get_game_object_info(editor_camera->camera));
 }
 
 void

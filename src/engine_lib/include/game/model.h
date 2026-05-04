@@ -8,6 +8,7 @@ typedef struct te_model te_model;
 struct te_world;
 struct te_camera;
 struct te_model_renderer;
+struct te_game_object_info;
 
 // Vertex of a model.
 typedef struct te_model_vertex {
@@ -20,6 +21,10 @@ typedef struct te_model_vertex {
 
 te_model* model_create();
 void model_destroy(te_model* model);
+
+// Returns game object info.
+// Returned pointer is valid while the game object is valid.
+struct te_game_object_info* model_get_game_object_info(te_model* model);
 
 // Specify path (relative to the `res` directory) to the file that stores mesh geometry.
 // Specify NULL to use default model instead.
@@ -144,12 +149,6 @@ void model_register_type(void);
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API
 // ------------------------------------------------------------------------------------------------
-
-// Called by world after the model was spawned.
-void prv_model_on_spawned(te_model* model, struct te_world* world);
-
-// Called by world before the model is despawned.
-void prv_model_on_despawned(te_model* model);
 
 // Returns model's world matrix (includes parent if has any).
 mat4* prv_model_get_world_mat_tmp(te_model* model);
