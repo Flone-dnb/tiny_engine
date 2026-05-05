@@ -171,7 +171,7 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
         // Prepare a sample scene.
         te_model* floor = model_create();
         model_set_name(floor, "floor");
-        model_set_scale(floor, (vec3){5.0f, 1.0f, 5.0f});
+        model_set_scale(floor, (vec3){4.0f, 1.0f, 4.0f});
         model_set_color(floor, (vec4){1.0f, 0.5f, 0.0f, 1.0f});
         world_spawn_game_object(editor->game_world, model_get_game_object_info(floor));
 
@@ -180,7 +180,7 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
         model_set_position(box, (vec3){0.0f, 1.0f, -1.0f});
         world_spawn_game_object(editor->game_world, model_get_game_object_info(box));
     } else {
-        world_add_from_file(editor->game_world, relative_path_to_world);
+        world_add_from_file(editor->game_world, relative_path_to_world, true);
 
         free(editor->game_world_relative_path);
         const size_t len = strlen(relative_path_to_world);

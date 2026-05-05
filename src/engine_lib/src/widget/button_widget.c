@@ -271,7 +271,7 @@ void
 button_widget_register_type(void) {
     te_type_info* info = type_info_create(
         button_widget_get_type_id(), button_widget_create, button_widget_destroy, widget_spawn,
-        widget_despawn, prv_button_widget_get_base, is_serialization_allowed);
+        widget_despawn, prv_button_widget_get_base, NULL, is_serialization_allowed);
     type_info_add_vec2_variable(
         info, "position", prv_button_widget_set_position, prv_button_widget_get_position);
     type_info_add_vec2_variable(

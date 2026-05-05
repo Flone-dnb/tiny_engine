@@ -239,9 +239,11 @@ on_button_entry_clicked(te_button_widget* button) {
         (unsigned int)widget_get_custom_value(button_widget_get_widget(button));
 
     if (file_dialog->selected_button_index < file_dialog->entry_button_count) {
+        // Clear selected button.
         vec4 color;
         theme_get_button_color(color);
-        button_widget_set_color(file_dialog->entry_buttons[button_index], color);
+        button_widget_set_color(
+            file_dialog->entry_buttons[file_dialog->selected_button_index], color);
 
         file_dialog->selected_button_index = 0xFFFFFFFF;
     }

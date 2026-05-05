@@ -65,6 +65,7 @@ type_info_create(
     void (*spawn)(struct te_world* world, void* obj),
     void (*despawn)(struct te_world* world, void* obj),
     struct te_widget* (*get_widget)(void*),
+    struct te_game_object_info* (*get_game_object_info)(void* obj),
     bool (*is_serialization_allowed)(void* obj)) {
     te_type_info* info = malloc(sizeof(te_type_info));
 
@@ -74,6 +75,7 @@ type_info_create(
     info->despawn = despawn;
 
     info->get_widget = get_widget;
+    info->get_game_object_info = get_game_object_info;
     info->is_serialization_allowed = is_serialization_allowed;
 
     info->id = id;
@@ -439,7 +441,7 @@ type_database_get_type_info(const char* id) {
         abort();
     }
 
-    te_type_info* test = type_info_create(id, NULL, NULL, NULL, NULL, NULL, NULL);
+    te_type_info* test = type_info_create(id, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     const te_type_info* const* found = hashmap_get(type_database.types, &test);
     free(test);
 

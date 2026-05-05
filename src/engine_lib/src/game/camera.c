@@ -237,7 +237,7 @@ type_despawn(te_world* world, te_camera* camera) {
 void
 camera_register_type(void) {
     te_type_info* info = type_info_create(
-        camera_get_type_id(), camera_create, camera_destroy, type_spawn, type_despawn, NULL,
+        camera_get_type_id(), camera_create, camera_destroy, type_spawn, type_despawn, NULL, camera_get_game_object_info,
         camera_is_serialization_allowed);
     type_info_add_vec3_variable(info, "position", camera_set_position, camera_get_position);
     type_info_add_vec3_variable(info, "rotation", camera_set_rotation, camera_get_rotation);

@@ -9,6 +9,7 @@
 struct te_config;
 struct te_widget;
 struct te_world;
+struct te_game_object_info;
 
 enum te_variable_type {
     TE_VT_BOOL,
@@ -64,8 +65,13 @@ typedef struct te_type_info {
     void (*spawn)(struct te_world* world, void* obj);
     void (*despawn)(struct te_world* world, void* obj);
 
-    // NULL if not a widget, otherwise returns base widget type.
+    // Function pointer is NULL if not a widget, otherwise returns a valid base widget type.
+    // Do not free returned pointer, valid while the `obj` exists.
     struct te_widget* (*get_widget)(void* obj);
+
+    // Function pointer is NULL if not a game object, otherwise returns a valid game object info.
+    // Do not free returned pointer, valid while the `obj` exists.
+    struct te_game_object_info* (*get_game_object_info)(void* obj);
 
     // Returns `false` if this object should not be serialized.
     bool (*is_serialization_allowed)(void* obj);
@@ -117,6 +123,7 @@ te_type_info* type_info_create(
     void (*spawn)(struct te_world* world, void* obj),
     void (*despawn)(struct te_world* world, void* obj),
     struct te_widget* (*get_widget)(void*),
+    struct te_game_object_info* (*get_game_object_info)(void* obj),
     bool (*is_serialization_allowed)(void* obj));
 void type_info_add_bool_variable(
     te_type_info* info, const char* name, te_bool_setter setter, te_bool_getter getter);

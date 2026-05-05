@@ -123,6 +123,16 @@ math_convert_string_to_float(const char* text, char** end) {
     float div = 1;
     bool after_dot = false;
 
+    if (*curr == 0) {
+        (*end) = curr - 1;
+        return out;
+    }
+
+    if ((*curr) == '-') {
+        // We will negate later.
+        curr++;
+    }
+
     while (*curr != 0) {
         if ((*curr) >= '0' && (*curr) <= '9') {
             if (!after_dot) {
@@ -139,6 +149,10 @@ math_convert_string_to_float(const char* text, char** end) {
         }
 
         curr++;
+    }
+
+    if ((*text) == '-') {
+        out *= -1.0f;
     }
 
     (*end) = curr - 1;

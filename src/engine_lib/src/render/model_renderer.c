@@ -5,6 +5,7 @@
 #include <game/model.h>
 #include <io/log.h>
 #include <render/shader_manager.h>
+#include <render/renderer.h>
 #include <shape/frustum_shape.h>
 #include <glad/glad.h>
 
@@ -22,10 +23,15 @@ typedef struct te_shader_group {
     int uniform_view_proj_mat;
     int uniform_world_mat;
     int uniform_normal_mat;
-    int uniform_color;
+    int uniform_model_color;
     int uniform_tiling;
     int uniform_uv_offset;
     int uniform_skin_mats; // -1 if not using skinning
+    int uniform_ambient_light_color;
+    int uniform_directional_light_color;
+    int uniform_directional_light_direction;
+    int uniform_point_light_color;
+    int uniform_point_light_pos_and_dist;
 } te_shader_group;
 
 struct te_model_renderer {
@@ -105,10 +111,22 @@ model_renderer_init_uniforms(te_shader_group* group) {
     group->uniform_view_proj_mat = get_uniform_location(group->prog_id, "view_proj_mat");
     group->uniform_world_mat = get_uniform_location(group->prog_id, "world_mat");
     group->uniform_normal_mat = get_uniform_location(group->prog_id, "normal_mat");
-    group->uniform_color = get_uniform_location(group->prog_id, "color");
+    group->uniform_model_color = get_uniform_location(group->prog_id, "model_color");
     group->uniform_tiling = get_uniform_location(group->prog_id, "tiling");
     group->uniform_uv_offset = get_uniform_location(group->prog_id, "uv_offset");
     group->uniform_skin_mats = -1;
+
+    group->uniform_ambient_light_color = get_uniform_location(group->prog_id, "ambient_light_color");
+
+    group->uniform_directional_light_color =
+        get_uniform_location(group->prog_id, "directional_light_color");
+    group->uniform_directional_light_direction =
+        get_uniform_location(group->prog_id, "directional_light_direction");
+
+    group->uniform_point_light_color =
+        get_uniform_location(group->prog_id, "point_light_color");
+    group->uniform_point_light_pos_and_dist =
+        get_uniform_location(group->prog_id, "point_light_pos_and_dist");
 }
 
 unsigned int
@@ -309,7 +327,8 @@ model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int han
 
 unsigned int
 model_renderer_draw(
-    te_model_renderer* renderer, mat4* view_proj_mat, te_frustum_shape* camera_frustum) {
+    te_model_renderer* renderer, te_lighting_data* lighting_data, mat4* view_proj_mat,
+    te_frustum_shape* camera_frustum) {
     unsigned int model_count = 0;
     unsigned int render_data_idx = 0;
 
@@ -319,6 +338,19 @@ model_renderer_draw(
         glUseProgram(group->prog_id);
 
         glUniformMatrix4fv(group->uniform_view_proj_mat, 1, GL_FALSE, (*view_proj_mat)[0]);
+        glUniform3fv(group->uniform_ambient_light_color, 1, lighting_data->ambient_light_color);
+
+        // Directional light.
+        glUniform4fv(
+            group->uniform_directional_light_color, 1, lighting_data->directional_light_color);
+        glUniform3fv(
+            group->uniform_directional_light_direction, 1, lighting_data->directional_light_direction);
+
+        // Point light.
+        glUniform4fv(group->uniform_point_light_color, 1, lighting_data->point_light_color);
+        glUniform4fv(
+            group->uniform_point_light_pos_and_dist, 1,
+            lighting_data->point_light_pos_and_dist);
 
         for (unsigned int unused = 0; unused < group->count; unused++, render_data_idx++) {
             te_model_render_data* data = &renderer->render_data[render_data_idx];
@@ -331,7 +363,7 @@ model_renderer_draw(
 
             glUniformMatrix4fv(group->uniform_world_mat, 1, GL_FALSE, data->world_mat[0]);
             glUniformMatrix3fv(group->uniform_normal_mat, 1, GL_FALSE, data->normal_mat[0]);
-            glUniform4fv(group->uniform_color, 1, data->color);
+            glUniform4fv(group->uniform_model_color, 1, data->color);
             glUniform2fv(group->uniform_tiling, 1, data->tex_tiling);
             glUniform2fv(group->uniform_uv_offset, 1, data->uv_offset);
 

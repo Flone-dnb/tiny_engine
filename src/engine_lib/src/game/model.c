@@ -993,7 +993,7 @@ type_despawn(te_world* world, te_model* model) {
 void
 model_register_type(void) {
     te_type_info* info = type_info_create(
-        model_get_type_id(), model_create, model_destroy, type_spawn, type_despawn, NULL,
+        model_get_type_id(), model_create, model_destroy, type_spawn, type_despawn, NULL, model_get_game_object_info,
         model_is_serialization_allowed);
     type_info_add_vec3_variable(info, "position", model_set_position, model_get_position);
     type_info_add_vec3_variable(info, "rotation", model_set_rotation, model_get_rotation);

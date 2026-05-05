@@ -16,7 +16,6 @@
 #include <game/camera.h>
 #include <game_manager.h>
 #include <io/log.h>
-#include <limits.h>
 #include <render/debug_drawer.h>
 #include <render/font_manager.h>
 #include <render/gpu_section.h>
@@ -49,6 +48,8 @@ struct te_renderer {
     te_shader_manager* shader_manager;
     te_texture_manager* texture_manager;
     te_font_manager* font_manager;
+
+    te_lighting_data* lighting_data;
 
     te_renderer_frame_stats frame_stats;
 
@@ -113,6 +114,20 @@ renderer_create(struct te_window* window) {
     renderer->frame_stats.fps = 0;
 
     renderer->fps_limit = 0;
+
+    // Setup base lighting.
+    {
+        renderer->lighting_data = malloc(sizeof(te_lighting_data));
+        memset(renderer->lighting_data, 0, sizeof(te_lighting_data));
+
+        te_lighting_data* data = renderer->lighting_data;
+
+        glm_vec3_copy((vec3){0.5f, 0.5f, 0.5f}, data->ambient_light_color);
+
+        glm_vec3_copy((vec3){1.0f, -1.0f, 1.0f}, data->directional_light_direction);
+        glm_vec3_normalize(data->directional_light_direction);
+        glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, data->directional_light_color);
+    }
 
 #if defined(__linux__)
     clock_gettime(CLOCK_MONOTONIC, &renderer->frame_end_time);
@@ -211,6 +226,8 @@ renderer_destroy(te_renderer* renderer) {
     prv_shader_manager_destroy(renderer->shader_manager);
     prv_font_manager_destroy(renderer->font_manager);
 
+    free(renderer->lighting_data);
+
 #if defined(ENGINE_DEBUG_TOOLS)
     if (GLAD_GL_EXT_disjoint_timer_query == 1) {
         glDeleteQueriesEXT(1, &renderer->gl_timestamp_frame_start);
@@ -225,6 +242,11 @@ renderer_destroy(te_renderer* renderer) {
     }
 
     free(renderer);
+}
+
+te_lighting_data*
+renderer_get_lighting_data(te_renderer* renderer) {
+    return renderer->lighting_data;
 }
 
 void
@@ -475,7 +497,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 #if defined(ENGINE_DEBUG_TOOLS)
             debug_stats->rendered_opaque_model_count =
 #endif
-                model_renderer_draw(opaque_model_renderer, view_proj_mat, camera_frustum);
+                model_renderer_draw(opaque_model_renderer, renderer->lighting_data, view_proj_mat, camera_frustum);
             GPU_SECTION_END;
 
             if (model_renderer_has_models(transparent_model_renderer)) {
@@ -489,7 +511,8 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
                 debug_stats->rendered_transparent_model_count =
 #endif
                     model_renderer_draw(
-                        transparent_model_renderer, view_proj_mat, camera_frustum);
+                        transparent_model_renderer, renderer->lighting_data, view_proj_mat,
+                        camera_frustum);
                 glDisable(GL_BLEND);
 
                 glEnable(GL_CULL_FACE);

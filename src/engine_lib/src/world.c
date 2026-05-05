@@ -12,6 +12,7 @@
 #include <type_database.h>
 #include <render/model_renderer.h>
 #include <render/widget_renderer.h>
+#include <render/renderer.h>
 #include <widget/widget.h>
 #include <window.h>
 #if defined(ENGINE_DEBUG_TOOLS)
@@ -26,7 +27,7 @@
 // World represents several objects: audio system, cameras, game objects and etc.
 struct te_world {
     // Always valid pointer. Game manager that owns this world. You should not free/destroy this pointer.
-    struct te_game_manager* game_manager;
+    te_game_manager* game_manager;
 
     // NULL if no active camera. Do not free/destroy this pointer. The camera will register/unregister itself.
     te_camera* active_camera;
@@ -389,8 +390,29 @@ prv_save_widget_recursive(te_config* config, te_widget* widget) {
 }
 
 void
-world_save_to_file(te_world* world, const char* relative_path) {
+world_save_to_file(
+    te_world* world, const char* relative_path) {
     te_config* config = config_create(NULL);
+
+    // Save lighting data.
+    te_lighting_data* lighting_data =
+        renderer_get_lighting_data(game_manager_get_renderer(world->game_manager));
+    const unsigned int section_idx = config_create_section(config, "lighting_data");
+    config_section_set_float_array(
+        config, section_idx, "directional_light_color", lighting_data->directional_light_color,
+        4);
+    config_section_set_float_array(
+        config, section_idx, "directional_light_direction",
+        lighting_data->directional_light_direction, 3);
+    config_section_set_float_array(
+        config, section_idx, "point_light_color", lighting_data->point_light_color,
+        4);
+    config_section_set_float_array(
+        config, section_idx, "point_light_pos_and_dist",
+        lighting_data->point_light_pos_and_dist,
+        4);
+    config_section_set_float_array(
+        config, section_idx, "ambient_light_color", lighting_data->ambient_light_color, 3);
 
     // Save game objects.
     if (world->spawned_root_game_object_count > 0) {
@@ -479,20 +501,72 @@ prv_load_child_widgets_recursive(
 }
 
 void
-world_add_from_file(te_world* world, const char* relative_path) {
-    world_add_from_file_with_offset(world, relative_path, (vec3){0.0f, 0.0f, 0.0f});
+world_add_from_file(te_world* world, const char* relative_path, bool load_lighting_data) {
+    world_add_from_file_with_offset(
+        world, relative_path, load_lighting_data, (vec3){0.0f, 0.0f, 0.0f});
+}
+
+static void load_vec_from_config(te_config* config, unsigned int section_idx, const char* key, unsigned int comp_count, float* target) {
+    unsigned int count;
+    float* array = config_section_get_float_array(config, section_idx, key, &count);
+    if (count == 0) {
+        log_error_fmt("expected to find the value \"%s\" in the config", key);
+        abort();
+    } else if (count != comp_count) {
+        log_error_fmt(
+            "unexpected array size found in the config, expected %u but found %u", comp_count,
+            count);
+        abort();
+    }
+
+    for (unsigned int i = 0; i < comp_count; i++) {
+        target[i] = array[i];
+    }
 }
 
 void
 world_add_from_file_with_offset(
-    te_world* world, const char* relative_path, vec3 location_offset) {
-    te_config* config = config_create(relative_path);
-
+    te_world* world, const char* relative_path, bool load_lighting_data,
+    vec3 location_offset) {
     const te_type_info* model_type_info = type_database_get_type_info(model_get_type_id());
     const te_type_info* camera_type_info = type_database_get_type_info(camera_get_type_id());
 
+    te_config* config = config_create(relative_path);
+
     const unsigned int section_count = config_get_section_count(config);
-    for (unsigned int section_idx = 0; section_idx < section_count;) {
+    unsigned int section_idx = 0;
+
+    if (section_count == 0) {
+        log_error("expected world file to have at least 1 section");
+        abort();
+    }
+
+    // Load lighting data.
+    if (strcmp(config_section_get_name(config, section_idx), "lighting_data") == 0) {
+        if (load_lighting_data) {
+            te_lighting_data* lighting_data =
+                renderer_get_lighting_data(game_manager_get_renderer(world->game_manager));
+
+            load_vec_from_config(
+                config, section_idx, "directional_light_color", 4,
+                lighting_data->directional_light_color);
+            load_vec_from_config(
+                config, section_idx, "directional_light_direction", 3,
+                lighting_data->directional_light_direction);
+            load_vec_from_config(
+                config, section_idx, "point_light_color", 4, lighting_data->point_light_color);
+            load_vec_from_config(
+                config, section_idx, "point_light_pos_and_dist", 4,
+                lighting_data->point_light_pos_and_dist);
+            load_vec_from_config(
+                config, section_idx, "ambient_light_color", 3,
+                lighting_data->ambient_light_color);
+        }
+        section_idx += 1;
+    }
+
+    // Load world objects.
+    for (; section_idx < section_count;) {
         const char* id = config_section_get_name(config, section_idx);
         const te_type_info* type_info = type_database_get_type_info(id);
 
@@ -507,13 +581,33 @@ world_add_from_file_with_offset(
             config, section_idx, CONFIG_VAR_NAME_CHILD_WIDGET_COUNT, 0);
         section_idx += 1;
 
-        if (strcmp(id, model_get_type_id()) == 0) {
-            te_model* model = obj;
+        // Apply offset (only apply to root objects, child/attached objects will be affected).
+        if (type_info->get_game_object_info != NULL) {
+            te_game_object_info* game_obj_info = type_info->get_game_object_info(obj);
+            switch (game_obj_info->type) {
+                case (TE_GOT_MODEL): {
+                    te_model* model = obj;
 
-            vec3 pos;
-            model_get_position(model, pos);
-            glm_vec3_add(pos, location_offset, pos);
-            model_set_position(model, pos);
+                    vec3 pos;
+                    model_get_position(model, pos);
+                    glm_vec3_add(pos, location_offset, pos);
+                    model_set_position(model, pos);
+                    break;
+                }
+                case (TE_GOT_CAMERA): {
+                    te_camera* camera = obj;
+
+                    vec3 pos;
+                    camera_get_position(camera, pos);
+                    glm_vec3_add(pos, location_offset, pos);
+                    camera_set_position(camera, pos);
+                    break;
+                }
+            }
+        }
+
+        if (type_info->get_game_object_info != NULL && type_info->get_game_object_info(obj)->type == TE_GOT_MODEL) {
+            te_model* model = obj;
 
             if (has_child_model) {
                 if (section_idx >= section_count) {
@@ -541,13 +635,6 @@ world_add_from_file_with_offset(
                 model_attach_camera(model, camera);
                 section_idx += 1;
             }
-        } else if (strcmp(id, camera_get_type_id()) == 0) {
-            te_camera* camera = obj;
-
-            vec3 pos;
-            camera_get_position(camera, pos);
-            glm_vec3_add(pos, location_offset, pos);
-            camera_set_position(camera, pos);
         } else if (child_widget_count > 0) {
             if (type_info->get_widget == NULL) {
                 log_error("found widget section that specified child count but the type does "
