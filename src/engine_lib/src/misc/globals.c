@@ -1,5 +1,6 @@
 #include <misc/globals.h>
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <io/log.h>
@@ -85,4 +86,52 @@ globals_get_world_up(float out[3]) {
     out[0] = 0.0f;
     out[1] = 1.0f;
     out[2] = 0.0f;
+}
+
+float
+globals_convert_string_to_float(const char* text, char** end) {
+    if (text == NULL) {
+        (*end) = (char*)text;
+        return 0.0f;
+    }
+
+    char* curr = (char*)text;
+    float out = 0.0f;
+    float div = 1;
+    bool after_dot = false;
+
+    if (*curr == 0) {
+        (*end) = curr - 1;
+        return out;
+    }
+
+    if ((*curr) == '-') {
+        // We will negate later.
+        curr++;
+    }
+
+    while (*curr != 0) {
+        if ((*curr) >= '0' && (*curr) <= '9') {
+            if (!after_dot) {
+                out *= 10.0f;
+                out += (float)((*curr) - '0');
+            } else {
+                div *= 10;
+                out += (float)((*curr) - '0') / div;
+            }
+        } else if ((*curr) == '.' || (*curr) == ',') {
+            after_dot = true;
+        } else {
+            break;
+        }
+
+        curr++;
+    }
+
+    if ((*text) == '-') {
+        out *= -1.0f;
+    }
+
+    (*end) = curr - 1;
+    return out;
 }

@@ -120,12 +120,12 @@ on_variable_text_edit_changed(
             break;
         }
         case (TE_VT_FLOAT): {
-            const float value = math_convert_string_to_float(text, &endptr);
+            const float value = globals_convert_string_to_float(text, &endptr);
             info->float_setters[set_get_index](inspector->obj, value);
             break;
         }
         case (TE_VT_VEC2): {
-            const float item = math_convert_string_to_float(text, &endptr);
+            const float item = globals_convert_string_to_float(text, &endptr);
             vec2 value;
             info->vec2_getters[set_get_index](inspector->obj, value);
             value[comp_idx] = item;
@@ -133,7 +133,7 @@ on_variable_text_edit_changed(
             break;
         }
         case (TE_VT_VEC3): {
-            const float item = math_convert_string_to_float(text, &endptr);
+            const float item = globals_convert_string_to_float(text, &endptr);
             vec3 value;
             info->vec3_getters[set_get_index](inspector->obj, value);
             value[comp_idx] = item;
@@ -141,7 +141,7 @@ on_variable_text_edit_changed(
             break;
         }
         case (TE_VT_VEC4): {
-            const float item = math_convert_string_to_float(text, &endptr);
+            const float item = globals_convert_string_to_float(text, &endptr);
             vec4 value;
             info->vec4_getters[set_get_index](inspector->obj, value);
             value[comp_idx] = item;
