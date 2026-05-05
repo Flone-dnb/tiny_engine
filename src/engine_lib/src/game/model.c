@@ -309,9 +309,6 @@ model_set_color(te_model* model, vec4 color) {
 
 void
 model_set_texture(te_model* model, const char* relative_path) {
-    free(model->tex_relative_path);
-    model->tex_relative_path = NULL;
-
 #if defined(ENGINE_EDITOR)
     // Check if path exists.
     char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
@@ -322,6 +319,9 @@ model_set_texture(te_model* model, const char* relative_path) {
     }
     free(res_path);
 #endif
+
+    free(model->tex_relative_path);
+    model->tex_relative_path = NULL;
 
     if (relative_path == NULL) {
         // Remove current texture.
@@ -787,6 +787,17 @@ model_enable_transparency(te_model* model, bool enable) {
 
 void
 model_set_custom_vert_shader(te_model* model, const char* vert_relative_path) {
+#if defined(ENGINE_EDITOR)
+    // Check if path exists.
+    char* res_path = filesystem_prepend_res_to_path(vert_relative_path, NULL);
+    if (!filesystem_does_path_exists(res_path)) {
+        // Do nothing, probably user typing the path.
+        free(res_path);
+        return;
+    }
+    free(res_path);
+#endif
+
     if (model->world != NULL) {
         prv_model_remove_from_model_renderer(model);
     }
@@ -813,6 +824,17 @@ model_get_custom_vert_shader(te_model* model) {
 
 void
 model_set_custom_frag_shader(te_model* model, const char* frag_relative_path) {
+#if defined(ENGINE_EDITOR)
+    // Check if path exists.
+    char* res_path = filesystem_prepend_res_to_path(frag_relative_path, NULL);
+    if (!filesystem_does_path_exists(res_path)) {
+        // Do nothing, probably user typing the path.
+        free(res_path);
+        return;
+    }
+    free(res_path);
+#endif
+
     if (model->world != NULL) {
         prv_model_remove_from_model_renderer(model);
     }
@@ -834,6 +856,17 @@ model_set_custom_frag_shader(te_model* model, const char* frag_relative_path) {
 
 void
 model_set_geometry(te_model* model, const char* relative_path) {
+#if defined(ENGINE_EDITOR)
+    // Check if path exists.
+    char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
+    if (!filesystem_does_path_exists(res_path)) {
+        // Do nothing, probably user typing the path.
+        free(res_path);
+        return;
+    }
+    free(res_path);
+#endif
+
     if (model->world != NULL) {
         prv_model_remove_from_model_renderer(model);
     }
@@ -993,8 +1026,8 @@ type_despawn(te_world* world, te_model* model) {
 void
 model_register_type(void) {
     te_type_info* info = type_info_create(
-        model_get_type_id(), model_create, model_destroy, type_spawn, type_despawn, NULL, model_get_game_object_info,
-        model_is_serialization_allowed);
+        model_get_type_id(), model_create, model_destroy, type_spawn, type_despawn, NULL,
+        model_get_game_object_info, model_is_serialization_allowed);
     type_info_add_vec3_variable(info, "position", model_set_position, model_get_position);
     type_info_add_vec3_variable(info, "rotation", model_set_rotation, model_get_rotation);
     type_info_add_vec3_variable(info, "scale", model_set_scale, model_get_scale);

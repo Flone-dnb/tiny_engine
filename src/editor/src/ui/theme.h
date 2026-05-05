@@ -11,13 +11,13 @@ prv_theme_vertical_to_horizontal_ratio(void) {
 // Returns width in range [0.0; 1.0] of the left panel (displays world inspector and filesystem panel).
 static inline float
 theme_get_left_panel_width(void) {
-    return 0.12f;
+    return 0.11f;
 }
 
 // Returns width in range [0.0; 1.0] of the right panel (displays object inspector).
 static inline float
 theme_get_right_panel_width(void) {
-    return 0.12f;
+    return 0.11f;
 }
 
 static inline void
@@ -33,7 +33,7 @@ theme_get_world_inspector_height(void) {
 
 static inline float
 theme_get_text_height(void) {
-    return 0.019f;
+    return 0.01875f;
 }
 
 static inline float

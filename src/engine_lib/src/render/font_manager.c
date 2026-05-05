@@ -14,7 +14,11 @@
 // This value will be used as the base size but will be scaled when drawing text according to the size of each text widget.
 // This value must be equal to the average size of the text, if it's too small big text will be blurry,
 // if it will be too big small text will look bad.
-#define TE_FONT_HEIGHT_TO_LOAD 0.08f
+#if defined(ENGINE_EDITOR)
+#define TE_FONT_HEIGHT_TO_LOAD 0.05f
+#else
+#define TE_FONT_HEIGHT_TO_LOAD 0.075f
+#endif
 
 // Compare function for hashmap.
 int
