@@ -495,8 +495,7 @@ prv_camera_recalc_frustum(te_camera* camera) {
         (float)camera->render_width / (float)camera->render_height);
 }
 
-mat4*
-camera_get_view_proj_mat(te_camera* camera) {
+static void make_sure_view_proj_mat_updated(te_camera* camera) {
     if (camera->is_view_mat_outdated || camera->is_proj_mat_outdated) {
         if (camera->is_view_mat_outdated) {
             vec3 forward;
@@ -528,8 +527,17 @@ camera_get_view_proj_mat(te_camera* camera) {
         prv_camera_recalc_frustum(camera);
         glm_mat4_mul(camera->proj_mat, camera->view_mat, camera->view_proj_mat);
     }
+}
 
+mat4*
+camera_get_view_proj_mat(te_camera* camera) {
+    make_sure_view_proj_mat_updated(camera);
     return &camera->view_proj_mat;
+}
+
+mat4* camera_get_view_mat(te_camera* camera) {
+    make_sure_view_proj_mat_updated(camera);
+    return &camera->view_mat;
 }
 
 struct te_world*

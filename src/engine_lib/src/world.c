@@ -413,6 +413,12 @@ world_save_to_file(
         4);
     config_section_set_float_array(
         config, section_idx, "ambient_light_color", lighting_data->ambient_light_color, 3);
+    config_section_set_float_array(
+        config, section_idx, "clear_color", lighting_data->clear_color, 3);
+    config_section_set_float_array(
+        config, section_idx, "distance_fog_color", lighting_data->distance_fog_color, 3);
+    config_section_set_float_array(
+        config, section_idx, "distance_fog_range", lighting_data->distance_fog_range, 2);
 
     // Save game objects.
     if (world->spawned_root_game_object_count > 0) {
@@ -561,6 +567,14 @@ world_add_from_file_with_offset(
             load_vec_from_config(
                 config, section_idx, "ambient_light_color", 3,
                 lighting_data->ambient_light_color);
+            load_vec_from_config(
+                config, section_idx, "clear_color", 3, lighting_data->clear_color);
+            load_vec_from_config(
+                config, section_idx, "distance_fog_color", 3,
+                lighting_data->distance_fog_color);
+            load_vec_from_config(
+                config, section_idx, "distance_fog_range", 2,
+                lighting_data->distance_fog_range);
         }
         section_idx += 1;
     }

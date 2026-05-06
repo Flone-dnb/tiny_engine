@@ -18,6 +18,10 @@ void editor_camera_destroy(te_editor_camera* editor_camera);
 void editor_camera_spawn(te_editor_camera* editor_camera, struct te_world* world);
 void editor_camera_despawn(te_editor_camera* editor_camera, struct te_world* world);
 
+// Changes camera's viewport: fullscreen or editor viewport modes.
+void editor_camera_set_is_fullscreen(te_editor_camera* editor_camera, bool is_fullscreen);
+bool editor_camera_is_fullscreen(te_editor_camera* editor_camera);
+
 // Sets whether the camera should react to the input or not.
 void editor_camera_enable_input(te_editor_camera* editor_camera, bool enable);
 

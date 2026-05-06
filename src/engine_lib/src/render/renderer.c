@@ -104,6 +104,7 @@ debug_command_set_fps_limit(te_game_manager* game_manager, unsigned int new_limi
 te_renderer*
 renderer_create(struct te_window* window) {
     te_renderer* renderer = malloc(sizeof(te_renderer));
+
     renderer->window = window;
     renderer->shader_manager = prv_shader_manager_create();
     renderer->texture_manager = prv_texture_manager_create();
@@ -127,6 +128,8 @@ renderer_create(struct te_window* window) {
         glm_vec3_copy((vec3){1.0f, -1.0f, 1.0f}, data->directional_light_direction);
         glm_vec3_normalize(data->directional_light_direction);
         glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, data->directional_light_color);
+
+        glm_vec2_copy((vec2){-1.0f, -1.0f}, data->distance_fog_range);
     }
 
 #if defined(__linux__)
@@ -436,6 +439,9 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 
     // Rendering to window's framebuffer.
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glClearColor(
+        renderer->lighting_data->clear_color[0], renderer->lighting_data->clear_color[1],
+        renderer->lighting_data->clear_color[2], 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Get worlds.
@@ -473,6 +479,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         prv_camera_set_render_target_size(camera, viewport_width, viewport_height);
 
         mat4* view_proj_mat = camera_get_view_proj_mat(camera);
+        mat4* view_mat = camera_get_view_mat(camera);
         struct te_frustum_shape* camera_frustum = camera_get_frustum(camera);
 
         ivec4 gl_viewport;
@@ -497,7 +504,9 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 #if defined(ENGINE_DEBUG_TOOLS)
             debug_stats->rendered_opaque_model_count =
 #endif
-                model_renderer_draw(opaque_model_renderer, renderer->lighting_data, view_proj_mat, camera_frustum);
+                model_renderer_draw(
+                    opaque_model_renderer, renderer->lighting_data, view_mat, view_proj_mat,
+                    camera_frustum);
             GPU_SECTION_END;
 
             if (model_renderer_has_models(transparent_model_renderer)) {
@@ -511,7 +520,8 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
                 debug_stats->rendered_transparent_model_count =
 #endif
                     model_renderer_draw(
-                        transparent_model_renderer, renderer->lighting_data, view_proj_mat,
+                        transparent_model_renderer, renderer->lighting_data,
+                        view_mat, view_proj_mat,
                         camera_frustum);
                 glDisable(GL_BLEND);
 

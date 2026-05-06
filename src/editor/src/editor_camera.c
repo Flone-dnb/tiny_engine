@@ -25,6 +25,7 @@ struct te_editor_camera {
 
     // `true` if should react to the input.
     bool is_input_enabled;
+    bool is_fullscreen;
 };
 
 te_editor_camera*
@@ -35,6 +36,7 @@ editor_camera_create() {
     editor_camera->is_input_enabled = false;
     editor_camera->rotation_sensitivity = 0.1f;
     editor_camera->speed = DEFAULT_CAMERA_SPEED;
+    editor_camera->is_fullscreen = false;
     glm_vec2_zero(editor_camera->gamepad_look);
     glm_vec3_zero(editor_camera->movement_input);
 
@@ -62,17 +64,34 @@ editor_camera_spawn(te_editor_camera* editor_camera, struct te_world* world) {
     world_set_active_camera(world, editor_camera->camera);
 
     // Set viewport.
-    vec4 viewport;
-    glm_vec4_copy(
-        (vec4){theme_get_left_panel_width(), 0.0f,
-               1.0f - (theme_get_left_panel_width() + theme_get_right_panel_width()), 1.0f},
-        viewport);
-    camera_set_viewport(editor_camera->camera, viewport);
+    editor_camera_set_is_fullscreen(editor_camera, false);
 }
 
 void
 editor_camera_despawn(te_editor_camera* editor_camera, struct te_world* world) {
     world_despawn_game_object(world, camera_get_game_object_info(editor_camera->camera));
+}
+
+void editor_camera_set_is_fullscreen(te_editor_camera* editor_camera, bool is_fullscreen) {
+    vec4 viewport;
+
+    if (is_fullscreen) {
+        glm_vec4_copy((vec4){0.0f, 0.0f, 1.0f, 1.0f}, viewport);
+    } else {
+        glm_vec4_copy(
+            (vec4){theme_get_left_panel_width(), 0.0f,
+                   1.0f - (theme_get_left_panel_width() + theme_get_right_panel_width()),
+                   1.0f},
+            viewport);
+    }
+
+    camera_set_viewport(editor_camera->camera, viewport);
+    editor_camera->is_fullscreen = is_fullscreen;
+}
+
+bool
+editor_camera_is_fullscreen(te_editor_camera* editor_camera) {
+    return editor_camera->is_fullscreen;
 }
 
 void

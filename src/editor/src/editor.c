@@ -22,6 +22,8 @@
 #include <obj_picking.h>
 #include <gizmo.h>
 
+#define EDITOR_STATS_POS_OFFSET 0.01f
+
 struct te_editor {
     // Not NULL if @ref game_world was loaded from a file (relative to the `res` directory).
     char* game_world_relative_path;
@@ -195,7 +197,8 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
     // Prepare stats widget.
     editor->game_world_stats_widget = text_widget_create();
     widget_set_relative_position(
-        text_widget_get_widget(editor->game_world_stats_widget), (vec2){0.01f, 0.01f});
+        text_widget_get_widget(editor->game_world_stats_widget),
+        (vec2){EDITOR_STATS_POS_OFFSET, EDITOR_STATS_POS_OFFSET});
     widget_set_relative_size(
         text_widget_get_widget(editor->game_world_stats_widget), (vec2){0.5f, 0.2f});
     widget_set_is_serialization_allowed(
@@ -371,9 +374,11 @@ editor_on_keyboard_button_pressed(
     (void)game_manager;
 
     te_editor* editor = game_instance;
+    if (editor->game_world == NULL) {
+        return;
+    }
 
-    if (editor->game_world != NULL && keyboard_modifiers_is_ctrl_pressed(&modifiers)
-        && button == TE_KB_S) {
+    if (keyboard_modifiers_is_ctrl_pressed(&modifiers) && button == TE_KB_S) {
         if (editor->game_world_relative_path == NULL) {
             editor_show_file_dialog(
                 editor, editor, on_new_world_file_selected, NULL, TE_FDM_SELECT_NEW_FILE);
@@ -381,6 +386,29 @@ editor_on_keyboard_button_pressed(
             world_save_to_file(editor->game_world, editor->game_world_relative_path);
         }
         return;
+    } else if (button == TE_KB_TAB) {
+        if (editor_camera_is_fullscreen(editor->editor_camera)) {
+            editor_camera_set_is_fullscreen(editor->editor_camera, false);
+
+            {
+                // Show stats.
+                te_widget* widget = text_widget_get_widget(editor->game_world_stats_widget);
+                widget_set_relative_position(
+                    widget, (vec2){EDITOR_STATS_POS_OFFSET, EDITOR_STATS_POS_OFFSET});
+            }
+
+            editor_ui_set_visibility(editor->ui, true);
+        } else{
+            editor_camera_set_is_fullscreen(editor->editor_camera, true);
+
+            {
+                // Hide stats.
+                te_widget* widget = text_widget_get_widget(editor->game_world_stats_widget);
+                widget_set_relative_position(widget, (vec2){1.0f, 1.0f});
+            }
+
+            editor_ui_set_visibility(editor->ui, false);
+        }
     }
 
     editor_camera_on_keyboard_button_pressed(editor->editor_camera, button);

@@ -13,6 +13,10 @@ struct te_editor_ui {
     te_property_inspector* property_inspector;
     te_filesystem_view* filesystem_view;
     te_world* game_world;
+
+    // NULL if not spawned yet. Background (parent) rectangles of left and right editor panels.
+    te_rect_widget* left_rect;
+    te_rect_widget* right_rect;
 };
 
 te_editor_ui*
@@ -22,6 +26,8 @@ editor_ui_create(struct te_editor* editor) {
     ui->property_inspector = property_inspector_create(ui);
     ui->world_inspector = world_inspector_create(editor, ui->property_inspector);
     ui->filesystem_view = filesystem_view_create(editor);
+    ui->left_rect = NULL;
+    ui->right_rect = NULL;
 
     return ui;
 }
@@ -42,6 +48,7 @@ editor_ui_spawn(te_editor_ui* ui, te_world* editor_world) {
 
     // Left panel.
     te_rect_widget* left_rect = rect_widget_create();
+    ui->left_rect = left_rect;
     {
         te_widget* widget = rect_widget_get_widget(left_rect);
         widget_set_relative_position(widget, (vec2){0.0f, 0.0f});
@@ -51,6 +58,7 @@ editor_ui_spawn(te_editor_ui* ui, te_world* editor_world) {
 
     // Right panel.
     te_rect_widget* right_rect = rect_widget_create();
+    ui->right_rect = right_rect;
     {
         te_widget* widget = rect_widget_get_widget(right_rect);
         widget_set_relative_position(
@@ -67,6 +75,24 @@ editor_ui_spawn(te_editor_ui* ui, te_world* editor_world) {
     // Spawn.
     world_spawn_widget(editor_world, rect_widget_get_widget(left_rect));
     world_spawn_widget(editor_world, rect_widget_get_widget(right_rect));
+}
+
+void
+editor_ui_set_visibility(te_editor_ui* ui, bool is_visible) {
+    if (ui->left_rect == NULL) {
+        return;
+    }
+
+    te_widget* left_widget = rect_widget_get_widget(ui->left_rect);
+    te_widget* right_widget = rect_widget_get_widget(ui->right_rect);
+    if (is_visible) {
+        widget_set_relative_position(left_widget, (vec2){0.0f, 0.0f});
+        widget_set_relative_position(
+            right_widget, (vec2){1.0f - theme_get_right_panel_width(), 0.0f});
+    }else{
+        widget_set_relative_position(left_widget, (vec2){0.0f, 1.0f});
+        widget_set_relative_position(right_widget, (vec2){1.0f, 1.0f});
+    }
 }
 
 te_world_inspector*

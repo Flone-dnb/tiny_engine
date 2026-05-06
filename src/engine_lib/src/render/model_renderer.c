@@ -20,6 +20,7 @@ typedef struct te_shader_group {
     unsigned int count;
 
     // uniform locations -----------------------
+    int uniform_view_mat;
     int uniform_view_proj_mat;
     int uniform_world_mat;
     int uniform_normal_mat;
@@ -32,6 +33,8 @@ typedef struct te_shader_group {
     int uniform_directional_light_direction;
     int uniform_point_light_color;
     int uniform_point_light_pos_and_dist;
+    int uniform_distance_fog_color;
+    int uniform_distance_fog_range;
 } te_shader_group;
 
 struct te_model_renderer {
@@ -108,6 +111,7 @@ model_renderer_has_models(te_model_renderer* renderer) {
 
 void
 model_renderer_init_uniforms(te_shader_group* group) {
+    group->uniform_view_mat = get_uniform_location(group->prog_id, "view_mat");
     group->uniform_view_proj_mat = get_uniform_location(group->prog_id, "view_proj_mat");
     group->uniform_world_mat = get_uniform_location(group->prog_id, "world_mat");
     group->uniform_normal_mat = get_uniform_location(group->prog_id, "normal_mat");
@@ -127,6 +131,11 @@ model_renderer_init_uniforms(te_shader_group* group) {
         get_uniform_location(group->prog_id, "point_light_color");
     group->uniform_point_light_pos_and_dist =
         get_uniform_location(group->prog_id, "point_light_pos_and_dist");
+
+    group->uniform_distance_fog_color =
+        get_uniform_location(group->prog_id, "distance_fog_color");
+    group->uniform_distance_fog_range =
+        get_uniform_location(group->prog_id, "distance_fog_range");
 }
 
 unsigned int
@@ -327,8 +336,8 @@ model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int han
 
 unsigned int
 model_renderer_draw(
-    te_model_renderer* renderer, te_lighting_data* lighting_data, mat4* view_proj_mat,
-    te_frustum_shape* camera_frustum) {
+    te_model_renderer* renderer, te_lighting_data* lighting_data,
+    mat4* view_mat, mat4* view_proj_mat, te_frustum_shape* camera_frustum) {
     unsigned int model_count = 0;
     unsigned int render_data_idx = 0;
 
@@ -338,6 +347,7 @@ model_renderer_draw(
         glUseProgram(group->prog_id);
 
         glUniformMatrix4fv(group->uniform_view_proj_mat, 1, GL_FALSE, (*view_proj_mat)[0]);
+        glUniformMatrix4fv(group->uniform_view_mat, 1, GL_FALSE, (*view_mat)[0]);
         glUniform3fv(group->uniform_ambient_light_color, 1, lighting_data->ambient_light_color);
 
         // Directional light.
@@ -351,6 +361,10 @@ model_renderer_draw(
         glUniform4fv(
             group->uniform_point_light_pos_and_dist, 1,
             lighting_data->point_light_pos_and_dist);
+
+        // Fog.
+        glUniform3fv(group->uniform_distance_fog_color, 1, lighting_data->directional_light_color);
+        glUniform2fv(group->uniform_distance_fog_range, 1, lighting_data->distance_fog_range);
 
         for (unsigned int unused = 0; unused < group->count; unused++, render_data_idx++) {
             te_model_render_data* data = &renderer->render_data[render_data_idx];

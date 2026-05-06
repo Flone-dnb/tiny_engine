@@ -24,6 +24,16 @@ typedef struct te_lighting_data {
     vec3 directional_light_direction;
 
     vec3 ambient_light_color;
+
+    // Backbuffer (background) fill color.
+    vec3 clear_color;
+
+    // Color if distance fog (if enabled  @ref distance_fog_range).
+    vec3 distance_fog_color;
+
+    // Stores (-1, -1) if disabled otherwise stores start (min fog) and end (max fog)
+    // positions in range [0.0; +inf] as distance from camera.
+    vec2 distance_fog_range;
 } te_lighting_data;
 
 te_renderer* renderer_create(struct te_window* window);

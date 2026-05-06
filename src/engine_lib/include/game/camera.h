@@ -65,6 +65,7 @@ bool camera_is_serialization_allowed(te_camera* camera);
 // Returns camera's view projection matrix.
 // Do not free/destroy returned pointer, valid while the camera exists.
 mat4* camera_get_view_proj_mat(te_camera* camera);
+mat4* camera_get_view_mat(te_camera* camera);
 
 // Returns NULL if the camera is not spawned in a world.
 struct te_world* camera_get_world(te_camera* camera);

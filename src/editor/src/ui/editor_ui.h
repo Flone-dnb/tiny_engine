@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdbool.h>
+
 typedef struct te_editor_ui te_editor_ui;
 struct te_editor;
 struct te_world;
@@ -13,6 +15,8 @@ void editor_ui_spawn(te_editor_ui* ui, struct te_world* editor_world);
 
 // Refreshes displayed directory entries in file explorer.
 void editor_ui_refresh_filesystem_view(te_editor_ui* ui);
+
+void editor_ui_set_visibility(te_editor_ui* ui, bool is_visible);
 
 // Clears all information in UI widgets (resets to their initial state).
 void editor_ui_reset(te_editor_ui* ui);
