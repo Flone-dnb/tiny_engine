@@ -10,7 +10,7 @@ struct te_texture_manager;
 struct te_font_manager;
 
 // Groups data about all lighting used during the rendering.
-typedef struct te_lighting_data {
+typedef struct te_light_params {
     // Color in RGB and intensity in A.
     vec4 directional_light_color;
 
@@ -23,6 +23,9 @@ typedef struct te_lighting_data {
     // Unit vector in the direction of the light source.
     vec3 directional_light_direction;
 
+    // note: if adding new variables add them to reflection
+    // ------------------------------------------------------
+
     vec3 ambient_light_color;
 
     // Backbuffer (background) fill color.
@@ -34,14 +37,14 @@ typedef struct te_lighting_data {
     // Stores (-1, -1) if disabled otherwise stores start (min fog) and end (max fog)
     // positions in range [0.0; +inf] as distance from camera.
     vec2 distance_fog_range;
-} te_lighting_data;
+} te_light_params;
 
 te_renderer* renderer_create(struct te_window* window);
 void renderer_destroy(te_renderer* renderer);
 
 // Returns parameters to configure lighting.
 // Do not free returned pointer, valid while the renderer exists.
-te_lighting_data* renderer_get_lighting_data(te_renderer* renderer);
+te_light_params* renderer_get_light_params(te_renderer* renderer);
 
 // Sets the maximum number of frames per second that is allowed for the renderer,
 // specify 0 to disable the limit.

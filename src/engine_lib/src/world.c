@@ -395,30 +395,30 @@ world_save_to_file(
     te_config* config = config_create(NULL);
 
     // Save lighting data.
-    te_lighting_data* lighting_data =
-        renderer_get_lighting_data(game_manager_get_renderer(world->game_manager));
-    const unsigned int section_idx = config_create_section(config, "lighting_data");
+    te_light_params* light_params =
+        renderer_get_light_params(game_manager_get_renderer(world->game_manager));
+    const unsigned int section_idx = config_create_section(config, "light_params");
     config_section_set_float_array(
-        config, section_idx, "directional_light_color", lighting_data->directional_light_color,
+        config, section_idx, "directional_light_color", light_params->directional_light_color,
         4);
     config_section_set_float_array(
         config, section_idx, "directional_light_direction",
-        lighting_data->directional_light_direction, 3);
+        light_params->directional_light_direction, 3);
     config_section_set_float_array(
-        config, section_idx, "point_light_color", lighting_data->point_light_color,
+        config, section_idx, "point_light_color", light_params->point_light_color,
         4);
     config_section_set_float_array(
         config, section_idx, "point_light_pos_and_dist",
-        lighting_data->point_light_pos_and_dist,
+        light_params->point_light_pos_and_dist,
         4);
     config_section_set_float_array(
-        config, section_idx, "ambient_light_color", lighting_data->ambient_light_color, 3);
+        config, section_idx, "ambient_light_color", light_params->ambient_light_color, 3);
     config_section_set_float_array(
-        config, section_idx, "clear_color", lighting_data->clear_color, 3);
+        config, section_idx, "clear_color", light_params->clear_color, 3);
     config_section_set_float_array(
-        config, section_idx, "distance_fog_color", lighting_data->distance_fog_color, 3);
+        config, section_idx, "distance_fog_color", light_params->distance_fog_color, 3);
     config_section_set_float_array(
-        config, section_idx, "distance_fog_range", lighting_data->distance_fog_range, 2);
+        config, section_idx, "distance_fog_range", light_params->distance_fog_range, 2);
 
     // Save game objects.
     if (world->spawned_root_game_object_count > 0) {
@@ -507,9 +507,9 @@ prv_load_child_widgets_recursive(
 }
 
 void
-world_add_from_file(te_world* world, const char* relative_path, bool load_lighting_data) {
+world_add_from_file(te_world* world, const char* relative_path, bool load_light_params) {
     world_add_from_file_with_offset(
-        world, relative_path, load_lighting_data, (vec3){0.0f, 0.0f, 0.0f});
+        world, relative_path, load_light_params, (vec3){0.0f, 0.0f, 0.0f});
 }
 
 static void load_vec_from_config(te_config* config, unsigned int section_idx, const char* key, unsigned int comp_count, float* target) {
@@ -532,7 +532,7 @@ static void load_vec_from_config(te_config* config, unsigned int section_idx, co
 
 void
 world_add_from_file_with_offset(
-    te_world* world, const char* relative_path, bool load_lighting_data,
+    te_world* world, const char* relative_path, bool load_light_params,
     vec3 location_offset) {
     const te_type_info* model_type_info = type_database_get_type_info(model_get_type_id());
     const te_type_info* camera_type_info = type_database_get_type_info(camera_get_type_id());
@@ -548,33 +548,33 @@ world_add_from_file_with_offset(
     }
 
     // Load lighting data.
-    if (strcmp(config_section_get_name(config, section_idx), "lighting_data") == 0) {
-        if (load_lighting_data) {
-            te_lighting_data* lighting_data =
-                renderer_get_lighting_data(game_manager_get_renderer(world->game_manager));
+    if (strcmp(config_section_get_name(config, section_idx), "light_params") == 0) {
+        if (load_light_params) {
+            te_light_params* light_params =
+                renderer_get_light_params(game_manager_get_renderer(world->game_manager));
 
             load_vec_from_config(
                 config, section_idx, "directional_light_color", 4,
-                lighting_data->directional_light_color);
+                light_params->directional_light_color);
             load_vec_from_config(
                 config, section_idx, "directional_light_direction", 3,
-                lighting_data->directional_light_direction);
+                light_params->directional_light_direction);
             load_vec_from_config(
-                config, section_idx, "point_light_color", 4, lighting_data->point_light_color);
+                config, section_idx, "point_light_color", 4, light_params->point_light_color);
             load_vec_from_config(
                 config, section_idx, "point_light_pos_and_dist", 4,
-                lighting_data->point_light_pos_and_dist);
+                light_params->point_light_pos_and_dist);
             load_vec_from_config(
                 config, section_idx, "ambient_light_color", 3,
-                lighting_data->ambient_light_color);
+                light_params->ambient_light_color);
             load_vec_from_config(
-                config, section_idx, "clear_color", 3, lighting_data->clear_color);
+                config, section_idx, "clear_color", 3, light_params->clear_color);
             load_vec_from_config(
                 config, section_idx, "distance_fog_color", 3,
-                lighting_data->distance_fog_color);
+                light_params->distance_fog_color);
             load_vec_from_config(
                 config, section_idx, "distance_fog_range", 2,
-                lighting_data->distance_fog_range);
+                light_params->distance_fog_range);
         }
         section_idx += 1;
     }

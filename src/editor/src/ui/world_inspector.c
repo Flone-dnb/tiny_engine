@@ -14,6 +14,8 @@
 #include <misc/wchar_funcs.h>
 #include <type_database.h>
 #include <editor.h>
+#include <game_manager.h>
+#include <render/renderer.h>
 #include <io/log.h>
 
 #define BUTTON_HIDDEN_X_POS 10.0f
@@ -974,6 +976,19 @@ on_button_next_page_clicked(te_button_widget* button) {
     refresh_item_names(inspector);
 }
 
+static void
+on_button_world_settings_clicked(te_button_widget* button) {
+    te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
+
+    property_inspector_hide(inspector->property_inspector);
+    refresh_button_highlight(inspector);
+    editor_set_gizmo(inspector->editor, NULL);
+
+    te_light_params* light_params = renderer_get_light_params(
+        game_manager_get_renderer(editor_get_game_manager(inspector->editor)));
+    property_inspector_show(inspector->property_inspector, light_params, "light_params");
+}
+
 void
 world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
     if (inspector->left_panel != NULL) {
@@ -993,6 +1008,49 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
 
     // Title text.
     float y_pos = vspacing;
+
+    // World settings.
+    {
+        te_button_widget* button = button_widget_create();
+        {
+            te_widget* widget = button_widget_get_widget(button);
+            widget_set_custom_ptr(widget, inspector);
+            widget_set_parent(widget, left_panel);
+            widget_set_relative_position(widget, (vec2){hpadding, y_pos});
+            widget_set_relative_size(widget, (vec2){total_width, theme_get_button_height()});
+        }
+
+        vec4 color;
+        theme_get_button_color(color);
+        button_widget_set_color(button, color);
+
+        theme_get_button_color_hovered(color);
+        button_widget_set_color_hovered(button, color);
+
+        theme_get_button_color_pressed(color);
+        button_widget_set_color_pressed(button, color);
+
+        button_widget_set_on_clicked(button, on_button_world_settings_clicked);
+
+        // Button text.
+
+        te_text_widget* text_widget = text_widget_create();
+        {
+            te_widget* widget = text_widget_get_widget(text_widget);
+            widget_set_parent(widget, button_widget_get_widget(button));
+            widget_set_relative_position(
+                widget, (vec2){hpadding_in_button, vpadding_in_button});
+            widget_set_relative_size(
+                widget, (vec2){1.0f - hpadding_in_button, 1.0f - vpadding_in_button});
+        }
+
+        text_widget_set_text_height(text_widget, theme_get_text_height());
+
+        unsigned int text_len;
+        wchar_t* text = wchar_from_char("World settings", &text_len);
+        text_widget_set_text_own(text_widget, text, text_len);
+    }
+    y_pos += theme_get_button_height() + vspacing;
 
     // World object type buttons: 3D objects or 2D objects.
     {

@@ -24,3 +24,7 @@ void editor_ui_reset(te_editor_ui* ui);
 // Returns always valid pointer to world inspector.
 // Do not delete/free returned pointer.
 struct te_world_inspector* editor_ui_get_world_inspector(te_editor_ui* ui);
+
+// Returns always valid pointer to editor.
+// Do not delete/free returned pointer.
+struct te_editor* editor_ui_get_editor(te_editor_ui* ui);

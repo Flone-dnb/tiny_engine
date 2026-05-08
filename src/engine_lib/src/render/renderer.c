@@ -24,6 +24,7 @@
 #include <render/shader_manager.h>
 #include <render/texture_manager.h>
 #include <render/widget_renderer.h>
+#include <type_database.h>
 #include <window.h>
 #include <world.h>
 #include <glad/glad.h>
@@ -49,7 +50,7 @@ struct te_renderer {
     te_texture_manager* texture_manager;
     te_font_manager* font_manager;
 
-    te_lighting_data* lighting_data;
+    te_light_params* light_params;
 
     te_renderer_frame_stats frame_stats;
 
@@ -101,6 +102,31 @@ debug_command_set_fps_limit(te_game_manager* game_manager, unsigned int new_limi
 }
 #endif
 
+// Getters/setters for light params for reflection.
+#define LIGHT_PARAMS_FUNC(name, body) \
+static void light_params_##name(void* obj, float* arg) { \
+    te_light_params* params = ((te_light_params*)obj); \
+    body; \
+}
+LIGHT_PARAMS_FUNC(set_clear_color, glm_vec3_copy(arg, params->clear_color));
+LIGHT_PARAMS_FUNC(get_clear_color, glm_vec3_copy(params->clear_color, arg));
+LIGHT_PARAMS_FUNC(set_ambient_light_color, glm_vec3_copy(arg, params->ambient_light_color));
+LIGHT_PARAMS_FUNC(get_ambient_light_color, glm_vec3_copy(params->ambient_light_color, arg));
+LIGHT_PARAMS_FUNC(set_dir_light_color, glm_vec4_copy(arg, params->directional_light_color));
+LIGHT_PARAMS_FUNC(get_dir_light_color, glm_vec4_copy(params->directional_light_color, arg));
+LIGHT_PARAMS_FUNC(set_dir_light_dir, glm_vec3_normalize(arg); glm_vec3_copy(arg, params->directional_light_direction));
+LIGHT_PARAMS_FUNC(get_dir_light_dir, glm_vec3_copy(params->directional_light_direction, arg));
+LIGHT_PARAMS_FUNC(set_point_light_color, glm_vec4_copy(arg, params->point_light_color));
+LIGHT_PARAMS_FUNC(get_point_light_color, glm_vec4_copy(params->point_light_color, arg));
+LIGHT_PARAMS_FUNC(
+    set_point_light_pos_and_dist, glm_vec4_copy(arg, params->point_light_pos_and_dist));
+LIGHT_PARAMS_FUNC(
+    get_point_light_pos_and_dist, glm_vec4_copy(params->point_light_pos_and_dist, arg));
+LIGHT_PARAMS_FUNC(set_distance_fog_range, glm_vec2_copy(arg, params->distance_fog_range));
+LIGHT_PARAMS_FUNC(get_distance_fog_range, glm_vec2_copy(params->distance_fog_range, arg));
+LIGHT_PARAMS_FUNC(set_distance_fog_color, glm_vec3_copy(arg, params->distance_fog_color));
+LIGHT_PARAMS_FUNC(get_distance_fog_color, glm_vec3_copy(params->distance_fog_color, arg));
+
 te_renderer*
 renderer_create(struct te_window* window) {
     te_renderer* renderer = malloc(sizeof(te_renderer));
@@ -118,10 +144,10 @@ renderer_create(struct te_window* window) {
 
     // Setup base lighting.
     {
-        renderer->lighting_data = malloc(sizeof(te_lighting_data));
-        memset(renderer->lighting_data, 0, sizeof(te_lighting_data));
+        renderer->light_params = malloc(sizeof(te_light_params));
+        memset(renderer->light_params, 0, sizeof(te_light_params));
 
-        te_lighting_data* data = renderer->lighting_data;
+        te_light_params* data = renderer->light_params;
 
         glm_vec3_copy((vec3){0.5f, 0.5f, 0.5f}, data->ambient_light_color);
 
@@ -220,6 +246,36 @@ renderer_create(struct te_window* window) {
     debug_console_register_command(fps_command);
 #endif
 
+    // Add light params to type database to be able to display them in the property inspector.
+    {
+        te_type_info* info = type_info_create(
+            "light_params", NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+
+        type_info_add_vec3_variable(info, "clear_color", light_params_set_clear_color, light_params_get_clear_color);
+        type_info_add_vec3_variable(
+            info, "ambient_light_color", light_params_set_ambient_light_color, light_params_get_ambient_light_color);
+        type_info_add_vec4_variable(
+            info, "directional_light_color", light_params_set_dir_light_color,
+            light_params_get_dir_light_color);
+        type_info_add_vec3_variable(
+            info, "directional_light_direction", light_params_set_dir_light_dir,
+            light_params_get_dir_light_dir);
+        type_info_add_vec4_variable(
+            info, "point_light_color", light_params_set_point_light_color,
+            light_params_get_point_light_color);
+        type_info_add_vec4_variable(
+            info, "point_light_pos_dist", light_params_set_point_light_pos_and_dist,
+            light_params_get_point_light_pos_and_dist);
+        type_info_add_vec2_variable(
+            info, "distance_fog_range", light_params_set_distance_fog_range,
+            light_params_get_distance_fog_range);
+        type_info_add_vec3_variable(
+            info, "distance_fog_color", light_params_set_distance_fog_color,
+            light_params_get_distance_fog_color);
+
+        type_database_register_type(info);
+    }
+
     return renderer;
 }
 
@@ -229,7 +285,7 @@ renderer_destroy(te_renderer* renderer) {
     prv_shader_manager_destroy(renderer->shader_manager);
     prv_font_manager_destroy(renderer->font_manager);
 
-    free(renderer->lighting_data);
+    free(renderer->light_params);
 
 #if defined(ENGINE_DEBUG_TOOLS)
     if (GLAD_GL_EXT_disjoint_timer_query == 1) {
@@ -247,9 +303,9 @@ renderer_destroy(te_renderer* renderer) {
     free(renderer);
 }
 
-te_lighting_data*
-renderer_get_lighting_data(te_renderer* renderer) {
-    return renderer->lighting_data;
+te_light_params*
+renderer_get_light_params(te_renderer* renderer) {
+    return renderer->light_params;
 }
 
 void
@@ -440,8 +496,8 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     // Rendering to window's framebuffer.
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glClearColor(
-        renderer->lighting_data->clear_color[0], renderer->lighting_data->clear_color[1],
-        renderer->lighting_data->clear_color[2], 1.0f);
+        renderer->light_params->clear_color[0], renderer->light_params->clear_color[1],
+        renderer->light_params->clear_color[2], 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Get worlds.
@@ -505,7 +561,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
             debug_stats->rendered_opaque_model_count =
 #endif
                 model_renderer_draw(
-                    opaque_model_renderer, renderer->lighting_data, view_mat, view_proj_mat,
+                    opaque_model_renderer, renderer->light_params, view_mat, view_proj_mat,
                     camera_frustum);
             GPU_SECTION_END;
 
@@ -520,7 +576,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
                 debug_stats->rendered_transparent_model_count =
 #endif
                     model_renderer_draw(
-                        transparent_model_renderer, renderer->lighting_data,
+                        transparent_model_renderer, renderer->light_params,
                         view_mat, view_proj_mat,
                         camera_frustum);
                 glDisable(GL_BLEND);

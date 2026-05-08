@@ -40,13 +40,14 @@ void world_save_to_file(te_world* world, const char* relative_path);
 
 // Deserializes game entities from the specified file (path relative to the `res` directory)
 // and spawns them in the world.
-// - If `load_lighting_data` is `true` will also load lighting data such as ambient light color,
-// directional light color/direction and etc. that were used while the world was saved.
+// - If `load_light_params` is `true` will also load lighting parameters such as ambient light color,
+// fog color, directional light color/direction and etc. that were used while the world was saved.
 // After the world finished loaded it will adjust renderer's lighting parameters that were saved.
 // - Additionally can add a location offset to 3D game objects.
-void world_add_from_file(te_world* world, const char* relative_path, bool load_lighting_data);
+void
+world_add_from_file(te_world* world, const char* relative_path, bool load_light_params);
 void world_add_from_file_with_offset(
-    te_world* world, const char* relative_path, bool load_lighting_data, vec3 location_offset);
+    te_world* world, const char* relative_path, bool load_light_params, vec3 location_offset);
 
 // Returns NULL if the world has no active camera.
 // Do not free/destroy returned pointer, valid until the camera is not destroyed.

@@ -90,7 +90,7 @@ Other game objects include things like models (AKA meshes), their usage is simil
 
 # Lighting
 
-The lighting is very simple in this engine, all lighting parameters are stored in `te_lighting_data` which you can query and modify using the function `renderer_get_lighting_data`, returned object stores parameters like ambient light, directional light color/direction and etc.
+The lighting is very simple in this engine, all lighting parameters are stored in `te_light_params` which you can query and modify using the function `renderer_get_light_params`, returned object has parameters like ambient light, distance fog color, directional light color/direction and etc.
 
 # Import GLTF
 

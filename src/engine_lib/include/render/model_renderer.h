@@ -10,7 +10,7 @@
 typedef struct te_model_renderer te_model_renderer;
 
 struct te_frustum_shape;
-struct te_lighting_data;
+struct te_light_params;
 
 // Data used to submit a model for rendering.
 typedef struct te_model_render_data {
@@ -68,5 +68,5 @@ model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int han
 // Draws models to the currently set framebuffer.
 // Returns the number of models drawn.
 unsigned int model_renderer_draw(
-    te_model_renderer* renderer, struct te_lighting_data* lighting_data,
+    te_model_renderer* renderer, struct te_light_params* light_params,
     mat4* view_mat, mat4* view_proj_mat, struct te_frustum_shape* camera_frustum);

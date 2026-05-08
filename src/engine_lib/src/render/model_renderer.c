@@ -336,7 +336,7 @@ model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int han
 
 unsigned int
 model_renderer_draw(
-    te_model_renderer* renderer, te_lighting_data* lighting_data,
+    te_model_renderer* renderer, te_light_params* light_params,
     mat4* view_mat, mat4* view_proj_mat, te_frustum_shape* camera_frustum) {
     unsigned int model_count = 0;
     unsigned int render_data_idx = 0;
@@ -348,23 +348,25 @@ model_renderer_draw(
 
         glUniformMatrix4fv(group->uniform_view_proj_mat, 1, GL_FALSE, (*view_proj_mat)[0]);
         glUniformMatrix4fv(group->uniform_view_mat, 1, GL_FALSE, (*view_mat)[0]);
-        glUniform3fv(group->uniform_ambient_light_color, 1, lighting_data->ambient_light_color);
+        glUniform3fv(group->uniform_ambient_light_color, 1, light_params->ambient_light_color);
 
         // Directional light.
         glUniform4fv(
-            group->uniform_directional_light_color, 1, lighting_data->directional_light_color);
+            group->uniform_directional_light_color, 1, light_params->directional_light_color);
         glUniform3fv(
-            group->uniform_directional_light_direction, 1, lighting_data->directional_light_direction);
+            group->uniform_directional_light_direction, 1,
+            light_params->directional_light_direction);
 
         // Point light.
-        glUniform4fv(group->uniform_point_light_color, 1, lighting_data->point_light_color);
+        glUniform4fv(group->uniform_point_light_color, 1, light_params->point_light_color);
         glUniform4fv(
             group->uniform_point_light_pos_and_dist, 1,
-            lighting_data->point_light_pos_and_dist);
+            light_params->point_light_pos_and_dist);
 
         // Fog.
-        glUniform3fv(group->uniform_distance_fog_color, 1, lighting_data->directional_light_color);
-        glUniform2fv(group->uniform_distance_fog_range, 1, lighting_data->distance_fog_range);
+        glUniform3fv(
+            group->uniform_distance_fog_color, 1, light_params->directional_light_color);
+        glUniform2fv(group->uniform_distance_fog_range, 1, light_params->distance_fog_range);
 
         for (unsigned int unused = 0; unused < group->count; unused++, render_data_idx++) {
             te_model_render_data* data = &renderer->render_data[render_data_idx];

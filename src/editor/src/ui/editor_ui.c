@@ -9,6 +9,8 @@
 #include <widget/widget.h>
 
 struct te_editor_ui {
+    struct te_editor* editor;
+
     te_world_inspector* world_inspector;
     te_property_inspector* property_inspector;
     te_filesystem_view* filesystem_view;
@@ -23,6 +25,7 @@ te_editor_ui*
 editor_ui_create(struct te_editor* editor) {
     te_editor_ui* ui = malloc(sizeof(te_editor_ui));
 
+    ui->editor = editor;
     ui->property_inspector = property_inspector_create(ui);
     ui->world_inspector = world_inspector_create(editor, ui->property_inspector);
     ui->filesystem_view = filesystem_view_create(editor);
@@ -98,6 +101,10 @@ editor_ui_set_visibility(te_editor_ui* ui, bool is_visible) {
 te_world_inspector*
 editor_ui_get_world_inspector(te_editor_ui* ui) {
     return ui->world_inspector;
+}
+
+struct te_editor* editor_ui_get_editor(te_editor_ui* ui) {
+    return ui->editor;
 }
 
 void
