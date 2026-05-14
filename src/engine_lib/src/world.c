@@ -13,6 +13,7 @@
 #include <render/model_renderer.h>
 #include <render/widget_renderer.h>
 #include <render/renderer.h>
+#include <sound_manager.h>
 #include <widget/widget.h>
 #include <window.h>
 #if defined(ENGINE_DEBUG_TOOLS)
@@ -47,6 +48,9 @@ struct te_world {
     // Size of this array is @ref interactable_widget_count.
     te_widget** interactable_widgets;
 
+    // NULL if nothing spawned, size of this array is @ref spawned_sound_count.
+    te_sound** spawned_sounds;
+
     // Renders models of the world.
     te_model_renderer* opaque_model_renderer;
     te_model_renderer* transparent_model_renderer;
@@ -69,11 +73,15 @@ struct te_world {
     // Size of the array @ref spawned_widgets.
     unsigned int spawned_widget_count;
 
+    // Size of the array @ref spawned_sounds.
+    unsigned int spawned_sound_count;
+
     // Size of the array @ref interactable_widgets.
     unsigned int interactable_widget_count;
 
     // `true` if the world is currently being destroyed.
     bool is_being_destroyed;
+    bool some_sounds_finished;
 
 #if defined(ENGINE_DEBUG_TOOLS)
     // GPU time query IDs.
@@ -98,13 +106,19 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
     world->spawned_widgets = NULL;
     world->spawned_widget_count = 0;
 
+    world->spawned_sounds = NULL;
+    world->spawned_sound_count = 0;
+
+    world->some_sounds_finished = false;
+
     world->interactable_widgets = NULL;
     world->hovered_interactable_widget = NULL;
     world->interactable_widget_count = 0;
 
     world->spawned_root_game_object_count = 0;
     world->spawned_root_game_object_array_size = 128;
-    world->spawned_root_game_objects = malloc(sizeof(te_game_object_info*) * world->spawned_root_game_object_array_size);
+    world->spawned_root_game_objects =
+        malloc(sizeof(te_game_object_info*) * world->spawned_root_game_object_array_size);
 
     world->opaque_model_renderer = model_renderer_create(128, 128);
     world->transparent_model_renderer = model_renderer_create(4, 4);
@@ -161,6 +175,12 @@ prv_world_destroy(te_world* world) {
             abort();
         }
         free(world->interactable_widgets);
+
+        // Sounds.
+        for (unsigned int i = 0; i < world->spawned_sound_count; i++) {
+            sound_destroy(world->spawned_sounds[i]);
+        }
+        free(world->spawned_sounds);
     }
 
     free(world->name);
@@ -237,13 +257,15 @@ prv_world_remove_root_game_object_no_notify(
 
         idx = i;
         found = true;
+        break;
     }
     if (!found) {
         if (must_exist_in_array) {
-            log_error("unable to despawn the specified game object: the object was not spawned "
-                      "previously or is a child object (despawn root "
-                      "object to despawn child objects or detach child object from parent first, "
-                      "then despawn the game object)");
+            log_error(
+                "unable to despawn the specified game object: the object was not spawned "
+                "previously or is a child object (despawn root "
+                "object to despawn child objects or detach child object from parent first, "
+                "then despawn the game object)");
             abort();
         } else {
             return;
@@ -351,9 +373,96 @@ world_set_active_camera(te_world* world, te_camera* camera) {
         abort();
     }
 
-    world->active_camera = camera;
+    if (world->active_camera != NULL) {
+        prv_camera_on_deactivated(world->active_camera);
+    }
 
+    world->active_camera = camera;
     prv_camera_on_active(world->active_camera);
+}
+
+void
+prv_world_tick(te_world* world) {
+    if (world->some_sounds_finished) {
+        // For now this silly cleanup implementation is enough.
+        for (unsigned int i = 0; i < world->spawned_sound_count;) {
+            if (!sound_is_finished_playing(world->spawned_sounds[i])) {
+                i += 1;
+                continue;
+            }
+
+            if (world->spawned_sound_count == 1) {
+                world->spawned_sound_count = 0;
+                free(world->spawned_sounds);
+                world->spawned_sounds = NULL;
+                break;
+            }
+
+            te_sound** new_sounds =
+                malloc(sizeof(te_sound*) * (world->spawned_sound_count - 1));
+            memcpy(new_sounds, world->spawned_sounds, sizeof(te_sound*) * i);
+            memcpy(
+                new_sounds + i, world->spawned_sounds + (i + 1),
+                sizeof(te_sound*) * (world->spawned_sound_count - i - 1));
+
+            free(world->spawned_sounds);
+            world->spawned_sounds = new_sounds;
+
+            world->spawned_sound_count -= 1;
+        }
+
+        // Even if some sound will end right here (and we will overwrite the flag)
+        // we will recheck all sounds again next time some sound is finished
+        // moreover we will destroy all left sounds in world destroy so it's fine for now.
+        world->some_sounds_finished = false;
+    }
+}
+
+static void
+on_sound_finished_audio_thread(void* user_data, te_sound* sound) {
+    (void)sound;
+
+    te_world* world = user_data;
+    if (prv_world_is_being_destroyed(world)) {
+        return;
+    }
+    world->some_sounds_finished = true;
+}
+
+void
+world_play_sound_2d(te_world* world, te_sound* sound) {
+    te_sound** new_sounds = malloc(sizeof(te_sound*) * (world->spawned_sound_count + 1));
+    memcpy(new_sounds, world->spawned_sounds, sizeof(te_sound*) * world->spawned_sound_count);
+
+    free(world->spawned_sounds);
+    world->spawned_sounds = new_sounds;
+
+    world->spawned_sounds[world->spawned_sound_count] = sound;
+
+    world->spawned_sound_count += 1;
+
+    prv_sound_set_on_finished_callback_audio_thread(
+        sound, world, on_sound_finished_audio_thread);
+    sound_play(sound);
+}
+
+void
+world_play_sound_3d(te_world* world, struct te_sound* sound, vec3 world_position) {
+    te_sound** new_sounds = malloc(sizeof(te_sound*) * (world->spawned_sound_count + 1));
+    memcpy(new_sounds, world->spawned_sounds, sizeof(te_sound*) * world->spawned_sound_count);
+
+    free(world->spawned_sounds);
+    world->spawned_sounds = new_sounds;
+
+    world->spawned_sounds[world->spawned_sound_count] = sound;
+
+    world->spawned_sound_count += 1;
+
+    prv_sound_set_on_finished_callback_audio_thread(
+        sound, world, on_sound_finished_audio_thread);
+
+    sound_set_3d_position(sound, world_position);
+    sound_play(sound);
 }
 
 static void
@@ -390,8 +499,7 @@ prv_save_widget_recursive(te_config* config, te_widget* widget) {
 }
 
 void
-world_save_to_file(
-    te_world* world, const char* relative_path) {
+world_save_to_file(te_world* world, const char* relative_path) {
     te_config* config = config_create(NULL);
 
     // Save lighting data.
@@ -405,12 +513,10 @@ world_save_to_file(
         config, section_idx, "directional_light_direction",
         light_params->directional_light_direction, 3);
     config_section_set_float_array(
-        config, section_idx, "point_light_color", light_params->point_light_color,
-        4);
+        config, section_idx, "point_light_color", light_params->point_light_color, 4);
     config_section_set_float_array(
         config, section_idx, "point_light_pos_and_dist",
-        light_params->point_light_pos_and_dist,
-        4);
+        light_params->point_light_pos_and_dist, 4);
     config_section_set_float_array(
         config, section_idx, "ambient_light_color", light_params->ambient_light_color, 3);
     config_section_set_float_array(
@@ -512,7 +618,10 @@ world_add_from_file(te_world* world, const char* relative_path, bool load_light_
         world, relative_path, load_light_params, (vec3){0.0f, 0.0f, 0.0f});
 }
 
-static void load_vec_from_config(te_config* config, unsigned int section_idx, const char* key, unsigned int comp_count, float* target) {
+static void
+load_vec_from_config(
+    te_config* config, unsigned int section_idx, const char* key, unsigned int comp_count,
+    float* target) {
     unsigned int count;
     float* array = config_section_get_float_array(config, section_idx, key, &count);
     if (count == 0) {
@@ -532,8 +641,7 @@ static void load_vec_from_config(te_config* config, unsigned int section_idx, co
 
 void
 world_add_from_file_with_offset(
-    te_world* world, const char* relative_path, bool load_light_params,
-    vec3 location_offset) {
+    te_world* world, const char* relative_path, bool load_light_params, vec3 location_offset) {
     const te_type_info* model_type_info = type_database_get_type_info(model_get_type_id());
     const te_type_info* camera_type_info = type_database_get_type_info(camera_get_type_id());
 
@@ -620,7 +728,8 @@ world_add_from_file_with_offset(
             }
         }
 
-        if (type_info->get_game_object_info != NULL && type_info->get_game_object_info(obj)->type == TE_GOT_MODEL) {
+        if (type_info->get_game_object_info != NULL
+            && type_info->get_game_object_info(obj)->type == TE_GOT_MODEL) {
             te_model* model = obj;
 
             if (has_child_model) {
@@ -720,7 +829,8 @@ world_spawn_game_object(te_world* world, te_game_object_info* info) {
             log_error("the game object is already spawned in this world");
             abort();
         } else {
-            log_error("the specified game object cannot be spawned in this world because the game object "
+            log_error("the specified game object cannot be spawned in this world because the "
+                      "game object "
                       "must be first despawned from the world it currently resides in");
             abort();
         }

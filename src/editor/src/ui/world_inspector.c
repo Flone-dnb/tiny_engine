@@ -187,7 +187,7 @@ refresh_button_highlight(te_world_inspector* inspector) {
                 continue;
             }
         } else {
-            if (info->game_object_info != inspected_object) {
+            if (info->game_object_info->game_object != inspected_object) {
                 continue;
             }
         }

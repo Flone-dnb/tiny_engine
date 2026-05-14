@@ -16,6 +16,7 @@ set(PROJECT_SOURCES
     src/misc/memory_usage.c
     src/misc/wchar_funcs.c
     src/game_manager.c
+    src/sound_manager.c
     src/world.c
     src/debug_console.c
     src/type_database.c
@@ -61,6 +62,7 @@ set(PROJECT_SOURCES
     include/misc/memory_usage.h
     include/misc/wchar_funcs.h
     include/game_manager.h
+    include/sound_manager.h
     include/render/renderer.h
     include/render/shader_manager.h
     include/render/texture_manager.h
@@ -168,6 +170,17 @@ target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE freetype)
 message(STATUS "${PROJECT_NAME}: adding external dependency \"hashmap.c\"...")
 add_library(hashmapc ${RELATIVE_EXT_PATH}/hashmap.c/hashmap.h ${RELATIVE_EXT_PATH}/hashmap.c/hashmap.c)
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE hashmapc)
+
+# Miniaudio.
+message(STATUS "${PROJECT_NAME}: adding external dependency \"miniaudio\"...")
+set(MINIAUDIO_NO_WEBAUDIO ON CACHE BOOL "" FORCE)
+set(MINIAUDIO_NO_ENCODING ON CACHE BOOL "" FORCE)
+set(MINIAUDIO_NO_FLAC ON CACHE BOOL "" FORCE)
+set(MINIAUDIO_NO_AVX2 ON CACHE BOOL "" FORCE)
+set(MINIAUDIO_NO_RUNTIME_LINKING OFF CACHE BOOL "" FORCE)
+set(MINIAUDIO_INSTALL OFF CACHE BOOL "" FORCE)
+add_subdirectory(${RELATIVE_EXT_PATH}/miniaudio ${DEPENDENCY_BUILD_DIR_NAME}/miniaudio EXCLUDE_FROM_ALL)
+target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE miniaudio)
 
 # Link engine library to dependencies.
 target_link_libraries(${ENGINE_LIB_TARGET} PUBLIC ${ENGINE_LIB_DEPS_TARGET})

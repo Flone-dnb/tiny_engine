@@ -9,6 +9,7 @@ typedef struct te_game_manager te_game_manager;
 struct te_renderer;
 struct te_window;
 struct te_world;
+struct te_sound_manager;
 
 // Creates a new world.
 // Specify a non-NULL world name. The name will be copied to the world's object.
@@ -35,6 +36,10 @@ game_manager_get_worlds(te_game_manager* game_manager, unsigned int* world_count
 
 // Returns user's main game system that was specified after window creation.
 void* game_manager_get_game_instance(te_game_manager* game_manager);
+
+// Returns sound manager.
+// Do not destroy/free returned pointer, valid while the game manager exists.
+struct te_sound_manager* game_manager_get_sound_manager(te_game_manager* game_manager);
 
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API

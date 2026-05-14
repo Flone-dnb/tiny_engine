@@ -11,6 +11,7 @@
 #include <type_database.h>
 #include <window.h>
 #include <world.h>
+#include <sound_manager.h>
 
 // Stores all core systems such as game world, physics, audio, renderer and etc.
 struct te_game_manager {
@@ -18,6 +19,8 @@ struct te_game_manager {
     struct te_window* window;
 
     te_renderer* renderer;
+
+    te_sound_manager* sound_manager;
 
     // Game worlds. Size of this array is @ref world_count.
     te_world** worlds;
@@ -30,6 +33,7 @@ te_game_manager*
 prv_game_manager_create(struct te_window* window) {
     te_game_manager* game_manager = (te_game_manager*)malloc(sizeof(te_game_manager));
 
+    game_manager->sound_manager = sound_manager_create();
     game_manager->window = window;
     game_manager->worlds = NULL;
     game_manager->world_count = 0;
@@ -92,6 +96,7 @@ prv_game_manager_destroy(te_game_manager* game_manager) {
 #endif
 
     renderer_destroy(game_manager->renderer);
+    sound_manager_destroy(game_manager->sound_manager);
 
     prv_type_database_deinit();
 
@@ -179,11 +184,52 @@ game_manager_get_game_instance(te_game_manager* game_manager) {
     return prv_window_get_game_instance(game_manager->window);
 }
 
+te_sound_manager*
+game_manager_get_sound_manager(te_game_manager* game_manager) {
+    return game_manager->sound_manager;
+}
+
 void
 prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
-    (void)game_manager;
     (void)delta_time_sec;
-    // TODO
+
+    // Get active camera to update sound listener.
+    te_camera* active_camera = NULL;
+    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+        active_camera = world_get_active_camera(game_manager->worlds[i]);
+        if (active_camera == NULL) {
+            continue;
+        }
+
+#if defined(ENGINE_EDITOR)
+        // Use game world camera as sound listener.
+        if (strcmp(world_get_name(game_manager->worlds[i]), "game") == 0) {
+            break;
+        } else {
+            active_camera = NULL;
+        }
+#else
+        // Just use the first active camera.
+        break;
+#endif
+    }
+
+    if (active_camera != NULL) {
+        vec3 pos;
+        camera_get_world_position(active_camera, pos);
+
+        vec3 forward;
+        vec3 up;
+        camera_get_forward(active_camera, forward);
+        camera_get_up(active_camera, up);
+
+        prv_sound_manager_set_listener(game_manager->sound_manager, pos, forward, up);
+    }
+
+    // Tick worlds.
+    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+        prv_world_tick(game_manager->worlds[i]);
+    }
 }
 
 void

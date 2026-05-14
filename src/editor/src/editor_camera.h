@@ -25,8 +25,16 @@ bool editor_camera_is_fullscreen(te_editor_camera* editor_camera);
 // Sets whether the camera should react to the input or not.
 void editor_camera_enable_input(te_editor_camera* editor_camera, bool enable);
 
+// Pilots a game camera instead of the viewport camera.
+// Specify NULL to exit custom camera piloting.
+void editor_camera_pilot_custom_camera(te_editor_camera* editor_camera, struct te_camera* camera);
+
 // Do not free/destroy returned pointer, always valid pointer while the editor camera exists.
+// Returns non-custom camera (ignores @ref editor_camera_pilot_custom_camera).
 struct te_camera* editor_camera_get_camera(te_editor_camera* editor_camera);
+
+// Returns `true` if @ref editor_camera_pilot_custom_camera was called with a valid camera.
+bool editor_camera_is_piloting_custom_camera(te_editor_camera* editor_camera);
 
 // callbacks -------------------------------------------------------------------------------
 void

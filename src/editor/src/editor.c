@@ -269,6 +269,70 @@ editor_show_file_dialog(
 }
 // ------------------------------------------------------------------------------------------------
 
+static void
+set_camera_editor_shape_visibility(te_world* world, bool is_visible) {
+    bool found_camera = false;
+    do {
+        found_camera = false;
+
+        unsigned int count;
+        te_game_object_info** infos = world_get_root_game_objects(world, &count);
+
+        for (unsigned int i = 0; i < count; i++) {
+            if (infos[i]->type == TE_GOT_CAMERA) {
+                te_camera* camera = (te_camera*)infos[i]->game_object;
+                if (world_get_active_camera(world) == camera) {
+                    continue;
+                }
+                if (is_visible != prv_camera_is_editor_shape_visible(camera)) {
+                    prv_camera_set_editor_shape_visibility(camera, is_visible);
+                    found_camera = true;
+                    break; // editor shape was despawned and world root objects array changed
+                }
+            } else if (infos[i]->type == TE_GOT_MODEL) {
+                te_model* model = (te_model*)infos[i]->game_object;
+                te_camera* attached_camera = model_get_attached_camera(model);
+                if (attached_camera != NULL) {
+                    if (world_get_active_camera(world) == attached_camera) {
+                        continue;
+                    }
+                    if (is_visible != prv_camera_is_editor_shape_visible(attached_camera)) {
+                        prv_camera_set_editor_shape_visibility(attached_camera, is_visible);
+                        found_camera = true;
+                        break; // same reason
+                    }
+                }
+            }
+        }
+        free(infos);
+    } while (found_camera);
+}
+
+static void
+show_ui(te_editor* editor) {
+    // Show stats.
+    te_widget* widget = text_widget_get_widget(editor->game_world_stats_widget);
+    widget_set_relative_position(
+        widget, (vec2){EDITOR_STATS_POS_OFFSET, EDITOR_STATS_POS_OFFSET});
+
+    editor_ui_set_visibility(editor->ui, true);
+    set_camera_editor_shape_visibility(editor->game_world, true);
+
+    editor_camera_set_is_fullscreen(editor->editor_camera, false);
+}
+
+static void
+hide_ui(te_editor* editor) {
+    editor_camera_set_is_fullscreen(editor->editor_camera, true);
+
+    // Hide stats.
+    te_widget* widget = text_widget_get_widget(editor->game_world_stats_widget);
+    widget_set_relative_position(widget, (vec2){1.0f, 1.0f});
+
+    editor_ui_set_visibility(editor->ui, false);
+    set_camera_editor_shape_visibility(editor->game_world, false);
+}
+
 void
 editor_set_gizmo(te_editor* editor, te_model* target) {
     if (editor->game_world == NULL) {
@@ -284,6 +348,12 @@ editor_set_gizmo(te_editor* editor, te_model* target) {
     if (target != NULL) {
         editor->gizmo = gizmo_create_in_world(editor->game_world, target);
     }
+}
+
+void
+editor_pilot_camera(te_editor* editor, te_camera* camera) {
+    editor_camera_pilot_custom_camera(editor->editor_camera, camera);
+    hide_ui(editor);
 }
 
 void
@@ -388,26 +458,9 @@ editor_on_keyboard_button_pressed(
         return;
     } else if (button == TE_KB_TAB) {
         if (editor_camera_is_fullscreen(editor->editor_camera)) {
-            editor_camera_set_is_fullscreen(editor->editor_camera, false);
-
-            {
-                // Show stats.
-                te_widget* widget = text_widget_get_widget(editor->game_world_stats_widget);
-                widget_set_relative_position(
-                    widget, (vec2){EDITOR_STATS_POS_OFFSET, EDITOR_STATS_POS_OFFSET});
-            }
-
-            editor_ui_set_visibility(editor->ui, true);
-        } else{
-            editor_camera_set_is_fullscreen(editor->editor_camera, true);
-
-            {
-                // Hide stats.
-                te_widget* widget = text_widget_get_widget(editor->game_world_stats_widget);
-                widget_set_relative_position(widget, (vec2){1.0f, 1.0f});
-            }
-
-            editor_ui_set_visibility(editor->ui, false);
+            show_ui(editor);
+        } else {
+            hide_ui(editor);
         }
     }
 
@@ -424,7 +477,12 @@ editor_on_keyboard_button_released(
     editor_camera_on_keyboard_button_released(editor->editor_camera, button);
 
     if (button == TE_KB_ESCAPE) {
-        window_close(game_manager_get_window(game_manager));
+        if (editor_camera_is_piloting_custom_camera(editor->editor_camera)) {
+            editor_camera_pilot_custom_camera(editor->editor_camera, NULL);
+            show_ui(editor);
+        } else {
+            window_close(game_manager_get_window(game_manager));
+        }
     }
 
     if (editor->game_world == NULL) {
@@ -560,8 +618,7 @@ editor_on_mouse_button_pressed(
                 return;
             }
         }
-        world_inspector_select_obj(
-            editor_ui_get_world_inspector(editor->ui), obj_info);
+        world_inspector_select_obj(editor_ui_get_world_inspector(editor->ui), obj_info);
     }
 }
 

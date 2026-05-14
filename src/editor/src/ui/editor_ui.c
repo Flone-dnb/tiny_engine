@@ -92,9 +92,12 @@ editor_ui_set_visibility(te_editor_ui* ui, bool is_visible) {
         widget_set_relative_position(left_widget, (vec2){0.0f, 0.0f});
         widget_set_relative_position(
             right_widget, (vec2){1.0f - theme_get_right_panel_width(), 0.0f});
-    }else{
+    } else {
         widget_set_relative_position(left_widget, (vec2){0.0f, 1.0f});
         widget_set_relative_position(right_widget, (vec2){1.0f, 1.0f});
+
+        world_inspector_select_obj(ui->world_inspector, NULL);
+        property_inspector_hide(ui->property_inspector);
     }
 }
 

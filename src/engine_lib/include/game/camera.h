@@ -95,3 +95,10 @@ void prv_camera_on_parent_model_world_mat_changed(te_camera* camera, struct te_m
 
 // Called when the camera became the active camera in a world.
 void prv_camera_on_active(te_camera* camera);
+void prv_camera_on_deactivated(te_camera* camera);
+
+#if defined(ENGINE_EDITOR)
+// Shows or hides a model used to visualize camera in the editor.
+void prv_camera_set_editor_shape_visibility(te_camera* camera, bool is_visible);
+bool prv_camera_is_editor_shape_visible(te_camera* camera);
+#endif

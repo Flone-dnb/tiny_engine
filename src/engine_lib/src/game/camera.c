@@ -30,6 +30,7 @@ struct te_camera {
 #if defined(ENGINE_EDITOR)
     // Model to visualize the camera in the editor.
     te_model* editor_model;
+    bool is_editor_model_visible;
 #endif
 
     // View matrix. May be outdated, see @ref is_view_mat_outdated.
@@ -92,6 +93,7 @@ camera_create() {
     camera->parent_model = NULL;
 #if defined(ENGINE_EDITOR)
     camera->editor_model = NULL;
+    camera->is_editor_model_visible = true;
 #endif
     glm_vec3_zero(camera->position);
     glm_vec3_zero(camera->rotation);
@@ -133,6 +135,40 @@ camera_destroy(te_camera* camera) {
     free(camera);
 }
 
+#if defined(ENGINE_EDITOR)
+static void
+create_editor_model(te_camera* camera) {
+    if (camera->world == NULL || camera->editor_model != NULL) {
+        return;
+    }
+
+    camera->editor_model = model_create();
+
+    model_set_is_serialization_allowed(camera->editor_model, false);
+    model_enable_transparency(camera->editor_model, true);
+    model_set_color(camera->editor_model, (vec4){1.0f, 1.0f, 1.0f, 0.2f});
+    model_set_scale(camera->editor_model, (vec3){0.25f, 0.25f, 0.25f});
+    model_set_custom_ptr(camera->editor_model, camera);
+
+    world_spawn_game_object(camera->world, model_get_game_object_info(camera->editor_model));
+
+    vec3 pos;
+    camera_get_world_position(camera, pos);
+    model_set_position(camera->editor_model, pos);
+}
+
+static void
+destroy_editor_model(te_camera* camera) {
+    if (camera->editor_model == NULL || camera->world == NULL) {
+        return;
+    }
+
+    world_despawn_game_object(camera->world, model_get_game_object_info(camera->editor_model));
+    model_destroy(camera->editor_model);
+    camera->editor_model = NULL;
+}
+#endif
+
 static void
 on_spawned(te_camera* camera, struct te_world* world) {
     if (world == camera->world) {
@@ -144,24 +180,11 @@ on_spawned(te_camera* camera, struct te_world* world) {
         abort();
     }
 
-#if defined(ENGINE_EDITOR)
-    if (world != NULL) {
-        camera->editor_model = model_create();
-
-        model_set_is_serialization_allowed(camera->editor_model, false);
-        model_enable_transparency(camera->editor_model, true);
-        model_set_color(camera->editor_model, (vec4){1.0f, 1.0f, 1.0f, 0.25f});
-        model_set_scale(camera->editor_model, (vec3){0.5f, 0.5f, 0.5f});
-
-        world_spawn_game_object(world, model_get_game_object_info(camera->editor_model));
-
-        vec3 pos;
-        camera_get_world_position(camera, pos);
-        model_set_position(camera->editor_model, pos);
-    }
-#endif
-
     camera->world = world;
+
+#if defined(ENGINE_EDITOR)
+    create_editor_model(camera);
+#endif
 }
 
 static void
@@ -237,8 +260,8 @@ type_despawn(te_world* world, te_camera* camera) {
 void
 camera_register_type(void) {
     te_type_info* info = type_info_create(
-        camera_get_type_id(), camera_create, camera_destroy, type_spawn, type_despawn, NULL, camera_get_game_object_info,
-        camera_is_serialization_allowed);
+        camera_get_type_id(), camera_create, camera_destroy, type_spawn, type_despawn, NULL,
+        camera_get_game_object_info, camera_is_serialization_allowed);
     type_info_add_vec3_variable(info, "position", camera_set_position, camera_get_position);
     type_info_add_vec3_variable(info, "rotation", camera_set_rotation, camera_get_rotation);
     type_info_add_uint_variable(
@@ -495,7 +518,8 @@ prv_camera_recalc_frustum(te_camera* camera) {
         (float)camera->render_width / (float)camera->render_height);
 }
 
-static void make_sure_view_proj_mat_updated(te_camera* camera) {
+static void
+make_sure_view_proj_mat_updated(te_camera* camera) {
     if (camera->is_view_mat_outdated || camera->is_proj_mat_outdated) {
         if (camera->is_view_mat_outdated) {
             vec3 forward;
@@ -535,7 +559,8 @@ camera_get_view_proj_mat(te_camera* camera) {
     return &camera->view_proj_mat;
 }
 
-mat4* camera_get_view_mat(te_camera* camera) {
+mat4*
+camera_get_view_mat(te_camera* camera) {
     make_sure_view_proj_mat_updated(camera);
     return &camera->view_mat;
 }
@@ -579,12 +604,16 @@ prv_camera_set_render_target_size(te_camera* camera, unsigned int width, unsigne
 void
 prv_camera_on_active(te_camera* camera) {
 #if defined(ENGINE_EDITOR)
-    if (camera->editor_model != NULL) {
-        world_despawn_game_object(
-            camera->world, model_get_game_object_info(camera->editor_model));
-        model_destroy(camera->editor_model);
-        camera->editor_model = NULL;
-    }
+    destroy_editor_model(camera);
+#else
+    (void)camera;
+#endif
+}
+
+void
+prv_camera_on_deactivated(te_camera* camera) {
+#if defined(ENGINE_EDITOR)
+    create_editor_model(camera);
 #else
     (void)camera;
 #endif
@@ -605,3 +634,24 @@ prv_camera_on_parent_model_world_mat_changed(te_camera* camera, te_model* parent
     }
 #endif
 }
+
+#if defined(ENGINE_EDITOR)
+void
+prv_camera_set_editor_shape_visibility(te_camera* camera, bool is_visible) {
+    camera->is_editor_model_visible = is_visible;
+
+    if (camera->editor_model != NULL && !is_visible) {
+        destroy_editor_model(camera);
+        return;
+    }
+
+    if (camera->editor_model == NULL && is_visible && camera->world != NULL) {
+        create_editor_model(camera);
+        return;
+    }
+}
+bool
+prv_camera_is_editor_shape_visible(te_camera* camera) {
+    return camera->editor_model != NULL;
+}
+#endif

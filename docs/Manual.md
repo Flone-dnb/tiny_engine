@@ -96,6 +96,27 @@ The lighting is very simple in this engine, all lighting parameters are stored i
 
 The editor provides a button to import GLTF/GLB files (`io/import.h` is used). Imported GLTF scene will appear in a new directory as a new world file. You can then load this GLTF scene by creating a new world and using the `world_add_from_file` function or you can add this imported GLTF scene to your already existing game world by using the same `world_add_from_file` function.
 
+# Sound
+
+To play a sound first create a sound object:
+
+```C
+#include <sound_manager.h>
+
+te_sound_manager* sound_manager = game_manager_get_sound_manager(game_manager);
+te_sound* sound = sound_create(sound_manager, "game/sound.mp3"); // located at "res/game/sound.mp3"
+```
+
+Then you can configure it using the `sound_...` functions. After than you can transfer the ownership of the sound to a world like so:
+
+```C
+world_play_sound_2d(world, sound);
+// or
+world_play_sound_3d(world, sound, some_world_pos);
+```
+
+In this case when the sound is finished (or when world is destroyed) the sound will also stop and will be automatically destroyed.
+
 # Debug tools
 
 Debug tools include things like `debug_drawer` (for rendering debug shapes) and `debug_console` (for registering new dev cheat commands and performance stats). In order to show/hide `debug_console` press the tilde (~) button on your keyboard.
@@ -189,7 +210,7 @@ To build:
 ```
 mkdir build && cd build
 cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Release ..
-cmake --build . --target <game_target_name> --config=Release -j 2
+cmake --build . --target <game_target_name> --config=Release -j 4
 ```
 
 ## The hard way
@@ -249,7 +270,7 @@ cd tmp/game
 mkdir build
 cd build
 cmake -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Release ..
-cmake --build . --target <game_target_name> --config=Release -j 2
+cmake --build . --target <game_target_name> --config=Release -j 4
 ```
 Then copy the resulting binary (from `build/OUTPUT/` directory) to your ARM64 Linux device. We don't worry about installing SDL and other libraries because we link SDL and other libraries statically. Inside of your ARM64 Linux device launch the game using some file explorer or a console.
 

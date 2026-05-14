@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <type_database.h>
+#include <game/game_object_info.h>
 #include <io/log.h>
 #include <ui/theme.h>
 #include <ui/editor_ui.h>
@@ -11,9 +12,11 @@
 #include <widget/checkbox_widget.h>
 #include <widget/text_widget.h>
 #include <widget/text_edit_widget.h>
+#include <widget/button_widget.h>
 #include <widget/rect_widget.h>
 #include <misc/wchar_funcs.h>
 #include <math_funcs.h>
+#include <editor.h>
 #include <world.h>
 
 struct te_property_inspector {
@@ -224,6 +227,14 @@ add_float_widget(
     free(src_text);
 }
 
+static void
+on_button_pilot_camera_clicked(te_button_widget* button) {
+    te_property_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
+
+    editor_pilot_camera(editor_ui_get_editor(inspector->ui), inspector->obj);
+    property_inspector_hide(inspector);
+}
+
 void
 property_inspector_show(te_property_inspector* inspector, void* obj, const char* obj_type_id) {
     if (inspector->obj == obj) {
@@ -262,6 +273,48 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
     vec2 pos;
     pos[0] = hpadding;
     pos[1] = theme_get_vertical_padding() / 2.0f;
+
+    if (type_info->get_game_object_info != NULL && type_info->get_game_object_info(obj)->type == TE_GOT_CAMERA) {
+        // Add a button to pilot the camera.
+        te_button_widget* button = button_widget_create();
+        {
+            te_widget* widget = button_widget_get_widget(button);
+            widget_set_custom_ptr(widget, inspector);
+            widget_set_parent(widget, inspector->right_panel);
+            widget_set_relative_position(widget, pos);
+            widget_set_relative_size(widget, size);
+        }
+
+        vec4 color;
+        theme_get_button_color(color);
+        button_widget_set_color(button, color);
+
+        theme_get_button_color_hovered(color);
+        button_widget_set_color_hovered(button, color);
+
+        theme_get_button_color_pressed(color);
+        button_widget_set_color_pressed(button, color);
+
+        button_widget_set_on_clicked(button, on_button_pilot_camera_clicked);
+
+        // Button text.
+
+        te_text_widget* text_widget = text_widget_create();
+        {
+            te_widget* widget = text_widget_get_widget(text_widget);
+            widget_set_parent(widget, button_widget_get_widget(button));
+            widget_set_relative_position(widget, (vec2){hpadding, 0.0f});
+            widget_set_relative_size(widget, (vec2){1.0f - hpadding, 1.0f});
+        }
+
+        text_widget_set_text_height(text_widget, theme_get_text_height());
+
+        unsigned int text_len;
+        wchar_t* text = wchar_from_char("Pilot camera", &text_len);
+        text_widget_set_text_own(text_widget, text, text_len);
+
+        pos[1] += size[1];
+    }
 
     for (unsigned int var_idx = 0; var_idx < type_info->variable_count; var_idx++) {
         te_variable_info* var_info = &type_info->variables[var_idx];

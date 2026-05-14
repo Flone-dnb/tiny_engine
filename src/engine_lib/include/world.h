@@ -12,6 +12,7 @@ struct te_widget_renderer;
 struct te_game_object_info;
 struct te_widget;
 struct te_camera;
+struct te_sound;
 
 // Returns world's name.
 // Do not free/destroy returned pointer.
@@ -33,6 +34,11 @@ void world_despawn_widget(te_world* world, struct te_widget* widget);
 //
 // The camera must be previously spawned in this world.
 void world_set_active_camera(te_world* world, struct te_camera* camera);
+
+// Worlds takes the ownership of the sound and will destroy it once the sound is finished
+// (or when the world is destroyed).
+void world_play_sound_2d(te_world* world, struct te_sound* sound);
+void world_play_sound_3d(te_world* world, struct te_sound* sound, vec3 world_position);
 
 // Serializes all spawned world entities into the specified file
 // (path relative to the `res` directory).
@@ -77,6 +83,9 @@ struct te_game_manager* world_get_game_manager(te_world* world);
 // Creates a new world. Game manager is expected to call this function because it manages game worlds.
 te_world* prv_world_create(struct te_game_manager* game_manager, const char* name);
 void prv_world_destroy(te_world* world);
+
+// Called every frame.
+void prv_world_tick(te_world* world);
 
 // Returns `true` if currently in @ref prv_world_destroy.
 bool prv_world_is_being_destroyed(te_world* world);

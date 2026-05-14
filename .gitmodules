@@ -19,3 +19,6 @@
 [submodule "ext/cgltf"]
 	path = ext/cgltf
 	url = https://github.com/jkuhlmann/cgltf.git
+[submodule "ext/miniaudio"]
+	path = ext/miniaudio
+	url = https://github.com/mackron/miniaudio.git

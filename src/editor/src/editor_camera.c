@@ -11,7 +11,14 @@
 #define DEFAULT_CAMERA_SPEED 4.0f
 
 struct te_editor_camera {
-    te_camera* camera;
+    // Always valid, camera being piloted.
+    // Do not free this camera.
+    te_camera* controlled_camera_ref;
+
+    // Always valid, may be equal to @ref camera but is different when piloting some game camera.
+    // See @ref is_piloting_custom_camera.
+    // Must be freed/destroyed.
+    te_camera* viewport_camera;
 
     // Stores the current state of the input.
     // X stores "forward" movement in [-1.0f; 1.0], Y stores "right" movement and Z stores up.
@@ -26,29 +33,31 @@ struct te_editor_camera {
     // `true` if should react to the input.
     bool is_input_enabled;
     bool is_fullscreen;
+    bool is_piloting_custom_camera;
 };
 
 te_editor_camera*
 editor_camera_create() {
     te_editor_camera* editor_camera = malloc(sizeof(te_editor_camera));
 
-    editor_camera->camera = camera_create();
+    editor_camera->viewport_camera = camera_create();
+    editor_camera->controlled_camera_ref = editor_camera->viewport_camera;
     editor_camera->is_input_enabled = false;
+    editor_camera->is_piloting_custom_camera = false;
     editor_camera->rotation_sensitivity = 0.1f;
     editor_camera->speed = DEFAULT_CAMERA_SPEED;
     editor_camera->is_fullscreen = false;
     glm_vec2_zero(editor_camera->gamepad_look);
     glm_vec3_zero(editor_camera->movement_input);
 
-    camera_set_is_serialization_allowed(editor_camera->camera, false);
+    camera_set_is_serialization_allowed(editor_camera->viewport_camera, false);
 
     return editor_camera;
 }
 
 void
 editor_camera_destroy(te_editor_camera* editor_camera) {
-    // if you crashed here then you forgot to despawn the camera before world destruction
-    camera_destroy(editor_camera->camera);
+    camera_destroy(editor_camera->viewport_camera);
 
     free(editor_camera);
 }
@@ -56,12 +65,13 @@ editor_camera_destroy(te_editor_camera* editor_camera) {
 void
 editor_camera_spawn(te_editor_camera* editor_camera, struct te_world* world) {
     // Set initial position/rotation.
-    camera_set_position(editor_camera->camera, (vec3){0.0f, 2.0f, 4.0f});
-    camera_set_rotation(editor_camera->camera, (vec3){0.0f, 0.0f, 0.0f});
+    camera_set_position(editor_camera->viewport_camera, (vec3){0.0f, 2.0f, 4.0f});
+    camera_set_rotation(editor_camera->viewport_camera, (vec3){0.0f, 0.0f, 0.0f});
 
     // Spawn.
-    world_spawn_game_object(world, camera_get_game_object_info(editor_camera->camera));
-    world_set_active_camera(world, editor_camera->camera);
+    world_spawn_game_object(
+        world, camera_get_game_object_info(editor_camera->viewport_camera));
+    world_set_active_camera(world, editor_camera->viewport_camera);
 
     // Set viewport.
     editor_camera_set_is_fullscreen(editor_camera, false);
@@ -69,7 +79,8 @@ editor_camera_spawn(te_editor_camera* editor_camera, struct te_world* world) {
 
 void
 editor_camera_despawn(te_editor_camera* editor_camera, struct te_world* world) {
-    world_despawn_game_object(world, camera_get_game_object_info(editor_camera->camera));
+    world_despawn_game_object(
+        world, camera_get_game_object_info(editor_camera->viewport_camera));
 }
 
 void editor_camera_set_is_fullscreen(te_editor_camera* editor_camera, bool is_fullscreen) {
@@ -85,7 +96,7 @@ void editor_camera_set_is_fullscreen(te_editor_camera* editor_camera, bool is_fu
             viewport);
     }
 
-    camera_set_viewport(editor_camera->camera, viewport);
+    camera_set_viewport(editor_camera->controlled_camera_ref, viewport);
     editor_camera->is_fullscreen = is_fullscreen;
 }
 
@@ -102,21 +113,39 @@ editor_camera_enable_input(te_editor_camera* editor_camera, bool enable) {
     glm_vec2_zero(editor_camera->gamepad_look);
 }
 
+void
+editor_camera_pilot_custom_camera(te_editor_camera* editor_camera, te_camera* camera) {
+    editor_camera->controlled_camera_ref = camera == NULL ? editor_camera->viewport_camera : camera;
+    editor_camera->is_piloting_custom_camera =
+        editor_camera->controlled_camera_ref != editor_camera->viewport_camera;
+
+    te_world* world = camera_get_world(editor_camera->controlled_camera_ref);
+    if (world == NULL) {
+        log_error("expected the camera to be spawned");
+        abort();
+    }
+    world_set_active_camera(world, editor_camera->controlled_camera_ref);
+}
+
 te_camera*
 editor_camera_get_camera(te_editor_camera* editor_camera) {
-    return editor_camera->camera;
+    return editor_camera->viewport_camera;
+}
+
+bool editor_camera_is_piloting_custom_camera(te_editor_camera* editor_camera) {
+    return editor_camera->is_piloting_custom_camera;
 }
 
 void
 editor_camera_apply_look_input(
     te_editor_camera* editor_camera, float x_offset, float y_offset) {
     vec3 rotation;
-    camera_get_rotation(editor_camera->camera, rotation);
+    camera_get_rotation(editor_camera->controlled_camera_ref, rotation);
 
     rotation[1] -= x_offset * editor_camera->rotation_sensitivity;
     rotation[0] -= y_offset * editor_camera->rotation_sensitivity;
 
-    camera_set_rotation(editor_camera->camera, rotation);
+    camera_set_rotation(editor_camera->controlled_camera_ref, rotation);
 }
 
 void
@@ -237,8 +266,8 @@ editor_camera_on_game_tick(te_editor_camera* editor_camera, float delta_time_sec
     vec3 forward;
     vec3 right;
     vec3 up;
-    camera_get_forward(editor_camera->camera, forward);
-    camera_get_right(editor_camera->camera, right);
+    camera_get_forward(editor_camera->controlled_camera_ref, forward);
+    camera_get_right(editor_camera->controlled_camera_ref, right);
     globals_get_world_up(up);
 
     glm_vec3_scale(forward, movement[0], forward);
@@ -246,11 +275,11 @@ editor_camera_on_game_tick(te_editor_camera* editor_camera, float delta_time_sec
     glm_vec3_scale(up, movement[2], up);
 
     vec3 position;
-    camera_get_position(editor_camera->camera, position);
+    camera_get_position(editor_camera->controlled_camera_ref, position);
 
     glm_vec3_add(position, forward, position);
     glm_vec3_add(position, right, position);
     glm_vec3_add(position, up, position);
 
-    camera_set_position(editor_camera->camera, position);
+    camera_set_position(editor_camera->controlled_camera_ref, position);
 }

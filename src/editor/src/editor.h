@@ -8,6 +8,7 @@
 typedef struct te_editor te_editor;
 struct te_game_manager;
 struct te_model;
+struct te_camera;
 struct te_game_object_info;
 
 te_editor* editor_create();
@@ -29,6 +30,9 @@ void editor_show_file_dialog(
 // Shows or hides gizmo around the specified model.
 // Specify NULL to hide the gizmo.
 void editor_set_gizmo(te_editor* editor, struct te_model* target);
+
+// Makes the editor camera to pilot the specified game camera.
+void editor_pilot_camera(te_editor* editor, struct te_camera* camera);
 
 // Called before a game object is deleted from the game world.
 void editor_on_before_game_obj_deleted(te_editor* editor, struct te_game_object_info* info);
