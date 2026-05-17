@@ -120,7 +120,8 @@ model_renderer_init_uniforms(te_shader_group* group) {
     group->uniform_uv_offset = get_uniform_location(group->prog_id, "uv_offset");
     group->uniform_skin_mats = -1;
 
-    group->uniform_ambient_light_color = get_uniform_location(group->prog_id, "ambient_light_color");
+    group->uniform_ambient_light_color =
+        get_uniform_location(group->prog_id, "ambient_light_color");
 
     group->uniform_directional_light_color =
         get_uniform_location(group->prog_id, "directional_light_color");
@@ -336,13 +337,18 @@ model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int han
 
 unsigned int
 model_renderer_draw(
-    te_model_renderer* renderer, te_light_params* light_params,
-    mat4* view_mat, mat4* view_proj_mat, te_frustum_shape* camera_frustum) {
+    te_model_renderer* renderer, te_light_params* light_params, mat4* view_mat,
+    mat4* view_proj_mat, te_frustum_shape* camera_frustum) {
     unsigned int model_count = 0;
     unsigned int render_data_idx = 0;
 
     for (unsigned int group_idx = 0; group_idx < renderer->shader_group_count; group_idx++) {
         te_shader_group* group = &renderer->shader_groups[group_idx];
+
+        void (*set_vertex_attribute_pointers)(void) =
+            group->uniform_skin_mats == -1
+                ? prv_model_set_attribute_pointers_model_vertex
+                : prv_model_set_attribute_pointers_model_vertex_skinned;
 
         glUseProgram(group->prog_id);
 
@@ -388,7 +394,7 @@ model_renderer_draw(
             glBindBuffer(GL_ARRAY_BUFFER, data->vbo);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data->ebo);
 
-            prv_model_set_vertex_attributes();
+            set_vertex_attribute_pointers();
 
             glDrawElements(GL_TRIANGLES, data->index_count, GL_UNSIGNED_SHORT, NULL);
             model_count += 1;

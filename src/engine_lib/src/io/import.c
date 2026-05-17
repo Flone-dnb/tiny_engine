@@ -135,6 +135,8 @@ save_primitive(
     size_t pos_attribute_idx = 0xFFFFFFFF;
     size_t normal_attribute_idx = 0xFFFFFFFF;
     size_t texcoord_attribute_idx = 0xFFFFFFFF;
+    size_t joints_attribute_idx = 0xFFFFFFFF;
+    size_t weights_attribute_idx = 0xFFFFFFFF;
     for (size_t i = 0; i < primitive->attributes_count; i++) {
         if (primitive->attributes[i].type == cgltf_attribute_type_position) {
             pos_attribute_idx = i;
@@ -184,6 +186,22 @@ save_primitive(
                     primitive->attributes[i].data->type);
                 return false;
             }
+        } else if (primitive->attributes[i].type == cgltf_attribute_type_joints) {
+            joints_attribute_idx = i;
+
+            if (primitive->attributes[i].data->type != cgltf_type_vec4) {
+                log_error_fmt(
+                    "found GLTF mesh with unsupported joints type %d, expected vec4",
+                    primitive->attributes[i].data->type);
+                return false;
+            }
+            if (primitive->attributes[i].data->component_type != cgltf_component_type_r_8u) {
+                log_error_fmt(
+                    "found GLTF mesh with unsupported texcoord component type %d, expected "
+                    "unsigned byte",
+                    primitive->attributes[i].data->type);
+                return false;
+            }
         }
     }
     if (pos_attribute_idx == 0xFFFFFFFF) {
@@ -228,7 +246,8 @@ save_primitive(
     // Load vertices.
     unsigned int vertex_count =
         (unsigned int)primitive->attributes[pos_attribute_idx].data->count;
-    te_model_vertex* vertices = malloc(sizeof(te_model_vertex) * vertex_count);
+    const bool is_skinned = joints_attribute_idx != 0xFFFFFFFF;
+    te_vertex_pack* vertices = vertex_pack_create(vertex_count, is_skinned);
     {
         // Load position.
         {
@@ -241,7 +260,10 @@ save_primitive(
                 (char*)buffer_view->buffer->data + (buffer_view->offset + accessor->offset);
 
             for (size_t i = 0; i < vertex_count; i++) {
-                glm_vec3_copy(*(vec3*)data, vertices[i].pos);
+                unsigned char* dst = &vertices->data
+                                 [vertices->vertex_sizeof * i
+                                  + vertices->attribute_offsets[TE_VA_POSITION]];
+                glm_vec3_copy(*(vec3*)data, (float*)dst);
                 data += stride;
             }
         }
@@ -257,7 +279,10 @@ save_primitive(
                 (char*)buffer_view->buffer->data + (buffer_view->offset + accessor->offset);
 
             for (size_t i = 0; i < vertex_count; i++) {
-                glm_vec3_copy(*(vec3*)data, vertices[i].normal);
+                unsigned char* dst = &vertices->data
+                                [vertices->vertex_sizeof * i
+                                 + vertices->attribute_offsets[TE_VA_NORMAL]];
+                glm_vec3_copy(*(vec3*)data, (float*)dst);
                 data += stride;
             }
         }
@@ -273,7 +298,50 @@ save_primitive(
                 (char*)buffer_view->buffer->data + (buffer_view->offset + accessor->offset);
 
             for (size_t i = 0; i < vertex_count; i++) {
-                glm_vec2_copy(*(vec2*)data, vertices[i].uv);
+                unsigned char* dst = &vertices->data
+                                [vertices->vertex_sizeof * i
+                                 + vertices->attribute_offsets[TE_VA_NORMAL]];
+                glm_vec2_copy(*(vec2*)data, (float*)dst);
+                data += stride;
+            }
+        }
+
+        // Load bone indices.
+        if (joints_attribute_idx != 0xFFFFFFFF) {
+            cgltf_accessor* accessor = primitive->attributes[joints_attribute_idx].data;
+            cgltf_buffer_view* buffer_view = accessor->buffer_view;
+
+            assert(sizeof(unsigned char) == sizeof(te_bone_index_t));
+
+            const size_t stride =
+                buffer_view->stride == 0 ? sizeof(unsigned char) * 4 : buffer_view->stride;
+            char* data =
+                (char*)buffer_view->buffer->data + (buffer_view->offset + accessor->offset);
+
+            for (size_t i = 0; i < vertex_count; i++) {
+                unsigned char* dst = &vertices->data
+                                [vertices->vertex_sizeof * i
+                                 + vertices->attribute_offsets[TE_VA_BONE_INDICES]];
+                memcpy(dst, data, sizeof(unsigned char) * 4);
+                data += stride;
+            }
+        }
+
+        // Load bone weights.
+        if (weights_attribute_idx != 0xFFFFFFFF) {
+            cgltf_accessor* accessor = primitive->attributes[weights_attribute_idx].data;
+            cgltf_buffer_view* buffer_view = accessor->buffer_view;
+
+            const size_t stride =
+                buffer_view->stride == 0 ? sizeof(vec4) : buffer_view->stride;
+            char* data =
+                (char*)buffer_view->buffer->data + (buffer_view->offset + accessor->offset);
+
+            for (size_t i = 0; i < vertex_count; i++) {
+                unsigned char* dst = &vertices->data
+                                [vertices->vertex_sizeof * i
+                                 + vertices->attribute_offsets[TE_VA_BONE_WEIGHTS]];
+                glm_vec4_copy(*(vec4*)data, (float*)dst);
                 data += stride;
             }
         }
@@ -287,11 +355,11 @@ save_primitive(
         return false;
     }
 
-    unsigned char id = 0;
+    unsigned char id = is_skinned ? 100 : 0;
     fwrite(&id, sizeof(id), 1, fp);
 
     fwrite(&vertex_count, sizeof(vertex_count), 1, fp);
-    fwrite(vertices, sizeof(te_model_vertex), vertex_count, fp);
+    fwrite(vertices->data, vertices->vertex_sizeof, vertex_count, fp);
 
     fwrite(&index_count, sizeof(index_count), 1, fp);
     fwrite(indices, sizeof(unsigned short), index_count, fp);

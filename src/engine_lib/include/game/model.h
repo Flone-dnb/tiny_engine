@@ -10,7 +10,47 @@ struct te_camera;
 struct te_model_renderer;
 struct te_game_object_info;
 
-// Vertex of a model.
+// ------------------------------------------------------------------------------------------------
+//                                       VERTEX API
+// ------------------------------------------------------------------------------------------------
+
+// Components of a vertex.
+enum te_vertex_attribute {
+    TE_VA_POSITION = 0,
+    TE_VA_NORMAL,
+    TE_VA_UV,
+    TE_VA_BONE_INDICES,
+    TE_VA_BONE_WEIGHTS,
+
+    TE_VA_COUNT, // <- marks the size of this enum
+};
+
+// Manages vertex access.
+typedef struct te_vertex_pack {
+    // Binds vertex attribute names to a shader program. Used after creating a model's shader.
+    void (*bind_gl_vertex_attributes)(unsigned int shader_prog_id);
+
+    // Sets pointers to vertex attributes. Used during the rendering.
+    void (*set_attribute_pointers)(void);
+
+    // Actual vertex data.
+    unsigned char* data;
+
+    // Number of vertices in @ref vertices.
+    unsigned int vertex_count;
+
+    // sizeof a single vertex.
+    unsigned int vertex_sizeof;
+
+    // For each attribute stores an offset (in bytes) from the vertex start position.
+    // Stores 255 if no such attribute.
+    unsigned char attribute_offsets[TE_VA_COUNT];
+} te_vertex_pack;
+
+// Allocates vertices array and initializes all internal variables of the returned vertex pack.
+te_vertex_pack* vertex_pack_create(unsigned int vertex_count, bool is_skinned);
+void vertex_pack_destroy(te_vertex_pack* pack);
+
 typedef struct te_model_vertex {
     // NOTE: if changing this struct also update gl vertex attribute description and offsets
     vec3 pos;
@@ -18,6 +58,21 @@ typedef struct te_model_vertex {
     vec2 uv;
     // NOTE: if changing this struct also update gl vertex attribute description and offsets
 } te_model_vertex;
+
+typedef unsigned char te_bone_index_t;
+typedef struct te_model_vertex_skinned {
+    // NOTE: if changing this struct also update gl vertex attribute description and offsets
+    vec3 pos;
+    vec3 normal;
+    vec2 uv;
+    te_bone_index_t bone_indices[4];
+    float boneWeights[4];
+    // NOTE: if changing this struct also update gl vertex attribute description and offsets
+} te_model_vertex_skinned;
+
+// ------------------------------------------------------------------------------------------------
+//                                       MODEL API
+// ------------------------------------------------------------------------------------------------
 
 te_model* model_create();
 void model_destroy(te_model* model);
@@ -41,8 +96,8 @@ const char* model_get_geometry(te_model* model);
 void model_set_custom_geometry_provider(
     te_model* model,
     void (*custom_get_geometry)(
-        te_model* model, te_model_vertex** vertices, unsigned short** indices,
-        unsigned int* vertex_count, unsigned int* index_count, bool* free_custom_geometry));
+        te_model* model, te_vertex_pack** vertices, unsigned short** indices,
+        unsigned int* index_count, bool* free_custom_geometry));
 
 // Optionally you can set a name of the model. The string will be copied.
 // Returns NULL if was not set previously.
@@ -153,8 +208,6 @@ void model_register_type(void);
 // Returns model's world matrix (includes parent if has any).
 mat4* prv_model_get_world_mat_tmp(te_model* model);
 
-void prv_model_set_vertex_attributes();
-
 // Returns 0xFFFFFFFF if the model is not being rendered,
 // otherwise handle into the model renderer's data array.
 unsigned int prv_model_get_render_data_handle(te_model* model);
@@ -162,3 +215,7 @@ unsigned int prv_model_get_render_data_handle(te_model* model);
 // Returns NULL if the model is not being rendered,
 // otherwise returns model renderer used to render the model.
 struct te_model_renderer* prv_model_get_model_renderer(te_model* model);
+
+// Used during the rendering.
+void prv_model_set_attribute_pointers_model_vertex(void);
+void prv_model_set_attribute_pointers_model_vertex_skinned(void);

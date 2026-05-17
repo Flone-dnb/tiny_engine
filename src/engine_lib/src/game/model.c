@@ -21,7 +21,126 @@
 
 #define MODEL_TEX_LOAD_OPTION TE_TLO_GENERATE_MIPMAPS
 
-// 3D model.
+static void bind_gl_vertex_attributes_model_vertex(unsigned int shader_prog_id) {
+    // Position.
+    glBindAttribLocation(shader_prog_id, 0, "pos");
+    glEnableVertexAttribArray(0);
+
+    // Normal.
+    glBindAttribLocation(shader_prog_id, 1, "normal");
+    glEnableVertexAttribArray(1);
+
+    // UV.
+    glBindAttribLocation(shader_prog_id, 2, "uv");
+    glEnableVertexAttribArray(2);
+}
+
+static void
+bind_gl_vertex_attributes_model_vertex_skinned(unsigned int shader_prog_id) {
+    // Position.
+    glBindAttribLocation(shader_prog_id, 0, "pos");
+    glEnableVertexAttribArray(0);
+
+    // Normal.
+    glBindAttribLocation(shader_prog_id, 1, "normal");
+    glEnableVertexAttribArray(1);
+
+    // UV.
+    glBindAttribLocation(shader_prog_id, 2, "uv");
+    glEnableVertexAttribArray(2);
+
+    // Bone indices.
+    glBindAttribLocation(shader_prog_id, 3, "bone_indices");
+    glEnableVertexAttribArray(3);
+
+    // Bone weights.
+    glBindAttribLocation(shader_prog_id, 4, "bone_weights");
+    glEnableVertexAttribArray(4);
+}
+
+void
+prv_model_set_attribute_pointers_model_vertex(void) {
+    // Position.
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), NULL);
+
+    // Normal.
+    glVertexAttribPointer(
+        1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)sizeof(vec3));
+
+    // UV.
+    glVertexAttribPointer(
+        2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)(sizeof(vec3) * 2));
+}
+
+void
+prv_model_set_attribute_pointers_model_vertex_skinned(void) {
+    // Position.
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned), NULL);
+
+    // Normal.
+    glVertexAttribPointer(
+        1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned), (void*)sizeof(vec3));
+
+    // UV.
+    glVertexAttribPointer(
+        2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned), (void*)(sizeof(vec3) * 2));
+
+    // Bone indices.
+    glVertexAttribPointer(
+        3, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(te_model_vertex_skinned),
+        (void*)(sizeof(vec3) * 2 + sizeof(vec2)));
+
+    // Bone weights.
+    glVertexAttribPointer(
+        4, 4, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned),
+        (void*)(sizeof(vec3) * 2 + sizeof(vec2) + 4 * sizeof(te_bone_index_t)));
+}
+
+te_vertex_pack*
+vertex_pack_create(unsigned int vertex_count, bool is_skinned) {
+    te_vertex_pack* pack = malloc(sizeof(te_vertex_pack));
+    pack->vertex_count = vertex_count;
+    memset(pack->attribute_offsets, 255, sizeof(pack->attribute_offsets[0]) * TE_VA_COUNT);
+    if (!is_skinned) {
+        pack->vertex_sizeof = sizeof(te_model_vertex);
+
+        unsigned char offset = 0;
+        pack->attribute_offsets[TE_VA_POSITION] = offset;
+        offset += sizeof(vec3);
+        pack->attribute_offsets[TE_VA_NORMAL] = offset;
+        offset += sizeof(vec3);
+        pack->attribute_offsets[TE_VA_UV] = offset;
+
+        pack->bind_gl_vertex_attributes = bind_gl_vertex_attributes_model_vertex;
+        pack->set_attribute_pointers = prv_model_set_attribute_pointers_model_vertex;
+    } else {
+        pack->vertex_sizeof = sizeof(te_model_vertex_skinned);
+
+        unsigned char offset = 0;
+        pack->attribute_offsets[TE_VA_POSITION] = offset;
+        offset += sizeof(vec3);
+        pack->attribute_offsets[TE_VA_NORMAL] = offset;
+        offset += sizeof(vec3);
+        pack->attribute_offsets[TE_VA_UV] = offset;
+        offset += sizeof(vec2);
+        pack->attribute_offsets[TE_VA_BONE_INDICES] = offset;
+        offset += sizeof(te_bone_index_t) * 4;
+        pack->attribute_offsets[TE_VA_BONE_WEIGHTS] = offset;
+
+        pack->bind_gl_vertex_attributes = bind_gl_vertex_attributes_model_vertex_skinned;
+        pack->set_attribute_pointers = prv_model_set_attribute_pointers_model_vertex_skinned;
+    }
+    pack->data = malloc(pack->vertex_sizeof * pack->vertex_count);
+
+    return pack;
+}
+
+void vertex_pack_destroy(te_vertex_pack* pack) {
+    free(pack->data);
+
+    free(pack);
+}
+
 struct te_model {
     // AABB in model space.
     te_aabb_shape aabb_local;
@@ -57,8 +176,8 @@ struct te_model {
     void* custom_ptr;
     void (*custom_on_before_destroyed)(te_model*);
     void (*custom_get_geometry)(
-        te_model* model, te_model_vertex** vertices, unsigned short** indices,
-        unsigned int* vertex_count, unsigned int* index_count, bool* free_custom_geometry);
+        te_model* model, te_vertex_pack** vertices, unsigned short** indices,
+        unsigned int* vertex_count, bool* free_custom_geometry);
     size_t custom_value;
 
     // Color in RGBA format in range [0.0; 1.0].
@@ -608,13 +727,13 @@ model_get_world(te_model* model) {
 }
 
 static void prv_model_generate_cube(
-    te_model_vertex** vertices, unsigned short** indices, unsigned int* vertex_count,
+    te_vertex_pack** vertices, unsigned short** indices,
     unsigned int* index_count);
 static void prv_model_load_geo(
-    const char* path_to_geo, te_model_vertex** vertices, unsigned short** indices,
-    unsigned int* vertex_count, unsigned int* index_count);
+    const char* path_to_geo, te_vertex_pack** vertices, unsigned short** indices,
+    unsigned int* index_count);
 
-te_aabb_shape prv_model_calc_aabb(te_model_vertex* vertices, unsigned int vertex_count);
+static te_aabb_shape prv_model_calc_aabb(te_vertex_pack* vertices);
 
 static void
 prv_model_add_to_model_renderer(te_model* model) {
@@ -642,20 +761,19 @@ prv_model_add_to_model_renderer(te_model* model) {
     unsigned int vbo = 0;
     unsigned int ebo = 0;
     {
-        te_model_vertex* vertices;
-        unsigned int vertex_count;
+        te_vertex_pack* vertices;
         unsigned short* indices;
         bool free_custom_geometry = false;
         if (model->custom_get_geometry != NULL) {
             model->custom_get_geometry(
-                model, &vertices, &indices, &vertex_count, &index_count,
+                model, &vertices, &indices, &index_count,
                 &free_custom_geometry);
         } else if (model->path_to_geo != NULL) {
             prv_model_load_geo(
-                model->path_to_geo, &vertices, &indices, &vertex_count, &index_count);
+                model->path_to_geo, &vertices, &indices, &index_count);
             free_custom_geometry = true;
         } else {
-            prv_model_generate_cube(&vertices, &indices, &vertex_count, &index_count);
+            prv_model_generate_cube(&vertices, &indices, &index_count);
         }
 
         glGenBuffers(1, &vbo);
@@ -663,7 +781,7 @@ prv_model_add_to_model_renderer(te_model* model) {
 
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(
-            GL_ARRAY_BUFFER, (GLsizeiptr)(sizeof(te_model_vertex) * vertex_count), vertices,
+            GL_ARRAY_BUFFER, (GLsizeiptr)(vertices->vertex_sizeof * vertices->vertex_count), vertices->data,
             GL_STATIC_DRAW);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
@@ -671,22 +789,12 @@ prv_model_add_to_model_renderer(te_model* model) {
             GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(sizeof(unsigned short) * index_count),
             indices, GL_STATIC_DRAW);
 
-        // Position.
-        glBindAttribLocation(model->shader_prog_id, 0, "pos");
-        glEnableVertexAttribArray(0);
+        vertices->bind_gl_vertex_attributes(model->shader_prog_id);
 
-        // Normal.
-        glBindAttribLocation(model->shader_prog_id, 1, "normal");
-        glEnableVertexAttribArray(1);
-
-        glBindAttribLocation(model->shader_prog_id, 2, "uv");
-        glEnableVertexAttribArray(2);
-
-        // Calculate local AABB.
-        model->aabb_local = prv_model_calc_aabb(vertices, vertex_count);
+        model->aabb_local = prv_model_calc_aabb(vertices);
 
         if (model->custom_get_geometry == NULL || free_custom_geometry) {
-            free(vertices);
+            vertex_pack_destroy(vertices);
             free(indices);
         }
     }
@@ -895,28 +1003,14 @@ void
 model_set_custom_geometry_provider(
     te_model* model,
     void (*custom_get_geometry)(
-        te_model* model, te_model_vertex** vertices, unsigned short** indices,
-        unsigned int* vertex_count, unsigned int* index_count, bool* free_custom_geometry)) {
+        te_model* model, te_vertex_pack** vertices, unsigned short** indices,
+        unsigned int* index_count, bool* free_custom_geometry)) {
     model->custom_get_geometry = custom_get_geometry;
 }
 
 const char*
 model_get_custom_frag_shader(te_model* model) {
     return model->custom_frag_relative_path;
-}
-
-void
-prv_model_set_vertex_attributes() {
-    // Position.
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), NULL);
-
-    // Normal.
-    glVertexAttribPointer(
-        1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)sizeof(vec3));
-
-    // UV.
-    glVertexAttribPointer(
-        2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)(sizeof(vec3) * 2));
 }
 
 unsigned int
@@ -933,16 +1027,19 @@ prv_model_get_model_renderer(te_model* model) {
     return prv_model_get_renderer(model);
 }
 
-te_aabb_shape
-prv_model_calc_aabb(te_model_vertex* vertices, unsigned int vertex_count) {
+static te_aabb_shape
+prv_model_calc_aabb(te_vertex_pack* vertices) {
     vec3 min;
     vec3 max;
     glm_vec3_copy((vec3){FLT_MAX, FLT_MAX, FLT_MAX}, min);
     glm_vec3_copy((vec3){FLT_MIN, FLT_MIN, FLT_MIN}, max);
 
-    for (unsigned int i = 0; i < vertex_count; i++) {
-        glm_vec3_minv(min, vertices[i].pos, min);
-        glm_vec3_maxv(max, vertices[i].pos, max);
+    for (unsigned int i = 0; i < vertices->vertex_count; i++) {
+        unsigned char* data =
+            &vertices->data
+                [vertices->vertex_sizeof * i + vertices->attribute_offsets[TE_VA_POSITION]];
+        glm_vec3_minv(min, (float*)data, min);
+        glm_vec3_maxv(max, (float*)data, max);
     }
 
     te_aabb_shape aabb;
@@ -1052,8 +1149,7 @@ model_register_type(void) {
 
 static void
 prv_model_load_geo(
-    const char* path_to_geo, te_model_vertex** vertices, unsigned short** indices,
-    unsigned int* vertex_count, unsigned int* index_count) {
+    const char* path_to_geo, te_vertex_pack** vertices, unsigned short** indices, unsigned int* index_count) {
     char* res_path = filesystem_prepend_res_to_path(path_to_geo, NULL);
 
     FILE* fp = fopen(res_path, "rb");
@@ -1065,16 +1161,20 @@ prv_model_load_geo(
 
     unsigned char id = 0;
     fread(&id, sizeof(id), 1, fp);
-    if (id != 0) {
+    if (id != 0 && id != 100) { // unskinned vertex format ID || skinned vertex format ID
         log_error_fmt(
             "failed to load model geometry from file %s: unexpected file type ID %u",
             path_to_geo, (unsigned int)id);
         abort();
     }
+    const bool is_skinned = id == 100;
 
-    fread(vertex_count, sizeof(*vertex_count), 1, fp);
-    (*vertices) = malloc(sizeof(te_model_vertex) * (*vertex_count));
-    fread(*vertices, sizeof(te_model_vertex), *vertex_count, fp);
+    unsigned int vertex_count = 0;
+    fread(&vertex_count, sizeof(vertex_count), 1, fp);
+
+    (*vertices) = vertex_pack_create(vertex_count, is_skinned);
+
+    fread((*vertices)->data, (*vertices)->vertex_sizeof, (*vertices)->vertex_count, fp);
 
     fread(index_count, sizeof(*index_count), 1, fp);
     (*indices) = malloc(sizeof(unsigned short) * (*index_count));
@@ -1086,103 +1186,178 @@ prv_model_load_geo(
 
 static void
 prv_model_generate_cube(
-    te_model_vertex** vertices, unsigned short** indices, unsigned int* vertex_count,
+    te_vertex_pack** vertices, unsigned short** indices,
     unsigned int* index_count) {
     const float half = 0.5f;
 
-    (*vertex_count) = 24;
-    (*vertices) = malloc(sizeof(te_model_vertex) * (*vertex_count));
+    (*vertices) = vertex_pack_create(24, false);
+
+    const unsigned int vert_size = (*vertices)->vertex_sizeof;
 
     // Init UVs.
-    for (unsigned int i = 0; i < (*vertex_count); i += 4) {
-        glm_vec2_make((vec2){1.0f, 1.0f}, (*vertices)[i].uv);
-        glm_vec2_make((vec2){0.0f, 1.0f}, (*vertices)[i + 1].uv);
-        glm_vec2_make((vec2){1.0f, 0.0f}, (*vertices)[i + 2].uv);
-        glm_vec2_make((vec2){0.0f, 0.0f}, (*vertices)[i + 3].uv);
+    const unsigned char uv_offset = (*vertices)->attribute_offsets[TE_VA_UV];
+    for (unsigned int i = 0; i < (*vertices)->vertex_count; i += 4) {
+        glm_vec2_make(
+            (vec2){1.0f, 1.0f}, (float*)((*vertices)->data + (vert_size * i + uv_offset)));
+        glm_vec2_make(
+            (vec2){0.0f, 1.0f}, (float*)((*vertices)->data + (vert_size * (i + 1) + uv_offset)));
+        glm_vec2_make(
+            (vec2){1.0f, 0.0f},
+            (float*)((*vertices)->data + (vert_size * (i + 2) + uv_offset)));
+        glm_vec2_make(
+            (vec2){0.0f, 0.0f},
+            (float*)((*vertices)->data + (vert_size * (i + 3) + uv_offset)));
     }
 
     // Init normals.
+    const unsigned char normal_offset = (*vertices)->attribute_offsets[TE_VA_NORMAL];
     unsigned int normal_i = 0;
     for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make((vec3){1.0f, 0.0f, 0.0f}, (*vertices)[normal_i].normal);
+        glm_vec3_make(
+            (vec3){1.0f, 0.0f, 0.0f},
+            (float*)((*vertices)->data + (vert_size * normal_i + normal_offset)));
     }
     for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make((vec3){-1.0f, 0.0f, 0.0f}, (*vertices)[normal_i].normal);
+        glm_vec3_make(
+            (vec3){-1.0f, 0.0f, 0.0f},
+            (float*)((*vertices)->data
+                     + (vert_size * normal_i + normal_offset)));
     }
     for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make((vec3){0.0f, 1.0f, 0.0f}, (*vertices)[normal_i].normal);
+        glm_vec3_make(
+            (vec3){0.0f, 1.0f, 0.0f},
+            (float*)((*vertices)->data
+                     + (vert_size * normal_i + normal_offset)));
     }
     for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make((vec3){0.0f, -1.0f, 0.0f}, (*vertices)[normal_i].normal);
+        glm_vec3_make(
+            (vec3){0.0f, -1.0f, 0.0f},
+            (float*)((*vertices)->data
+                     + (vert_size * normal_i + normal_offset)));
     }
     for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make((vec3){0.0f, 0.0f, 1.0f}, (*vertices)[normal_i].normal);
+        glm_vec3_make(
+            (vec3){0.0f, 0.0f, 1.0f},
+            (float*)((*vertices)->data
+                     + (vert_size * normal_i + normal_offset)));
     }
     for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make((vec3){.0f, 0.0f, -1.0f}, (*vertices)[normal_i].normal);
+        glm_vec3_make(
+            (vec3){.0f, 0.0f, -1.0f},
+            (float*)((*vertices)->data
+                     + (vert_size * normal_i + normal_offset)));
     }
 
     // Init positions.
 
     // +X face.
+    const unsigned char pos_offset = (*vertices)->attribute_offsets[TE_VA_POSITION];
     unsigned int i = 0;
-    glm_vec3_make((vec3){half, -half, -half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){half, -half, -half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make((vec3){half, half, -half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){half, half, -half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make((vec3){half, -half, half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){half, -half, half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make((vec3){half, half, half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){half, half, half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
 
     // -X face.
-    glm_vec3_make((vec3){-half, half, -half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){-half, half, -half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make((vec3){-half, -half, -half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){-half, -half, -half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make((vec3){-half, half, half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){-half, half, half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make((vec3){-half, -half, half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){-half, -half, half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
 
     // +Y face.
-    glm_vec3_make((vec3){half, half, -half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){half, half, -half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make((vec3){-half, half, -half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){-half, half, -half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make((vec3){half, half, half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){half, half, half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make((vec3){-half, half, half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){-half, half, half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
 
     // -Y face.
-    glm_vec3_make((vec3){-half, -half, -half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){-half, -half, -half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make((vec3){half, -half, -half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){half, -half, -half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make((vec3){-half, -half, half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){-half, -half, half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make((vec3){half, -half, half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){half, -half, half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
 
     // +Z face.
-    glm_vec3_make((vec3){-half, -half, half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){-half, -half, half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make((vec3){half, -half, half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){half, -half, half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make((vec3){-half, half, half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){-half, half, half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make((vec3){half, half, half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){half, half, half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
 
     // -Z face.
-    glm_vec3_make((vec3){-half, half, -half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){-half, half, -half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make((vec3){half, half, -half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){half, half, -half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make((vec3){-half, -half, -half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){-half, -half, -half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make((vec3){half, -half, -half}, (*vertices)[i].pos);
+    glm_vec3_make(
+        (vec3){half, -half, -half},
+        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
 
     (*index_count) = 36;

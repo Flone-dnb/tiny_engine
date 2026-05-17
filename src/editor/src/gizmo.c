@@ -27,8 +27,8 @@ on_before_model_destroyed(te_model* model) {
 }
 
 static void get_geometry(
-    te_model* model, te_model_vertex** vertices, unsigned short** indices,
-    unsigned int* vertex_count, unsigned int* index_count, bool* free_geometry);
+    te_model* model, te_vertex_pack** vertices, unsigned short** indices,
+    unsigned int* index_count, bool* free_geometry);
 
 static te_model*
 create_gizmo_model(te_gizmo* gizmo, unsigned int axis_idx) {
@@ -43,7 +43,8 @@ create_gizmo_model(te_gizmo* gizmo, unsigned int axis_idx) {
     return model;
 }
 
-static void update_gizmo_rotation(te_gizmo* gizmo) {
+static void
+update_gizmo_rotation(te_gizmo* gizmo) {
     vec3 rot;
     te_model* parent = model_get_parent(gizmo->target);
     if (parent == NULL) {
@@ -144,7 +145,8 @@ gizmo_set_mode(te_gizmo* gizmo, enum te_gizmo_mode mode) {
     spawn_gizmo_models(gizmo, world);
 }
 
-enum te_gizmo_mode gizmo_get_mode(te_gizmo* gizmo) {
+enum te_gizmo_mode
+gizmo_get_mode(te_gizmo* gizmo) {
     return gizmo->mode;
 }
 
@@ -204,11 +206,8 @@ gizmo_move(te_gizmo* gizmo, te_camera* camera, float x_offset, float y_offset) {
         gizmo_offset[2] = glm_vec3_dot(dir, (*world_mat)[2]);
     }
 
-
     if (gizmo->mode == TE_GM_MOVE) {
-        glm_vec3_scale(
-            gizmo_offset, 0.01f * fabsf(x_offset + y_offset),
-            gizmo_offset);
+        glm_vec3_scale(gizmo_offset, 0.01f * fabsf(x_offset + y_offset), gizmo_offset);
 
         vec3 pos;
         model_get_position(gizmo->target, pos);
@@ -258,12 +257,13 @@ gizmo_get_model_z(te_gizmo* gizmo) {
 }
 
 static void generate_base(
-    float half_width, float half, te_model_vertex* start_vertex, unsigned short* start_index, unsigned short index_offset);
+    float half_width, float half, te_vertex_pack* vertices, unsigned short* indices,
+    unsigned int start_vertex, unsigned int start_index, unsigned short index_offset);
 
 static void
 get_geometry(
-    te_model* model, te_model_vertex** vertices, unsigned short** indices,
-    unsigned int* vertex_count, unsigned int* index_count, bool* free_geometry) {
+    te_model* model, te_vertex_pack** vertices, unsigned short** indices,
+    unsigned int* index_count, bool* free_geometry) {
     te_gizmo* gizmo = model_get_custom_ptr(model);
 
     // Create geometry of single axis.
@@ -272,29 +272,34 @@ get_geometry(
     const float half_width = 1.0f;
     const float half = 0.125f;
 
-    (*vertex_count) = gizmo->mode == TE_GM_MOVE ? 24 : 24 * 2;
-    (*vertices) = malloc(sizeof(te_model_vertex) * (*vertex_count));
+    const unsigned int vert_count = gizmo->mode == TE_GM_MOVE ? 24 : 24 * 2;
+    (*vertices) = vertex_pack_create(vert_count, false);
 
     (*index_count) = gizmo->mode == TE_GM_MOVE ? 36 : 36 * 2;
     (*indices) = malloc(sizeof(unsigned short) * (*index_count));
 
-    generate_base(half_width, half, (*vertices), (*indices), 0);
+    generate_base(half_width, half, (*vertices), (*indices), 0, 0, 0);
 
     if (gizmo->mode == TE_GM_ROTATE) {
         // Add new shape near the origin.
-        generate_base(half * 2.0f, half * 2.0f, (*vertices) + 24, (*indices) + 36, 24);
+        generate_base(half * 2.0f, half * 2.0f, (*vertices), (*indices), 24, 36, 24);
 
         for (unsigned int k = 24; k < 24 * 2; k++) {
-            glm_vec3_add((*vertices)[k].pos, (vec3){half * 2.0f, 0.0f, 0.0f}, (*vertices)[k].pos);
+            unsigned char* data = (*vertices)->data
+                                  + ((*vertices)->vertex_sizeof * k
+                                     + (*vertices)->attribute_offsets[TE_VA_POSITION]);
+            glm_vec3_add((float*)data, (vec3){half * 2.0f, 0.0f, 0.0f}, (float*)data);
         }
     } else if (gizmo->mode == TE_GM_SCALE) {
         // Add new shape.
-        generate_base(half * 2.0f, half * 2.0f, (*vertices) + 24, (*indices) + 36, 24);
+        generate_base(half * 2.0f, half * 2.0f, (*vertices), (*indices), 24, 36, 24);
 
         for (unsigned int k = 24; k < 24 * 2; k++) {
+            unsigned char* data = (*vertices)->data
+                                  + ((*vertices)->vertex_sizeof * k
+                                     + (*vertices)->attribute_offsets[TE_VA_POSITION]);
             glm_vec3_add(
-                (*vertices)[k].pos, (vec3){half_width * 2.0f + half, 0.0f, 0.0f},
-                (*vertices)[k].pos);
+                (float*)data, (vec3){half_width * 2.0f + half, 0.0f, 0.0f}, (float*)data);
         }
     }
 
@@ -308,152 +313,230 @@ get_geometry(
             math_make_rotation_mat((vec3){0.0f, -90.0f, 0.0f}, rot_mat);
         }
 
-        for (unsigned int k = 0; k < (*vertex_count); k++) {
+        for (unsigned int k = 0; k < vert_count; k++) {
+            unsigned char* data = (*vertices)->data
+                                  + ((*vertices)->vertex_sizeof * k
+                                     + (*vertices)->attribute_offsets[TE_VA_POSITION]);
+
             vec4 pos;
-            glm_vec3_copy((*vertices)[k].pos, pos);
+            glm_vec3_copy((float*)data, pos);
             pos[3] = 1.0f;
 
             glm_mat4_mulv(rot_mat, pos, pos);
 
-            glm_vec3_copy(pos, (*vertices)[k].pos);
+            glm_vec3_copy(pos, (float*)data);
         }
     }
 }
 
 static void
 generate_base(
-    float half_width, float half, te_model_vertex* start_vertex, unsigned short* start_index, unsigned short index_offset) {
+    float half_width, float half, te_vertex_pack* vertices, unsigned short* indices,
+    unsigned int start_vertex, unsigned int start_index, unsigned short index_offset) {
+    const unsigned int vert_size = vertices->vertex_sizeof;
+
     // Init UVs.
+    const unsigned char uv_offset = vertices->attribute_offsets[TE_VA_UV];
     for (unsigned int i = 0; i < 24; i += 4) {
-        glm_vec2_make((vec2){1.0f, 1.0f}, start_vertex[i].uv);
-        glm_vec2_make((vec2){0.0f, 1.0f}, start_vertex[i + 1].uv);
-        glm_vec2_make((vec2){1.0f, 0.0f}, start_vertex[i + 2].uv);
-        glm_vec2_make((vec2){0.0f, 0.0f}, start_vertex[i + 3].uv);
+        glm_vec2_make(
+            (vec2){1.0f, 1.0f},
+            (float*)(vertices->data + vert_size * (start_vertex + i) + uv_offset));
+        glm_vec2_make(
+            (vec2){0.0f, 1.0f},
+            (float*)(vertices->data + vert_size * (start_vertex + i + 1) + uv_offset));
+        glm_vec2_make(
+            (vec2){1.0f, 0.0f},
+            (float*)(vertices->data + vert_size * (start_vertex + i + 2) + uv_offset));
+        glm_vec2_make(
+            (vec2){0.0f, 0.0f},
+            (float*)(vertices->data + vert_size * (start_vertex + i + 3) + uv_offset));
     }
 
     // Init normals.
+    const unsigned char normal_offset = vertices->attribute_offsets[TE_VA_NORMAL];
     unsigned int normal_i = 0;
     for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make((vec3){1.0f, 0.0f, 0.0f}, start_vertex[normal_i].normal);
+        glm_vec3_make(
+            (vec3){1.0f, 0.0f, 0.0f},
+            (float*)(vertices->data + vert_size * (start_vertex + normal_i) + normal_offset));
     }
     for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make((vec3){-1.0f, 0.0f, 0.0f}, start_vertex[normal_i].normal);
+        glm_vec3_make(
+            (vec3){-1.0f, 0.0f, 0.0f},
+            (float*)(vertices->data + vert_size * (start_vertex + normal_i) + normal_offset));
     }
     for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make((vec3){0.0f, 1.0f, 0.0f}, start_vertex[normal_i].normal);
+        glm_vec3_make(
+            (vec3){0.0f, 1.0f, 0.0f},
+            (float*)(vertices->data + vert_size * (start_vertex + normal_i) + normal_offset));
     }
     for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make((vec3){0.0f, -1.0f, 0.0f}, start_vertex[normal_i].normal);
+        glm_vec3_make(
+            (vec3){0.0f, -1.0f, 0.0f},
+            (float*)(vertices->data + vert_size * (start_vertex + normal_i) + normal_offset));
     }
     for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make((vec3){0.0f, 0.0f, 1.0f}, start_vertex[normal_i].normal);
+        glm_vec3_make(
+            (vec3){0.0f, 0.0f, 1.0f},
+            (float*)(vertices->data + vert_size * (start_vertex + normal_i) + normal_offset));
     }
     for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make((vec3){.0f, 0.0f, -1.0f}, start_vertex[normal_i].normal);
+        glm_vec3_make(
+            (vec3){.0f, 0.0f, -1.0f},
+            (float*)(vertices->data + vert_size * (start_vertex + normal_i) + normal_offset));
     }
 
     // Init positions.
-
+    const unsigned int pos_offset = vertices->attribute_offsets[TE_VA_POSITION];
     // +X face.
     unsigned int i = 0;
-    glm_vec3_make((vec3){half_width, -half, -half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){half_width, -half, -half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make((vec3){half_width, half, -half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){half_width, half, -half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make((vec3){half_width, -half, half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){half_width, -half, half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make((vec3){half_width, half, half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){half_width, half, half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
 
     // -X face.
-    glm_vec3_make((vec3){-half_width, half, -half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){-half_width, half, -half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make((vec3){-half_width, -half, -half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){-half_width, -half, -half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make((vec3){-half_width, half, half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){-half_width, half, half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make((vec3){-half_width, -half, half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){-half_width, -half, half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
 
     // +Y face.
-    glm_vec3_make((vec3){half_width, half, -half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){half_width, half, -half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make((vec3){-half_width, half, -half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){-half_width, half, -half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make((vec3){half_width, half, half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){half_width, half, half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make((vec3){-half_width, half, half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){-half_width, half, half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
 
     // -Y face.
-    glm_vec3_make((vec3){-half_width, -half, -half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){-half_width, -half, -half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make((vec3){half_width, -half, -half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){half_width, -half, -half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make((vec3){-half_width, -half, half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){-half_width, -half, half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make((vec3){half_width, -half, half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){half_width, -half, half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
 
     // +Z face.
-    glm_vec3_make((vec3){-half_width, -half, half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){-half_width, -half, half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make((vec3){half_width, -half, half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){half_width, -half, half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make((vec3){-half_width, half, half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){-half_width, half, half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make((vec3){half_width, half, half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){half_width, half, half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
 
     // -Z face.
-    glm_vec3_make((vec3){-half_width, half, -half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){-half_width, half, -half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make((vec3){half_width, half, -half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){half_width, half, -half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make((vec3){-half_width, -half, -half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){-half_width, -half, -half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make((vec3){half_width, -half, -half}, start_vertex[i].pos);
+    glm_vec3_make(
+        (vec3){half_width, -half, -half},
+        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
 
     // Make origin around 0.
     for (unsigned int k = 0; k < 24; k++) {
-        start_vertex[k].pos[0] += half_width + half_width / 4.0f;
+        float* data = (float*)(vertices->data + vert_size * (start_vertex + k) + pos_offset);
+        (*data) += half_width + half_width / 4.0f; // modify X (pos[0])
     }
 
-    start_index[0] = index_offset + 0; // +X face.
-    start_index[1] = index_offset + 1;
-    start_index[2] = index_offset + 2;
-    start_index[3] = index_offset + 3;
-    start_index[4] = index_offset + 2;
-    start_index[5] = index_offset + 1;
-    start_index[6] = index_offset + 4; // -X face.
-    start_index[7] = index_offset + 5;
-    start_index[8] = index_offset + 6;
-    start_index[9] = index_offset + 7;
-    start_index[10] = index_offset + 6;
-    start_index[11] = index_offset + 5;
-    start_index[12] = index_offset + 8; // +Y face.
-    start_index[13] = index_offset + 9;
-    start_index[14] = index_offset + 10;
-    start_index[15] = index_offset + 11;
-    start_index[16] = index_offset + 10;
-    start_index[17] = index_offset + 9;
-    start_index[18] = index_offset + 12; // -Y face.
-    start_index[19] = index_offset + 13;
-    start_index[20] = index_offset + 14;
-    start_index[21] = index_offset + 15;
-    start_index[22] = index_offset + 14;
-    start_index[23] = index_offset + 13;
-    start_index[24] = index_offset + 16; // +Z face.
-    start_index[25] = index_offset + 17;
-    start_index[26] = index_offset + 18;
-    start_index[27] = index_offset + 19;
-    start_index[28] = index_offset + 18;
-    start_index[29] = index_offset + 17;
-    start_index[30] = index_offset + 20; // -Z face.
-    start_index[31] = index_offset + 21;
-    start_index[32] = index_offset + 22;
-    start_index[33] = index_offset + 23;
-    start_index[34] = index_offset + 22;
-    start_index[35] = index_offset + 21;
+    indices[start_index + 0] = index_offset + 0; // +X face.
+    indices[start_index + 1] = index_offset + 1;
+    indices[start_index + 2] = index_offset + 2;
+    indices[start_index + 3] = index_offset + 3;
+    indices[start_index + 4] = index_offset + 2;
+    indices[start_index + 5] = index_offset + 1;
+    indices[start_index + 6] = index_offset + 4; // -X face.
+    indices[start_index + 7] = index_offset + 5;
+    indices[start_index + 8] = index_offset + 6;
+    indices[start_index + 9] = index_offset + 7;
+    indices[start_index + 10] = index_offset + 6;
+    indices[start_index + 11] = index_offset + 5;
+    indices[start_index + 12] = index_offset + 8; // +Y face.
+    indices[start_index + 13] = index_offset + 9;
+    indices[start_index + 14] = index_offset + 10;
+    indices[start_index + 15] = index_offset + 11;
+    indices[start_index + 16] = index_offset + 10;
+    indices[start_index + 17] = index_offset + 9;
+    indices[start_index + 18] = index_offset + 12; // -Y face.
+    indices[start_index + 19] = index_offset + 13;
+    indices[start_index + 20] = index_offset + 14;
+    indices[start_index + 21] = index_offset + 15;
+    indices[start_index + 22] = index_offset + 14;
+    indices[start_index + 23] = index_offset + 13;
+    indices[start_index + 24] = index_offset + 16; // +Z face.
+    indices[start_index + 25] = index_offset + 17;
+    indices[start_index + 26] = index_offset + 18;
+    indices[start_index + 27] = index_offset + 19;
+    indices[start_index + 28] = index_offset + 18;
+    indices[start_index + 29] = index_offset + 17;
+    indices[start_index + 30] = index_offset + 20; // -Z face.
+    indices[start_index + 31] = index_offset + 21;
+    indices[start_index + 32] = index_offset + 22;
+    indices[start_index + 33] = index_offset + 23;
+    indices[start_index + 34] = index_offset + 22;
+    indices[start_index + 35] = index_offset + 21;
 }
