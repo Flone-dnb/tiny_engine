@@ -16,6 +16,7 @@
 #include <render/texture_manager.h>
 #include <shape/aabb_shape.h>
 #include <type_database.h>
+#include <misc/mesh_generator.h>
 #include <world.h>
 #include <glad/glad.h>
 
@@ -149,14 +150,17 @@ struct te_model {
     // NULL if instead a default model should be used.
     char* path_to_geo;
 
-    // NULL if default vertex shader is used. Path (relative to the `res` directory) to custom vertex shader.
+    // NULL if default vertex shader is used. Path (relative to the `res` directory) to a custom vertex shader.
     char* custom_vert_relative_path;
 
-    // NULL if default fragment shader is used. Path (relative to the `res` directory) to custom fragment shader.
+    // NULL if default fragment shader is used. Path (relative to the `res` directory) to a custom fragment shader.
     char* custom_frag_relative_path;
 
-    // NULL if texture is not set, otherwise path (relative to the `res` directory) to the texture file.
+    // NULL if texture is not set, otherwise path (relative to the `res` directory) to a texture file.
     char* tex_relative_path;
+
+    // NULL if not set, otherwise path (relative to the `res` directory) to a skeleton file.
+    char* skeleton_relative_path;
 
     // NULL if not set.
     char* name;
@@ -196,6 +200,10 @@ struct te_model {
     // Stores invalid value if not spawned (see @ref world). OpenGL ID of the shader program used.
     unsigned int shader_prog_id;
 
+    // NULL if not spawned or if @ref skeleton_relative_path is NULL.
+    te_skeleton* skeleton;
+    mat4* skinning_mats;
+
     bool is_opaque;
     bool is_serialization_allowed;
 };
@@ -215,6 +223,9 @@ model_create() {
     model->attached_camera = NULL;
     model->parent_model = NULL;
     model->tex_relative_path = NULL;
+    model->skeleton_relative_path = NULL;
+    model->skeleton = NULL;
+    model->skinning_mats = NULL;
     model->path_to_geo = NULL;
     model->custom_vert_relative_path = NULL;
     model->custom_frag_relative_path = NULL;
@@ -273,6 +284,7 @@ model_destroy(te_model* model) {
     free(model->tex_relative_path);
     free(model->custom_frag_relative_path);
     free(model->custom_vert_relative_path);
+    free(model->skeleton_relative_path);
     free(model->path_to_geo);
     free(model->game_object_info);
 
@@ -429,14 +441,16 @@ model_set_color(te_model* model, vec4 color) {
 void
 model_set_texture(te_model* model, const char* relative_path) {
 #if defined(ENGINE_EDITOR)
-    // Check if path exists.
-    char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
-    if (!filesystem_does_path_exists(res_path)) {
-        // Do nothing, probably user typing the path.
+    if (relative_path != NULL) {
+        // Check if path exists.
+        char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
+        if (!filesystem_does_path_exists(res_path)) {
+            // Do nothing, probably user typing the path.
+            free(res_path);
+            return;
+        }
         free(res_path);
-        return;
     }
-    free(res_path);
 #endif
 
     free(model->tex_relative_path);
@@ -548,6 +562,46 @@ model_get_world_position(te_model* model, vec3 out) {
         prv_model_get_model_renderer(model), prv_model_get_render_data_handle(model));
 
     glm_vec3_copy(target_data->world_mat[3], out);
+}
+
+static void prv_model_remove_from_model_renderer(te_model* model);
+static void prv_model_add_to_model_renderer(te_model* model);
+
+void model_set_skeleton(te_model* model, const char* relative_path) {
+#if defined(ENGINE_EDITOR)
+    if (relative_path != NULL) {
+        // Check if path exists.
+        char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
+        if (!filesystem_does_path_exists(res_path)) {
+            // Do nothing, probably user typing the path.
+            free(res_path);
+            return;
+        }
+        free(res_path);
+    }
+#endif
+
+    if (model->world != NULL) {
+        prv_model_remove_from_model_renderer(model);
+    }
+
+    free(model->skeleton_relative_path);
+    model->skeleton_relative_path = NULL;
+
+    if (relative_path != NULL) {
+        const size_t len = strlen(relative_path);
+        model->skeleton_relative_path = malloc(sizeof(char) * (len + 1));
+        memcpy(model->skeleton_relative_path, relative_path, sizeof(char) * len);
+        model->skeleton_relative_path[len] = 0;
+    }
+
+    if (model->world != NULL) {
+        prv_model_add_to_model_renderer(model);
+    }
+}
+
+const char* model_get_skeleton(te_model* model) {
+    return model->skeleton_relative_path;
 }
 
 void
@@ -726,14 +780,14 @@ model_get_world(te_model* model) {
     return model->world;
 }
 
-static void prv_model_generate_cube(
-    te_vertex_pack** vertices, unsigned short** indices,
-    unsigned int* index_count);
 static void prv_model_load_geo(
     const char* path_to_geo, te_vertex_pack** vertices, unsigned short** indices,
     unsigned int* index_count);
 
 static te_aabb_shape prv_model_calc_aabb(te_vertex_pack* vertices);
+
+static void prv_model_load_skeleton(te_model* model);
+static void prv_model_update_skeleton(te_model* model);
 
 static void
 prv_model_add_to_model_renderer(te_model* model) {
@@ -748,12 +802,15 @@ prv_model_add_to_model_renderer(te_model* model) {
     {
         te_shader_manager* shader_manager = renderer_get_shader_manager(
             game_manager_get_renderer(world_get_game_manager(model->world)));
+
         model->shader_prog_id = shader_manager_request_shader(
             shader_manager,
-            model->custom_vert_relative_path == NULL ? "engine/shader/model.vert.glsl"
-                                                     : model->custom_vert_relative_path,
-            model->custom_frag_relative_path == NULL ? "engine/shader/model.frag.glsl"
-                                                     : model->custom_frag_relative_path);
+            model->custom_vert_relative_path != NULL
+                ? model->custom_vert_relative_path
+                : (model->skeleton_relative_path != NULL ? "engine/shader/skeleton.vert.glsl"
+                                                         : "engine/shader/model.vert.glsl"),
+            model->custom_frag_relative_path != NULL ? model->custom_frag_relative_path
+                                                     : "engine/shader/model.frag.glsl");
     }
 
     // Load geometry.
@@ -773,7 +830,7 @@ prv_model_add_to_model_renderer(te_model* model) {
                 model->path_to_geo, &vertices, &indices, &index_count);
             free_custom_geometry = true;
         } else {
-            prv_model_generate_cube(&vertices, &indices, &index_count);
+            mesh_generator_cube(&vertices, &indices, &index_count);
         }
 
         glGenBuffers(1, &vbo);
@@ -799,6 +856,11 @@ prv_model_add_to_model_renderer(te_model* model) {
         }
     }
 
+    if (model->skeleton_relative_path != NULL) {
+        // Load skeleton.
+        prv_model_load_skeleton(model);
+    }
+
     // Add to rendering.
     te_model_renderer* model_renderer = prv_model_get_renderer(model);
     model->render_data_handle =
@@ -811,19 +873,34 @@ prv_model_add_to_model_renderer(te_model* model) {
 
         glm_vec4_copy(model->color, data->color);
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
+
         data->vbo = vbo;
         data->ebo = ebo;
+        data->index_count = (int)index_count;
+
         data->tex_id = 0;
         glm_vec2_copy((vec2){-1.0f, -1.0f}, data->tex_tiling);
         glm_vec2_copy(model->uv_offset, data->uv_offset);
-        data->index_count = (int)index_count;
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
+
         if (model->tex_relative_path != NULL) {
             te_texture_manager* texture_manager = renderer_get_texture_manager(
                 game_manager_get_renderer(world_get_game_manager(model->world)));
+
             data->tex_id = texture_manager_request_texture(
                 texture_manager, model->tex_relative_path, MODEL_TEX_LOAD_OPTION);
+
             glm_vec2_copy(model->tex_tiling, data->tex_tiling);
+        }
+
+        data->skinning_mats_count = 0;
+        data->skinning_mats = NULL;
+        if (model->skeleton_relative_path != NULL) {
+            // Init bone transforms (first update).
+            prv_model_update_skeleton(model);
+
+            data->skinning_mats_count = model->skeleton->bone_count;
+            data->skinning_mats = model->skinning_mats;
         }
     }
 }
@@ -862,12 +939,77 @@ prv_model_remove_from_model_renderer(te_model* model) {
         texture_manager_mark_unused_texture(texture_manager, tex_id);
     }
 
+    if (model->skeleton != NULL) {
+        free(model->skinning_mats);
+        model->skinning_mats = NULL;
+
+        skeleton_destroy(model->skeleton);
+        model->skeleton = NULL;
+    }
+
     // Release geometry.
     glDeleteBuffers(1, &vbo);
     glDeleteBuffers(1, &ebo);
 
     model->render_data_handle = 0xffffffff;
     model->shader_prog_id = 0xffffffff;
+}
+
+static void load_skeleton_node(te_skeleton* skeleton, FILE* fp, unsigned int* bone_idx) {
+    te_skeleton_bone* bone = &skeleton->bones[*bone_idx];
+    (*bone_idx) += 1;
+
+    // Read name.
+    bone->name = NULL;
+    unsigned int count;
+    fread(&count, sizeof(count), 1, fp);
+    if (count > 0) {
+        bone->name = malloc(sizeof(char) * (count + 1));
+        fread(bone->name, sizeof(char), count, fp);
+        bone->name[count] = 0;
+    }
+
+    // Read local transform.
+    fread(bone->position, sizeof(float), 3, fp);
+    fread(bone->rotation, sizeof(float), 3, fp);
+    fread(bone->scale, sizeof(float), 3, fp);
+
+    fread(&bone->inverse_bind_pose_mat[0], sizeof(mat4), 1, fp);
+
+    // Read child count.
+    fread(&count, sizeof(count), 1, fp);
+
+    for (unsigned int i = 0; i < count; i++) {
+        load_skeleton_node(skeleton, fp, bone_idx);
+    }
+}
+
+te_skeleton*
+skeleton_create(const char* relative_path) {
+    char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
+
+    FILE* fp = fopen(res_path, "rb");
+    te_skeleton* skeleton = malloc(sizeof(te_skeleton));
+
+    // Read bone count.
+    fread(&skeleton->bone_count, sizeof(skeleton->bone_count), 1, fp);
+    skeleton->bones = malloc(sizeof(te_skeleton_bone) * skeleton->bone_count);
+
+    // Read nodes.
+    unsigned int bone_idx = 0;
+    load_skeleton_node(skeleton, fp, &bone_idx);
+
+    fclose(fp);
+    free(res_path);
+
+    return skeleton;
+}
+
+void
+skeleton_destroy(te_skeleton* skeleton) {
+    free(skeleton->bones);
+
+    free(skeleton);
 }
 
 mat4*
@@ -896,14 +1038,16 @@ model_enable_transparency(te_model* model, bool enable) {
 void
 model_set_custom_vert_shader(te_model* model, const char* vert_relative_path) {
 #if defined(ENGINE_EDITOR)
-    // Check if path exists.
-    char* res_path = filesystem_prepend_res_to_path(vert_relative_path, NULL);
-    if (!filesystem_does_path_exists(res_path)) {
-        // Do nothing, probably user typing the path.
+    if (vert_relative_path != NULL) {
+        // Check if path exists.
+        char* res_path = filesystem_prepend_res_to_path(vert_relative_path, NULL);
+        if (!filesystem_does_path_exists(res_path)) {
+            // Do nothing, probably user typing the path.
+            free(res_path);
+            return;
+        }
         free(res_path);
-        return;
     }
-    free(res_path);
 #endif
 
     if (model->world != NULL) {
@@ -933,14 +1077,16 @@ model_get_custom_vert_shader(te_model* model) {
 void
 model_set_custom_frag_shader(te_model* model, const char* frag_relative_path) {
 #if defined(ENGINE_EDITOR)
-    // Check if path exists.
-    char* res_path = filesystem_prepend_res_to_path(frag_relative_path, NULL);
-    if (!filesystem_does_path_exists(res_path)) {
-        // Do nothing, probably user typing the path.
+    if (frag_relative_path != NULL) {
+        // Check if path exists.
+        char* res_path = filesystem_prepend_res_to_path(frag_relative_path, NULL);
+        if (!filesystem_does_path_exists(res_path)) {
+            // Do nothing, probably user typing the path.
+            free(res_path);
+            return;
+        }
         free(res_path);
-        return;
     }
-    free(res_path);
 #endif
 
     if (model->world != NULL) {
@@ -965,14 +1111,16 @@ model_set_custom_frag_shader(te_model* model, const char* frag_relative_path) {
 void
 model_set_geometry(te_model* model, const char* relative_path) {
 #if defined(ENGINE_EDITOR)
-    // Check if path exists.
-    char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
-    if (!filesystem_does_path_exists(res_path)) {
-        // Do nothing, probably user typing the path.
+    if (relative_path != NULL) {
+        // Check if path exists.
+        char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
+        if (!filesystem_does_path_exists(res_path)) {
+            // Do nothing, probably user typing the path.
+            free(res_path);
+            return;
+        }
         free(res_path);
-        return;
     }
-    free(res_path);
 #endif
 
     if (model->world != NULL) {
@@ -1091,6 +1239,45 @@ on_despawned(te_model* model) {
     model->world = NULL;
 }
 
+static void
+update_skeleton_bone(te_model* model, unsigned int* bone_idx, mat4 parent_transform) {
+    te_skeleton_bone* bone = &model->skeleton->bones[*bone_idx];
+
+    mat4 global_transform;
+    glm_mat4_identity(global_transform);
+    {
+        mat4 mat1;
+        glm_scale_make(mat1, bone->scale);
+
+        mat4 mat2;
+        math_make_rotation_mat(bone->rotation, mat2);
+
+        // Scale, rotate and then translate.
+        glm_mat4_mul(mat2, mat1, global_transform);
+        glm_translate_make(mat2, bone->position);
+        glm_mat4_mul(mat2, global_transform, global_transform);
+
+        glm_mat4_mul(parent_transform, global_transform, global_transform);
+    }
+
+    glm_mat4_mul(
+        global_transform, bone->inverse_bind_pose_mat, model->skinning_mats[*bone_idx]);
+
+    (*bone_idx) += 1;
+
+    for (unsigned int i = 0; i < bone->child_count; i++) {
+        update_skeleton_bone(model, bone_idx, global_transform);
+    }
+}
+
+static void prv_model_update_skeleton(te_model* model) {
+    mat4 identity;
+    glm_mat4_identity(identity);
+
+    unsigned int bone_idx = 0;
+    update_skeleton_bone(model, &bone_idx, identity);
+}
+
 const char*
 model_get_type_id(void) {
     return "model";
@@ -1129,6 +1316,7 @@ model_register_type(void) {
     type_info_add_vec3_variable(info, "rotation", model_set_rotation, model_get_rotation);
     type_info_add_vec3_variable(info, "scale", model_set_scale, model_get_scale);
     type_info_add_vec4_variable(info, "color", model_set_color, model_get_color);
+    type_info_add_string_variable(info, "skeleton", model_set_skeleton, model_get_skeleton);
     type_info_add_string_variable(info, "texture", model_set_texture, model_get_texture);
     type_info_add_vec2_variable(
         info, "texture_tiling", model_set_texture_tiling, model_get_texture_tiling);
@@ -1184,218 +1372,7 @@ prv_model_load_geo(
     free(res_path);
 }
 
-static void
-prv_model_generate_cube(
-    te_vertex_pack** vertices, unsigned short** indices,
-    unsigned int* index_count) {
-    const float half = 0.5f;
-
-    (*vertices) = vertex_pack_create(24, false);
-
-    const unsigned int vert_size = (*vertices)->vertex_sizeof;
-
-    // Init UVs.
-    const unsigned char uv_offset = (*vertices)->attribute_offsets[TE_VA_UV];
-    for (unsigned int i = 0; i < (*vertices)->vertex_count; i += 4) {
-        glm_vec2_make(
-            (vec2){1.0f, 1.0f}, (float*)((*vertices)->data + (vert_size * i + uv_offset)));
-        glm_vec2_make(
-            (vec2){0.0f, 1.0f}, (float*)((*vertices)->data + (vert_size * (i + 1) + uv_offset)));
-        glm_vec2_make(
-            (vec2){1.0f, 0.0f},
-            (float*)((*vertices)->data + (vert_size * (i + 2) + uv_offset)));
-        glm_vec2_make(
-            (vec2){0.0f, 0.0f},
-            (float*)((*vertices)->data + (vert_size * (i + 3) + uv_offset)));
-    }
-
-    // Init normals.
-    const unsigned char normal_offset = (*vertices)->attribute_offsets[TE_VA_NORMAL];
-    unsigned int normal_i = 0;
-    for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make(
-            (vec3){1.0f, 0.0f, 0.0f},
-            (float*)((*vertices)->data + (vert_size * normal_i + normal_offset)));
-    }
-    for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make(
-            (vec3){-1.0f, 0.0f, 0.0f},
-            (float*)((*vertices)->data
-                     + (vert_size * normal_i + normal_offset)));
-    }
-    for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make(
-            (vec3){0.0f, 1.0f, 0.0f},
-            (float*)((*vertices)->data
-                     + (vert_size * normal_i + normal_offset)));
-    }
-    for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make(
-            (vec3){0.0f, -1.0f, 0.0f},
-            (float*)((*vertices)->data
-                     + (vert_size * normal_i + normal_offset)));
-    }
-    for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make(
-            (vec3){0.0f, 0.0f, 1.0f},
-            (float*)((*vertices)->data
-                     + (vert_size * normal_i + normal_offset)));
-    }
-    for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make(
-            (vec3){.0f, 0.0f, -1.0f},
-            (float*)((*vertices)->data
-                     + (vert_size * normal_i + normal_offset)));
-    }
-
-    // Init positions.
-
-    // +X face.
-    const unsigned char pos_offset = (*vertices)->attribute_offsets[TE_VA_POSITION];
-    unsigned int i = 0;
-    glm_vec3_make(
-        (vec3){half, -half, -half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-    glm_vec3_make(
-        (vec3){half, half, -half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-    glm_vec3_make(
-        (vec3){half, -half, half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-    glm_vec3_make(
-        (vec3){half, half, half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-
-    // -X face.
-    glm_vec3_make(
-        (vec3){-half, half, -half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-    glm_vec3_make(
-        (vec3){-half, -half, -half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-    glm_vec3_make(
-        (vec3){-half, half, half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-    glm_vec3_make(
-        (vec3){-half, -half, half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-
-    // +Y face.
-    glm_vec3_make(
-        (vec3){half, half, -half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-    glm_vec3_make(
-        (vec3){-half, half, -half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-    glm_vec3_make(
-        (vec3){half, half, half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-    glm_vec3_make(
-        (vec3){-half, half, half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-
-    // -Y face.
-    glm_vec3_make(
-        (vec3){-half, -half, -half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-    glm_vec3_make(
-        (vec3){half, -half, -half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-    glm_vec3_make(
-        (vec3){-half, -half, half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-    glm_vec3_make(
-        (vec3){half, -half, half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-
-    // +Z face.
-    glm_vec3_make(
-        (vec3){-half, -half, half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-    glm_vec3_make(
-        (vec3){half, -half, half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-    glm_vec3_make(
-        (vec3){-half, half, half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-    glm_vec3_make(
-        (vec3){half, half, half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-
-    // -Z face.
-    glm_vec3_make(
-        (vec3){-half, half, -half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-    glm_vec3_make(
-        (vec3){half, half, -half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-    glm_vec3_make(
-        (vec3){-half, -half, -half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-    glm_vec3_make(
-        (vec3){half, -half, -half},
-        (float*)((*vertices)->data + (vert_size * i + pos_offset)));
-    i += 1;
-
-    (*index_count) = 36;
-    (*indices) = malloc(sizeof(unsigned short) * (*index_count));
-    (*indices)[0] = 0; // +X face.
-    (*indices)[1] = 1;
-    (*indices)[2] = 2;
-    (*indices)[3] = 3;
-    (*indices)[4] = 2;
-    (*indices)[5] = 1;
-    (*indices)[6] = 4; // -X face.
-    (*indices)[7] = 5;
-    (*indices)[8] = 6;
-    (*indices)[9] = 7;
-    (*indices)[10] = 6;
-    (*indices)[11] = 5;
-    (*indices)[12] = 8; // +Y face.
-    (*indices)[13] = 9;
-    (*indices)[14] = 10;
-    (*indices)[15] = 11;
-    (*indices)[16] = 10;
-    (*indices)[17] = 9;
-    (*indices)[18] = 12; // -Y face.
-    (*indices)[19] = 13;
-    (*indices)[20] = 14;
-    (*indices)[21] = 15;
-    (*indices)[22] = 14;
-    (*indices)[23] = 13;
-    (*indices)[24] = 16; // +Z face.
-    (*indices)[25] = 17;
-    (*indices)[26] = 18;
-    (*indices)[27] = 19;
-    (*indices)[28] = 18;
-    (*indices)[29] = 17;
-    (*indices)[30] = 20; // -Z face.
-    (*indices)[31] = 21;
-    (*indices)[32] = 22;
-    (*indices)[33] = 23;
-    (*indices)[34] = 22;
-    (*indices)[35] = 21;
+static void prv_model_load_skeleton(te_model* model) {
+    model->skeleton = skeleton_create(model->skeleton_relative_path);
+    model->skinning_mats = malloc(sizeof(mat4) * model->skeleton->bone_count);
 }

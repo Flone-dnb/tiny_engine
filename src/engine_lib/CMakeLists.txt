@@ -15,6 +15,7 @@ set(PROJECT_SOURCES
     src/misc/globals.c
     src/misc/memory_usage.c
     src/misc/wchar_funcs.c
+    src/misc/mesh_generator.c
     src/game_manager.c
     src/sound_manager.c
     src/world.c
@@ -61,6 +62,7 @@ set(PROJECT_SOURCES
     include/misc/globals.h
     include/misc/memory_usage.h
     include/misc/wchar_funcs.h
+    include/misc/mesh_generator.h
     include/game_manager.h
     include/sound_manager.h
     include/render/renderer.h

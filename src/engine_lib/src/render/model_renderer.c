@@ -378,9 +378,12 @@ model_renderer_draw(
             te_model_render_data* data = &renderer->render_data[render_data_idx];
 
             // Frustum culling (don't cull skeletal meshes due to animations).
-            if (group->uniform_skin_mats == -1
-                && !frustum_shape_is_aabb_inside(camera_frustum, &data->aabb_world)) {
-                continue;
+            if (group->uniform_skin_mats == -1) {
+                if (!frustum_shape_is_aabb_inside(camera_frustum, &data->aabb_world)) {
+                    continue;
+                }
+            } else {
+                glUniformMatrix4fv(group->uniform_skin_mats, data->skinning_mats_count, GL_FALSE, (*data->skinning_mats)[0]);
             }
 
             glUniformMatrix4fv(group->uniform_world_mat, 1, GL_FALSE, data->world_mat[0]);

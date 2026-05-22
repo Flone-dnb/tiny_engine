@@ -5,11 +5,15 @@
 #include <game/model.h>
 #include <io/log.h>
 #include <io/filesystem.h>
+#include <math_funcs.h>
 #define CGLTF_IMPLEMENTATION
 #include <cgltf/cgltf.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb/stb_image_write.h>
 #include <stb/stb_image.h>
+#include <cglm/affine.h>
+#include <cglm/euler.h>
+#include <cglm/quat.h>
 
 // Returns absolute path to the destination texture (located in the "res" directory).
 // You must free returned pointer.
@@ -108,7 +112,139 @@ save_texture(
     return absolute_tex_path;
 }
 
-static bool
+static void
+save_skeleton_node(cgltf_node* node, FILE* fp, cgltf_skin* skin) {
+    unsigned int name_len = 0;
+    if (node->name != NULL) {
+        name_len = (unsigned int)strlen(node->name);
+    }
+
+    // Save name.
+    fwrite(&name_len, sizeof(name_len), 1, fp);
+    if (node->name != NULL) {
+        fwrite(node->name, sizeof(char), name_len, fp);
+    }
+
+    // Prepare local transform.
+    mat4 transform;
+    glm_mat4_identity(transform);
+    if (node->has_matrix) {
+        glm_vec4_copy(&node->matrix[0], transform[0]);
+        glm_vec4_copy(&node->matrix[4], transform[1]);
+        glm_vec4_copy(&node->matrix[8], transform[2]);
+        glm_vec4_copy(&node->matrix[12], transform[3]);
+    } else if (node->has_translation || node->has_rotation || node->has_scale) {
+        mat4 translate_mat;
+        mat4 rot_mat;
+        mat4 scale_mat;
+
+        glm_mat4_identity(translate_mat);
+        glm_mat4_identity(rot_mat);
+        glm_mat4_identity(scale_mat);
+
+        if (node->has_translation) {
+            glm_translate_make(translate_mat, node->translation);
+        }
+        if (node->has_rotation) {
+            mat4 mat;
+            glm_quat_mat4(node->rotation, mat);
+
+            vec3 rot;
+            glm_euler_angles(mat, rot);
+            rot[0] = glm_deg(rot[0]);
+            rot[1] = glm_deg(rot[1]);
+            rot[2] = glm_deg(rot[2]);
+
+            math_make_rotation_mat(rot, rot_mat);
+        }
+        if (node->has_scale) {
+            glm_scale_make(scale_mat, node->scale);
+        }
+
+        // Scale, rotate and then translate.
+        glm_mat4_mul(rot_mat, scale_mat, transform);
+        glm_mat4_mul(translate_mat, transform, transform);
+    }
+
+    vec4 loc;
+    mat4 rot_mat;
+    vec3 rot;
+    vec3 scale;
+    glm_decompose(transform, loc, rot_mat, scale);
+    glm_euler_angles(rot_mat, rot);
+    rot[0] = glm_deg(rot[0]);
+    rot[1] = glm_deg(rot[1]);
+    rot[2] = glm_deg(rot[2]);
+
+    // Save local transform.
+    fwrite(&loc, sizeof(float), 3, fp);
+    fwrite(&rot, sizeof(float), 3, fp);
+    fwrite(&scale, sizeof(float), 3, fp);
+
+    // Save inverse bind pose matrix.
+    glm_mat4_identity(transform);
+    if (skin->inverse_bind_matrices != NULL) {
+        cgltf_accessor* accessor = skin->inverse_bind_matrices;
+        cgltf_buffer_view* buffer_view = accessor->buffer_view;
+
+        mat4* data = (mat4*)((char*)buffer_view->buffer->data
+                             + (buffer_view->offset + accessor->offset));
+
+        for (size_t i = 0; i < skin->joints_count; i++) {
+            if (node != skin->joints[i]) {
+                continue;
+            }
+            data += i;
+            glm_mat4_copy(*data, transform);
+            break;
+        }
+    }
+    fwrite(&transform, sizeof(float), 4 * 4, fp);
+
+    // Save child count.
+    unsigned int child_count = (unsigned int)node->children_count;
+    fwrite(&child_count, sizeof(child_count), 1, fp);
+
+    for (size_t node_idx = 0; node_idx < node->children_count; node_idx++) {
+        save_skeleton_node(node->children[node_idx], fp, skin);
+    }
+}
+
+static void
+import_skeleton(
+    cgltf_node* node, const char* path_to_anim_dir, unsigned int path_to_anim_dir_len,
+    cgltf_skin* skin) {
+    if (skin->joints_count > TE_MAX_BONE_COUNT) {
+        log_error_fmt(
+            "found skeleton with %zu bones while max allowed bone count is %i, "
+            "you can increase the bone count limit in the C code",
+            skin->joints_count, TE_MAX_BONE_COUNT);
+        abort();
+    }
+
+    if (!filesystem_does_path_exists(path_to_anim_dir)) {
+        filesystem_create_directory(path_to_anim_dir);
+    }
+
+    char* path_to_skeleton =
+        filesystem_append_path(path_to_anim_dir, path_to_anim_dir_len, "skel.bin", 8, NULL);
+
+    FILE* fp = fopen(path_to_skeleton, "wb");
+    if (fp == NULL) {
+        log_error_fmt("failed to create file at %s", path_to_skeleton);
+        abort();
+    }
+
+    const unsigned int total_bone_count = (unsigned int)skin->joints_count;
+    fwrite(&total_bone_count, sizeof(total_bone_count), 1, fp);
+
+    save_skeleton_node(node, fp, skin);
+
+    fclose(fp);
+    free(path_to_skeleton);
+}
+
+static void
 save_primitive(
     const char* path_to_gltf_dir, unsigned int path_to_gltf_dir_len,
     cgltf_primitive* primitive, size_t node_idx, size_t prim_idx, const char* path_to_file,
@@ -121,14 +257,14 @@ save_primitive(
             "found GLTF mesh with unsupported indices type %d, indices type must be "
             "UNSIGNED_SHORT",
             primitive->indices->component_type);
-        return false;
+        abort();
     }
 
     // Check index count.
     if (primitive->indices->count
         > 0xFFFFFFFFu) { // because we store index count as unsigned int
         log_error_fmt("GLTF mesh index count exceeds limit of %u", 0xFFFFFFFFu);
-        return false;
+        abort();
     }
 
     // Check attribute types.
@@ -145,14 +281,14 @@ save_primitive(
                 log_error_fmt(
                     "found GLTF mesh with unsupported position type %d, expected vec3",
                     primitive->attributes[i].data->type);
-                return false;
+                abort();
             }
             if (primitive->attributes[i].data->component_type != cgltf_component_type_r_32f) {
                 log_error_fmt(
                     "found GLTF mesh with unsupported position component type %d, expected "
                     "float",
                     primitive->attributes[i].data->type);
-                return false;
+                abort();
             }
         } else if (primitive->attributes[i].type == cgltf_attribute_type_normal) {
             normal_attribute_idx = i;
@@ -161,14 +297,14 @@ save_primitive(
                 log_error_fmt(
                     "found GLTF mesh with unsupported normal type %d, expected vec3",
                     primitive->attributes[i].data->type);
-                return false;
+                abort();
             }
             if (primitive->attributes[i].data->component_type != cgltf_component_type_r_32f) {
                 log_error_fmt(
                     "found GLTF mesh with unsupported normal component type %d, expected "
                     "float",
                     primitive->attributes[i].data->type);
-                return false;
+                abort();
             }
         } else if (primitive->attributes[i].type == cgltf_attribute_type_texcoord) {
             texcoord_attribute_idx = i;
@@ -177,14 +313,14 @@ save_primitive(
                 log_error_fmt(
                     "found GLTF mesh with unsupported texcoord type %d, expected vec2",
                     primitive->attributes[i].data->type);
-                return false;
+                abort();
             }
             if (primitive->attributes[i].data->component_type != cgltf_component_type_r_32f) {
                 log_error_fmt(
                     "found GLTF mesh with unsupported texcoord component type %d, expected "
                     "float",
                     primitive->attributes[i].data->type);
-                return false;
+                abort();
             }
         } else if (primitive->attributes[i].type == cgltf_attribute_type_joints) {
             joints_attribute_idx = i;
@@ -193,37 +329,37 @@ save_primitive(
                 log_error_fmt(
                     "found GLTF mesh with unsupported joints type %d, expected vec4",
                     primitive->attributes[i].data->type);
-                return false;
+                abort();
             }
             if (primitive->attributes[i].data->component_type != cgltf_component_type_r_8u) {
                 log_error_fmt(
                     "found GLTF mesh with unsupported texcoord component type %d, expected "
                     "unsigned byte",
                     primitive->attributes[i].data->type);
-                return false;
+                abort();
             }
         }
     }
     if (pos_attribute_idx == 0xFFFFFFFF) {
         log_error("found GLTF mesh without a POSITION attribute");
-        return false;
+        abort();
     } else if (normal_attribute_idx == 0xFFFFFFFF) {
         log_error("found GLTF mesh without a NORMAL attribute");
-        return false;
+        abort();
     } else if (texcoord_attribute_idx == 0xFFFFFFFF) {
         log_error("found GLTF mesh without a TEXCOORD attribute");
-        return false;
+        abort();
     }
 
     // Check vertex count.
     if (primitive->attributes[pos_attribute_idx].data->count
         > 0xFFFFFFFFu) { // because we store vertex count as unsigned int
         log_error_fmt("GLTF mesh vertex count exceeds limit of %u", 0xFFFFFFFFu);
-        return false;
+        abort();
     }
     if (primitive->attributes[pos_attribute_idx].data->count == 0) {
         log_error("GLTF mesh vertex count is zero");
-        return false;
+        abort();
     }
 
     // Load indices.
@@ -261,8 +397,8 @@ save_primitive(
 
             for (size_t i = 0; i < vertex_count; i++) {
                 unsigned char* dst = &vertices->data
-                                 [vertices->vertex_sizeof * i
-                                  + vertices->attribute_offsets[TE_VA_POSITION]];
+                                          [vertices->vertex_sizeof * i
+                                           + vertices->attribute_offsets[TE_VA_POSITION]];
                 glm_vec3_copy(*(vec3*)data, (float*)dst);
                 data += stride;
             }
@@ -280,8 +416,8 @@ save_primitive(
 
             for (size_t i = 0; i < vertex_count; i++) {
                 unsigned char* dst = &vertices->data
-                                [vertices->vertex_sizeof * i
-                                 + vertices->attribute_offsets[TE_VA_NORMAL]];
+                                          [vertices->vertex_sizeof * i
+                                           + vertices->attribute_offsets[TE_VA_NORMAL]];
                 glm_vec3_copy(*(vec3*)data, (float*)dst);
                 data += stride;
             }
@@ -299,8 +435,8 @@ save_primitive(
 
             for (size_t i = 0; i < vertex_count; i++) {
                 unsigned char* dst = &vertices->data
-                                [vertices->vertex_sizeof * i
-                                 + vertices->attribute_offsets[TE_VA_NORMAL]];
+                                          [vertices->vertex_sizeof * i
+                                           + vertices->attribute_offsets[TE_VA_NORMAL]];
                 glm_vec2_copy(*(vec2*)data, (float*)dst);
                 data += stride;
             }
@@ -320,8 +456,8 @@ save_primitive(
 
             for (size_t i = 0; i < vertex_count; i++) {
                 unsigned char* dst = &vertices->data
-                                [vertices->vertex_sizeof * i
-                                 + vertices->attribute_offsets[TE_VA_BONE_INDICES]];
+                                          [vertices->vertex_sizeof * i
+                                           + vertices->attribute_offsets[TE_VA_BONE_INDICES]];
                 memcpy(dst, data, sizeof(unsigned char) * 4);
                 data += stride;
             }
@@ -339,8 +475,8 @@ save_primitive(
 
             for (size_t i = 0; i < vertex_count; i++) {
                 unsigned char* dst = &vertices->data
-                                [vertices->vertex_sizeof * i
-                                 + vertices->attribute_offsets[TE_VA_BONE_WEIGHTS]];
+                                          [vertices->vertex_sizeof * i
+                                           + vertices->attribute_offsets[TE_VA_BONE_WEIGHTS]];
                 glm_vec4_copy(*(vec4*)data, (float*)dst);
                 data += stride;
             }
@@ -350,9 +486,7 @@ save_primitive(
     FILE* fp = fopen(path_to_file, "wb");
     if (fp == NULL) {
         log_error_fmt("failed to open file for writing %s", path_to_file);
-        free(vertices);
-        free(indices);
-        return false;
+        abort();
     }
 
     unsigned char id = is_skinned ? 100 : 0;
@@ -365,7 +499,7 @@ save_primitive(
     fwrite(indices, sizeof(unsigned short), index_count, fp);
 
     fclose(fp);
-    free(vertices);
+    vertex_pack_destroy(vertices);
     free(indices);
 
     // Save material.
@@ -396,8 +530,6 @@ save_primitive(
             free(relative_path);
         }
     }
-
-    return true;
 }
 
 bool
@@ -407,8 +539,8 @@ import_file_as_world(
     unsigned int res_path_len;
     char* res_path = filesystem_prepend_res_to_path(relative_path_to_dir, &res_path_len);
     if (!filesystem_does_path_exists(res_path)) {
-        free(res_path);
         log_error_fmt("the specified path %s does not exist", res_path);
+        free(res_path);
         return false;
     }
 
@@ -506,40 +638,47 @@ import_file_as_world(
         filesystem_append_path(res_out_dir, res_out_dir_len, "tex", 3, &tex_dir_len);
     // Note: don't create tex directory, we will create it if textures found.
 
-    bool failed = false;
-    for (size_t node_idx = 0; node_idx < data->scene->nodes_count; node_idx++) {
-        cgltf_node* node = data->scene->nodes[node_idx];
+    // Prepare path for newly imported skeleton/animation files.
+    unsigned int anim_dir_len;
+    char* anim_dir =
+        filesystem_append_path(res_out_dir, res_out_dir_len, "anim", 4, &anim_dir_len);
+    // Note: don't create anim directory, we will create it if skeleton/animation are found.
 
-        if (node->mesh == NULL) {
-            continue;
-        }
+    for (size_t i = 0; i < data->meshes_count; i++) {
+        cgltf_mesh* mesh = &data->meshes[i];
 
-        for (size_t prim_idx = 0; prim_idx < node->mesh->primitives_count; prim_idx++) {
-            cgltf_primitive* primitive = &node->mesh->primitives[prim_idx];
+        for (size_t prim_idx = 0; prim_idx < mesh->primitives_count; prim_idx++) {
+            cgltf_primitive* primitive = &mesh->primitives[prim_idx];
             te_model* model = model_create();
 
             // Prepare geometry bin file name.
-            int len = snprintf(NULL, 0, "%zu_%zu", node_idx, prim_idx);
+            int len = -1;
+            if (mesh->name == NULL) {
+                len = snprintf(NULL, 0, "%zu_%zu", i, prim_idx);
+            } else {
+                len = snprintf(NULL, 0, "%s_%zu", mesh->name, prim_idx);
+            }
             if (len < 0) {
                 log_error("snprintf error");
                 abort();
             }
             unsigned int geo_name_len = (unsigned int)len;
+
             char* geo_name = malloc(sizeof(char) * (geo_name_len + 1));
-            snprintf(geo_name, geo_name_len + 1, "%zu_%zu", node_idx, prim_idx);
+            if (mesh->name == NULL) {
+                snprintf(geo_name, geo_name_len + 1, "%zu_%zu", i, prim_idx);
+            } else {
+                snprintf(geo_name, geo_name_len + 1, "%s_%zu", mesh->name, prim_idx);
+            }
 
             char* geo_path = filesystem_append_path_ext(
                 geo_dir, geo_dir_len, geo_name, geo_name_len, ".bin", 4, NULL);
-            failed = !save_primitive(
-                path_to_gltf_dir, path_to_gltf_dir_len, primitive, node_idx, prim_idx,
-                geo_path, model, tex_dir, tex_dir_len);
-            if (failed) {
-                free(geo_path);
-                break;
-            }
+
+            save_primitive(
+                path_to_gltf_dir, path_to_gltf_dir_len, primitive, i, prim_idx, geo_path,
+                model, tex_dir, tex_dir_len);
 
             char* geo_relative = filesystem_convert_path_to_relative(geo_path);
-
             model_set_geometry(model, geo_relative);
 
             world_spawn_game_object(world, model_get_game_object_info(model));
@@ -550,29 +689,49 @@ import_file_as_world(
         }
     }
 
-    if (!failed) {
-        char* world_path = filesystem_append_path_ext(
-            res_out_dir, res_out_dir_len, filename, filename_len, ".txt", 4, NULL);
-
-        char* relative_path = filesystem_convert_path_to_relative(world_path);
-        if (relative_path == NULL) {
-            log_error_fmt(
-                "failed to convert path %s to be relative to the \"res\" directory",
-                world_path);
+    if (data->skins_count > 0) {
+        if (data->skins_count > 1) {
+            log_error("found multiple skeletons, expected 0 or 1");
             abort();
         }
 
-        world_save_to_file(world, relative_path);
+        cgltf_skin* skin = &data->skins[0];
+        if (skin->joints_count == 0) {
+            log_error("found skeleton with 0 bones");
+            abort();
+        }
 
-        free(relative_path);
-        free(world_path);
+        cgltf_node* root = skin->joints[0];
+        import_skeleton(root, anim_dir, anim_dir_len, skin);
     }
-    game_manager_destroy_world(game_manager, world);
+
+    // Save new world.
+    {
+        if (data->meshes_count > 0) {
+            char* world_path = filesystem_append_path_ext(
+                res_out_dir, res_out_dir_len, filename, filename_len, ".txt", 4, NULL);
+
+            char* relative_path = filesystem_convert_path_to_relative(world_path);
+            if (relative_path == NULL) {
+                log_error_fmt(
+                    "failed to convert path %s to be relative to the \"res\" directory",
+                    world_path);
+                abort();
+            }
+
+            world_save_to_file(world, relative_path);
+
+            free(relative_path);
+            free(world_path);
+        }
+        game_manager_destroy_world(game_manager, world);
+    }
 
     cgltf_free(data);
     free(res_out_dir);
     free(geo_dir);
     free(tex_dir);
+    free(anim_dir);
     free(path_to_gltf_dir);
 
     return true;

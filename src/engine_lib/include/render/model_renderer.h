@@ -30,9 +30,11 @@ typedef struct te_model_render_data {
 
     vec2 uv_offset;
 
-    // Number of elements in the index buffer.
-    int index_count;
+    // NULL if not using skinning.
+    mat4* skinning_mats;
+    unsigned int skinning_mats_count;
 
+    int index_count;
     unsigned int vbo;
     unsigned int ebo;
 } te_model_render_data;
