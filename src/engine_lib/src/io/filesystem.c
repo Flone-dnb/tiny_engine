@@ -348,7 +348,7 @@ filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count) {
     }
     struct dirent* entry;
     while ((entry = readdir(dir)) != NULL) {
-        if (entry->d_name[0] == '.' || entry->d_name[1] == '.') {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
         }
         (*entry_count) += 1;
@@ -368,7 +368,7 @@ filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count) {
     }
     unsigned int i = 0;
     while ((entry = readdir(dir)) != NULL) {
-        if (entry->d_name[0] == '.' || entry->d_name[1] == '.') {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
         }
 
@@ -409,7 +409,7 @@ filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count) {
         }
         (*entry_count) = 0;
         do {
-            if (ffd.cFileName[0] == '.' || ffd.cFileName[1] == '.') {
+            if (strcmp(ffd.cFileName, ".") == 0 || strcmp(ffd.cFileName, "..") == 0) {
                 continue;
             }
             (*entry_count) += 1;
@@ -432,7 +432,7 @@ filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count) {
         }
         unsigned int i = 0;
         do {
-            if (ffd.cFileName[0] == '.' || ffd.cFileName[1] == '.') {
+            if (strcmp(ffd.cFileName, ".") == 0 || strcmp(ffd.cFileName, "..") == 0) {
                 continue;
             }
 

@@ -118,7 +118,7 @@ model_renderer_init_uniforms(te_shader_group* group) {
     group->uniform_model_color = get_uniform_location(group->prog_id, "model_color");
     group->uniform_tiling = get_uniform_location(group->prog_id, "tiling");
     group->uniform_uv_offset = get_uniform_location(group->prog_id, "uv_offset");
-    group->uniform_skin_mats = -1;
+    group->uniform_skin_mats = glGetUniformLocation(group->prog_id, "skinning_mats");
 
     group->uniform_ambient_light_color =
         get_uniform_location(group->prog_id, "ambient_light_color");

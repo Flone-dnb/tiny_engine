@@ -210,7 +210,7 @@ save_skeleton_node(cgltf_node* node, FILE* fp, cgltf_skin* skin) {
     }
 }
 
-static void
+static char*
 import_skeleton(
     cgltf_node* node, const char* path_to_anim_dir, unsigned int path_to_anim_dir_len,
     cgltf_skin* skin) {
@@ -241,15 +241,16 @@ import_skeleton(
     save_skeleton_node(node, fp, skin);
 
     fclose(fp);
-    free(path_to_skeleton);
+
+    return path_to_skeleton;
 }
 
 static void
 save_primitive(
     const char* path_to_gltf_dir, unsigned int path_to_gltf_dir_len,
     cgltf_primitive* primitive, size_t node_idx, size_t prim_idx, const char* path_to_file,
-    te_model* model, const char* path_to_tex_dir, unsigned int path_to_tex_dir_len) {
-    // Do a few checks.
+    te_model* model, const char* path_to_tex_dir, unsigned int path_to_tex_dir_len, bool* found_skin) {
+    (*found_skin) = false;
 
     // Check index type.
     if (primitive->indices->component_type != cgltf_component_type_r_16u) {
@@ -333,8 +334,23 @@ save_primitive(
             }
             if (primitive->attributes[i].data->component_type != cgltf_component_type_r_8u) {
                 log_error_fmt(
-                    "found GLTF mesh with unsupported texcoord component type %d, expected "
+                    "found GLTF mesh with unsupported joints component type %d, expected "
                     "unsigned byte",
+                    primitive->attributes[i].data->type);
+                abort();
+            }
+        } else if (primitive->attributes[i].type == cgltf_attribute_type_weights) {
+            weights_attribute_idx = i;
+
+            if (primitive->attributes[i].data->type != cgltf_type_vec4) {
+                log_error_fmt(
+                    "found GLTF mesh with unsupported weights type %d, expected vec4",
+                    primitive->attributes[i].data->type);
+                abort();
+            }
+            if (primitive->attributes[i].data->component_type != cgltf_component_type_r_32f) {
+                log_error_fmt(
+                    "found GLTF mesh with unsupported weights component type %d, expected float",
                     primitive->attributes[i].data->type);
                 abort();
             }
@@ -349,6 +365,14 @@ save_primitive(
     } else if (texcoord_attribute_idx == 0xFFFFFFFF) {
         log_error("found GLTF mesh without a TEXCOORD attribute");
         abort();
+    }
+
+    if (joints_attribute_idx != 0xFFFFFFFF || weights_attribute_idx != 0xFFFFFFFF) {
+        if (joints_attribute_idx == 0xFFFFFFFF || weights_attribute_idx == 0xFFFFFFFF) {
+            log_error("found skin joints or weights but expected to find both");
+            abort();
+        }
+        (*found_skin) = true;
     }
 
     // Check vertex count.
@@ -436,7 +460,7 @@ save_primitive(
             for (size_t i = 0; i < vertex_count; i++) {
                 unsigned char* dst = &vertices->data
                                           [vertices->vertex_sizeof * i
-                                           + vertices->attribute_offsets[TE_VA_NORMAL]];
+                                           + vertices->attribute_offsets[TE_VA_UV]];
                 glm_vec2_copy(*(vec2*)data, (float*)dst);
                 data += stride;
             }
@@ -644,6 +668,28 @@ import_file_as_world(
         filesystem_append_path(res_out_dir, res_out_dir_len, "anim", 4, &anim_dir_len);
     // Note: don't create anim directory, we will create it if skeleton/animation are found.
 
+    // First import skeletons to assign them to models later.
+    char* relative_skel_path = NULL;
+    if (data->skins_count > 0) {
+        if (data->skins_count > 1) {
+            log_error("found multiple skeletons, expected 0 or 1");
+            abort();
+        }
+
+        cgltf_skin* skin = &data->skins[0];
+        if (skin->joints_count == 0) {
+            log_error("found skeleton with 0 bones");
+            abort();
+        }
+
+        cgltf_node* root = skin->joints[0];
+        char* path_to_skeleton = import_skeleton(root, anim_dir, anim_dir_len, skin);
+
+        relative_skel_path = filesystem_convert_path_to_relative(path_to_skeleton);
+        free(path_to_skeleton);
+    }
+
+    // Import models.
     for (size_t i = 0; i < data->meshes_count; i++) {
         cgltf_mesh* mesh = &data->meshes[i];
 
@@ -674,35 +720,27 @@ import_file_as_world(
             char* geo_path = filesystem_append_path_ext(
                 geo_dir, geo_dir_len, geo_name, geo_name_len, ".bin", 4, NULL);
 
+            bool found_skin = false;
             save_primitive(
                 path_to_gltf_dir, path_to_gltf_dir_len, primitive, i, prim_idx, geo_path,
-                model, tex_dir, tex_dir_len);
+                model, tex_dir, tex_dir_len, &found_skin);
 
+            // Set geometry.
             char* geo_relative = filesystem_convert_path_to_relative(geo_path);
             model_set_geometry(model, geo_relative);
 
+            // Set skeleton.
+            if (relative_skel_path != NULL && found_skin) {
+                model_set_skeleton(model, relative_skel_path);
+            }
+
+            // Spawn.
             world_spawn_game_object(world, model_get_game_object_info(model));
 
             free(geo_path);
             free(geo_relative);
             free(geo_name);
         }
-    }
-
-    if (data->skins_count > 0) {
-        if (data->skins_count > 1) {
-            log_error("found multiple skeletons, expected 0 or 1");
-            abort();
-        }
-
-        cgltf_skin* skin = &data->skins[0];
-        if (skin->joints_count == 0) {
-            log_error("found skeleton with 0 bones");
-            abort();
-        }
-
-        cgltf_node* root = skin->joints[0];
-        import_skeleton(root, anim_dir, anim_dir_len, skin);
     }
 
     // Save new world.
@@ -732,6 +770,7 @@ import_file_as_world(
     free(geo_dir);
     free(tex_dir);
     free(anim_dir);
+    free(relative_skel_path);
     free(path_to_gltf_dir);
 
     return true;

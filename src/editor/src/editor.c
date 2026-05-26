@@ -192,6 +192,12 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
         editor->game_world_relative_path[len] = 0;
     }
 
+    // Setup light.
+    te_light_params* light_params = renderer_get_light_params(game_manager_get_renderer(editor->game_manager));
+    glm_vec3_copy((vec3){1.0f, -1.0f, 1.0f}, light_params->directional_light_direction);
+    glm_vec3_normalize(light_params->directional_light_direction);
+    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, light_params->directional_light_color);
+
     editor_camera_spawn(editor->editor_camera, editor->game_world);
 
     // Prepare stats widget.

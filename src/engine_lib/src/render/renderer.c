@@ -153,7 +153,7 @@ renderer_create(struct te_window* window) {
 
         glm_vec3_copy((vec3){1.0f, -1.0f, 1.0f}, data->directional_light_direction);
         glm_vec3_normalize(data->directional_light_direction);
-        glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, data->directional_light_color);
+        glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 0.0f}, data->directional_light_color);
 
         glm_vec2_copy((vec2){-1.0f, -1.0f}, data->distance_fog_range);
     }

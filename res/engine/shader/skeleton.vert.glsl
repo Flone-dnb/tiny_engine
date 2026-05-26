@@ -4,7 +4,7 @@
 attribute vec3 pos;
 attribute vec3 normal;
 attribute vec2 uv;
-attribute uvec4 bone_indices;
+attribute vec4 bone_indices;
 attribute vec4 bone_weights;
 
 varying vec3 frag_pos;
@@ -24,7 +24,7 @@ void main(void) {
     vec4 skinned_normal = vec4(0.0);
     for (int i = 0; i < 4; i++) {
         float bone_weight = bone_weights[i];
-        mat4 bone_mat = skinning_mats[bone_indices[i]];
+        mat4 bone_mat = skinning_mats[int(bone_indices)];
 
         // passing 0 as 4th component for position to avoid applying translation twice
         skinned_pos += (bone_mat * vec4(pos, 0.0)) * bone_weight;

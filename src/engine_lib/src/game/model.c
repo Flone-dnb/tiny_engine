@@ -22,7 +22,8 @@
 
 #define MODEL_TEX_LOAD_OPTION TE_TLO_GENERATE_MIPMAPS
 
-static void bind_gl_vertex_attributes_model_vertex(unsigned int shader_prog_id) {
+static void
+bind_gl_vertex_attributes_model_vertex(unsigned int shader_prog_id) {
     // Position.
     glBindAttribLocation(shader_prog_id, 0, "pos");
     glEnableVertexAttribArray(0);
@@ -136,7 +137,8 @@ vertex_pack_create(unsigned int vertex_count, bool is_skinned) {
     return pack;
 }
 
-void vertex_pack_destroy(te_vertex_pack* pack) {
+void
+vertex_pack_destroy(te_vertex_pack* pack) {
     free(pack->data);
 
     free(pack);
@@ -291,6 +293,35 @@ model_destroy(te_model* model) {
     free(model);
 }
 
+#if defined(ENGINE_EDITOR)
+static bool
+check_file_path(const char* relative_path) {
+    if (relative_path == NULL) {
+        return true;
+    }
+
+    if (relative_path != NULL) {
+        // Check if path exists.
+        char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
+        if (!filesystem_does_path_exists(res_path)) {
+            // Do nothing, probably user typing the path.
+            free(res_path);
+            return false;
+        }
+        FILE* fp = fopen(res_path, "rb");
+        if (fp == NULL) {
+            // Not a file.
+            free(res_path);
+            return false;
+        }
+        fclose(fp);
+        free(res_path);
+    }
+
+    return true;
+}
+#endif
+
 te_game_object_info*
 model_get_game_object_info(te_model* model) {
     return model->game_object_info;
@@ -441,15 +472,8 @@ model_set_color(te_model* model, vec4 color) {
 void
 model_set_texture(te_model* model, const char* relative_path) {
 #if defined(ENGINE_EDITOR)
-    if (relative_path != NULL) {
-        // Check if path exists.
-        char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
-        if (!filesystem_does_path_exists(res_path)) {
-            // Do nothing, probably user typing the path.
-            free(res_path);
-            return;
-        }
-        free(res_path);
+    if (!check_file_path(relative_path)) {
+        return;
     }
 #endif
 
@@ -567,17 +591,11 @@ model_get_world_position(te_model* model, vec3 out) {
 static void prv_model_remove_from_model_renderer(te_model* model);
 static void prv_model_add_to_model_renderer(te_model* model);
 
-void model_set_skeleton(te_model* model, const char* relative_path) {
+void
+model_set_skeleton(te_model* model, const char* relative_path) {
 #if defined(ENGINE_EDITOR)
-    if (relative_path != NULL) {
-        // Check if path exists.
-        char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
-        if (!filesystem_does_path_exists(res_path)) {
-            // Do nothing, probably user typing the path.
-            free(res_path);
-            return;
-        }
-        free(res_path);
+    if (!check_file_path(relative_path)) {
+        return;
     }
 #endif
 
@@ -600,7 +618,8 @@ void model_set_skeleton(te_model* model, const char* relative_path) {
     }
 }
 
-const char* model_get_skeleton(te_model* model) {
+const char*
+model_get_skeleton(te_model* model) {
     return model->skeleton_relative_path;
 }
 
@@ -823,11 +842,9 @@ prv_model_add_to_model_renderer(te_model* model) {
         bool free_custom_geometry = false;
         if (model->custom_get_geometry != NULL) {
             model->custom_get_geometry(
-                model, &vertices, &indices, &index_count,
-                &free_custom_geometry);
+                model, &vertices, &indices, &index_count, &free_custom_geometry);
         } else if (model->path_to_geo != NULL) {
-            prv_model_load_geo(
-                model->path_to_geo, &vertices, &indices, &index_count);
+            prv_model_load_geo(model->path_to_geo, &vertices, &indices, &index_count);
             free_custom_geometry = true;
         } else {
             mesh_generator_cube(&vertices, &indices, &index_count);
@@ -838,8 +855,8 @@ prv_model_add_to_model_renderer(te_model* model) {
 
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(
-            GL_ARRAY_BUFFER, (GLsizeiptr)(vertices->vertex_sizeof * vertices->vertex_count), vertices->data,
-            GL_STATIC_DRAW);
+            GL_ARRAY_BUFFER, (GLsizeiptr)(vertices->vertex_sizeof * vertices->vertex_count),
+            vertices->data, GL_STATIC_DRAW);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
         glBufferData(
@@ -955,18 +972,19 @@ prv_model_remove_from_model_renderer(te_model* model) {
     model->shader_prog_id = 0xffffffff;
 }
 
-static void load_skeleton_node(te_skeleton* skeleton, FILE* fp, unsigned int* bone_idx) {
+static void
+load_skeleton_node(te_skeleton* skeleton, FILE* fp, unsigned int* bone_idx) {
     te_skeleton_bone* bone = &skeleton->bones[*bone_idx];
     (*bone_idx) += 1;
 
     // Read name.
     bone->name = NULL;
-    unsigned int count;
-    fread(&count, sizeof(count), 1, fp);
-    if (count > 0) {
-        bone->name = malloc(sizeof(char) * (count + 1));
-        fread(bone->name, sizeof(char), count, fp);
-        bone->name[count] = 0;
+    unsigned int name_len;
+    fread(&name_len, sizeof(name_len), 1, fp);
+    if (name_len > 0) {
+        bone->name = malloc(sizeof(char) * (name_len + 1));
+        fread(bone->name, sizeof(char), name_len, fp);
+        bone->name[name_len] = 0;
     }
 
     // Read local transform.
@@ -977,9 +995,9 @@ static void load_skeleton_node(te_skeleton* skeleton, FILE* fp, unsigned int* bo
     fread(&bone->inverse_bind_pose_mat[0], sizeof(mat4), 1, fp);
 
     // Read child count.
-    fread(&count, sizeof(count), 1, fp);
+    fread(&bone->child_count, sizeof(bone->child_count), 1, fp);
 
-    for (unsigned int i = 0; i < count; i++) {
+    for (unsigned int i = 0; i < bone->child_count; i++) {
         load_skeleton_node(skeleton, fp, bone_idx);
     }
 }
@@ -1007,6 +1025,9 @@ skeleton_create(const char* relative_path) {
 
 void
 skeleton_destroy(te_skeleton* skeleton) {
+    for (unsigned int i = 0; i < skeleton->bone_count; i++) {
+        free(skeleton->bones[i].name);
+    }
     free(skeleton->bones);
 
     free(skeleton);
@@ -1038,15 +1059,8 @@ model_enable_transparency(te_model* model, bool enable) {
 void
 model_set_custom_vert_shader(te_model* model, const char* vert_relative_path) {
 #if defined(ENGINE_EDITOR)
-    if (vert_relative_path != NULL) {
-        // Check if path exists.
-        char* res_path = filesystem_prepend_res_to_path(vert_relative_path, NULL);
-        if (!filesystem_does_path_exists(res_path)) {
-            // Do nothing, probably user typing the path.
-            free(res_path);
-            return;
-        }
-        free(res_path);
+    if (!check_file_path(vert_relative_path)) {
+        return;
     }
 #endif
 
@@ -1077,15 +1091,8 @@ model_get_custom_vert_shader(te_model* model) {
 void
 model_set_custom_frag_shader(te_model* model, const char* frag_relative_path) {
 #if defined(ENGINE_EDITOR)
-    if (frag_relative_path != NULL) {
-        // Check if path exists.
-        char* res_path = filesystem_prepend_res_to_path(frag_relative_path, NULL);
-        if (!filesystem_does_path_exists(res_path)) {
-            // Do nothing, probably user typing the path.
-            free(res_path);
-            return;
-        }
-        free(res_path);
+    if (!check_file_path(frag_relative_path)) {
+        return;
     }
 #endif
 
@@ -1111,15 +1118,8 @@ model_set_custom_frag_shader(te_model* model, const char* frag_relative_path) {
 void
 model_set_geometry(te_model* model, const char* relative_path) {
 #if defined(ENGINE_EDITOR)
-    if (relative_path != NULL) {
-        // Check if path exists.
-        char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
-        if (!filesystem_does_path_exists(res_path)) {
-            // Do nothing, probably user typing the path.
-            free(res_path);
-            return;
-        }
-        free(res_path);
+    if (!check_file_path(relative_path)) {
+        return;
     }
 #endif
 
@@ -1149,10 +1149,9 @@ model_get_geometry(te_model* model) {
 
 void
 model_set_custom_geometry_provider(
-    te_model* model,
-    void (*custom_get_geometry)(
-        te_model* model, te_vertex_pack** vertices, unsigned short** indices,
-        unsigned int* index_count, bool* free_custom_geometry)) {
+    te_model* model, void (*custom_get_geometry)(
+                         te_model* model, te_vertex_pack** vertices, unsigned short** indices,
+                         unsigned int* index_count, bool* free_custom_geometry)) {
     model->custom_get_geometry = custom_get_geometry;
 }
 
@@ -1185,7 +1184,7 @@ prv_model_calc_aabb(te_vertex_pack* vertices) {
     for (unsigned int i = 0; i < vertices->vertex_count; i++) {
         unsigned char* data =
             &vertices->data
-                [vertices->vertex_sizeof * i + vertices->attribute_offsets[TE_VA_POSITION]];
+                 [vertices->vertex_sizeof * i + vertices->attribute_offsets[TE_VA_POSITION]];
         glm_vec3_minv(min, (float*)data, min);
         glm_vec3_maxv(max, (float*)data, max);
     }
@@ -1270,7 +1269,8 @@ update_skeleton_bone(te_model* model, unsigned int* bone_idx, mat4 parent_transf
     }
 }
 
-static void prv_model_update_skeleton(te_model* model) {
+static void
+prv_model_update_skeleton(te_model* model) {
     mat4 identity;
     glm_mat4_identity(identity);
 
@@ -1337,7 +1337,8 @@ model_register_type(void) {
 
 static void
 prv_model_load_geo(
-    const char* path_to_geo, te_vertex_pack** vertices, unsigned short** indices, unsigned int* index_count) {
+    const char* path_to_geo, te_vertex_pack** vertices, unsigned short** indices,
+    unsigned int* index_count) {
     char* res_path = filesystem_prepend_res_to_path(path_to_geo, NULL);
 
     FILE* fp = fopen(res_path, "rb");
@@ -1372,7 +1373,8 @@ prv_model_load_geo(
     free(res_path);
 }
 
-static void prv_model_load_skeleton(te_model* model) {
+static void
+prv_model_load_skeleton(te_model* model) {
     model->skeleton = skeleton_create(model->skeleton_relative_path);
     model->skinning_mats = malloc(sizeof(mat4) * model->skeleton->bone_count);
 }
