@@ -125,28 +125,6 @@ obj_picking_find_obj_under_cursor(
 
     te_game_object_info* picked_game_object = model_get_game_object_info(info.model);
 
-    if (model_get_custom_ptr(info.model) != NULL) {
-        // Maybe this model is just a visualization model for some other non visual game object (like camera).
-        void* custom_ptr = model_get_custom_ptr(info.model);
-        for (unsigned int i = 0; i < count; i++) {
-            if (root_game_objects[i]->game_object != custom_ptr) {
-                if (root_game_objects[i]->type == TE_GOT_MODEL) {
-                    te_camera* attached_camera =
-                        model_get_attached_camera(root_game_objects[i]->game_object);
-                    if (attached_camera == custom_ptr) {
-                        picked_game_object = camera_get_game_object_info(custom_ptr);
-                        break;
-                    }
-                }
-                continue;
-            }
-
-            picked_game_object = root_game_objects[i];
-            break;
-        }
-    }
-
     free(root_game_objects);
-
     return picked_game_object;
 }

@@ -232,15 +232,25 @@ model_renderer_add_model(te_model_renderer* renderer, unsigned int prog_id) {
 
         // Shift some render data to the right to prepare space for new item.
         // We already made sure that the render data array will be able to fit a new item (see above).
-        unsigned int copy_count = 0;
+        unsigned int shift_to_right_count = 0;
         for (unsigned int i = shader_group_index + 1; i < renderer->shader_group_count; i++) {
-            copy_count += renderer->shader_groups[i].count;
+            shift_to_right_count += renderer->shader_groups[i].count;
         }
 
         // We already made sure that the render data array will be able to fit a new item (see above).
         memmove(
             renderer->render_data + (data_index + 1), renderer->render_data + data_index,
-            sizeof(te_model_render_data) * copy_count);
+            sizeof(te_model_render_data) * shift_to_right_count);
+
+        // Also shift handles.
+        for (unsigned int i = 0; i < renderer->render_handle_arrays_size; i++) {
+            if (renderer->handle_to_data[i] == INVALID_DATA_INDEX
+                || renderer->handle_to_data[i] < data_index
+                || i == handle) {
+                continue;
+            }
+            renderer->handle_to_data[i] += 1;
+        }
 
         // Update group.
         renderer->shader_groups[shader_group_index].count += 1;
@@ -383,7 +393,7 @@ model_renderer_draw(
                     continue;
                 }
             } else {
-                glUniformMatrix4fv(group->uniform_skin_mats, data->skinning_mats_count, GL_FALSE, (*data->skinning_mats)[0]);
+                glUniformMatrix4fv(group->uniform_skin_mats, (int)data->skinning_mats_count, GL_FALSE, (*data->skinning_mats)[0]);
             }
 
             glUniformMatrix4fv(group->uniform_world_mat, 1, GL_FALSE, data->world_mat[0]);

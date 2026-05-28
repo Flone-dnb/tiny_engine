@@ -9,6 +9,7 @@
 #include <misc/globals.h>
 #include <shape/frustum_shape.h>
 #include <type_database.h>
+#include <misc/mesh_generator.h>
 #include <world.h>
 
 struct te_camera {
@@ -137,6 +138,16 @@ camera_destroy(te_camera* camera) {
 
 #if defined(ENGINE_EDITOR)
 static void
+get_editor_camera_model_geometry(
+    te_model* model, te_vertex_pack** vertices, unsigned short** indices,
+    unsigned int* index_count, bool* free_geometry) {
+    (void)model;
+
+    (*free_geometry) = true;
+    mesh_generator_icosphere(vertices, indices, index_count);
+}
+
+static void
 create_editor_model(te_camera* camera) {
     if (camera->world == NULL || camera->editor_model != NULL) {
         return;
@@ -145,9 +156,9 @@ create_editor_model(te_camera* camera) {
     camera->editor_model = model_create();
 
     model_set_is_serialization_allowed(camera->editor_model, false);
-    model_enable_transparency(camera->editor_model, true);
-    model_set_color(camera->editor_model, (vec4){1.0f, 1.0f, 1.0f, 0.2f});
+    model_set_color(camera->editor_model, (vec4){0.5f, 0.5f, 0.5f, 1.0f});
     model_set_scale(camera->editor_model, (vec3){0.25f, 0.25f, 0.25f});
+    model_set_custom_geometry_provider(camera->editor_model, get_editor_camera_model_geometry);
     model_set_custom_ptr(camera->editor_model, camera);
 
     world_spawn_game_object(camera->world, model_get_game_object_info(camera->editor_model));

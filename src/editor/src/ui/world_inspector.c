@@ -16,6 +16,7 @@
 #include <editor.h>
 #include <game_manager.h>
 #include <render/renderer.h>
+#include <io/filesystem.h>
 #include <io/log.h>
 
 #define BUTTON_HIDDEN_X_POS 10.0f
@@ -575,19 +576,52 @@ world_inspector_select_obj(te_world_inspector* inspector, te_game_object_info* t
             break;
         }
     }
+
+    bool is_special = false;
     if (!found) {
-        // We probably in a different mode (3D object != 2D objects).
-        return;
+        // Some objects (such as not serializable) are not displayed in the world inspector so it's fine.
+        // Check if the specified object is a special case (for example it's a camera's visualization model).
+        if (target_info->type != TE_GOT_MODEL) {
+            return;
+        }
+        void* custom_ptr = model_get_custom_ptr(target_info->game_object);
+        if (custom_ptr == NULL) {
+            return;
+        }
+
+        // Check custom_ptr.
+        for (unsigned int page_idx = 0; page_idx < inspector->page_count; page_idx++) {
+            for (unsigned int i = 0; i < inspector->item_buttons_count; i++) {
+                te_world_item_info* info =
+                    &((te_world_item_info*)
+                          inspector->item_list)[page_idx * inspector->item_buttons_count + i];
+                if (info->game_object_info->game_object == custom_ptr) {
+                    // Selected camera visualization model, display camera properties.
+                    target_info = info->game_object_info;
+                    found = true;
+                    break;
+                }
+            }
+            if (found) {
+                break;
+            }
+        }
+
+        if (!found) {
+            return;
+        }
     }
 
     if (target_info->type == TE_GOT_MODEL) {
         editor_set_gizmo(inspector->editor, target_info->game_object);
     }
 
-    property_inspector_show(
-        inspector->property_inspector, target_info->game_object, target_info->type_id);
-    refresh_item_names(inspector);
-    refresh_page_text(inspector);
+    if (!is_special) {
+        property_inspector_show(
+            inspector->property_inspector, target_info->game_object, target_info->type_id);
+        refresh_item_names(inspector);
+        refresh_page_text(inspector);
+    }
 }
 
 void
@@ -989,6 +1023,28 @@ on_button_world_settings_clicked(te_button_widget* button) {
     property_inspector_show(inspector->property_inspector, light_params, "light_params");
 }
 
+static void on_add_world_selected(void* custom, const char* absolute_path) {
+    te_world_inspector* inspector = custom;
+
+    char* relative_path = filesystem_convert_path_to_relative(absolute_path);
+
+    te_world* game_world = editor_get_game_world(inspector->editor);
+    world_add_from_file(game_world, relative_path, false);
+
+    world_inspector_rebuild_list(inspector, game_world);
+
+    free(relative_path);
+}
+
+static void
+on_button_add_world_clicked(te_button_widget* button) {
+    te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
+
+    editor_show_file_dialog(
+        inspector->editor, inspector, on_add_world_selected, NULL,
+        TE_FDM_SELECT_EXISTING_FILE);
+}
+
 void
 world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
     if (inspector->left_panel != NULL) {
@@ -1048,6 +1104,49 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
 
         unsigned int text_len;
         wchar_t* text = wchar_from_char("World settings", &text_len);
+        text_widget_set_text_own(text_widget, text, text_len);
+    }
+    y_pos += theme_get_button_height() + vspacing;
+
+    // Add world.
+    {
+        te_button_widget* button = button_widget_create();
+        {
+            te_widget* widget = button_widget_get_widget(button);
+            widget_set_custom_ptr(widget, inspector);
+            widget_set_parent(widget, left_panel);
+            widget_set_relative_position(widget, (vec2){hpadding, y_pos});
+            widget_set_relative_size(widget, (vec2){total_width, theme_get_button_height()});
+        }
+
+        vec4 color;
+        theme_get_button_color(color);
+        button_widget_set_color(button, color);
+
+        theme_get_button_color_hovered(color);
+        button_widget_set_color_hovered(button, color);
+
+        theme_get_button_color_pressed(color);
+        button_widget_set_color_pressed(button, color);
+
+        button_widget_set_on_clicked(button, on_button_add_world_clicked);
+
+        // Button text.
+
+        te_text_widget* text_widget = text_widget_create();
+        {
+            te_widget* widget = text_widget_get_widget(text_widget);
+            widget_set_parent(widget, button_widget_get_widget(button));
+            widget_set_relative_position(
+                widget, (vec2){hpadding_in_button, vpadding_in_button});
+            widget_set_relative_size(
+                widget, (vec2){1.0f - hpadding_in_button, 1.0f - vpadding_in_button});
+        }
+
+        text_widget_set_text_height(text_widget, theme_get_text_height());
+
+        unsigned int text_len;
+        wchar_t* text = wchar_from_char("Add world from file", &text_len);
         text_widget_set_text_own(text_widget, text, text_len);
     }
     y_pos += theme_get_button_height() + vspacing;

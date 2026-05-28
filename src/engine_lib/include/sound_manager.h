@@ -50,7 +50,7 @@ bool sound_is_finished_playing(te_sound* sound);
 void sound_set_3d_position(te_sound* sound, vec3 pos);
 
 // Enables spatialization and sets the minimum and maximum distances
-// for the attenuation calculation (see @ref sound_set_position).
+// for the attenuation calculation (see @ref sound_set_3d_position).
 void sound_set_distance(te_sound* sound, float min, float max);
 
 // ------------------------------------------------------------------------------------------------

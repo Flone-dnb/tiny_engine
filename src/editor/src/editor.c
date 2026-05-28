@@ -92,6 +92,11 @@ editor_get_game_manager(te_editor* editor) {
     return editor->game_manager;
 }
 
+te_world*
+editor_get_game_world(te_editor* editor) {
+    return editor->game_world;
+}
+
 static void
 destroy_game_world(te_editor* editor, te_game_manager* game_manager) {
     if (editor->file_dialog != NULL) {

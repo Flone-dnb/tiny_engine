@@ -10,11 +10,13 @@ struct te_game_manager;
 struct te_model;
 struct te_camera;
 struct te_game_object_info;
+struct te_world;
 
 te_editor* editor_create();
 void editor_destroy(te_editor* editor);
 
 struct te_game_manager* editor_get_game_manager(te_editor* editor);
+struct te_world* editor_get_game_world(te_editor* editor);
 
 // Destroys previous game world (if existed).
 // Optionally specify a non-NULL path to file to load as the new world.

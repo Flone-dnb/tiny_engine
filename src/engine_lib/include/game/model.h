@@ -9,6 +9,7 @@ struct te_world;
 struct te_camera;
 struct te_model_renderer;
 struct te_game_object_info;
+struct te_skeleton;
 
 // ------------------------------------------------------------------------------------------------
 //                                       VERTEX API
@@ -213,16 +214,19 @@ void model_register_type(void);
 // you can increase this value if needed (but also update the shader)
 #define TE_MAX_BONE_COUNT 80
 
+struct te_skeleton_bone;
 typedef struct te_skeleton_bone {
     mat4 inverse_bind_pose_mat;
+
+    char* name;
 
     // Transform of the node relative to its parent.
     vec3 position;
     vec3 rotation; // in degrees
     vec3 scale;
 
-    char* name;
     unsigned int child_count;
+    unsigned int parent_idx; // if has no parent then 0xFFFFFFFF
 } te_skeleton_bone;
 
 typedef struct te_skeleton {

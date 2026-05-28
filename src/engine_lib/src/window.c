@@ -357,7 +357,7 @@ prv_window_process_event(te_window* window, union SDL_Event event, float delta_t
 #if defined(IS_ARM64)
             if (window->connected_gamepad != NULL) {
                 // In some cases while using retro-handhelds (which have built in gamepad) gamepad buttons trigger
-                // keyboard input before the actual gamepad button input.
+                // keyboard input before the actual gamepad button input which messes up the input.
                 break;
             }
 #endif

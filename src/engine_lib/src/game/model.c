@@ -237,6 +237,7 @@ model_create() {
     model->custom_get_geometry = NULL;
     model->is_opaque = true;
     model->is_serialization_allowed = true;
+
     glm_vec2_one(model->tex_tiling);
     glm_vec2_zero(model->uv_offset);
 
@@ -913,11 +914,11 @@ prv_model_add_to_model_renderer(te_model* model) {
         data->skinning_mats_count = 0;
         data->skinning_mats = NULL;
         if (model->skeleton_relative_path != NULL) {
-            // Init bone transforms (first update).
-            prv_model_update_skeleton(model);
-
             data->skinning_mats_count = model->skeleton->bone_count;
             data->skinning_mats = model->skinning_mats;
+
+            // Init bone transforms (first update).
+            prv_model_update_skeleton(model);
         }
     }
 }
@@ -970,12 +971,18 @@ prv_model_remove_from_model_renderer(te_model* model) {
 
     model->render_data_handle = 0xffffffff;
     model->shader_prog_id = 0xffffffff;
+
+    // DO NOT: set NULL to world in this function, the caller is expected to do it if needed
 }
 
 static void
-load_skeleton_node(te_skeleton* skeleton, FILE* fp, unsigned int* bone_idx) {
-    te_skeleton_bone* bone = &skeleton->bones[*bone_idx];
+load_skeleton_bone(
+    te_skeleton* skeleton, FILE* fp, unsigned int* bone_idx, unsigned int parent_bone_idx) {
+    const unsigned int this_bone_idx = *bone_idx;
+    te_skeleton_bone* bone = &skeleton->bones[this_bone_idx];
     (*bone_idx) += 1;
+
+    bone->parent_idx = parent_bone_idx;
 
     // Read name.
     bone->name = NULL;
@@ -998,7 +1005,7 @@ load_skeleton_node(te_skeleton* skeleton, FILE* fp, unsigned int* bone_idx) {
     fread(&bone->child_count, sizeof(bone->child_count), 1, fp);
 
     for (unsigned int i = 0; i < bone->child_count; i++) {
-        load_skeleton_node(skeleton, fp, bone_idx);
+        load_skeleton_bone(skeleton, fp, bone_idx, this_bone_idx);
     }
 }
 
@@ -1013,9 +1020,9 @@ skeleton_create(const char* relative_path) {
     fread(&skeleton->bone_count, sizeof(skeleton->bone_count), 1, fp);
     skeleton->bones = malloc(sizeof(te_skeleton_bone) * skeleton->bone_count);
 
-    // Read nodes.
+    // Read bones.
     unsigned int bone_idx = 0;
-    load_skeleton_node(skeleton, fp, &bone_idx);
+    load_skeleton_bone(skeleton, fp, &bone_idx, 0xFFFFFFFF);
 
     fclose(fp);
     free(res_path);
