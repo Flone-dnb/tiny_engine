@@ -103,18 +103,19 @@ debug_command_set_fps_limit(te_game_manager* game_manager, unsigned int new_limi
 #endif
 
 // Getters/setters for light params for reflection.
-#define LIGHT_PARAMS_FUNC(name, body) \
-static void light_params_##name(void* obj, float* arg) { \
-    te_light_params* params = ((te_light_params*)obj); \
-    body; \
-}
+#define LIGHT_PARAMS_FUNC(name, body)                                                         \
+    static void light_params_##name(void* obj, float* arg) {                                  \
+        te_light_params* params = ((te_light_params*)obj);                                    \
+        body;                                                                                 \
+    }
 LIGHT_PARAMS_FUNC(set_clear_color, glm_vec3_copy(arg, params->clear_color));
 LIGHT_PARAMS_FUNC(get_clear_color, glm_vec3_copy(params->clear_color, arg));
 LIGHT_PARAMS_FUNC(set_ambient_light_color, glm_vec3_copy(arg, params->ambient_light_color));
 LIGHT_PARAMS_FUNC(get_ambient_light_color, glm_vec3_copy(params->ambient_light_color, arg));
 LIGHT_PARAMS_FUNC(set_dir_light_color, glm_vec4_copy(arg, params->directional_light_color));
 LIGHT_PARAMS_FUNC(get_dir_light_color, glm_vec4_copy(params->directional_light_color, arg));
-LIGHT_PARAMS_FUNC(set_dir_light_dir, glm_vec3_normalize(arg); glm_vec3_copy(arg, params->directional_light_direction));
+LIGHT_PARAMS_FUNC(set_dir_light_dir, glm_vec3_normalize(arg);
+                  glm_vec3_copy(arg, params->directional_light_direction));
 LIGHT_PARAMS_FUNC(get_dir_light_dir, glm_vec3_copy(params->directional_light_direction, arg));
 LIGHT_PARAMS_FUNC(set_point_light_color, glm_vec4_copy(arg, params->point_light_color));
 LIGHT_PARAMS_FUNC(get_point_light_color, glm_vec4_copy(params->point_light_color, arg));
@@ -248,12 +249,14 @@ renderer_create(struct te_window* window) {
 
     // Add light params to type database to be able to display them in the property inspector.
     {
-        te_type_info* info = type_info_create(
-            "light_params", NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+        te_type_info* info =
+            type_info_create("light_params", NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
-        type_info_add_vec3_variable(info, "clear_color", light_params_set_clear_color, light_params_get_clear_color);
         type_info_add_vec3_variable(
-            info, "ambient_light_color", light_params_set_ambient_light_color, light_params_get_ambient_light_color);
+            info, "clear_color", light_params_set_clear_color, light_params_get_clear_color);
+        type_info_add_vec3_variable(
+            info, "ambient_light_color", light_params_set_ambient_light_color,
+            light_params_get_ambient_light_color);
         type_info_add_vec4_variable(
             info, "directional_light_color", light_params_set_dir_light_color,
             light_params_get_dir_light_color);
@@ -576,9 +579,8 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
                 debug_stats->rendered_transparent_model_count =
 #endif
                     model_renderer_draw(
-                        transparent_model_renderer, renderer->light_params,
-                        view_mat, view_proj_mat,
-                        camera_frustum);
+                        transparent_model_renderer, renderer->light_params, view_mat,
+                        view_proj_mat, camera_frustum);
                 glDisable(GL_BLEND);
 
                 glEnable(GL_CULL_FACE);

@@ -246,10 +246,126 @@ import_skeleton(
 }
 
 static void
+save_anim_channel(
+    unsigned int* bone_idx, cgltf_node* skin_node, cgltf_animation* anim, float* anim_duration,
+    FILE* fp) {
+    // Find all channels that animate this skeleton bone.
+    // In GLTF 1 channel animates 1 property (such as translation).
+    bool found_channel = false;
+    for (unsigned int channel_idx = 0; channel_idx < anim->channels_count; channel_idx++) {
+        if (anim->channels[channel_idx].target_node < 0
+            || anim->channels[channel_idx].target_node != skin_node) {
+            continue;
+        }
+
+        cgltf_animation_channel* channel = &anim->channels[channel_idx];
+
+        if (channel->target_path != cgltf_animation_path_type_translation
+            && channel->target_path != cgltf_animation_path_type_rotation
+            && channel->target_path != cgltf_animation_path_type_scale) {
+            continue;
+        }
+
+        cgltf_accessor* input = channel->sampler->input;
+        cgltf_accessor* output = channel->sampler->output;
+
+        if (!input->has_max) {
+            log_error("found an animation channel without the \"max\" field");
+            abort();
+        }
+        const float duration = input->max[0];
+        if (duration > *anim_duration) {
+            (*anim_duration) = duration;
+        }
+
+        if (input->type != cgltf_type_scalar) {
+            log_error("found an animation channel with unexpected input type");
+            abort();
+        }
+        if (output->type != cgltf_type_vec3 && output->type != cgltf_type_vec4) {
+            log_error("found an animation channel with unexpected output type");
+            abort();
+        }
+
+        if (!found_channel) {
+            // Write bone index before writing all channels that affect it.
+            fwrite(bone_idx, sizeof(*bone_idx), 1, fp);
+        }
+        found_channel = true;
+
+        // Get timestamps.
+        if (input->count == 0) {
+            log_error("found an animation channel with 0 timestamps");
+            abort();
+        }
+        cgltf_buffer_view* time_buffer_view = input->buffer_view;
+        const size_t time_stride =
+            time_buffer_view->stride == 0 ? sizeof(float) : time_buffer_view->stride;
+        float* timestamps = (float*)((char*)time_buffer_view->buffer->data
+                                     + (time_buffer_view->offset + input->offset));
+
+        (void)time_stride;
+        (void)timestamps;
+        // TODO
+    }
+
+    (*bone_idx) += 1;
+    for (size_t node_idx = 0; node_idx < skin_node->children_count; node_idx++) {
+        save_anim_channel(bone_idx, skin_node->children[node_idx], anim, anim_duration, fp);
+    }
+}
+
+static void
+import_animation(
+    cgltf_animation* anim, const char* path_to_anim_dir, unsigned int path_to_anim_dir_len,
+    cgltf_node* skin_root_node, cgltf_skin* skin) {
+    if (!filesystem_does_path_exists(path_to_anim_dir)) {
+        log_error("expected a skeleton to be already imported");
+        abort();
+    }
+    if (anim->name == NULL) {
+        log_error("found animation without a name");
+        abort();
+    }
+    if (anim->channels_count != skin->joints_count) {
+        log_error_fmt(
+            "found incompatible animation: animation has %zu channel(s) but skeleton has %zu "
+            "bone(s)",
+            anim->channels_count, skin->joints_count);
+        abort();
+    }
+
+    char* path_to_anim = filesystem_append_path_ext(
+        path_to_anim_dir, path_to_anim_dir_len, anim->name, 0, ".bin", 4, NULL);
+
+    FILE* fp = fopen(path_to_anim, "wb");
+    if (fp == NULL) {
+        log_error_fmt("failed to create file at %s", path_to_anim);
+        abort();
+    }
+
+    // Write channel count.
+    const unsigned int channel_count = (unsigned int)anim->channels_count;
+    fwrite(&channel_count, sizeof(channel_count), 1, fp);
+
+    // Write channels.
+    unsigned int bone_idx = 0;
+    float anim_duration = 0.0f;
+    save_anim_channel(&bone_idx, skin_root_node, anim, &anim_duration, fp);
+
+    // Write anim duration.
+    fwrite(&anim_duration, sizeof(anim_duration), 1, fp);
+
+    fclose(fp);
+    free(path_to_anim);
+}
+
+static void
 save_primitive(
     const char* path_to_gltf_dir, unsigned int path_to_gltf_dir_len,
     cgltf_primitive* primitive, size_t node_idx, size_t prim_idx, const char* path_to_file,
-    te_model* model, const char* path_to_tex_dir, unsigned int path_to_tex_dir_len, bool* found_skin) {
+    te_model* model, const char* path_to_tex_dir, unsigned int path_to_tex_dir_len,
+    bool* found_skin) {
     (*found_skin) = false;
 
     // Check index type.
@@ -350,7 +466,8 @@ save_primitive(
             }
             if (primitive->attributes[i].data->component_type != cgltf_component_type_r_32f) {
                 log_error_fmt(
-                    "found GLTF mesh with unsupported weights component type %d, expected float",
+                    "found GLTF mesh with unsupported weights component type %d, expected "
+                    "float",
                     primitive->attributes[i].data->type);
                 abort();
             }
@@ -458,9 +575,9 @@ save_primitive(
                 (char*)buffer_view->buffer->data + (buffer_view->offset + accessor->offset);
 
             for (size_t i = 0; i < vertex_count; i++) {
-                unsigned char* dst = &vertices->data
-                                          [vertices->vertex_sizeof * i
-                                           + vertices->attribute_offsets[TE_VA_UV]];
+                unsigned char* dst =
+                    &vertices->data
+                         [vertices->vertex_sizeof * i + vertices->attribute_offsets[TE_VA_UV]];
                 glm_vec2_copy(*(vec2*)data, (float*)dst);
                 data += stride;
             }
@@ -670,20 +787,22 @@ import_file_as_world(
 
     // First import skeletons to assign them to models later.
     char* relative_skel_path = NULL;
+    cgltf_node* skin_root = NULL;
+    cgltf_skin* skin = NULL;
     if (data->skins_count > 0) {
         if (data->skins_count > 1) {
             log_error("found multiple skeletons, expected 0 or 1");
             abort();
         }
 
-        cgltf_skin* skin = &data->skins[0];
+        skin = &data->skins[0];
         if (skin->joints_count == 0) {
             log_error("found skeleton with 0 bones");
             abort();
         }
 
-        cgltf_node* root = skin->joints[0];
-        char* path_to_skeleton = import_skeleton(root, anim_dir, anim_dir_len, skin);
+        skin_root = skin->joints[0];
+        char* path_to_skeleton = import_skeleton(skin_root, anim_dir, anim_dir_len, skin);
 
         relative_skel_path = filesystem_convert_path_to_relative(path_to_skeleton);
         free(path_to_skeleton);
@@ -741,6 +860,12 @@ import_file_as_world(
             free(geo_relative);
             free(geo_name);
         }
+    }
+
+    // Import animations.
+    for (size_t i = 0; i < data->animations_count; i++) {
+        cgltf_animation* anim = &data->animations[i];
+        import_animation(anim, anim_dir, anim_dir_len, skin_root, skin);
     }
 
     // Save new world.
