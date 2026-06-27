@@ -377,6 +377,8 @@ filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count) {
         memcpy(entries[i].name, entry->d_name, sizeof(char) * len);
         entries[i].name[len] = 0;
 
+        entries[i].name_len = (unsigned int)len;
+
         entries[i].is_dir = entry->d_type == DT_DIR;
 
         i++;
@@ -440,6 +442,8 @@ filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count) {
             entries[i].name = malloc(sizeof(char) * (len + 1));
             memcpy(entries[i].name, ffd.cFileName, sizeof(char) * len);
             entries[i].name[len] = 0;
+
+            entries[i].name_len = (unsigned int)len;
 
             entries[i].is_dir = ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY;
 

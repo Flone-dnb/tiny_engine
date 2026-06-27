@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <cglm/mat4.h>
 #include <game/camera.h>
+#include <game/skeleton.h>
 #include <game/game_object_info.h>
 #include <game_manager.h>
 #include <io/log.h>
@@ -204,7 +205,6 @@ struct te_model {
 
     // NULL if not spawned or if @ref skeleton_relative_path is NULL.
     te_skeleton* skeleton;
-    mat4* skinning_mats;
 
     bool is_opaque;
     bool is_serialization_allowed;
@@ -227,7 +227,6 @@ model_create() {
     model->tex_relative_path = NULL;
     model->skeleton_relative_path = NULL;
     model->skeleton = NULL;
-    model->skinning_mats = NULL;
     model->path_to_geo = NULL;
     model->custom_vert_relative_path = NULL;
     model->custom_frag_relative_path = NULL;
@@ -593,7 +592,7 @@ static void prv_model_remove_from_model_renderer(te_model* model);
 static void prv_model_add_to_model_renderer(te_model* model);
 
 void
-model_set_skeleton(te_model* model, const char* relative_path) {
+model_set_skeleton_path(te_model* model, const char* relative_path) {
 #if defined(ENGINE_EDITOR)
     if (!check_file_path(relative_path)) {
         return;
@@ -620,8 +619,13 @@ model_set_skeleton(te_model* model, const char* relative_path) {
 }
 
 const char*
-model_get_skeleton(te_model* model) {
+model_get_skeleton_path(te_model* model) {
     return model->skeleton_relative_path;
+}
+
+te_skeleton*
+model_get_skeleton(te_model* model) {
+    return model->skeleton;
 }
 
 void
@@ -806,9 +810,6 @@ static void prv_model_load_geo(
 
 static te_aabb_shape prv_model_calc_aabb(te_vertex_pack* vertices);
 
-static void prv_model_load_skeleton(te_model* model);
-static void prv_model_update_skeleton(te_model* model);
-
 static void
 prv_model_add_to_model_renderer(te_model* model) {
 #if defined(DEBUG)
@@ -875,8 +876,7 @@ prv_model_add_to_model_renderer(te_model* model) {
     }
 
     if (model->skeleton_relative_path != NULL) {
-        // Load skeleton.
-        prv_model_load_skeleton(model);
+        model->skeleton = prv_skeleton_create(model->skeleton_relative_path);
     }
 
     // Add to rendering.
@@ -912,13 +912,9 @@ prv_model_add_to_model_renderer(te_model* model) {
         }
 
         data->skinning_mats_count = 0;
-        data->skinning_mats = NULL;
         if (model->skeleton_relative_path != NULL) {
-            data->skinning_mats_count = model->skeleton->bone_count;
-            data->skinning_mats = model->skinning_mats;
-
-            // Init bone transforms (first update).
-            prv_model_update_skeleton(model);
+            data->skinning_mats_count = skeleton_get_bone_count(model->skeleton);
+            data->skinning_mats = skeleton_get_skinning_mats(model->skeleton);
         }
     }
 }
@@ -958,10 +954,7 @@ prv_model_remove_from_model_renderer(te_model* model) {
     }
 
     if (model->skeleton != NULL) {
-        free(model->skinning_mats);
-        model->skinning_mats = NULL;
-
-        skeleton_destroy(model->skeleton);
+        prv_skeleton_destroy(model->skeleton);
         model->skeleton = NULL;
     }
 
@@ -973,71 +966,6 @@ prv_model_remove_from_model_renderer(te_model* model) {
     model->shader_prog_id = 0xffffffff;
 
     // DO NOT: set NULL to world in this function, the caller is expected to do it if needed
-}
-
-static void
-load_skeleton_bone(
-    te_skeleton* skeleton, FILE* fp, unsigned int* bone_idx, unsigned int parent_bone_idx) {
-    const unsigned int this_bone_idx = *bone_idx;
-    te_skeleton_bone* bone = &skeleton->bones[this_bone_idx];
-    (*bone_idx) += 1;
-
-    bone->parent_idx = parent_bone_idx;
-
-    // Read name.
-    bone->name = NULL;
-    unsigned int name_len;
-    fread(&name_len, sizeof(name_len), 1, fp);
-    if (name_len > 0) {
-        bone->name = malloc(sizeof(char) * (name_len + 1));
-        fread(bone->name, sizeof(char), name_len, fp);
-        bone->name[name_len] = 0;
-    }
-
-    // Read local transform.
-    fread(bone->position, sizeof(float), 3, fp);
-    fread(bone->rotation, sizeof(float), 3, fp);
-    fread(bone->scale, sizeof(float), 3, fp);
-
-    fread(&bone->inverse_bind_pose_mat[0], sizeof(mat4), 1, fp);
-
-    // Read child count.
-    fread(&bone->child_count, sizeof(bone->child_count), 1, fp);
-
-    for (unsigned int i = 0; i < bone->child_count; i++) {
-        load_skeleton_bone(skeleton, fp, bone_idx, this_bone_idx);
-    }
-}
-
-te_skeleton*
-skeleton_create(const char* relative_path) {
-    char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
-
-    FILE* fp = fopen(res_path, "rb");
-    te_skeleton* skeleton = malloc(sizeof(te_skeleton));
-
-    // Read bone count.
-    fread(&skeleton->bone_count, sizeof(skeleton->bone_count), 1, fp);
-    skeleton->bones = malloc(sizeof(te_skeleton_bone) * skeleton->bone_count);
-
-    // Read bones.
-    unsigned int bone_idx = 0;
-    load_skeleton_bone(skeleton, fp, &bone_idx, 0xFFFFFFFF);
-
-    fclose(fp);
-    free(res_path);
-
-    return skeleton;
-}
-
-void
-skeleton_destroy(te_skeleton* skeleton) {
-    for (unsigned int i = 0; i < skeleton->bone_count; i++) {
-        free(skeleton->bones[i].name);
-    }
-    free(skeleton->bones);
-
-    free(skeleton);
 }
 
 mat4*
@@ -1245,46 +1173,6 @@ on_despawned(te_model* model) {
     model->world = NULL;
 }
 
-static void
-update_skeleton_bone(te_model* model, unsigned int* bone_idx, mat4 parent_transform) {
-    te_skeleton_bone* bone = &model->skeleton->bones[*bone_idx];
-
-    mat4 global_transform;
-    glm_mat4_identity(global_transform);
-    {
-        mat4 mat1;
-        glm_scale_make(mat1, bone->scale);
-
-        mat4 mat2;
-        math_make_rotation_mat(bone->rotation, mat2);
-
-        // Scale, rotate and then translate.
-        glm_mat4_mul(mat2, mat1, global_transform);
-        glm_translate_make(mat2, bone->position);
-        glm_mat4_mul(mat2, global_transform, global_transform);
-
-        glm_mat4_mul(parent_transform, global_transform, global_transform);
-    }
-
-    glm_mat4_mul(
-        global_transform, bone->inverse_bind_pose_mat, model->skinning_mats[*bone_idx]);
-
-    (*bone_idx) += 1;
-
-    for (unsigned int i = 0; i < bone->child_count; i++) {
-        update_skeleton_bone(model, bone_idx, global_transform);
-    }
-}
-
-static void
-prv_model_update_skeleton(te_model* model) {
-    mat4 identity;
-    glm_mat4_identity(identity);
-
-    unsigned int bone_idx = 0;
-    update_skeleton_bone(model, &bone_idx, identity);
-}
-
 const char*
 model_get_type_id(void) {
     return "model";
@@ -1323,7 +1211,8 @@ model_register_type(void) {
     type_info_add_vec3_variable(info, "rotation", model_set_rotation, model_get_rotation);
     type_info_add_vec3_variable(info, "scale", model_set_scale, model_get_scale);
     type_info_add_vec4_variable(info, "color", model_set_color, model_get_color);
-    type_info_add_string_variable(info, "skeleton", model_set_skeleton, model_get_skeleton);
+    type_info_add_string_variable(
+        info, "skeleton", model_set_skeleton_path, model_get_skeleton_path);
     type_info_add_string_variable(info, "texture", model_set_texture, model_get_texture);
     type_info_add_vec2_variable(
         info, "texture_tiling", model_set_texture_tiling, model_get_texture_tiling);
@@ -1378,10 +1267,4 @@ prv_model_load_geo(
 
     fclose(fp);
     free(res_path);
-}
-
-static void
-prv_model_load_skeleton(te_model* model) {
-    model->skeleton = skeleton_create(model->skeleton_relative_path);
-    model->skinning_mats = malloc(sizeof(mat4) * model->skeleton->bone_count);
 }

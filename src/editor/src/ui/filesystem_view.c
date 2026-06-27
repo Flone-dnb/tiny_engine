@@ -145,15 +145,15 @@ refresh_dir_entry_names(te_filesystem_view* explorer) {
         } else {
             te_filesystem_entry* entry = &explorer->dir_entries[item_idx];
 
-            const size_t name_len = strlen(entry->name);
-            char* text = malloc(sizeof(char) * ((entry->is_dir ? 4 : 0) + name_len + 1));
+            char* text =
+                malloc(sizeof(char) * ((entry->is_dir ? 4 : 0) + entry->name_len + 1));
             if (entry->is_dir) {
                 memcpy(text, "[d] ", sizeof(char) * 4);
-                memcpy(text + 4, entry->name, sizeof(char) * name_len);
-                text[4 + name_len] = 0;
+                memcpy(text + 4, entry->name, sizeof(char) * entry->name_len);
+                text[4 + entry->name_len] = 0;
             } else {
-                memcpy(text, entry->name, sizeof(char) * name_len);
-                text[name_len] = 0;
+                memcpy(text, entry->name, sizeof(char) * entry->name_len);
+                text[entry->name_len] = 0;
             }
 
             unsigned int text_len;
@@ -313,7 +313,6 @@ on_button_dir_entry_clicked(te_button_widget* button) {
     te_filesystem_entry* entry =
         &explorer->dir_entries
              [explorer->current_page * explorer->dir_entry_button_count + button_index];
-    const unsigned int name_len = (unsigned int)strlen(entry->name);
 
     if (entry->is_dir) {
         // Change current dir path.
@@ -322,13 +321,13 @@ on_button_dir_entry_clicked(te_button_widget* button) {
             old_dir_len = strlen(explorer->relative_path);
         }
 
-        char* new_path = malloc(sizeof(char) * (old_dir_len + name_len + 2));
+        char* new_path = malloc(sizeof(char) * (old_dir_len + entry->name_len + 2));
         if (explorer->relative_path != NULL) {
             memcpy(new_path, explorer->relative_path, sizeof(char) * old_dir_len);
         }
-        memcpy(new_path + old_dir_len, entry->name, sizeof(char) * name_len);
-        new_path[old_dir_len + name_len] = '/';
-        new_path[old_dir_len + name_len + 1] = 0;
+        memcpy(new_path + old_dir_len, entry->name, sizeof(char) * entry->name_len);
+        new_path[old_dir_len + entry->name_len] = '/';
+        new_path[old_dir_len + entry->name_len + 1] = 0;
 
         free(explorer->relative_path);
         explorer->relative_path = new_path;
@@ -338,7 +337,7 @@ on_button_dir_entry_clicked(te_button_widget* button) {
     } else {
         // Check file extension.
         unsigned int dot_pos = 0;
-        for (unsigned int i = name_len - 1; i > 0; i--) {
+        for (unsigned int i = entry->name_len - 1; i > 0; i--) {
             if (entry->name[i] == '.') {
                 dot_pos = i;
                 break;
@@ -352,15 +351,16 @@ on_button_dir_entry_clicked(te_button_widget* button) {
             }
 
             char* file_relative_path =
-                malloc(sizeof(char) * (relative_path_len + name_len + 1));
+                malloc(sizeof(char) * (relative_path_len + entry->name_len + 1));
             if (explorer->relative_path != NULL) {
                 memcpy(
                     file_relative_path, explorer->relative_path,
                     sizeof(char) * relative_path_len);
             }
             memcpy(
-                file_relative_path + relative_path_len, entry->name, sizeof(char) * name_len);
-            file_relative_path[relative_path_len + name_len] = 0;
+                file_relative_path + relative_path_len, entry->name,
+                sizeof(char) * entry->name_len);
+            file_relative_path[relative_path_len + entry->name_len] = 0;
 
             editor_create_game_world(explorer->editor, file_relative_path);
             free(file_relative_path);

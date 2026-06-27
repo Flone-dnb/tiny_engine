@@ -5,6 +5,9 @@ typedef struct te_filesystem_entry {
     // Name of a file/directory.
     char* name;
 
+    // strlen of @ref name
+    unsigned int name_len;
+
     // `true` if it's a directory.
     bool is_dir;
 } te_filesystem_entry;

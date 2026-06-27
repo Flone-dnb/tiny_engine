@@ -33,6 +33,7 @@ set(PROJECT_SOURCES
     src/render/gpu_time_section.h
     src/game/camera.c
     src/game/model.c
+    src/game/skeleton.c
     src/widget/widget.c
     src/widget/text_widget.c
     src/widget/rect_widget.c
@@ -75,6 +76,7 @@ set(PROJECT_SOURCES
     include/game/camera.h
     include/game/model.h
     include/game/game_object_info.h
+    include/game/skeleton.h
     include/widget/widget.h
     include/widget/text_widget.h
     include/widget/rect_widget.h

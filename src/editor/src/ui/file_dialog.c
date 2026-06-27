@@ -130,15 +130,15 @@ refresh_entry_button_names(te_file_dialog* file_dialog) {
         } else {
             te_filesystem_entry* entry = &file_dialog->dir_entries[item_idx];
 
-            const size_t name_len = strlen(entry->name);
-            char* text = malloc(sizeof(char) * ((entry->is_dir ? 4 : 0) + name_len + 1));
+            char* text =
+                malloc(sizeof(char) * ((entry->is_dir ? 4 : 0) + entry->name_len + 1));
             if (entry->is_dir) {
                 memcpy(text, "[d] ", sizeof(char) * 4);
-                memcpy(text + 4, entry->name, sizeof(char) * name_len);
-                text[4 + name_len] = 0;
+                memcpy(text + 4, entry->name, sizeof(char) * entry->name_len);
+                text[4 + entry->name_len] = 0;
             } else {
-                memcpy(text, entry->name, sizeof(char) * name_len);
-                text[name_len] = 0;
+                memcpy(text, entry->name, sizeof(char) * entry->name_len);
+                text[entry->name_len] = 0;
             }
 
             unsigned int text_len;
@@ -278,6 +278,7 @@ on_button_entry_clicked(te_button_widget* button) {
         file_dialog->dir_entries = filesystem_list_directory(
             file_dialog->current_path, &file_dialog->dir_entry_count);
 
+        file_dialog->current_page = 0;
         refresh_page_text(file_dialog);
         refresh_entry_button_names(file_dialog);
     } else {
@@ -287,19 +288,18 @@ on_button_entry_clicked(te_button_widget* button) {
                   + button_index - 1];
         if (entry->is_dir) {
             size_t len = strlen(file_dialog->current_path);
-            const size_t name_len = strlen(entry->name);
             const bool need_slash = file_dialog->current_path[len - 1] != '/'
                                     && file_dialog->current_path[len - 1] != '\\';
 
-            char* new_path = malloc(sizeof(char) * (len + need_slash + name_len + 1));
+            char* new_path = malloc(sizeof(char) * (len + need_slash + entry->name_len + 1));
             memcpy(new_path, file_dialog->current_path, sizeof(char) * len);
 #if defined(WIN32)
             new_path[len] = '\\';
 #else
             new_path[len] = '/';
 #endif
-            memcpy(new_path + len + need_slash, entry->name, sizeof(char) * name_len);
-            new_path[len + need_slash + name_len] = 0;
+            memcpy(new_path + len + need_slash, entry->name, sizeof(char) * entry->name_len);
+            new_path[len + need_slash + entry->name_len] = 0;
 
             free(file_dialog->current_path);
             file_dialog->current_path = new_path;
@@ -311,6 +311,7 @@ on_button_entry_clicked(te_button_widget* button) {
             file_dialog->dir_entries = filesystem_list_directory(
                 file_dialog->current_path, &file_dialog->dir_entry_count);
 
+            file_dialog->current_page = 0;
             refresh_page_text(file_dialog);
             refresh_entry_button_names(file_dialog);
         } else if (file_dialog->mode == TE_FDM_SELECT_EXISTING_FILE) {
@@ -343,19 +344,20 @@ on_button_select_clicked(te_button_widget* button) {
 
             // Build path to file.
             size_t len = strlen(file_dialog->current_path);
-            const size_t name_len = strlen(entry->name);
             const bool need_slash = file_dialog->current_path[len - 1] != '/'
                                     && file_dialog->current_path[len - 1] != '\\';
 
-            char* selected_path = malloc(sizeof(char) * (len + need_slash + name_len + 1));
+            char* selected_path =
+                malloc(sizeof(char) * (len + need_slash + entry->name_len + 1));
             memcpy(selected_path, file_dialog->current_path, sizeof(char) * len);
 #if defined(WIN32)
             selected_path[len] = '\\';
 #else
             selected_path[len] = '/';
 #endif
-            memcpy(selected_path + len + need_slash, entry->name, sizeof(char) * name_len);
-            selected_path[len + need_slash + name_len] = 0;
+            memcpy(
+                selected_path + len + need_slash, entry->name, sizeof(char) * entry->name_len);
+            selected_path[len + need_slash + entry->name_len] = 0;
 
             void (*on_selected)(void* custom, const char*) = file_dialog->on_selected;
             void* custom = file_dialog->custom;

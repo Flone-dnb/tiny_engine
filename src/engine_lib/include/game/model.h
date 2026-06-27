@@ -95,10 +95,9 @@ const char* model_get_geometry(te_model* model);
 //
 // If you specify `free_geometry` as `true` the model will free provided geometry.
 void model_set_custom_geometry_provider(
-    te_model* model,
-    void (*custom_get_geometry)(
-        te_model* model, te_vertex_pack** vertices, unsigned short** indices,
-        unsigned int* index_count, bool* free_custom_geometry));
+    te_model* model, void (*custom_get_geometry)(
+                         te_model* model, te_vertex_pack** vertices, unsigned short** indices,
+                         unsigned int* index_count, bool* free_custom_geometry));
 
 // Optionally you can set a name of the model. The string will be copied.
 // Returns NULL if was not set previously.
@@ -117,8 +116,9 @@ void model_get_scale(te_model* model, vec3 out);
 void model_get_world_position(te_model* model, vec3 out);
 
 // Sets path (relative to the `res` directory) to skeleton to use.
-void model_set_skeleton(te_model* model, const char* relative_path);
-const char* model_get_skeleton(te_model* model);
+void model_set_skeleton_path(te_model* model, const char* relative_path);
+const char* model_get_skeleton_path(te_model* model);
+struct te_skeleton* model_get_skeleton(te_model* model);
 
 // Sets color of the model in the RGBA format in range [0.0; 1.0].
 // Note that alpha will be ignored if @ref model_enable_transparency is disabled.
@@ -205,44 +205,6 @@ struct te_world* model_get_world(te_model* model);
 const char* model_get_type_id(void);
 // Registers the type in the type database.
 void model_register_type(void);
-
-// ------------------------------------------------------------------------------------------------
-//                                       SKELETON API
-// ------------------------------------------------------------------------------------------------
-
-// same as in skeleton.vert.glsl
-// you can increase this value if needed (but also update the shader)
-#define TE_MAX_BONE_COUNT 80
-
-struct te_skeleton_bone;
-typedef struct te_skeleton_bone {
-    mat4 inverse_bind_pose_mat;
-
-    char* name;
-
-    // Transform of the node relative to its parent.
-    vec3 position;
-    vec3 rotation; // in degrees
-    vec3 scale;
-
-    unsigned int child_count;
-    unsigned int parent_idx; // if has no parent then 0xFFFFFFFF
-} te_skeleton_bone;
-
-typedef struct te_skeleton {
-    // Stores root bone at index 0, then child nodes, example:
-    // 0 - root (child_count = 2)
-    //   1 - child1 (child_count = 1)
-    //     2 - child1_child
-    //   3 - child2 (child_count = 0)
-    te_skeleton_bone* bones;
-
-    unsigned int bone_count;
-} te_skeleton;
-
-// Loads skeleton from a file relative to the `res` directory.
-te_skeleton* skeleton_create(const char* relative_path);
-void skeleton_destroy(te_skeleton* skeleton);
 
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API
