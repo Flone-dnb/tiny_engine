@@ -157,8 +157,6 @@ prv_skeleton_destroy(te_skeleton* skeleton) {
         const te_skeleton_animation** ptr = item;
         te_skeleton_animation* anim = (te_skeleton_animation*)*ptr;
         skeleton_animation_destroy(anim);
-
-        free(anim);
     }
     hashmap_free(skeleton->preloaded_anims);
 
