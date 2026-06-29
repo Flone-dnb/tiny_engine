@@ -109,7 +109,7 @@ prv_skeleton_create(const char* relative_path) {
         sizeof(te_skeleton_animation*), 8, 0, 0, anim_hash, anim_compare, NULL, NULL);
 
     // Read bone count.
-    (void)fread(&skeleton->bone_count, sizeof(skeleton->bone_count), 1, fp);
+    fread(&skeleton->bone_count, sizeof(skeleton->bone_count), 1, fp);
     skeleton->bones = malloc(sizeof(te_skeleton_bone) * skeleton->bone_count);
 
     // Read bones.
@@ -184,22 +184,22 @@ load_skeleton_bone(
     // Read name.
     bone->name = NULL;
     unsigned int name_len;
-    (void)fread(&name_len, sizeof(name_len), 1, fp);
+    fread(&name_len, sizeof(name_len), 1, fp);
     if (name_len > 0) {
         bone->name = malloc(sizeof(char) * (name_len + 1));
-        (void)fread(bone->name, sizeof(char), name_len, fp);
+        fread(bone->name, sizeof(char), name_len, fp);
         bone->name[name_len] = 0;
     }
 
     // Read local transform.
-    (void)fread(bone->position, sizeof(float), 3, fp);
-    (void)fread(bone->rotation, sizeof(float), 3, fp);
-    (void)fread(bone->scale, sizeof(float), 3, fp);
+    fread(bone->position, sizeof(float), 3, fp);
+    fread(bone->rotation, sizeof(float), 3, fp);
+    fread(bone->scale, sizeof(float), 3, fp);
 
-    (void)fread(&bone->inverse_bind_pose_mat[0], sizeof(mat4), 1, fp);
+    fread(&bone->inverse_bind_pose_mat[0], sizeof(mat4), 1, fp);
 
     // Read child count.
-    (void)fread(&bone->child_count, sizeof(bone->child_count), 1, fp);
+    fread(&bone->child_count, sizeof(bone->child_count), 1, fp);
 
     for (unsigned int i = 0; i < bone->child_count; i++) {
         load_skeleton_bone(skeleton, fp, bone_idx, this_bone_idx);
@@ -259,7 +259,7 @@ skeleton_get_skinning_mats(te_skeleton* skeleton) {
 static bool
 load_bone_anim(te_skeleton_animation* skel_anim, unsigned int bone_anim_idx, FILE* fp) {
     unsigned int bone_idx;
-    (void)fread(&bone_idx, sizeof(bone_idx), 1, fp);
+    fread(&bone_idx, sizeof(bone_idx), 1, fp);
 
     if (bone_idx == 0xFFFFFFFF) {
         // Bone info ended.
@@ -276,28 +276,29 @@ load_bone_anim(te_skeleton_animation* skel_anim, unsigned int bone_anim_idx, FIL
 
     while (1) {
         unsigned int channel_type;
-        (void)fread(&channel_type, sizeof(channel_type), 1, fp);
+        fread(&channel_type, sizeof(channel_type), 1, fp);
 
         unsigned int interpolation_type;
-        (void)fread(&interpolation_type, sizeof(interpolation_type), 1, fp);
+        fread(&interpolation_type, sizeof(interpolation_type), 1, fp);
 
         // Count keyframes.
         unsigned int keyframe_count = 0;
         float timestamp = 0.0f;
         vec3 value;
         while (1) {
-            (void)fread(&timestamp, sizeof(timestamp), 1, fp);
+            fread(&timestamp, sizeof(timestamp), 1, fp);
             if (timestamp < 0.0f) {
                 // Get back to the first keyframe.
                 fseek(
                     fp,
-                    -(sizeof(timestamp)
-                      + keyframe_count * (sizeof(timestamp) + sizeof(value))),
+                    -(long int)((
+                        sizeof(timestamp)
+                        + keyframe_count * (sizeof(timestamp) + sizeof(value)))),
                     SEEK_CUR);
                 break;
             }
 
-            (void)fread(value, sizeof(vec3), 1, fp);
+            fread(value, sizeof(vec3), 1, fp);
             keyframe_count += 1;
         }
         if (keyframe_count == 0) {
@@ -321,15 +322,15 @@ load_bone_anim(te_skeleton_animation* skel_anim, unsigned int bone_anim_idx, FIL
         for (unsigned int i = 0; i < keyframe_count; i++) {
             keyframes[i].interpolation_type = interpolation_type;
 
-            (void)fread(&keyframes[i].time, sizeof(keyframes[i].time), 1, fp);
-            (void)fread(keyframes[i].value, sizeof(vec3), 1, fp);
+            fread(&keyframes[i].time, sizeof(keyframes[i].time), 1, fp);
+            fread(keyframes[i].value, sizeof(vec3), 1, fp);
         }
 
         // Read keyframe end mark (-1.0f).
-        (void)fread(&timestamp, sizeof(timestamp), 1, fp);
+        fread(&timestamp, sizeof(timestamp), 1, fp);
 
         unsigned int end_mark;
-        (void)fread(&end_mark, sizeof(end_mark), 1, fp);
+        fread(&end_mark, sizeof(end_mark), 1, fp);
         if (end_mark == 0xFFFFFFFF) {
             // Bone info ended.
             return true;
@@ -367,7 +368,7 @@ prv_skeleton_preload_animation_file(
     }
 
     // Read animated bone count.
-    (void)fread(&anim->bone_anim_count, sizeof(anim->bone_anim_count), 1, fp);
+    fread(&anim->bone_anim_count, sizeof(anim->bone_anim_count), 1, fp);
     anim->bone_anims = malloc(sizeof(te_skeleton_bone_animation) * anim->bone_anim_count);
 
     for (unsigned int i = 0; i < anim->bone_anim_count; i++) {
@@ -378,7 +379,7 @@ prv_skeleton_preload_animation_file(
         }
     }
 
-    (void)fread(&anim->duration_sec, sizeof(anim->duration_sec), 1, fp);
+    fread(&anim->duration_sec, sizeof(anim->duration_sec), 1, fp);
 
     fclose(fp);
 
