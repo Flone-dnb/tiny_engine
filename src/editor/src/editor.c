@@ -198,7 +198,8 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
     }
 
     // Setup light.
-    te_light_params* light_params = renderer_get_light_params(game_manager_get_renderer(editor->game_manager));
+    te_light_params* light_params =
+        renderer_get_light_params(game_manager_get_renderer(editor->game_manager));
     glm_vec3_copy((vec3){1.0f, -1.0f, 1.0f}, light_params->directional_light_direction);
     glm_vec3_normalize(light_params->directional_light_direction);
     glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, light_params->directional_light_color);
@@ -441,7 +442,7 @@ on_new_world_file_selected(void* custom, const char* path_to_file) {
         return;
     }
 
-    world_save_to_file(editor->game_world, relative_path);
+    world_save_to_file(editor->game_world, relative_path, true);
 
     editor->game_world_relative_path = relative_path;
 
@@ -464,7 +465,7 @@ editor_on_keyboard_button_pressed(
             editor_show_file_dialog(
                 editor, editor, on_new_world_file_selected, NULL, TE_FDM_SELECT_NEW_FILE);
         } else {
-            world_save_to_file(editor->game_world, editor->game_world_relative_path);
+            world_save_to_file(editor->game_world, editor->game_world_relative_path, true);
         }
         return;
     } else if (button == TE_KB_TAB) {

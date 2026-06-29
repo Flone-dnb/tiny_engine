@@ -44,7 +44,7 @@ struct te_skeleton {
 };
 
 typedef struct te_skeleton_animation_keyframe {
-    enum te_animation_interpolation_type interpolation_type;
+    enum te_keyframe_interpolation_type interpolation_type;
     float time;
     vec3 value; // for rotation stores 3 components of a normalized quaternion
 } te_skeleton_animation_keyframe;
@@ -72,6 +72,9 @@ typedef struct te_skeleton_animation {
     // To determine which item (from this array) animated which bone
     // use @ref bone_anim_indices.
     te_skeleton_bone_animation* bone_anims;
+
+    // The number of elements in the array @ref bone_anims.
+    unsigned int bone_anim_count;
 
     float duration_sec;
 } te_skeleton_animation;
@@ -127,8 +130,21 @@ prv_skeleton_create(const char* relative_path) {
 
 static void
 skeleton_animation_destroy(te_skeleton_animation* anim) {
-    log_error("not implemeted");
-    abort();
+    free(anim->name);
+
+    free(anim->bone_anim_indices);
+
+    for (unsigned int i = 0; i < anim->bone_anim_count; i++) {
+        te_skeleton_bone_animation* bone_anim = &anim->bone_anims[i];
+
+        for (unsigned int channel_type = 0; channel_type < TE_ACT_COUNT; channel_type++) {
+            if (bone_anim->keyframe_count[channel_type] == 0) {
+                continue;
+            }
+            free(bone_anim->keyframes[channel_type]);
+        }
+    }
+    free(anim->bone_anims);
 
     free(anim);
 }
@@ -241,8 +257,7 @@ skeleton_get_skinning_mats(te_skeleton* skeleton) {
 }
 
 static bool
-load_bone_anim(te_skeleton* skeleton, te_skeleton_animation* anim, FILE* fp) {
-    // Read bone index.
+load_bone_anim(te_skeleton_animation* skel_anim, unsigned int bone_anim_idx, FILE* fp) {
     unsigned int bone_idx;
     fread(&bone_idx, sizeof(bone_idx), 1, fp);
 
@@ -251,8 +266,81 @@ load_bone_anim(te_skeleton* skeleton, te_skeleton_animation* anim, FILE* fp) {
         return false;
     }
 
-    (void)skeleton;
-    (void)anim;
+    // Init bone anim.
+    skel_anim->bone_anim_indices[bone_idx] = bone_anim_idx;
+    te_skeleton_bone_animation* bone_anim = &skel_anim->bone_anims[bone_anim_idx];
+    for (unsigned int i = 0; i < TE_ACT_COUNT; i++) {
+        bone_anim->keyframe_count[i] = 0;
+        bone_anim->keyframes[i] = NULL;
+    }
+
+    while (1) {
+        unsigned int channel_type;
+        fread(&channel_type, sizeof(channel_type), 1, fp);
+
+        unsigned int interpolation_type;
+        fread(&interpolation_type, sizeof(interpolation_type), 1, fp);
+
+        // Count keyframes.
+        unsigned int keyframe_count = 0;
+        float timestamp = 0.0f;
+        vec3 value;
+        while (1) {
+            fread(&timestamp, sizeof(timestamp), 1, fp);
+            if (timestamp < 0.0f) {
+                // Get back to the first keyframe.
+                fseek(
+                    fp,
+                    -(sizeof(timestamp)
+                      + keyframe_count * (sizeof(timestamp) + sizeof(value))),
+                    SEEK_CUR);
+                break;
+            }
+
+            fread(value, sizeof(vec3), 1, fp);
+            keyframe_count += 1;
+        }
+        if (keyframe_count == 0) {
+            log_error_fmt(
+                "expected to find at least a single keyframe for a bone with index %u",
+                bone_idx);
+            abort();
+        }
+
+        bone_anim->keyframe_count[channel_type] = keyframe_count;
+        te_skeleton_animation_keyframe* keyframes =
+            malloc(sizeof(te_skeleton_animation_keyframe) * keyframe_count);
+        if (bone_anim->keyframes[channel_type] != NULL) {
+            log_error_fmt(
+                "found duplicate animation channels on the bone %u, channel %u", bone_idx,
+                channel_type);
+            abort();
+        }
+        bone_anim->keyframes[channel_type] = keyframes;
+
+        for (unsigned int i = 0; i < keyframe_count; i++) {
+            keyframes[i].interpolation_type = interpolation_type;
+
+            fread(&keyframes[i].time, sizeof(keyframes[i].time), 1, fp);
+            fread(keyframes[i].value, sizeof(vec3), 1, fp);
+        }
+
+        // Read keyframe end mark (-1.0f).
+        fread(&timestamp, sizeof(timestamp), 1, fp);
+
+        unsigned int end_mark;
+        fread(&end_mark, sizeof(end_mark), 1, fp);
+        if (end_mark == 0xFFFFFFFF) {
+            // Bone info ended.
+            return true;
+        } else if (end_mark == 0xFFFFFFFF - 1) {
+            // Same bone next but different channel.
+            continue;
+        } else {
+            log_error_fmt("unexpected bone end mark found: %u", end_mark);
+            abort();
+        }
+    }
 
     return true;
 }
@@ -278,12 +366,16 @@ prv_skeleton_preload_animation_file(
         anim->bone_anim_indices[i] = 0xFFFFFFFF;
     }
 
-    anim->bone_anims = NULL;
+    // Read animated bone count.
+    fread(&anim->bone_anim_count, sizeof(anim->bone_anim_count), 1, fp);
+    anim->bone_anims = malloc(sizeof(te_skeleton_bone_animation) * anim->bone_anim_count);
 
-    if (!load_bone_anim(skeleton, anim, fp)) {
-        log_error_fmt(
-            "unable to find a single bone animation info in file %s", path_to_anim_file);
-        abort();
+    for (unsigned int i = 0; i < anim->bone_anim_count; i++) {
+        if (!load_bone_anim(anim, i, fp)) {
+            log_error_fmt(
+                "unable to find a single bone animation info in file %s", path_to_anim_file);
+            abort();
+        }
     }
 
     fread(&anim->duration_sec, sizeof(anim->duration_sec), 1, fp);

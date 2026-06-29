@@ -247,6 +247,45 @@ import_skeleton(
 }
 
 static bool
+keyframe_value_eps_cmp(vec3 a, vec3 b) {
+    const float eps = 0.001f;
+    return fabsf(a[0] - b[0]) <= eps && fabsf(a[1] - b[1]) <= eps && fabsf(a[2] - b[2]) <= eps;
+}
+
+static void
+keyframe_value_to_vec3(enum te_animation_channel_type channel_type, float* values, vec3 dst) {
+    if (channel_type == TE_ACT_ROTATION) {
+        vec4 value;
+        glm_quat_copy(values, value);
+        glm_quat_normalize(value);
+
+        glm_vec3_copy(value, dst);
+    } else {
+        glm_vec3_copy(values, dst);
+    }
+}
+
+static void
+count_anim_bone_count(
+    unsigned int* bone_idx, cgltf_node* skin_node, cgltf_animation* anim,
+    unsigned int* anim_bone_count) {
+    for (unsigned int channel_idx = 0; channel_idx < anim->channels_count; channel_idx++) {
+        if (anim->channels[channel_idx].target_node < 0
+            || anim->channels[channel_idx].target_node != skin_node) {
+            continue;
+        }
+
+        (*anim_bone_count) += 1;
+        break;
+    }
+
+    (*bone_idx) += 1;
+    for (size_t node_idx = 0; node_idx < skin_node->children_count; node_idx++) {
+        count_anim_bone_count(bone_idx, skin_node->children[node_idx], anim, anim_bone_count);
+    }
+}
+
+static bool
 save_anim_channel(
     unsigned int* bone_idx, cgltf_node* skin_node, cgltf_animation* anim,
     float* anim_duration_sec, FILE* fp) {
@@ -291,6 +330,9 @@ save_anim_channel(
         if (!found_channel) {
             // Write bone index before writing all channels that affect it.
             fwrite(bone_idx, sizeof(*bone_idx), 1, fp);
+        } else {
+            unsigned int same_bone_mark = 0xFFFFFFFF - 1;
+            fwrite(&same_bone_mark, sizeof(same_bone_mark), 1, fp);
         }
         found_channel = true;
 
@@ -306,14 +348,18 @@ save_anim_channel(
         // Write interpolation type.
         unsigned char interpolation_type = 0;
         if (channel->sampler->interpolation == cgltf_interpolation_type_step) {
-            interpolation_type = TE_AIT_STEP;
+            interpolation_type = TE_KIT_STEP;
         } else if (channel->sampler->interpolation == cgltf_interpolation_type_linear) {
-            interpolation_type = TE_AIT_LINEAR;
+            interpolation_type = TE_KIT_LINEAR;
         } else if (channel->sampler->interpolation == cgltf_interpolation_type_cubic_spline) {
-            interpolation_type = TE_AIT_CUBIC_SPLINE;
+            //interpolation_type = TE_KIT_CUBIC_SPLINE;
+            // Usually GLTF stores linear but if found a file with cubic spline test how our
+            // keyframe skipping algorithm works with it.
+            log_error("unsupported interpolation type - TODO?");
+            abort();
         } else {
-            log_error(
-                "found an animation channel with an unexpected channel interpolation type");
+            log_error("found an animation channel with an unexpected channel "
+                      "interpolation type");
             abort();
         }
         fwrite(&interpolation_type, sizeof(interpolation_type), 1, fp);
@@ -340,14 +386,72 @@ save_anim_channel(
 
         const unsigned int value_comp_count = channel_type == TE_ACT_ROTATION ? 4 : 3;
 
-        // Write key-value pairs.
-        for (size_t i = 0; i < output->count; i++) {
-            fwrite(timestamps, time_stride, 1, fp);
-            fwrite(values, value_stride, 1, fp);
+        // Process all keyframes but remove redundant values.
+
+        fwrite(timestamps, time_stride, 1, fp);
+        fwrite(values, value_stride, 1, fp);
+
+        vec3 first_value;
+        keyframe_value_to_vec3(channel_type, values, first_value);
+
+        float prev_timestamp = *timestamps;
+        vec3 prev_value;
+        glm_vec3_copy(first_value, prev_value);
+
+        timestamps += 1;
+        values += value_comp_count;
+
+        vec3 step;
+        bool step_found = false;
+        bool write_keyframe = true;
+        for (size_t i = 1; i < output->count; i++) {
+            vec3 value;
+            keyframe_value_to_vec3(channel_type, values, value);
+
+            if (i + 1 < output->count) {
+                if (!step_found) {
+                    vec3 diff;
+                    glm_vec3_sub(value, prev_value, diff);
+                    glm_vec3_copy(diff, step);
+
+                    step_found = true;
+                    write_keyframe = false;
+                } else {
+                    vec3 expected;
+                    glm_vec3_copy(prev_value, expected);
+                    glm_vec3_add(expected, step, expected);
+
+                    if (keyframe_value_eps_cmp(value, expected)) {
+                        write_keyframe = false;
+                    } else {
+                        fwrite(&prev_timestamp, time_stride, 1, fp);
+                        fwrite(prev_value, sizeof(vec3), 1, fp);
+
+                        vec3 diff;
+                        glm_vec3_sub(value, prev_value, diff);
+                        glm_vec3_copy(diff, step);
+
+                        write_keyframe = false;
+                    }
+                }
+            }
+
+            if (write_keyframe) {
+                fwrite(timestamps, time_stride, 1, fp);
+                fwrite(value, sizeof(vec3), 1, fp);
+            }
+
+            glm_vec3_copy(value, prev_value);
+            prev_timestamp = *timestamps;
 
             timestamps += 1;
             values += value_comp_count;
+
+            write_keyframe = true;
         }
+
+        float end_mark = -1.0f;
+        fwrite(&end_mark, sizeof(end_mark), 1, fp);
     }
 
     (*bone_idx) += 1;
@@ -381,8 +485,14 @@ import_animation(
         abort();
     }
 
-    // Write channels.
+    // Write animated bone count.
     unsigned int bone_idx = 0;
+    unsigned int anim_bone_count = 0;
+    count_anim_bone_count(&bone_idx, skin_root_node, anim, &anim_bone_count);
+    fwrite(&anim_bone_count, sizeof(anim_bone_count), 1, fp);
+
+    // Write bone animations.
+    bone_idx = 0;
     float anim_duration = 0.0f;
     if (!save_anim_channel(&bone_idx, skin_root_node, anim, &anim_duration, fp)) {
         log_error("unable to find a single animation channel that animates skeleton bones");
@@ -442,7 +552,8 @@ save_primitive(
             }
             if (primitive->attributes[i].data->component_type != cgltf_component_type_r_32f) {
                 log_error_fmt(
-                    "found GLTF mesh with unsupported position component type %d, expected "
+                    "found GLTF mesh with unsupported position component type %d, "
+                    "expected "
                     "float",
                     primitive->attributes[i].data->type);
                 abort();
@@ -474,7 +585,8 @@ save_primitive(
             }
             if (primitive->attributes[i].data->component_type != cgltf_component_type_r_32f) {
                 log_error_fmt(
-                    "found GLTF mesh with unsupported texcoord component type %d, expected "
+                    "found GLTF mesh with unsupported texcoord component type %d, "
+                    "expected "
                     "float",
                     primitive->attributes[i].data->type);
                 abort();
@@ -741,7 +853,8 @@ import_file_as_world(
               || (filename[name_idx] >= '0' && filename[name_idx] <= '9')
               || filename[name_idx] == '-' || filename[name_idx] == '_')) {
             log_error_fmt(
-                "file %s contains forbidden characters in the name, allowed characters: A-z, "
+                "file %s contains forbidden characters in the name, allowed characters: "
+                "A-z, "
                 "0-9, _, -",
                 path_to_file);
             free(res_path);
@@ -922,7 +1035,7 @@ import_file_as_world(
                 abort();
             }
 
-            world_save_to_file(world, relative_path);
+            world_save_to_file(world, relative_path, false);
 
             free(relative_path);
             free(world_path);

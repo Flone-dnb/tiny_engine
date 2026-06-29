@@ -45,12 +45,12 @@ enum te_animation_channel_type {
     TE_ACT_COUNT, // <- marks the size of this enum
 };
 
-enum te_animation_interpolation_type {
-    TE_AIT_STEP = 0,
-    TE_AIT_LINEAR,
-    TE_AIT_CUBIC_SPLINE,
+enum te_keyframe_interpolation_type {
+    TE_KIT_STEP = 0,
+    TE_KIT_LINEAR,
+    TE_KIT_CUBIC_SPLINE,
 
-    TE_AIT_COUNT, // <- marks the size of this enum
+    TE_KIT_COUNT, // <- marks the size of this enum
 };
 
 // Loads skeleton from a file relative to the `res` directory.

@@ -499,32 +499,33 @@ prv_save_widget_recursive(te_config* config, te_widget* widget) {
 }
 
 void
-world_save_to_file(te_world* world, const char* relative_path) {
+world_save_to_file(te_world* world, const char* relative_path, bool write_light_params) {
     te_config* config = config_create(NULL);
 
-    // Save lighting data.
-    te_light_params* light_params =
-        renderer_get_light_params(game_manager_get_renderer(world->game_manager));
-    const unsigned int section_idx = config_create_section(config, "light_params");
-    config_section_set_float_array(
-        config, section_idx, "directional_light_color", light_params->directional_light_color,
-        4);
-    config_section_set_float_array(
-        config, section_idx, "directional_light_direction",
-        light_params->directional_light_direction, 3);
-    config_section_set_float_array(
-        config, section_idx, "point_light_color", light_params->point_light_color, 4);
-    config_section_set_float_array(
-        config, section_idx, "point_light_pos_and_dist",
-        light_params->point_light_pos_and_dist, 4);
-    config_section_set_float_array(
-        config, section_idx, "ambient_light_color", light_params->ambient_light_color, 3);
-    config_section_set_float_array(
-        config, section_idx, "clear_color", light_params->clear_color, 3);
-    config_section_set_float_array(
-        config, section_idx, "distance_fog_color", light_params->distance_fog_color, 3);
-    config_section_set_float_array(
-        config, section_idx, "distance_fog_range", light_params->distance_fog_range, 2);
+    if (write_light_params) {
+        te_light_params* light_params =
+            renderer_get_light_params(game_manager_get_renderer(world->game_manager));
+        const unsigned int section_idx = config_create_section(config, "light_params");
+        config_section_set_float_array(
+            config, section_idx, "directional_light_color",
+            light_params->directional_light_color, 4);
+        config_section_set_float_array(
+            config, section_idx, "directional_light_direction",
+            light_params->directional_light_direction, 3);
+        config_section_set_float_array(
+            config, section_idx, "point_light_color", light_params->point_light_color, 4);
+        config_section_set_float_array(
+            config, section_idx, "point_light_pos_and_dist",
+            light_params->point_light_pos_and_dist, 4);
+        config_section_set_float_array(
+            config, section_idx, "ambient_light_color", light_params->ambient_light_color, 3);
+        config_section_set_float_array(
+            config, section_idx, "clear_color", light_params->clear_color, 3);
+        config_section_set_float_array(
+            config, section_idx, "distance_fog_color", light_params->distance_fog_color, 3);
+        config_section_set_float_array(
+            config, section_idx, "distance_fog_range", light_params->distance_fog_range, 2);
+    }
 
     // Save game objects.
     if (world->spawned_root_game_object_count > 0) {
