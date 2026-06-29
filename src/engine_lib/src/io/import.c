@@ -270,8 +270,7 @@ count_anim_bone_count(
     unsigned int* bone_idx, cgltf_node* skin_node, cgltf_animation* anim,
     unsigned int* anim_bone_count) {
     for (unsigned int channel_idx = 0; channel_idx < anim->channels_count; channel_idx++) {
-        if (anim->channels[channel_idx].target_node < 0
-            || anim->channels[channel_idx].target_node != skin_node) {
+        if (anim->channels[channel_idx].target_node != skin_node) {
             continue;
         }
 
@@ -293,8 +292,7 @@ save_anim_channel(
     // In GLTF 1 channel animates 1 property (such as translation).
     bool found_channel = false;
     for (unsigned int channel_idx = 0; channel_idx < anim->channels_count; channel_idx++) {
-        if (anim->channels[channel_idx].target_node < 0
-            || anim->channels[channel_idx].target_node != skin_node) {
+        if (anim->channels[channel_idx].target_node != skin_node) {
             continue;
         }
 

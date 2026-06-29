@@ -42,7 +42,7 @@ void world_play_sound_3d(te_world* world, struct te_sound* sound, vec3 world_pos
 
 // Serializes all spawned world entities into the specified file
 // (path relative to the `res` directory).
-// Specify @ref write_light_params to also save world lighting parameters.
+// Specify `write_light_params` to also save world lighting parameters.
 void world_save_to_file(te_world* world, const char* relative_path, bool write_light_params);
 
 // Deserializes game entities from the specified file (path relative to the `res` directory)

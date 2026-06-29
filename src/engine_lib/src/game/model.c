@@ -1245,7 +1245,7 @@ prv_model_load_geo(
     }
 
     unsigned char id = 0;
-    fread(&id, sizeof(id), 1, fp);
+    (void)fread(&id, sizeof(id), 1, fp);
     if (id != 0 && id != 100) { // unskinned vertex format ID || skinned vertex format ID
         log_error_fmt(
             "failed to load model geometry from file %s: unexpected file type ID %u",
@@ -1255,15 +1255,15 @@ prv_model_load_geo(
     const bool is_skinned = id == 100;
 
     unsigned int vertex_count = 0;
-    fread(&vertex_count, sizeof(vertex_count), 1, fp);
+    (void)fread(&vertex_count, sizeof(vertex_count), 1, fp);
 
     (*vertices) = vertex_pack_create(vertex_count, is_skinned);
 
-    fread((*vertices)->data, (*vertices)->vertex_sizeof, (*vertices)->vertex_count, fp);
+    (void)fread((*vertices)->data, (*vertices)->vertex_sizeof, (*vertices)->vertex_count, fp);
 
-    fread(index_count, sizeof(*index_count), 1, fp);
+    (void)fread(index_count, sizeof(*index_count), 1, fp);
     (*indices) = malloc(sizeof(unsigned short) * (*index_count));
-    fread(*indices, sizeof(unsigned short), *index_count, fp);
+    (void)fread(*indices, sizeof(unsigned short), *index_count, fp);
 
     fclose(fp);
     free(res_path);
