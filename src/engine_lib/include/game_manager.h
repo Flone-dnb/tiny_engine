@@ -23,12 +23,14 @@ void game_manager_destroy_world(te_game_manager* game_manager, struct te_world* 
 
 // Registers a custom function to be called every frame.
 // Returns a unique ID of the callback that you need to use to unregister the callback
-// in @ref game_manager_unregister_tick_callback.
-unsigned int game_manager_add_tick_callback(te_game_manager* game_manager,
-    void* custom, void (*on_tick)(void* custom, float delta_time_sec));
+// in @ref game_manager_remove_tick_callback.
+unsigned int game_manager_add_tick_callback(
+    te_game_manager* game_manager, void* custom,
+    void (*on_tick)(void* custom, float delta_time_sec));
 
-// Unregisters a callback that was previously registered using @ref game_manager_register_tick_callback.
-void game_manager_remove_tick_callback(te_game_manager* game_manager, unsigned int callback_id);
+// Unregisters a callback that was previously registered using @ref game_manager_add_tick_callback.
+void
+game_manager_remove_tick_callback(te_game_manager* game_manager, unsigned int callback_id);
 
 // Returns window that owns game manager.
 // Always valid pointer to the window. You should not free/destroy returned pointer.
