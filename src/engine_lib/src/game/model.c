@@ -175,7 +175,7 @@ struct te_model {
     te_world* world;
 
     // NULL if not attached.
-    te_model* child_model;
+    te_model** child_models;
     te_model* parent_model;
     te_camera* attached_camera;
 
@@ -203,6 +203,9 @@ struct te_model {
     // Stores invalid value if not spawned (see @ref world). OpenGL ID of the shader program used.
     unsigned int shader_prog_id;
 
+    // Number of elements in the array @ref child_models.
+    unsigned int child_model_count;
+
     // NULL if not spawned or if @ref skeleton_relative_path is NULL.
     te_skeleton* skeleton;
 
@@ -221,7 +224,8 @@ model_create() {
     model->name = NULL;
     model->render_data_handle = 0xffffffff;
     model->shader_prog_id = 0xffffffff;
-    model->child_model = NULL;
+    model->child_models = NULL;
+    model->child_model_count = 0;
     model->attached_camera = NULL;
     model->parent_model = NULL;
     model->tex_relative_path = NULL;
@@ -265,14 +269,16 @@ model_destroy(te_model* model) {
         model->custom_on_before_destroyed(model);
     }
 
-    if (model->child_model != NULL) {
-        if (model->child_model->world != NULL) {
+    for (unsigned int i = 0; i < model->child_model_count; i++ ) {
+        if (model->child_models[i]->world != NULL) {
             // We should have despawned it in our despawn callback.
             log_error("expected the child model to be despawned already");
             abort();
         }
-        model_destroy(model->child_model);
+        model_destroy(model->child_models[i]);
     }
+    free(model->child_models);
+    model->child_model_count = 0;
 
     if (model->attached_camera != NULL) {
         if (camera_get_world(model->attached_camera) != NULL) {
@@ -399,15 +405,18 @@ prv_model_calc_world_normal_matrices(te_model* model, mat4 world, mat3 normal) {
         glm_mat3_mul(data->normal_mat, normal, normal);
     }
 
-    if (model->child_model != NULL && model->child_model->render_data_handle != 0xffffffff) {
-        te_model_renderer* renderer = prv_model_get_renderer(model->child_model);
-        te_model_render_data* data = model_renderer_get_render_data_tmp(
-            renderer, model->child_model->render_data_handle);
+    for (unsigned int i = 0; i < model->child_model_count; i++) {
+        te_model* child_model = model->child_models[i];
 
-        prv_model_calc_world_normal_matrices(
-            model->child_model, data->world_mat, data->normal_mat);
-        data->aabb_world =
-            aabb_shape_convert_to_world(&model->child_model->aabb_local, data->world_mat);
+        if (child_model->render_data_handle != 0xffffffff) {
+            te_model_renderer* renderer = prv_model_get_renderer(child_model);
+            te_model_render_data* data = model_renderer_get_render_data_tmp(renderer, child_model->render_data_handle);
+
+            prv_model_calc_world_normal_matrices(
+                child_model, data->world_mat, data->normal_mat);
+            data->aabb_world =
+                aabb_shape_convert_to_world(&child_model->aabb_local, data->world_mat);
+        }
     }
 
     if (model->attached_camera != NULL) {
@@ -654,18 +663,49 @@ model_set_parent(te_model* model, te_model* new_parent) {
         return;
     }
 
-    if (new_parent != NULL && new_parent->child_model != NULL) {
-        log_error("only 1 model can be attached");
-        abort();
+    if (model->parent_model != NULL) {
+        // Remove from old parent.
+        for (unsigned int i = 0; i < model->parent_model->child_model_count; i++) {
+            if (model != model->parent_model->child_models[i]) {
+                continue;
+            }
+
+            if (model->parent_model->child_model_count == 1) {
+                model->parent_model->child_model_count = 0;
+                free(model->parent_model->child_models);
+                model->parent_model->child_models = NULL;
+            } else {
+                te_model** new_children =
+                    malloc(sizeof(te_model*) * (model->parent_model->child_model_count - 1));
+                memcpy(new_children, model->parent_model->child_models, sizeof(te_model*) * i);
+                memcpy(
+                    new_children + i, model->parent_model->child_models + (i + 1),
+                    sizeof(te_model*) * (model->parent_model->child_model_count - i - 1));
+
+                free(model->parent_model->child_models);
+                model->parent_model->child_models = new_children;
+                model->parent_model->child_model_count -= 1;
+            }
+            break;
+        }
     }
 
-    if (model->parent_model != NULL) {
-        model->parent_model->child_model = NULL;
-    }
     model->parent_model = new_parent;
 
     if (new_parent != NULL) {
-        new_parent->child_model = model;
+        // Add to new parent.
+        te_model** new_children =
+            malloc(sizeof(te_model*) * (new_parent->child_model_count + 1));
+        memcpy(
+            new_children, new_parent->child_models,
+            sizeof(te_model*) * new_parent->child_model_count);
+
+        new_children[new_parent->child_model_count] = model;
+
+        free(new_parent->child_models);
+        new_parent->child_models = new_children;
+
+        new_parent->child_model_count += 1;
     }
 
     if (model->world == NULL) {
@@ -710,8 +750,17 @@ model_get_parent(te_model* model) {
 }
 
 te_model*
-model_get_child_model(te_model* model) {
-    return model->child_model;
+model_get_child_model(te_model* model, unsigned int index) {
+    if (index < model->child_model_count) {
+        return model->child_models[index];
+    } else {
+        return NULL;
+    }
+}
+
+unsigned int
+model_get_child_model_count(te_model* model) {
+    return model->child_model_count;
 }
 
 void
@@ -875,8 +924,10 @@ prv_model_add_to_model_renderer(te_model* model) {
         }
     }
 
+    te_game_manager* game_manager = world_get_game_manager(model->world);
+
     if (model->skeleton_relative_path != NULL) {
-        model->skeleton = prv_skeleton_create(model->skeleton_relative_path);
+        model->skeleton = prv_skeleton_create(model->skeleton_relative_path, game_manager);
     }
 
     // Add to rendering.
@@ -903,7 +954,7 @@ prv_model_add_to_model_renderer(te_model* model) {
 
         if (model->tex_relative_path != NULL) {
             te_texture_manager* texture_manager = renderer_get_texture_manager(
-                game_manager_get_renderer(world_get_game_manager(model->world)));
+                game_manager_get_renderer(game_manager));
 
             data->tex_id = texture_manager_request_texture(
                 texture_manager, model->tex_relative_path, MODEL_TEX_LOAD_OPTION);
@@ -1141,14 +1192,18 @@ on_spawned(te_model* model, te_world* world) {
     model->world = world;
     prv_model_add_to_model_renderer(model);
 
-    if (model->child_model != NULL) {
-        if (model->child_model->world != NULL) {
+    // Spawn child models.
+    for (unsigned int i = 0; i < model->child_model_count; i++) {
+        te_model* child_model = model->child_models[i];
+
+        if (child_model->world != NULL) {
             log_error("expected the child model to not be spawned yet");
             abort();
         }
-        on_spawned(model->child_model, world);
+        on_spawned(child_model, world);
     }
 
+    // Spawn attached camera.
     if (model->attached_camera != NULL) {
         if (camera_get_world(model->attached_camera) != NULL) {
             log_error("expected the attached camera to not be spawned yet");
@@ -1161,9 +1216,16 @@ on_spawned(te_model* model, te_world* world) {
 
 static void
 on_despawned(te_model* model) {
-    if (model->child_model != NULL && model->child_model->world != NULL) {
-        on_despawned(model->child_model);
+    // Despawn child models.
+    for (unsigned int i = 0; i < model->child_model_count; i++) {
+        te_model* child_model = model->child_models[i];
+
+        if (child_model->world != NULL) {
+            on_despawned(child_model);
+        }
     }
+
+    // Despawn attached camera.
     if (model->attached_camera != NULL && camera_get_world(model->attached_camera) != NULL) {
         camera_get_game_object_info(model->attached_camera)
             ->on_despawned(model->attached_camera);

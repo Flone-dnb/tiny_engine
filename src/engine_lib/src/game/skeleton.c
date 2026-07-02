@@ -2,9 +2,12 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <game_manager.h>
 #include <io/filesystem.h>
 #include <math_funcs.h>
 #include <cglm/affine.h>
+#include <cglm/quat.h>
+#include <cglm/euler.h>
 #include <hashmap.c/hashmap.h>
 
 struct te_skeleton_bone;
@@ -23,6 +26,8 @@ typedef struct te_skeleton_bone {
 } te_skeleton_bone;
 
 struct te_skeleton {
+    te_game_manager* game_manager;
+
     struct hashmap* preloaded_anims;
 
     // The number of items in this array is @ref bone_count.
@@ -40,13 +45,20 @@ struct te_skeleton {
     // Stored outside of the bones array to be passed to the shader.
     mat4* skinning_mats;
 
+    // NULL if not playing an animation, otherwise reference to the animation.
+    // Do not destroy/free this pointer, references an animation from @ref preloaded_anims.
+    te_skeleton_animation* playing_anim;
+
     unsigned int bone_count;
+
+    // ID used to unregister tick callback.
+    unsigned int tick_callback_id;
 };
 
 typedef struct te_skeleton_animation_keyframe {
     enum te_keyframe_interpolation_type interpolation_type;
     float time;
-    vec3 value; // for rotation stores 3 components of a normalized quaternion
+    vec4 value; // for rotation quaternion, for others 4th component is zero
 } te_skeleton_animation_keyframe;
 
 // Animates transform of a single skeleton bone.
@@ -55,7 +67,7 @@ typedef struct te_skeleton_bone_animation {
     unsigned int keyframe_count[TE_ACT_COUNT];
 } te_skeleton_bone_animation;
 
-typedef struct te_skeleton_animation {
+struct te_skeleton_animation {
     // Not NULL, unique name of the animation within a skeleton.
     char* name;
 
@@ -77,7 +89,12 @@ typedef struct te_skeleton_animation {
     unsigned int bone_anim_count;
 
     float duration_sec;
-} te_skeleton_animation;
+
+    // ---------------------------------- runtime params
+
+    float current_time_sec;
+    bool loop;
+};
 
 // Command hash for hashmap.
 static uint64_t
@@ -99,14 +116,16 @@ static void load_skeleton_bone(
     te_skeleton* skeleton, FILE* fp, unsigned int* bone_idx, unsigned int parent_bone_idx);
 
 te_skeleton*
-prv_skeleton_create(const char* relative_path) {
-    char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
-
-    FILE* fp = fopen(res_path, "rb");
+prv_skeleton_create(const char* relative_path, te_game_manager* game_manager) {
     te_skeleton* skeleton = malloc(sizeof(te_skeleton));
+    skeleton->game_manager = game_manager;
+    skeleton->playing_anim = NULL;
 
     skeleton->preloaded_anims = hashmap_new(
         sizeof(te_skeleton_animation*), 8, 0, 0, anim_hash, anim_compare, NULL, NULL);
+
+    char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
+    FILE* fp = fopen(res_path, "rb");
 
     // Read bone count.
     fread(&skeleton->bone_count, sizeof(skeleton->bone_count), 1, fp);
@@ -123,7 +142,7 @@ prv_skeleton_create(const char* relative_path) {
     skeleton->skinning_mats = malloc(sizeof(mat4) * skeleton->bone_count);
 
     // Init bone transforms (first update).
-    skeleton_update(skeleton);
+    prv_skeleton_update(skeleton, 0.0f);
 
     return skeleton;
 }
@@ -151,6 +170,8 @@ skeleton_animation_destroy(te_skeleton_animation* anim) {
 
 void
 prv_skeleton_destroy(te_skeleton* skeleton) {
+    skeleton_stop_animation(skeleton);
+
     size_t iter = 0;
     void* item;
     while (hashmap_iter(skeleton->preloaded_anims, &iter, &item)) {
@@ -205,6 +226,128 @@ load_skeleton_bone(
 }
 
 static void
+skeleton_bone_interpolate_pos_scale(
+    float curr_time_sec, te_skeleton_bone_animation* bone_anim,
+    enum te_animation_channel_type channel_type, mat4 out) {
+    const unsigned int keyframe_count = bone_anim->keyframe_count[channel_type];
+    te_skeleton_animation_keyframe* keyframes = bone_anim->keyframes[channel_type];
+
+#if defined(DEBUG)
+    if (keyframe_count == 0) {
+        log_error("expected to have at least 1 keyframe");
+        abort();
+    }
+#endif
+
+    unsigned int left_idx = 0;
+    for (; left_idx < keyframe_count;) {
+        if (curr_time_sec > keyframes[left_idx].time) {
+            left_idx += 1;
+            continue;
+        }
+        if (left_idx > 0) {
+            left_idx -= 1;
+        }
+        break;
+    }
+
+    vec3 out_value;
+
+    if (left_idx == keyframe_count - 1
+        || keyframes[left_idx].interpolation_type == TE_KIT_STEP) {
+        glm_vec3_copy(keyframes[left_idx].value, out_value);
+    } else {
+        const float factor = (curr_time_sec - keyframes[left_idx].time)
+                             / (keyframes[left_idx + 1].time - keyframes[left_idx].time);
+
+        if (keyframes[left_idx].interpolation_type == TE_KIT_LINEAR) {
+            glm_vec3_lerp(
+                keyframes[left_idx].value, keyframes[left_idx + 1].value, factor, out_value);
+        } else {
+            float s = glm_smoothstep(0.0f, 1.0f, factor);
+            glm_vec3_lerp(
+                keyframes[left_idx].value, keyframes[left_idx + 1].value, s, out_value);
+        }
+    }
+
+    if (channel_type == TE_ACT_SCALE) {
+        glm_scale_make(out, out_value);
+    } else {
+        glm_translate_make(out, out_value);
+    }
+}
+
+static void
+skeleton_bone_interpolate_rotation(
+    float curr_time_sec, te_skeleton_bone_animation* bone_anim, mat4 out) {
+    const unsigned int keyframe_count = bone_anim->keyframe_count[TE_ACT_ROTATION];
+    te_skeleton_animation_keyframe* keyframes = bone_anim->keyframes[TE_ACT_ROTATION];
+
+#if defined(DEBUG)
+    if (keyframe_count == 0) {
+        log_error("expected to have at least 1 keyframe");
+        abort();
+    }
+#endif
+
+    unsigned int left_idx = 0;
+    for (; left_idx < keyframe_count;) {
+        if (curr_time_sec > keyframes[left_idx].time) {
+            left_idx += 1;
+            continue;
+        }
+        if (left_idx > 0) {
+            left_idx -= 1;
+        }
+        break;
+    }
+
+    vec4 from;
+    glm_vec4_copy(keyframes[left_idx].value, from);
+
+    if (left_idx == keyframe_count - 1
+        || keyframes[left_idx].interpolation_type == TE_KIT_STEP) {
+        mat4 mat;
+        glm_quat_mat4(from, mat);
+
+        vec3 rot;
+        glm_euler_angles(mat, rot);
+        rot[0] = glm_deg(rot[0]);
+        rot[1] = glm_deg(rot[1]);
+        rot[2] = glm_deg(rot[2]);
+
+        math_make_rotation_mat(rot, out);
+        return;
+    }
+
+    const float factor = (curr_time_sec - keyframes[left_idx].time)
+                         / (keyframes[left_idx + 1].time - keyframes[left_idx].time);
+
+    vec4 to;
+    glm_vec4_copy(keyframes[left_idx + 1].value, to);
+
+    vec4 result;
+
+    if (keyframes[left_idx].interpolation_type == TE_KIT_LINEAR) {
+        glm_quat_slerp(from, to, factor, result);
+    } else {
+        float s = glm_smoothstep(0.0f, 1.0f, factor);
+        glm_quat_slerp(from, to, s, result);
+    }
+
+    mat4 mat;
+    glm_quat_mat4(result, mat);
+
+    vec3 rot;
+    glm_euler_angles(mat, rot);
+    rot[0] = glm_deg(rot[0]);
+    rot[1] = glm_deg(rot[1]);
+    rot[2] = glm_deg(rot[2]);
+
+    math_make_rotation_mat(rot, out);
+}
+
+static void
 update_skeleton_bone_skinning_mat(
     te_skeleton* skeleton, unsigned int* bone_idx, mat4 parent_transform) {
     te_skeleton_bone* bone = &skeleton->bones[*bone_idx];
@@ -223,6 +366,29 @@ update_skeleton_bone_skinning_mat(
         glm_translate_make(mat2, bone->position);
         glm_mat4_mul(mat2, global_transform, global_transform);
 
+        if (skeleton->playing_anim != NULL
+            && skeleton->playing_anim->bone_anim_indices[*bone_idx] != 0xFFFFFFFF) {
+            te_skeleton_bone_animation* bone_anim =
+                &skeleton->playing_anim
+                     ->bone_anims[skeleton->playing_anim->bone_anim_indices[*bone_idx]];
+
+            skeleton_bone_interpolate_pos_scale(
+                skeleton->playing_anim->current_time_sec, bone_anim, TE_ACT_SCALE, mat1);
+
+            skeleton_bone_interpolate_rotation(
+                skeleton->playing_anim->current_time_sec, bone_anim, mat2);
+
+            // Scale, rotate.
+            glm_mat4_mul(mat2, mat1, mat1);
+
+            // Translate.
+            skeleton_bone_interpolate_pos_scale(
+                skeleton->playing_anim->current_time_sec, bone_anim, TE_ACT_POSITION, mat2);
+            glm_mat4_mul(mat2, mat1, mat1);
+
+            glm_mat4_mul(mat1, global_transform, global_transform);
+        }
+
         glm_mat4_mul(parent_transform, global_transform, global_transform);
     }
 
@@ -236,7 +402,20 @@ update_skeleton_bone_skinning_mat(
 }
 
 void
-skeleton_update(te_skeleton* skeleton) {
+prv_skeleton_update(te_skeleton* skeleton, float delta_time_sec) {
+    if (skeleton->playing_anim != NULL) {
+        te_skeleton_animation* anim = skeleton->playing_anim;
+
+        anim->current_time_sec += delta_time_sec;
+
+        if (anim->loop) {
+            anim->current_time_sec = fmodf(anim->current_time_sec, anim->duration_sec);
+        } else {
+            anim->current_time_sec =
+                glm_clamp(anim->current_time_sec, 0.0f, anim->duration_sec);
+        }
+    }
+
     mat4 identity;
     glm_mat4_identity(identity);
 
@@ -273,19 +452,19 @@ load_bone_anim(te_skeleton_animation* skel_anim, unsigned int bone_anim_idx, FIL
     }
 
     while (1) {
-        unsigned int channel_type;
+        unsigned char channel_type;
         fread(&channel_type, sizeof(channel_type), 1, fp);
 
-        unsigned int interpolation_type;
+        unsigned char interpolation_type;
         fread(&interpolation_type, sizeof(interpolation_type), 1, fp);
 
         // Count keyframes.
         unsigned int keyframe_count = 0;
         float timestamp = 0.0f;
-        vec3 value;
+        vec4 value;
         while (1) {
             fread(&timestamp, sizeof(timestamp), 1, fp);
-            if (timestamp < 0.0f) {
+            if (timestamp < -0.5f) {
                 // Get back to the first keyframe.
                 fseek(
                     fp,
@@ -296,7 +475,7 @@ load_bone_anim(te_skeleton_animation* skel_anim, unsigned int bone_anim_idx, FIL
                 break;
             }
 
-            fread(value, sizeof(vec3), 1, fp);
+            fread(value, sizeof(value), 1, fp);
             keyframe_count += 1;
         }
         if (keyframe_count == 0) {
@@ -321,7 +500,7 @@ load_bone_anim(te_skeleton_animation* skel_anim, unsigned int bone_anim_idx, FIL
             keyframes[i].interpolation_type = interpolation_type;
 
             fread(&keyframes[i].time, sizeof(keyframes[i].time), 1, fp);
-            fread(keyframes[i].value, sizeof(vec3), 1, fp);
+            fread(keyframes[i].value, sizeof(value), 1, fp);
         }
 
         // Read keyframe end mark (-1.0f).
@@ -336,8 +515,9 @@ load_bone_anim(te_skeleton_animation* skel_anim, unsigned int bone_anim_idx, FIL
             // Same bone next but different channel.
             continue;
         } else {
-            log_error_fmt("unexpected bone end mark found: %u", end_mark);
-            abort();
+            // Next bone index.
+            fseek(fp, -(long int)(sizeof(end_mark)), SEEK_CUR);
+            return true;
         }
     }
 
@@ -348,6 +528,18 @@ static void
 prv_skeleton_preload_animation_file(
     te_skeleton* skeleton, const char* path_to_anim_file, const char* name,
     unsigned int name_len) {
+    // Check if already loaded.
+    {
+        te_skeleton_animation lookup;
+        lookup.name = (char*)name; // <- only for lookup
+        te_skeleton_animation* lookup_ptr = &lookup;
+        const te_skeleton_animation* const* found =
+            hashmap_get(skeleton->preloaded_anims, &lookup_ptr);
+        if (found != NULL) {
+            return;
+        }
+    }
+
     FILE* fp = fopen(path_to_anim_file, "rb");
     if (fp == NULL) {
         log_error_fmt("failed to open file %s", path_to_anim_file);
@@ -355,6 +547,8 @@ prv_skeleton_preload_animation_file(
     }
 
     te_skeleton_animation* anim = malloc(sizeof(te_skeleton_animation));
+    anim->current_time_sec = 0.0f;
+    anim->loop = false;
 
     anim->name = malloc(sizeof(char) * (name_len + 1));
     memcpy(anim->name, name, sizeof(char) * name_len);
@@ -382,52 +576,106 @@ prv_skeleton_preload_animation_file(
     fclose(fp);
 
     // Add to cache.
-    const te_skeleton_animation* const* found = hashmap_get(skeleton->preloaded_anims, &anim);
-    if (found != NULL) {
-        log_error_fmt(
-            "an animation with the name %s is already loaded: maybe you have 2 files with the "
-            "same name? or you are trying to preload the same animation?",
-            name);
-        abort();
-    }
     hashmap_set(skeleton->preloaded_anims, &anim);
 }
 
 void
-skeleton_load_animations(te_skeleton* skeleton, const char* relative_path_to_dir) {
+skeleton_load_animations(te_skeleton* skeleton, const char* relative_path) {
     unsigned int path_to_anim_dir_len;
-    char* path_to_anim_dir =
-        filesystem_prepend_res_to_path(relative_path_to_dir, &path_to_anim_dir_len);
-
-    unsigned int entry_count;
-    te_filesystem_entry* entries = filesystem_list_directory(path_to_anim_dir, &entry_count);
-
-    for (unsigned int entry_idx = 0; entry_idx < entry_count; entry_idx++) {
-        te_filesystem_entry* entry = &entries[entry_idx];
-        if (!entry->is_dir) {
-            if (entry->name_len >= 6
-                && strncmp(entry->name + entry->name_len - 5, ".anim", 5) == 0) {
-                char* path_to_anim = filesystem_append_path(
-                    path_to_anim_dir, path_to_anim_dir_len, entry->name, entry->name_len,
-                    NULL);
-
-                prv_skeleton_preload_animation_file(
-                    skeleton, path_to_anim, entry->name, entry->name_len);
-
-                free(path_to_anim);
-            }
-        }
-
-        free(entry->name);
+    char* anim_path = filesystem_prepend_res_to_path(relative_path, &path_to_anim_dir_len);
+    if (!filesystem_does_path_exists(anim_path)) {
+        log_error_fmt("the specified path does not exist \"%s\"", anim_path);
+        abort();
     }
-    free(entries);
 
-    free(path_to_anim_dir);
+    if (filesystem_path_is_directory(anim_path)) {
+        // Load all anim files from this directory.
+        unsigned int entry_count;
+        te_filesystem_entry* entries = filesystem_list_directory(anim_path, &entry_count);
+
+        for (unsigned int entry_idx = 0; entry_idx < entry_count; entry_idx++) {
+            te_filesystem_entry* entry = &entries[entry_idx];
+            if (!entry->is_dir) {
+                if (entry->name_len >= 6
+                    && strncmp(entry->name + entry->name_len - 5, ".anim", 5) == 0) {
+                    char* path_to_anim = filesystem_append_path(
+                        anim_path, path_to_anim_dir_len, entry->name, entry->name_len, NULL);
+
+                    prv_skeleton_preload_animation_file(
+                        skeleton, path_to_anim, entry->name, entry->name_len);
+
+                    free(path_to_anim);
+                }
+            }
+
+            free(entry->name);
+        }
+        free(entries);
+    } else {
+        // Load anim file.
+        unsigned int filename_len;
+        const char* filename = filesystem_find_filename(anim_path, true, &filename_len);
+        if (filename_len < 6) {
+            log_error_fmt("invalid anim file path specified: %s", anim_path);
+            abort();
+        }
+        if (strncmp(filename + filename_len - 5, ".anim", 5) != 0) {
+            log_error_fmt("expected .anim extension: %s", anim_path);
+            abort();
+        }
+        prv_skeleton_preload_animation_file(skeleton, anim_path, filename, filename_len);
+    }
+
+    free(anim_path);
 }
 
 void
-skeleton_play_animation(te_skeleton* skeleton, const char* anim_file_name) {
-    (void)skeleton;
-    (void)anim_file_name;
-    //TODO;
+skeleton_play_animation(te_skeleton* skeleton, const char* anim_name, bool loop) {
+    te_skeleton_animation lookup;
+    lookup.name = (char*)anim_name; // <- only for lookup
+    te_skeleton_animation* lookup_ptr = &lookup;
+    te_skeleton_animation* const* found = hashmap_get(skeleton->preloaded_anims, &lookup_ptr);
+    if (found == NULL) {
+        log_error_fmt("unable to find animation %s (was it loaded previously?)", anim_name);
+        abort();
+    }
+
+    skeleton->playing_anim = *found;
+    skeleton->playing_anim->loop = loop;
+    skeleton->playing_anim->current_time_sec = 0.0f;
+
+    prv_skeleton_update(skeleton, 0.0f);
+
+    // Register tick callback to update animation.
+    skeleton->tick_callback_id =
+        game_manager_add_tick_callback(skeleton->game_manager, skeleton, prv_skeleton_update);
+}
+
+void
+skeleton_stop_animation(te_skeleton* skeleton) {
+    if (skeleton->playing_anim == NULL) {
+        return;
+    }
+
+    skeleton->playing_anim->loop = false;
+    skeleton->playing_anim->current_time_sec = 0.0f;
+    skeleton->playing_anim = NULL;
+
+    prv_skeleton_update(skeleton, 0.0f);
+
+    game_manager_remove_tick_callback(skeleton->game_manager, skeleton->tick_callback_id);
+}
+
+void
+skeleton_unload_animations(te_skeleton* skeleton) {
+    skeleton_stop_animation(skeleton);
+
+    size_t iter = 0;
+    void* item;
+    while (hashmap_iter(skeleton->preloaded_anims, &iter, &item)) {
+        const te_skeleton_animation** ptr = item;
+        te_skeleton_animation* anim = (te_skeleton_animation*)*ptr;
+        skeleton_animation_destroy(anim);
+    }
+    hashmap_clear(skeleton->preloaded_anims, false);
 }

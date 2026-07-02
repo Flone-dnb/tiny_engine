@@ -150,7 +150,8 @@ void model_get_uv_offset(te_model* model, vec2 uv_offset);
 // Specify NULL as parent to detach.
 void model_set_parent(te_model* model, te_model* new_parent);
 te_model* model_get_parent(te_model* model);
-te_model* model_get_child_model(te_model* model);
+te_model* model_get_child_model(te_model* model, unsigned int index); // if returns NULL for 0 index then has no children
+unsigned int model_get_child_model_count(te_model* model);
 
 // Same as @ref model_set_parent but attaches a camera. Specify NULL to detach the camera.
 // After attached do not attempt to despawn this camera using the world because the world only operates on "root" cameras.

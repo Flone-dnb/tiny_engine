@@ -13,6 +13,12 @@
 #include <world.h>
 #include <sound_manager.h>
 
+typedef struct te_game_tick_callback {
+    void* custom;
+    void (*on_tick)(void* custom, float delta_time_sec);
+    unsigned int id;
+} te_game_tick_callback;
+
 // Stores all core systems such as game world, physics, audio, renderer and etc.
 struct te_game_manager {
     // Always valid pointer to the window that owns this object. This pointer should not be freed.
@@ -22,11 +28,26 @@ struct te_game_manager {
 
     te_sound_manager* sound_manager;
 
+    // Custom user tick callbacks. The number of elements in this array is @ref tick_callback_count.
+    te_game_tick_callback* tick_callbacks;
+
     // Game worlds. Size of this array is @ref world_count.
     te_world** worlds;
 
     // Number of elements in the @ref worlds array.
     unsigned int world_count;
+
+    // Number of elements in the @ref tick_callbacks array.
+    unsigned int tick_callback_count;
+
+    // Next unique ID of a new tick callback to be used.
+    unsigned int next_tick_callback_id;
+
+    // `true` if we are currently iterating over @ref tick_callbacks.
+    bool is_processing_tick_callbacks;
+
+    // `true` if while processing tick callbacks they changed.
+    bool is_tick_callbacks_changed;
 };
 
 te_game_manager*
@@ -37,6 +58,11 @@ prv_game_manager_create(struct te_window* window) {
     game_manager->window = window;
     game_manager->worlds = NULL;
     game_manager->world_count = 0;
+    game_manager->tick_callbacks = NULL;
+    game_manager->tick_callback_count = 0;
+    game_manager->next_tick_callback_id = 0;
+    game_manager->is_processing_tick_callbacks = false;
+    game_manager->is_tick_callbacks_changed = false;
 
     prv_type_database_init();
 
@@ -100,6 +126,13 @@ prv_game_manager_destroy(te_game_manager* game_manager) {
 
     prv_type_database_deinit();
 
+    if (game_manager->tick_callback_count > 0) {
+        log_error_fmt(
+            "the game manager is destroyed but there are still %u tick callback(s) registered",
+            game_manager->tick_callback_count);
+        abort();
+    }
+
     free(game_manager);
 }
 
@@ -161,6 +194,69 @@ game_manager_destroy_world(te_game_manager* game_manager, te_world* world) {
 
         game_manager->world_count -= 1;
     }
+}
+
+unsigned int
+game_manager_add_tick_callback(
+    te_game_manager* game_manager, void* custom,
+    void (*on_tick)(void* custom, float delta_time_sec)) {
+    te_game_tick_callback* new_callbacks =
+        malloc(sizeof(te_game_tick_callback) * (game_manager->tick_callback_count + 1));
+    memcpy(
+        new_callbacks, game_manager->tick_callbacks,
+        sizeof(te_game_tick_callback) * game_manager->tick_callback_count);
+
+    free(game_manager->tick_callbacks);
+    game_manager->tick_callbacks = new_callbacks;
+
+    te_game_tick_callback* callback = &new_callbacks[game_manager->tick_callback_count];
+    callback->on_tick = on_tick;
+    callback->custom = custom;
+    callback->id = game_manager->next_tick_callback_id;
+
+    game_manager->next_tick_callback_id += 1;
+    game_manager->tick_callback_count += 1;
+
+    if (game_manager->is_processing_tick_callbacks) {
+        game_manager->is_tick_callbacks_changed = true;
+    }
+
+    return callback->id;
+}
+
+void
+game_manager_remove_tick_callback(te_game_manager* game_manager, unsigned int callback_id) {
+    if (game_manager->tick_callback_count == 1) {
+        free(game_manager->tick_callbacks);
+        game_manager->tick_callbacks = NULL;
+        game_manager->tick_callback_count = 0;
+        return;
+    }
+
+    for (unsigned int i = 0; i < game_manager->tick_callback_count; i++) {
+        if (game_manager->tick_callbacks[i].id != callback_id) {
+            continue;
+        }
+
+        te_game_tick_callback* new_callbacks =
+            malloc(sizeof(te_game_tick_callback) * (game_manager->tick_callback_count - 1));
+        memcpy(new_callbacks, game_manager->tick_callbacks, sizeof(te_game_tick_callback) * i);
+        memcpy(
+            new_callbacks + i, game_manager->tick_callbacks + (i + 1),
+            sizeof(te_game_tick_callback) * (game_manager->tick_callback_count - i - 1));
+
+        free(game_manager->tick_callbacks);
+        game_manager->tick_callbacks = new_callbacks;
+
+        if (game_manager->is_processing_tick_callbacks) {
+            game_manager->is_tick_callbacks_changed = true;
+        }
+
+        return;
+    }
+
+    log_error_fmt("unable to find a registered tick callback with ID %u", callback_id);
+    abort();
 }
 
 struct te_window*
@@ -229,6 +325,69 @@ prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
     // Tick worlds.
     for (unsigned int i = 0; i < game_manager->world_count; i++) {
         prv_world_tick(game_manager->worlds[i]);
+    }
+
+    // Tick custom callbacks.
+    {
+        game_manager->is_processing_tick_callbacks = true;
+
+        // Because logic inside a callback can add/remove tick callbacks (array we are iterating)
+        // we track which callbacks we triggered and recheck if needed.
+        unsigned int* notified_ids =
+            malloc(sizeof(unsigned int) * game_manager->tick_callback_count);
+        unsigned int notified_count = 0;
+
+        while(true) {
+            bool check_if_notified = false;
+
+            if (game_manager->is_tick_callbacks_changed) {
+                unsigned int* new_ids = malloc(sizeof(unsigned int) * (notified_count + game_manager->tick_callback_count));
+                memcpy(new_ids, notified_ids, sizeof(unsigned int) * notified_count);
+
+                free(notified_ids);
+                notified_ids = new_ids;
+
+                game_manager->is_tick_callbacks_changed = false;
+                check_if_notified = true;
+            }
+
+            for (unsigned int callback_idx = 0;
+                 callback_idx < game_manager->tick_callback_count; callback_idx++) {
+                te_game_tick_callback* callback = &game_manager->tick_callbacks[callback_idx];
+
+                if (check_if_notified) {
+                    bool notified = false;
+                    for (unsigned int i = 0; i < notified_count; i++) {
+                        if (notified_ids[i] == callback->id) {
+                            notified = true;
+                            break;
+                        }
+                    }
+                    if (notified) {
+                        continue;
+                    }
+                }
+
+                callback->on_tick(callback->custom, delta_time_sec);
+
+                notified_ids[notified_count] = callback->id;
+                notified_count += 1;
+
+                if (game_manager->is_tick_callbacks_changed) {
+                    break;
+                }
+            }
+
+            if (game_manager->is_tick_callbacks_changed) {
+                continue;
+            }
+
+            break;
+        }
+
+        free(notified_ids);
+
+        game_manager->is_processing_tick_callbacks = false;
     }
 }
 

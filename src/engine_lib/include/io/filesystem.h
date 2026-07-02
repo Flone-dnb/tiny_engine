@@ -15,6 +15,7 @@ typedef struct te_filesystem_entry {
 // ------------------------------------------------------------------------------------------------
 
 bool filesystem_does_path_exists(const char* path);
+bool filesystem_path_is_directory(const char* path);
 
 // Recursively creates directories for the specified path (if directories did not existed before).
 void filesystem_ensure_dirs_exist(const char* path);
@@ -28,6 +29,7 @@ void filesystem_copy_file(const char* src, const char* dst);
 
 // Returns pointer to the first character of the filename from the specified path string.
 // Also works for directories.
+// Specify NULL as `ret_len` to ignore returned string length.
 // Returns NULL if filename not found.
 const char*
 filesystem_find_filename(const char* path, bool include_extension, unsigned int* ret_len);

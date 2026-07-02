@@ -247,21 +247,20 @@ import_skeleton(
 }
 
 static bool
-keyframe_value_eps_cmp(vec3 a, vec3 b) {
-    const float eps = 0.001f;
-    return fabsf(a[0] - b[0]) <= eps && fabsf(a[1] - b[1]) <= eps && fabsf(a[2] - b[2]) <= eps;
+keyframe_value_eps_cmp(vec4 a, vec4 b) {
+    const float eps = 0.002f;
+    return fabsf(a[0] - b[0]) <= eps && fabsf(a[1] - b[1]) <= eps && fabsf(a[2] - b[2]) <= eps
+           && fabsf(a[3] - b[3]) <= eps;
 }
 
 static void
-keyframe_value_to_vec3(enum te_animation_channel_type channel_type, float* values, vec3 dst) {
+keyframe_value_to_vec4(enum te_animation_channel_type channel_type, float* values, vec4 dst) {
     if (channel_type == TE_ACT_ROTATION) {
-        vec4 value;
-        glm_quat_copy(values, value);
-        glm_quat_normalize(value);
-
-        glm_vec3_copy(value, dst);
+        glm_quat_copy(values, dst);
+        glm_quat_normalize(dst);
     } else {
         glm_vec3_copy(values, dst);
+        dst[3] = 0.0f;
     }
 }
 
@@ -368,17 +367,11 @@ save_anim_channel(
             abort();
         }
         cgltf_buffer_view* time_buffer_view = input->buffer_view;
-        const size_t time_stride =
-            time_buffer_view->stride == 0 ? sizeof(float) : time_buffer_view->stride;
         float* timestamps = (float*)((char*)time_buffer_view->buffer->data
                                      + (time_buffer_view->offset + input->offset));
 
         // Get values.
         cgltf_buffer_view* value_buffer_view = output->buffer_view;
-        const size_t value_stride =
-            value_buffer_view->stride == 0
-                ? (channel_type == TE_ACT_ROTATION ? sizeof(vec4) : sizeof(vec3))
-                : value_buffer_view->stride;
         float* values = (float*)((char*)value_buffer_view->buffer->data
                                  + (value_buffer_view->offset + output->offset));
 
@@ -386,48 +379,52 @@ save_anim_channel(
 
         // Process all keyframes but remove redundant values.
 
-        fwrite(timestamps, time_stride, 1, fp);
-        fwrite(values, value_stride, 1, fp);
-
-        vec3 first_value;
-        keyframe_value_to_vec3(channel_type, values, first_value);
+        vec4 first_value;
+        keyframe_value_to_vec4(channel_type, values, first_value);
 
         float prev_timestamp = *timestamps;
-        vec3 prev_value;
-        glm_vec3_copy(first_value, prev_value);
+        vec4 prev_value;
+        glm_vec4_copy(first_value, prev_value);
+
+        if (*timestamps < 0.0f) {
+            log_error_fmt("found negative timestamp %f at index 0", *timestamps);
+            abort();
+        }
+        fwrite(timestamps, sizeof(float), 1, fp);
+        fwrite(first_value, sizeof(vec4), 1, fp);
 
         timestamps += 1;
         values += value_comp_count;
 
-        vec3 step;
+        vec4 step;
         bool step_found = false;
         bool write_keyframe = true;
         for (size_t i = 1; i < output->count; i++) {
-            vec3 value;
-            keyframe_value_to_vec3(channel_type, values, value);
+            vec4 value;
+            keyframe_value_to_vec4(channel_type, values, value);
 
             if (i + 1 < output->count) {
                 if (!step_found) {
-                    vec3 diff;
-                    glm_vec3_sub(value, prev_value, diff);
-                    glm_vec3_copy(diff, step);
+                    vec4 diff;
+                    glm_vec4_sub(value, prev_value, diff);
+                    glm_vec4_copy(diff, step);
 
                     step_found = true;
                     write_keyframe = false;
                 } else {
-                    vec3 expected;
-                    glm_vec3_copy(prev_value, expected);
-                    glm_vec3_add(expected, step, expected);
+                    vec4 expected;
+                    glm_vec4_copy(prev_value, expected);
+                    glm_vec4_add(expected, step, expected);
 
                     if (keyframe_value_eps_cmp(value, expected)) {
                         write_keyframe = false;
                     } else {
-                        fwrite(&prev_timestamp, time_stride, 1, fp);
-                        fwrite(prev_value, sizeof(vec3), 1, fp);
+                        fwrite(&prev_timestamp, sizeof(float), 1, fp);
+                        fwrite(prev_value, sizeof(vec4), 1, fp);
 
-                        vec3 diff;
-                        glm_vec3_sub(value, prev_value, diff);
-                        glm_vec3_copy(diff, step);
+                        vec4 diff;
+                        glm_vec4_sub(value, prev_value, diff);
+                        glm_vec4_copy(diff, step);
 
                         write_keyframe = false;
                     }
@@ -435,11 +432,16 @@ save_anim_channel(
             }
 
             if (write_keyframe) {
-                fwrite(timestamps, time_stride, 1, fp);
-                fwrite(value, sizeof(vec3), 1, fp);
+                fwrite(timestamps, sizeof(float), 1, fp);
+                fwrite(value, sizeof(vec4), 1, fp);
             }
 
-            glm_vec3_copy(value, prev_value);
+            if (*timestamps < 0.0f) {
+                log_error_fmt("found negative timestamp %f at index %u", *timestamps, i);
+                abort();
+            }
+
+            glm_vec4_copy(value, prev_value);
             prev_timestamp = *timestamps;
 
             timestamps += 1;

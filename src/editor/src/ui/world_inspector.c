@@ -425,7 +425,7 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
             }
 
             if (info->type == TE_GOT_MODEL) {
-                // Models are special because they can have child model or attached camera.
+                // Models are special because they can have child models or attached camera.
                 te_model* model = info->game_object;
 
                 te_camera* attached_camera = model_get_attached_camera(model);
@@ -434,9 +434,17 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
                     inspector->item_list_count += 1;
                 }
 
-                te_model* child_model = model_get_child_model(model);
-                if (child_model != NULL && model_is_serialization_allowed(child_model)) {
-                    inspector->item_list_count += 1;
+                unsigned int child_idx = 0;
+                while (true) {
+                    te_model* child_model = model_get_child_model(model, child_idx);
+                    if (child_model == NULL) {
+                        break;
+                    }
+
+                    if (model_is_serialization_allowed(child_model)) {
+                        inspector->item_list_count += 1;
+                    }
+                    child_idx += 1;
                 }
             }
 
@@ -479,14 +487,27 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
                         item_info->game_object_info =
                             camera_get_game_object_info(attached_camera);
                         item_info->widget = NULL;
+
+                        item_idx += 1;
                     }
 
-                    te_model* child_model = model_get_child_model(model);
-                    if (child_model != NULL && model_is_serialization_allowed(child_model)) {
-                        te_world_item_info* item_info = &world_items[item_idx];
-                        item_info->indent = 1;
-                        item_info->game_object_info = model_get_game_object_info(child_model);
-                        item_info->widget = NULL;
+                    unsigned int child_idx = 0;
+                    while (true) {
+                        te_model* child_model = model_get_child_model(model, child_idx);
+                        if (child_model == NULL) {
+                            break;
+                        }
+
+                        if (model_is_serialization_allowed(child_model)) {
+                            te_world_item_info* item_info = &world_items[item_idx];
+                            item_info->indent = 1;
+                            item_info->game_object_info =
+                                model_get_game_object_info(child_model);
+                            item_info->widget = NULL;
+
+                            item_idx += 1;
+                        }
+                        child_idx += 1;
                     }
                 }
             }

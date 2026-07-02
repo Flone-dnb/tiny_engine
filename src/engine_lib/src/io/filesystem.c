@@ -68,6 +68,37 @@ filesystem_does_path_exists(const char* path) {
 #endif
 }
 
+bool filesystem_path_is_directory(const char* path) {
+#if defined(WIN32)
+    DWORD dwAttrib = GetFileAttributesA(path);
+    if (dwAttrib == INVALID_FILE_ATTRIBUTES) {
+        log_error_fmt("failed to get path attributes for %s", path);
+        return false;
+    }
+    if (dwAttrib & FILE_ATTRIBUTE_DIRECTORY) {
+        return true;
+    }
+
+    return false;
+#elif __linux__
+    struct stat path_stat;
+    if (stat(path, &path_stat) != 0) {
+        log_error_fmt("failed to get path attributes for %s", path);
+        return false;
+    }
+
+    if (S_ISDIR(path_stat.st_mode)) {
+        return true;
+    } else if (S_ISREG(path_stat.st_mode)) {
+        return false;
+    }
+
+    return false;
+#else
+#error "unsupported OS"
+#endif
+}
+
 void
 filesystem_remove_file(const char* path) {
 #if defined(WIN32)
@@ -133,18 +164,24 @@ filesystem_find_filename(const char* path, bool include_extension, unsigned int*
         }
     }
     if (idx >= len) {
-        (*ret_len) = 0;
+        if (ret_len != NULL) {
+            (*ret_len) = 0;
+        }
         return NULL;
     }
 
     if (include_extension) {
-        (*ret_len) = (unsigned int)(len - idx);
+        if (ret_len != NULL) {
+            (*ret_len) = (unsigned int)(len - idx);
+        }
         return path + idx;
     }
 
     for (size_t i = idx; i < len; i++) {
         if (path[i] == '.') {
-            (*ret_len) = (unsigned int)(i - idx);
+            if (ret_len != NULL) {
+                (*ret_len) = (unsigned int)(i - idx);
+            }
             break;
         }
     }

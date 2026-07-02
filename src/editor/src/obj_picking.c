@@ -109,12 +109,19 @@ obj_picking_find_obj_under_cursor(
             break;
         }
 
-        te_model* child = model_get_child_model(model);
-        if (child != NULL) {
+        // Test child models.
+        unsigned int child_idx = 0;
+        while (true) {
+            te_model* child = model_get_child_model(model, child_idx);
+            if (child == NULL) {
+                break;
+            }
+
             if (test_model_hit(
                     &info, frustum, gizmo, camera_world_pos, camera_world_ray, child)) {
                 break;
             }
+            child_idx += 1;
         }
     }
 

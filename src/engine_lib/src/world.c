@@ -21,7 +21,7 @@
 #include <render/gpu_time_section.h>
 #endif
 
-#define CONFIG_VAR_NAME_HAS_CHILD_MODEL "has_child_model"
+#define CONFIG_VAR_NAME_CHILD_MODEL_COUNT "child_model_count"
 #define CONFIG_VAR_NAME_HAS_ATTACHED_CAMERA "has_attached_camera"
 #define CONFIG_VAR_NAME_CHILD_WIDGET_COUNT "child_widget_count"
 
@@ -527,6 +527,12 @@ world_save_to_file(te_world* world, const char* relative_path, bool write_light_
             config, section_idx, "distance_fog_range", light_params->distance_fog_range, 2);
     }
 
+    const te_type_info* camera_type_info = type_database_get_type_info(camera_get_type_id());
+    if (camera_type_info == NULL) {
+        log_error("expected camera type info to be valid");
+        abort();
+    }
+
     // Save game objects.
     if (world->spawned_root_game_object_count > 0) {
         for (unsigned int idx = 0; idx < world->spawned_root_game_object_count; idx++) {
@@ -547,17 +553,21 @@ world_save_to_file(te_world* world, const char* relative_path, bool write_light_
             if (info->type == TE_GOT_MODEL) {
                 // Special case for models.
                 te_model* model = info->game_object;
-                te_model* child_model = model_get_child_model(model);
+
+                const unsigned int child_model_count = model_get_child_model_count(model);
+                config_section_set_uint(
+                    config, section_idx, CONFIG_VAR_NAME_CHILD_MODEL_COUNT, child_model_count);
+
                 te_camera* attached_camera = model_get_attached_camera(model);
-                if (child_model != NULL) {
-                    config_section_set_bool(
-                        config, section_idx, CONFIG_VAR_NAME_HAS_CHILD_MODEL, true);
-                    (void)type_info_save_to_config(type_info, config, child_model);
-                }
                 if (attached_camera != NULL) {
                     config_section_set_bool(
                         config, section_idx, CONFIG_VAR_NAME_HAS_ATTACHED_CAMERA, true);
-                    (void)type_info_save_to_config(type_info, config, attached_camera);
+                    (void)type_info_save_to_config(camera_type_info, config, attached_camera);
+                }
+
+                for (unsigned int child_idx = 0; child_idx < child_model_count; child_idx++) {
+                    (void)type_info_save_to_config(
+                        type_info, config, model_get_child_model(model, child_idx));
                 }
             }
         }
@@ -696,8 +706,8 @@ world_add_from_file_with_offset(
         void* obj = type_info->create();
         type_info_load_from_config(type_info, config, section_idx, obj);
 
-        const bool has_child_model = config_section_get_bool(
-            config, section_idx, CONFIG_VAR_NAME_HAS_CHILD_MODEL, false);
+        const unsigned int child_model_count = config_section_get_uint(
+            config, section_idx, CONFIG_VAR_NAME_CHILD_MODEL_COUNT, 0);
         const bool has_attached_camera = config_section_get_bool(
             config, section_idx, CONFIG_VAR_NAME_HAS_ATTACHED_CAMERA, false);
         const unsigned int child_widget_count = config_section_get_uint(
@@ -733,19 +743,6 @@ world_add_from_file_with_offset(
             && type_info->get_game_object_info(obj)->type == TE_GOT_MODEL) {
             te_model* model = obj;
 
-            if (has_child_model) {
-                if (section_idx >= section_count) {
-                    log_error_fmt(
-                        "unexpected end of file \"%s\", have %u sections while expected to "
-                        "have more",
-                        relative_path, section_count);
-                    abort();
-                }
-                te_model* child_model = model_create();
-                type_info_load_from_config(model_type_info, config, section_idx, child_model);
-                model_set_parent(child_model, model);
-                section_idx += 1;
-            }
             if (has_attached_camera) {
                 if (section_idx >= section_count) {
                     log_error_fmt(
@@ -757,6 +754,20 @@ world_add_from_file_with_offset(
                 te_camera* camera = camera_create();
                 type_info_load_from_config(camera_type_info, config, section_idx, camera);
                 model_attach_camera(model, camera);
+                section_idx += 1;
+            }
+
+            for (unsigned int child_idx = 0; child_idx < child_model_count; child_idx++) {
+                if (section_idx >= section_count) {
+                    log_error_fmt(
+                        "unexpected end of file \"%s\", have %u sections while expected to "
+                        "have more",
+                        relative_path, section_count);
+                    abort();
+                }
+                te_model* child_model = model_create();
+                type_info_load_from_config(model_type_info, config, section_idx, child_model);
+                model_set_parent(child_model, model);
                 section_idx += 1;
             }
         } else if (child_widget_count > 0) {

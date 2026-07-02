@@ -13,7 +13,7 @@ Supported platforms: Windows (x32, x64), Linux (x32, x64 and ARM64).
 - [X] Simple editor
 - [X] GLTF/GLB import
 - [X] Audio
-- [ ] Skeletal animations
+- [X] Skeletal animations
 - [ ] Particle effects
 - [ ] Simple physics engine
 
