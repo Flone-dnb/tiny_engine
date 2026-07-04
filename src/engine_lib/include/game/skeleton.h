@@ -4,6 +4,7 @@
 #include <cglm/vec3.h>
 
 struct te_game_manager;
+struct te_model;
 
 // Skeleton for skeletal animations.
 typedef struct te_skeleton te_skeleton;
@@ -56,7 +57,7 @@ enum te_keyframe_interpolation_type {
 };
 
 // Loads skeleton from a file relative to the `res` directory.
-te_skeleton* prv_skeleton_create(const char* relative_path, struct te_game_manager* game_manager);
+te_skeleton* prv_skeleton_create(const char* relative_path, struct te_model* model, struct te_game_manager* game_manager);
 void prv_skeleton_destroy(te_skeleton* skeleton);
 
 // Updates inverse bind pose matrices for all skeleton bones and calculates skinning matrices

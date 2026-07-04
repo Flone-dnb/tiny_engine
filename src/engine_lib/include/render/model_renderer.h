@@ -35,8 +35,7 @@ typedef struct te_model_render_data {
     unsigned int skinning_mats_count;
 
     int index_count;
-    unsigned int vbo;
-    unsigned int ebo;
+    unsigned int vao;
 } te_model_render_data;
 
 // Capacity is the initial (reserved) size for data arrays where 1 item is used by 1 model.

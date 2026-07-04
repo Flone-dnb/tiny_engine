@@ -333,6 +333,94 @@ prv_text_widget_on_window_size_changed(void* this) {
     prv_text_widget_update_all_render_data(text_widget);
 }
 
+// Returns visible glyph count.
+// Specify NULL as `glyphs` to just count visible glyphs.
+static unsigned int
+collect_glyphs(
+    te_text_widget* text_widget, unsigned int window_width, unsigned int window_height,
+    te_font_manager* font_manager, te_text_widget_glyph* glyphs) {
+    // in pixels
+    const float glyph_scale =
+        text_widget->text_height / prv_font_manager_get_font_height_to_load();
+    const float glyph_height = text_widget->text_height * (float)window_height;
+    const float line_spacing = text_widget->line_spacing * glyph_height;
+
+    vec2 size;
+    widget_get_screen_size(text_widget->widget, size);
+    glm_vec2_mul(size, (vec2){(float)window_width, (float)window_height}, size);
+
+    // Offset from the widget's pivot.
+    vec2 offset;
+    glm_vec2_copy((vec2){0.0f, 0.0f}, offset);
+
+    // Switch to the first row of the text.
+    offset[1] += glyph_height;
+
+    unsigned int glyph_count = 0;
+    for (unsigned int char_idx = 0; char_idx < text_widget->text_len;
+         char_idx++) {
+        te_font_glyph src_glyph =
+            font_manager_get_glyph(font_manager, (unsigned long)text_widget->text[char_idx]);
+        glyph_count += src_glyph.width > 0 && text_widget->text[char_idx] != '\n';
+
+        if (text_widget->text[char_idx] == '\n' && text_widget->is_multiline) {
+            offset[1] += glyph_height + line_spacing;
+            offset[0] = 0.0f;
+
+            if (offset[1] > size[1]) {
+                // Reached vertical limit.
+                glyph_count -= 1;
+                break;
+            }
+
+            continue; // don't render \n
+        }
+
+        const float distance_to_next_glyph = (float)(src_glyph.advance >> 6) * glyph_scale;
+
+        if (offset[0] + distance_to_next_glyph > size[0]) {
+            if (text_widget->is_multiline) {
+                // Handle word wrap.
+                offset[1] += glyph_height + line_spacing;
+                offset[0] = 0.0f;
+
+                if (offset[1] > size[1]) {
+                    // Reached vertical limit.
+                    glyph_count -= 1;
+                    break;
+                }
+            } else {
+                // Reached horizontal limit.
+                glyph_count -= 1;
+                break;
+            }
+        }
+
+        if (src_glyph.width != 0 && glyphs != NULL) {
+            te_text_widget_glyph* dst_glyph = &glyphs[glyph_count - 1];
+
+            dst_glyph->tex_id = src_glyph.tex_id;
+
+            glm_vec2_copy(
+                (vec2){(float)src_glyph.width * glyph_scale,
+                       (float)src_glyph.height * glyph_scale},
+                dst_glyph->size_pix);
+
+            glm_vec2_copy(offset, dst_glyph->offset_pix);
+            glm_vec2_add(
+                dst_glyph->offset_pix,
+                (vec2){(float)src_glyph.bearing_x * glyph_scale,
+                       -(float)src_glyph.bearing_y * glyph_scale},
+                dst_glyph->offset_pix);
+        }
+
+        // Switch to the next glyph.
+        offset[0] += distance_to_next_glyph;
+    }
+
+    return glyph_count;
+}
+
 static void
 prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
 #if defined(DEBUG)
@@ -364,93 +452,15 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
     glm_vec2_mul(
         data->pos_pix, (vec2){(float)window_width, (float)window_height}, data->pos_pix);
 
-    // Update glyphs (calculating in pixels).
-    const float glyph_scale =
-        text_widget->text_height / prv_font_manager_get_font_height_to_load();
-    const float glyph_height = text_widget->text_height * (float)window_height;
-    const float line_spacing = text_widget->line_spacing * glyph_height;
-
-    vec2 size;
-    widget_get_screen_size(text_widget->widget, size);
-    glm_vec2_mul(size, (vec2){(float)window_width, (float)window_height}, size);
-
-    // Count how much glyphs with non 0 width there are (i.e. displayable glyphs).
     data->glyph_count = 0;
-    for (unsigned int i = 0; i < text_widget->text_len; i++) {
-        te_font_glyph glyph =
-            font_manager_get_glyph(font_manager, (unsigned long)text_widget->text[i]);
-        data->glyph_count += glyph.width > 0;
-    }
     free(data->glyphs);
     data->glyphs = NULL;
 
+    data->glyph_count = collect_glyphs(
+        text_widget, window_width, window_height, font_manager, NULL);
     if (data->glyph_count > 0) {
         data->glyphs = malloc(sizeof(te_text_widget_glyph) * data->glyph_count);
-
-        // Offset from the widget's pivot.
-        vec2 offset;
-        glm_vec2_copy((vec2){0.0f, 0.0f}, offset);
-
-        // Switch to the first row of the text.
-        offset[1] += glyph_height;
-
-        for (unsigned int char_idx = 0, glyph_idx = 0; char_idx < text_widget->text_len;
-             char_idx++) {
-            te_font_glyph src_glyph = font_manager_get_glyph(
-                font_manager, (unsigned long)text_widget->text[char_idx]);
-            glyph_idx += src_glyph.width > 0;
-
-            if (text_widget->text[char_idx] == '\n' && text_widget->is_multiline) {
-                offset[1] += glyph_height + line_spacing;
-                offset[0] = 0.0f;
-
-                if (offset[1] > size[1]) {
-                    // Reached vertical limit.
-                    break;
-                }
-
-                continue; // don't render \n
-            }
-
-            const float distance_to_next_glyph = (float)(src_glyph.advance >> 6) * glyph_scale;
-
-            if (offset[0] + distance_to_next_glyph > size[0]) {
-                if (text_widget->is_multiline) {
-                    // Handle word wrap.
-                    offset[1] += glyph_height + line_spacing;
-                    offset[0] = 0.0f;
-
-                    if (offset[1] > size[1]) {
-                        // Reached vertical limit.
-                        break;
-                    }
-                } else {
-                    // Reached horizontal limit.
-                    break;
-                }
-            }
-
-            if (src_glyph.width != 0) {
-                te_text_widget_glyph* dst_glyph = &data->glyphs[glyph_idx - 1];
-
-                dst_glyph->tex_id = src_glyph.tex_id;
-
-                glm_vec2_copy(
-                    (vec2){(float)src_glyph.width * glyph_scale,
-                           (float)src_glyph.height * glyph_scale},
-                    dst_glyph->size_pix);
-
-                glm_vec2_copy(offset, dst_glyph->offset_pix);
-                glm_vec2_add(
-                    dst_glyph->offset_pix,
-                    (vec2){(float)src_glyph.bearing_x * glyph_scale,
-                           -(float)src_glyph.bearing_y * glyph_scale},
-                    dst_glyph->offset_pix);
-            }
-
-            // Switch to the next glyph.
-            offset[0] += distance_to_next_glyph;
-        }
+        collect_glyphs(text_widget, window_width, window_height, font_manager, data->glyphs);
     }
 }
 

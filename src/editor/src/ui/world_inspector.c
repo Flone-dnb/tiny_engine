@@ -887,7 +887,7 @@ on_button_list_item_clicked(te_button_widget* button) {
                         }
                         case (TE_GOT_MODEL): {
                             model_set_parent(
-                                inspector->selected_item->game_object_info->game_object, NULL);
+                                inspector->selected_item->game_object_info->game_object, NULL, 0xFFFFFFFF);
                             break;
                         }
                     }
@@ -945,7 +945,7 @@ on_button_list_item_clicked(te_button_widget* button) {
                         }
                         model_set_parent(
                             inspector->selected_item->game_object_info->game_object,
-                            target_info->game_object_info->game_object);
+                            target_info->game_object_info->game_object, 0xFFFFFFFF);
                         break;
                     }
                 }

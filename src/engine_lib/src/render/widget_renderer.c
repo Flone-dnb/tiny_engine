@@ -205,6 +205,7 @@ struct te_widget_renderer {
     te_renderer* renderer;
 
     // Quad geometry.
+    unsigned int vao;
     unsigned int vbo;
     unsigned int ebo;
 
@@ -261,19 +262,27 @@ widget_renderer_create(te_renderer* renderer) {
         glm_vec4_copy((vec4){1.0f, 0.0f, 1.0f, 0.0f}, &vertices[3][0]);
         const unsigned short indices[6] = {0, 1, 2, 0, 2, 3};
 
+        glGenVertexArrays(1, &widget_renderer->vao);
         glGenBuffers(1, &widget_renderer->vbo);
         glGenBuffers(1, &widget_renderer->ebo);
 
-        glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
-        glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(vec4), &vertices[0][0], GL_STATIC_DRAW);
+        glBindVertexArray(widget_renderer->vao);
+        {
+            // Vertex buffer.
+            glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
+            glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(vec4), &vertices[0][0], GL_STATIC_DRAW);
 
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
-        glBufferData(
-            GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
+            // Vertex layout.
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(vec4), NULL);
 
-        glBindAttribLocation(widget_renderer->text_shader.prog_id, 0, "vertex");
-        glEnableVertexAttribArray(0);
-
+            // Index buffer.
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
+            glBufferData(
+                GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned short), &indices[0],
+                GL_STATIC_DRAW);
+        }
+        glBindVertexArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
@@ -304,6 +313,7 @@ widget_renderer_destroy(te_widget_renderer* widget_renderer) {
         renderer_get_shader_manager(widget_renderer->renderer),
         widget_renderer->quad_shader.prog_id);
 
+    glDeleteVertexArrays(1, &widget_renderer->vao);
     glDeleteBuffers(1, &widget_renderer->vbo);
     glDeleteBuffers(1, &widget_renderer->ebo);
 
@@ -382,11 +392,9 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
         GPU_SECTION_BEGIN("rect");
 
         glUseProgram(shader->prog_id);
-        glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
-        glActiveTexture(GL_TEXTURE0); // quad texture
+        glBindVertexArray(widget_renderer->vao);
 
-        glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(vec4), NULL);
+        glActiveTexture(GL_TEXTURE0); // quad texture
 
         glUniform2fv(shader->uniform_window_size, 1, window_size);
 
@@ -418,11 +426,9 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
         GPU_SECTION_BEGIN("text");
 
         glUseProgram(shader->prog_id);
-        glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
-        glActiveTexture(GL_TEXTURE0); // glyph's bitmap
+        glBindVertexArray(widget_renderer->vao);
 
-        glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(vec4), NULL);
+        glActiveTexture(GL_TEXTURE0); // glyph's bitmap
 
         vec4 clip_rect;
         glm_vec4_copy((vec4){0.0f, 0.0f, 1.0f, 1.0f}, clip_rect);

@@ -132,16 +132,14 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
     world->name[name_len] = 0;
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    if (GLAD_GL_EXT_disjoint_timer_query == 1) {
-        glGenQueriesEXT(1, &world->gl_query_draw_models);
-        glGenQueriesEXT(1, &world->gl_query_draw_widgets);
+    glGenQueries(1, &world->gl_query_draw_models);
+    glGenQueries(1, &world->gl_query_draw_widgets);
 
-        // Init timers.
-        GPU_TIME_SECTION_BEGIN(world->gl_query_draw_models);
-        GPU_TIME_SECTION_END;
-        GPU_TIME_SECTION_BEGIN(world->gl_query_draw_widgets);
-        GPU_TIME_SECTION_END;
-    }
+    // Init timers.
+    GPU_TIME_SECTION_BEGIN(world->gl_query_draw_models);
+    GPU_TIME_SECTION_END;
+    GPU_TIME_SECTION_BEGIN(world->gl_query_draw_widgets);
+    GPU_TIME_SECTION_END;
 #endif
 
     return world;
@@ -189,10 +187,8 @@ prv_world_destroy(te_world* world) {
     widget_renderer_destroy(world->widget_renderer);
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    if (GLAD_GL_EXT_disjoint_timer_query == 1) {
-        glDeleteQueriesEXT(1, &world->gl_query_draw_models);
-        glDeleteQueriesEXT(1, &world->gl_query_draw_widgets);
-    }
+    glDeleteQueries(1, &world->gl_query_draw_models);
+    glDeleteQueries(1, &world->gl_query_draw_widgets);
 #endif
 
     free(world);
@@ -767,7 +763,7 @@ world_add_from_file_with_offset(
                 }
                 te_model* child_model = model_create();
                 type_info_load_from_config(model_type_info, config, section_idx, child_model);
-                model_set_parent(child_model, model);
+                model_set_parent(child_model, model, 0xFFFFFFFF);
                 section_idx += 1;
             }
         } else if (child_widget_count > 0) {

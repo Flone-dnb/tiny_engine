@@ -1,11 +1,11 @@
-attribute vec3 pos;
-attribute vec3 normal;
-attribute vec2 uv;
+layout (location = 0) in vec3 pos;
+layout (location = 0) in vec3 normal;
+layout (location = 0) in vec2 uv;
 
-varying vec3 frag_pos;
-varying vec3 frag_normal;
-varying vec2 frag_uv;
-varying vec3 view_space_pos;
+out vec3 frag_pos;
+out vec3 frag_normal;
+out vec2 frag_uv;
+out vec3 view_space_pos;
 
 uniform mat4 view_mat;
 uniform mat4 view_proj_mat;

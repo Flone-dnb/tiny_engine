@@ -174,7 +174,7 @@ renderer_create(struct te_window* window) {
     }
 
     // Initialize GLAD.
-    if (gladLoadGLES2Loader((GLADloadproc)SDL_GL_GetProcAddress) == 0) {
+    if (gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress) == 0) {
 #if defined(WIN32)
         SDL_ShowSimpleMessageBox(
             SDL_MESSAGEBOX_ERROR, "Error", "failed to load OpenGL ES", NULL);
@@ -184,22 +184,17 @@ renderer_create(struct te_window* window) {
     }
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    if (GLAD_GL_EXT_disjoint_timer_query != 1) {
-        log_info("the GPU does not support GL_EXT_disjoint_timer_query extension, GPU time "
-                 "metrics are disabled");
-    } else {
-        glGenQueriesEXT(1, &renderer->gl_timestamp_frame_start);
-        glGenQueriesEXT(1, &renderer->gl_timestamp_frame_end);
-        glGenQueriesEXT(1, &renderer->gl_query_draw_debug);
+    glGenQueries(1, &renderer->gl_timestamp_frame_start);
+    glGenQueries(1, &renderer->gl_timestamp_frame_end);
+    glGenQueries(1, &renderer->gl_query_draw_debug);
 
-        // Init timers.
+    // Init timers.
 
-        glQueryCounterEXT(renderer->gl_timestamp_frame_start, GL_TIMESTAMP_EXT);
-        glQueryCounterEXT(renderer->gl_timestamp_frame_end, GL_TIMESTAMP_EXT);
+    glQueryCounter(renderer->gl_timestamp_frame_start, GL_TIMESTAMP);
+    glQueryCounter(renderer->gl_timestamp_frame_end, GL_TIMESTAMP);
 
-        GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_debug);
-        GPU_TIME_SECTION_END;
-    }
+    GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_debug);
+    GPU_TIME_SECTION_END;
 #endif
 
 #if defined(DEBUG)
@@ -291,11 +286,9 @@ renderer_destroy(te_renderer* renderer) {
     free(renderer->light_params);
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    if (GLAD_GL_EXT_disjoint_timer_query == 1) {
-        glDeleteQueriesEXT(1, &renderer->gl_timestamp_frame_start);
-        glDeleteQueriesEXT(1, &renderer->gl_timestamp_frame_end);
-        glDeleteQueriesEXT(1, &renderer->gl_query_draw_debug);
-    }
+    glDeleteQueries(1, &renderer->gl_timestamp_frame_start);
+    glDeleteQueries(1, &renderer->gl_timestamp_frame_end);
+    glDeleteQueries(1, &renderer->gl_query_draw_debug);
 #endif
 
     if (!SDL_GL_DestroyContext(renderer->gl_context)) {
@@ -417,7 +410,7 @@ prv_renderer_calc_frame_stats(te_renderer* renderer, float delta_time_sec) {
 static float
 prv_renderer_get_query_time_ms(unsigned int query) {
     GLuint64 time_elapsed = 0;
-    glGetQueryObjectui64vEXT(query, GL_QUERY_RESULT_EXT, &time_elapsed);
+    glGetQueryObjectui64v(query, GL_QUERY_RESULT, &time_elapsed);
     return (float)(time_elapsed) / 1000000.0f; // nanoseconds to milliseconds
 }
 #endif
@@ -449,11 +442,11 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     te_debug_stats* debug_stats = prv_debug_console_get_stats();
     bool record_new_queries = true;
 
-    if (GLAD_GL_EXT_disjoint_timer_query == 1) {
+    {
         // Check if the GPU finished commands.
         GLuint available = 0;
-        glGetQueryObjectuivEXT(
-            renderer->gl_timestamp_frame_end, GL_QUERY_RESULT_AVAILABLE_EXT, &available);
+        glGetQueryObjectuiv(
+            renderer->gl_timestamp_frame_end, GL_QUERY_RESULT_AVAILABLE, &available);
         if (available == GL_FALSE) {
             // Don't do new queries on this frame, we will wait for the current queries to be finished.
             record_new_queries = false;
@@ -471,16 +464,16 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
             {
                 GLint64 start_time = 0;
                 GLint64 end_time = 0;
-                glGetQueryObjecti64vEXT(
-                    renderer->gl_timestamp_frame_start, GL_QUERY_RESULT_EXT, &start_time);
-                glGetQueryObjecti64vEXT(
-                    renderer->gl_timestamp_frame_end, GL_QUERY_RESULT_EXT, &end_time);
+                glGetQueryObjecti64v(
+                    renderer->gl_timestamp_frame_start, GL_QUERY_RESULT, &start_time);
+                glGetQueryObjecti64v(
+                    renderer->gl_timestamp_frame_end, GL_QUERY_RESULT, &end_time);
                 debug_stats->gpu_time_frame_ms =
                     (float)(end_time - start_time) / 1000000.0f; // nanoseconds to milliseconds
             }
 
             // Mark frame start.
-            glQueryCounterEXT(renderer->gl_timestamp_frame_start, GL_TIMESTAMP_EXT);
+            glQueryCounter(renderer->gl_timestamp_frame_start, GL_TIMESTAMP);
         }
     }
 
@@ -515,7 +508,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         }
 
 #if defined(ENGINE_DEBUG_TOOLS)
-        if (GLAD_GL_EXT_disjoint_timer_query == 1 && record_new_queries) {
+        if (record_new_queries) {
             // Save results of the previous GPU metrics.
             debug_stats->gpu_time_draw_models_ms +=
                 prv_renderer_get_query_time_ms(prv_world_get_gl_query_draw_models(worlds[i]));
@@ -666,8 +659,8 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         GPU_SECTION_END;
     }
 
-    if (GLAD_GL_EXT_disjoint_timer_query == 1 && record_new_queries) {
-        glQueryCounterEXT(renderer->gl_timestamp_frame_end, GL_TIMESTAMP_EXT);
+    if (record_new_queries) {
+        glQueryCounter(renderer->gl_timestamp_frame_end, GL_TIMESTAMP);
     }
 
     // Get CPU time before swap as it might block the current thread.

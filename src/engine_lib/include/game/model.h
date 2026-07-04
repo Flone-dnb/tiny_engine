@@ -28,9 +28,6 @@ enum te_vertex_attribute {
 
 // Manages vertex access.
 typedef struct te_vertex_pack {
-    // Binds vertex attribute names to a shader program. Used after creating a model's shader.
-    void (*bind_gl_vertex_attributes)(unsigned int shader_prog_id);
-
     // Sets pointers to vertex attributes. Used during the rendering.
     void (*set_attribute_pointers)(void);
 
@@ -143,12 +140,13 @@ void model_set_uv_offset(te_model* model, vec2 uv_offset);
 void model_get_uv_offset(te_model* model, vec2 uv_offset);
 
 // Child model's location/rotation/scale will then be treated as relative to the parents location/rotation/scale.
+// If you want to attach to parent model's skeleton bone specify skeleton bone index or 0xFFFFFFFF to just attach to model.
 // If the child model is not spawned but the parent is spawned will make the child model spawned.
 // When parent is despawned/destroyed will also make the attached child despawn/destroy.
 // After attached do not attempt to despawn the child model using the world because the world only operates on "root" models.
 // In order to despawn such model first detach it from the parent to make it "root" model and then despawn using the world.
 // Specify NULL as parent to detach.
-void model_set_parent(te_model* model, te_model* new_parent);
+void model_set_parent(te_model* model, te_model* new_parent, unsigned int parent_bone_idx);
 te_model* model_get_parent(te_model* model);
 te_model* model_get_child_model(te_model* model, unsigned int index); // if returns NULL for 0 index then has no children
 unsigned int model_get_child_model_count(te_model* model);
@@ -213,6 +211,8 @@ void model_register_type(void);
 
 // Returns model's world matrix (includes parent if has any).
 mat4* prv_model_get_world_mat_tmp(te_model* model);
+
+void prv_model_on_after_skeleton_updated(te_model* model);
 
 // Returns 0xFFFFFFFF if the model is not being rendered,
 // otherwise handle into the model renderer's data array.

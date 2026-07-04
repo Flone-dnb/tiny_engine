@@ -23,54 +23,19 @@
 
 #define MODEL_TEX_LOAD_OPTION TE_TLO_GENERATE_MIPMAPS
 
-static void
-bind_gl_vertex_attributes_model_vertex(unsigned int shader_prog_id) {
-    // Position.
-    glBindAttribLocation(shader_prog_id, 0, "pos");
-    glEnableVertexAttribArray(0);
-
-    // Normal.
-    glBindAttribLocation(shader_prog_id, 1, "normal");
-    glEnableVertexAttribArray(1);
-
-    // UV.
-    glBindAttribLocation(shader_prog_id, 2, "uv");
-    glEnableVertexAttribArray(2);
-}
-
-static void
-bind_gl_vertex_attributes_model_vertex_skinned(unsigned int shader_prog_id) {
-    // Position.
-    glBindAttribLocation(shader_prog_id, 0, "pos");
-    glEnableVertexAttribArray(0);
-
-    // Normal.
-    glBindAttribLocation(shader_prog_id, 1, "normal");
-    glEnableVertexAttribArray(1);
-
-    // UV.
-    glBindAttribLocation(shader_prog_id, 2, "uv");
-    glEnableVertexAttribArray(2);
-
-    // Bone indices.
-    glBindAttribLocation(shader_prog_id, 3, "bone_indices");
-    glEnableVertexAttribArray(3);
-
-    // Bone weights.
-    glBindAttribLocation(shader_prog_id, 4, "bone_weights");
-    glEnableVertexAttribArray(4);
-}
-
 void
 prv_model_set_attribute_pointers_model_vertex(void) {
     // Position.
+    glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), NULL);
 
     // Normal.
+    glEnableVertexAttribArray(1);
     glVertexAttribPointer(
         1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)sizeof(vec3));
 
     // UV.
+    glEnableVertexAttribArray(2);
     glVertexAttribPointer(
         2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)(sizeof(vec3) * 2));
 }
@@ -78,22 +43,27 @@ prv_model_set_attribute_pointers_model_vertex(void) {
 void
 prv_model_set_attribute_pointers_model_vertex_skinned(void) {
     // Position.
+    glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned), NULL);
 
     // Normal.
+    glEnableVertexAttribArray(1);
     glVertexAttribPointer(
         1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned), (void*)sizeof(vec3));
 
     // UV.
+    glEnableVertexAttribArray(2);
     glVertexAttribPointer(
         2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned), (void*)(sizeof(vec3) * 2));
 
     // Bone indices.
-    glVertexAttribPointer(
-        3, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(te_model_vertex_skinned),
+    glEnableVertexAttribArray(3);
+    glVertexAttribIPointer(                // <- note `I` here, passing array of integers
+        3, 4, GL_UNSIGNED_BYTE, sizeof(te_model_vertex_skinned),
         (void*)(sizeof(vec3) * 2 + sizeof(vec2)));
 
     // Bone weights.
+    glEnableVertexAttribArray(4);
     glVertexAttribPointer(
         4, 4, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned),
         (void*)(sizeof(vec3) * 2 + sizeof(vec2) + 4 * sizeof(te_bone_index_t)));
@@ -114,7 +84,6 @@ vertex_pack_create(unsigned int vertex_count, bool is_skinned) {
         offset += sizeof(vec3);
         pack->attribute_offsets[TE_VA_UV] = offset;
 
-        pack->bind_gl_vertex_attributes = bind_gl_vertex_attributes_model_vertex;
         pack->set_attribute_pointers = prv_model_set_attribute_pointers_model_vertex;
     } else {
         pack->vertex_sizeof = sizeof(te_model_vertex_skinned);
@@ -130,7 +99,6 @@ vertex_pack_create(unsigned int vertex_count, bool is_skinned) {
         offset += sizeof(te_bone_index_t) * 4;
         pack->attribute_offsets[TE_VA_BONE_WEIGHTS] = offset;
 
-        pack->bind_gl_vertex_attributes = bind_gl_vertex_attributes_model_vertex_skinned;
         pack->set_attribute_pointers = prv_model_set_attribute_pointers_model_vertex_skinned;
     }
     pack->data = malloc(pack->vertex_sizeof * pack->vertex_count);
@@ -206,6 +174,15 @@ struct te_model {
     // Number of elements in the array @ref child_models.
     unsigned int child_model_count;
 
+    // 0xFFFFFFFF if invalid, otherwise points to a bone of @ref parent_model skeleton
+    // to which the model is attached to.
+    unsigned int parent_bone_idx;
+
+    // 0xFFFFFFFF if not being rendered, OpenGL vertex array object, vertex buffer object and element buffer object IDs.
+    unsigned int vao;
+    unsigned int vbo;
+    unsigned int ebo;
+
     // NULL if not spawned or if @ref skeleton_relative_path is NULL.
     te_skeleton* skeleton;
 
@@ -222,8 +199,11 @@ model_create() {
 
     model->world = NULL;
     model->name = NULL;
-    model->render_data_handle = 0xffffffff;
-    model->shader_prog_id = 0xffffffff;
+    model->render_data_handle = 0xFFFFFFFF;
+    model->shader_prog_id = 0xFFFFFFFF;
+    model->parent_bone_idx = 0xFFFFFFFF;
+    model->vbo = 0xFFFFFFFF;
+    model->ebo = 0xFFFFFFFF;
     model->child_models = NULL;
     model->child_model_count = 0;
     model->attached_camera = NULL;
@@ -351,7 +331,7 @@ model_get_name(te_model* model) {
     return model->name;
 }
 
-te_model_renderer*
+static te_model_renderer*
 prv_model_get_renderer(te_model* model) {
 #if defined(DEBUG)
     if (model->world == NULL) {
@@ -365,6 +345,30 @@ prv_model_get_renderer(te_model* model) {
     } else {
         return world_get_transparent_model_renderer(model->world);
     }
+}
+
+static void prv_model_calc_world_normal_matrices(te_model* model, mat4 world, mat3 normal);
+
+static void prv_model_update_child_model_mats(te_model* model) {
+    for (unsigned int i = 0; i < model->child_model_count; i++) {
+        te_model* child_model = model->child_models[i];
+
+        if (child_model->render_data_handle != 0xffffffff) {
+            te_model_renderer* renderer = prv_model_get_renderer(child_model);
+            te_model_render_data* data =
+                model_renderer_get_render_data_tmp(renderer, child_model->render_data_handle);
+
+            prv_model_calc_world_normal_matrices(
+                child_model, data->world_mat, data->normal_mat);
+            data->aabb_world =
+                aabb_shape_convert_to_world(&child_model->aabb_local, data->world_mat);
+        }
+    }
+}
+
+void
+prv_model_on_after_skeleton_updated(te_model* model) {
+    prv_model_update_child_model_mats(model);
 }
 
 static void
@@ -389,35 +393,42 @@ prv_model_calc_world_normal_matrices(te_model* model, mat4 world, mat3 normal) {
     glm_mat4_pick3(normal_mat, normal);
 
     if (model->parent_model != NULL && model->parent_model->render_data_handle != 0xffffffff) {
-        te_model_renderer* renderer = prv_model_get_renderer(model->parent_model);
-        te_model_render_data* data = model_renderer_get_render_data_tmp(
-            renderer, model->parent_model->render_data_handle);
+        if (model->parent_bone_idx != 0xFFFFFFFF) {
+            te_skeleton* skeleton = model->skeleton;
+            if (skeleton == NULL) {
+                log_error("expected parent model to have a skeleton");
+                abort();
+            }
+            glm_mat4_copy(
+                skeleton_get_skinning_mats(skeleton)[model->parent_bone_idx], world);
 
-        // Ignore parent's scale.
-        mat4 parent_world;
-        glm_mat4_copy(data->world_mat, parent_world);
-        math_normalize_safely(parent_world[0]);
-        math_normalize_safely(parent_world[1]);
-        math_normalize_safely(parent_world[2]);
+            // Ignore parent's scale.
+            math_normalize_safely(world[0]);
+            math_normalize_safely(world[1]);
+            math_normalize_safely(world[2]);
 
-        glm_mat4_mul(parent_world, world, world);
+            mat4 normal_mat;
+            glm_mat4_inv(world, normal_mat);
+            glm_mat4_transpose(normal_mat);
 
-        glm_mat3_mul(data->normal_mat, normal, normal);
-    }
+            glm_mat4_pick3(normal_mat, normal);
+        } else {
+            te_model_renderer* renderer = prv_model_get_renderer(model->parent_model);
+            te_model_render_data* data = model_renderer_get_render_data_tmp(
+                renderer, model->parent_model->render_data_handle);
 
-    for (unsigned int i = 0; i < model->child_model_count; i++) {
-        te_model* child_model = model->child_models[i];
+            glm_mat4_copy(data->world_mat, world);
 
-        if (child_model->render_data_handle != 0xffffffff) {
-            te_model_renderer* renderer = prv_model_get_renderer(child_model);
-            te_model_render_data* data = model_renderer_get_render_data_tmp(renderer, child_model->render_data_handle);
+            // Ignore parent's scale.
+            math_normalize_safely(world[0]);
+            math_normalize_safely(world[1]);
+            math_normalize_safely(world[2]);
 
-            prv_model_calc_world_normal_matrices(
-                child_model, data->world_mat, data->normal_mat);
-            data->aabb_world =
-                aabb_shape_convert_to_world(&child_model->aabb_local, data->world_mat);
+            glm_mat3_copy(data->normal_mat, normal);
         }
     }
+
+    prv_model_update_child_model_mats(model);
 
     if (model->attached_camera != NULL) {
         prv_camera_on_parent_model_world_mat_changed(model->attached_camera, model);
@@ -658,7 +669,7 @@ model_get_uv_offset(te_model* model, vec2 uv_offset) {
 }
 
 void
-model_set_parent(te_model* model, te_model* new_parent) {
+model_set_parent(te_model* model, te_model* new_parent, unsigned int parent_bone_idx) {
     if (model->parent_model == new_parent) {
         return;
     }
@@ -691,6 +702,7 @@ model_set_parent(te_model* model, te_model* new_parent) {
     }
 
     model->parent_model = new_parent;
+    model->parent_bone_idx = parent_bone_idx;
 
     if (new_parent != NULL) {
         // Add to new parent.
@@ -885,8 +897,6 @@ prv_model_add_to_model_renderer(te_model* model) {
 
     // Load geometry.
     unsigned int index_count = 0;
-    unsigned int vbo = 0;
-    unsigned int ebo = 0;
     {
         te_vertex_pack* vertices;
         unsigned short* indices;
@@ -901,20 +911,30 @@ prv_model_add_to_model_renderer(te_model* model) {
             mesh_generator_cube(&vertices, &indices, &index_count);
         }
 
-        glGenBuffers(1, &vbo);
-        glGenBuffers(1, &ebo);
+        glGenVertexArrays(1, &model->vao);
+        glGenBuffers(1, &model->vbo);
+        glGenBuffers(1, &model->ebo);
 
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(
-            GL_ARRAY_BUFFER, (GLsizeiptr)(vertices->vertex_sizeof * vertices->vertex_count),
-            vertices->data, GL_STATIC_DRAW);
+        glBindVertexArray(model->vao);
+        {
+            // Vertex buffer.
+            glBindBuffer(GL_ARRAY_BUFFER, model->vbo);
+            glBufferData(
+                GL_ARRAY_BUFFER,
+                (GLsizeiptr)(vertices->vertex_sizeof * vertices->vertex_count), vertices->data,
+                GL_STATIC_DRAW);
 
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-        glBufferData(
-            GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(sizeof(unsigned short) * index_count),
-            indices, GL_STATIC_DRAW);
+            // Index buffer.
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, model->ebo);
+            glBufferData(
+                GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(sizeof(unsigned short) * index_count),
+                indices, GL_STATIC_DRAW);
 
-        vertices->bind_gl_vertex_attributes(model->shader_prog_id);
+            vertices->set_attribute_pointers();
+        }
+        glBindVertexArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
         model->aabb_local = prv_model_calc_aabb(vertices);
 
@@ -927,7 +947,7 @@ prv_model_add_to_model_renderer(te_model* model) {
     te_game_manager* game_manager = world_get_game_manager(model->world);
 
     if (model->skeleton_relative_path != NULL) {
-        model->skeleton = prv_skeleton_create(model->skeleton_relative_path, game_manager);
+        model->skeleton = prv_skeleton_create(model->skeleton_relative_path, model, game_manager);
     }
 
     // Add to rendering.
@@ -943,8 +963,7 @@ prv_model_add_to_model_renderer(te_model* model) {
         glm_vec4_copy(model->color, data->color);
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
 
-        data->vbo = vbo;
-        data->ebo = ebo;
+        data->vao = model->vao;
         data->index_count = (int)index_count;
 
         data->tex_id = 0;
@@ -985,14 +1004,10 @@ prv_model_remove_from_model_renderer(te_model* model) {
     te_model_renderer* model_renderer = prv_model_get_renderer(model);
 
     unsigned int tex_id = 0;
-    unsigned int vbo = 0;
-    unsigned int ebo = 0;
     {
         te_model_render_data* data =
             model_renderer_get_render_data_tmp(model_renderer, model->render_data_handle);
         tex_id = data->tex_id;
-        vbo = data->vbo;
-        ebo = data->ebo;
     }
 
     // Remove from rendering.
@@ -1010,8 +1025,9 @@ prv_model_remove_from_model_renderer(te_model* model) {
     }
 
     // Release geometry.
-    glDeleteBuffers(1, &vbo);
-    glDeleteBuffers(1, &ebo);
+    glGenVertexArrays(1, &model->vao);
+    glDeleteBuffers(1, &model->vbo);
+    glDeleteBuffers(1, &model->ebo);
 
     model->render_data_handle = 0xffffffff;
     model->shader_prog_id = 0xffffffff;
@@ -1258,7 +1274,7 @@ type_despawn(te_world* world, te_model* model) {
     }
 
     if (model->parent_model != NULL) {
-        model_set_parent(model, NULL); // make model to be in the array of root world objects
+        model_set_parent(model, NULL, 0xFFFFFFFF); // make model to be in the array of root world objects
     }
     world_despawn_game_object(
         model->world, model->game_object_info); // despawn root world object

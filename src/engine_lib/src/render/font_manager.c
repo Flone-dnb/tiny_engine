@@ -202,8 +202,8 @@ font_manager_cache_glyphs(
         glBindTexture(GL_TEXTURE_2D, tex_id);
         {
             glTexImage2D(
-                GL_TEXTURE_2D, 0, GL_LUMINANCE, (int)manager->ft_face->glyph->bitmap.width,
-                (int)manager->ft_face->glyph->bitmap.rows, 0, GL_LUMINANCE,
+                GL_TEXTURE_2D, 0, GL_RED, (int)manager->ft_face->glyph->bitmap.width,
+                (int)manager->ft_face->glyph->bitmap.rows, 0, GL_RED,
                 (unsigned int)gl_format, manager->ft_face->glyph->bitmap.buffer);
 
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

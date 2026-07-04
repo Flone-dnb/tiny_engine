@@ -143,11 +143,11 @@ endif()
 message(STATUS "${PROJECT_NAME}: adding dependency \"GLAD\"...")
 set(GLAD_TARGET_NAME glad)
 add_library(${GLAD_TARGET_NAME} STATIC
-    ${RELATIVE_EXT_PATH}/glad_gles20/src/glad.c
-    ${RELATIVE_EXT_PATH}/glad_gles20/include/KHR/khrplatform.h
-    ${RELATIVE_EXT_PATH}/glad_gles20/include/glad/glad.h
+    ${RELATIVE_EXT_PATH}/glad/src/glad.c
+    ${RELATIVE_EXT_PATH}/glad/include/KHR/khrplatform.h
+    ${RELATIVE_EXT_PATH}/glad/include/glad/glad.h
 )
-target_include_directories(${GLAD_TARGET_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH}/glad_gles20/include)
+target_include_directories(${GLAD_TARGET_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH}/glad/include)
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE ${GLAD_TARGET_NAME})
 add_dependencies(${ENGINE_LIB_DEPS_TARGET} ${GLAD_TARGET_NAME})
 

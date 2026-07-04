@@ -1,12 +1,12 @@
 # tiny engine
 
-Tiny 3D game engine for making small low-poly games.
+Tiny 3D game engine for making small games.
 
 Supported platforms: Windows (x32, x64), Linux (x32, x64 and ARM64).
 
 # Roadmap
 
-- [X] Forward renderer using OpenGL ES 2.0
+- [X] Forward renderer using OpenGL 4.5
 - [X] Config management
 - [X] GUI
 - [X] Type reflection

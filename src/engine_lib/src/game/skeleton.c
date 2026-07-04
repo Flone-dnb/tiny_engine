@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <game_manager.h>
+#include <game/model.h>
 #include <io/filesystem.h>
 #include <math_funcs.h>
 #include <cglm/affine.h>
@@ -27,6 +28,9 @@ typedef struct te_skeleton_bone {
 
 struct te_skeleton {
     te_game_manager* game_manager;
+
+    // Do not free/destroy, model that uses this skeleton.
+    te_model* model;
 
     struct hashmap* preloaded_anims;
 
@@ -116,9 +120,11 @@ static void load_skeleton_bone(
     te_skeleton* skeleton, FILE* fp, unsigned int* bone_idx, unsigned int parent_bone_idx);
 
 te_skeleton*
-prv_skeleton_create(const char* relative_path, te_game_manager* game_manager) {
+prv_skeleton_create(
+    const char* relative_path, te_model* model, te_game_manager* game_manager) {
     te_skeleton* skeleton = malloc(sizeof(te_skeleton));
     skeleton->game_manager = game_manager;
+    skeleton->model = model;
     skeleton->playing_anim = NULL;
 
     skeleton->preloaded_anims = hashmap_new(
@@ -421,6 +427,8 @@ prv_skeleton_update(te_skeleton* skeleton, float delta_time_sec) {
 
     unsigned int bone_idx = 0;
     update_skeleton_bone_skinning_mat(skeleton, &bone_idx, identity);
+
+    prv_model_on_after_skeleton_updated(skeleton->model);
 }
 
 unsigned int

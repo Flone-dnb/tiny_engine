@@ -80,9 +80,9 @@ window_create(const char* window_title) {
             abort();
         }
 
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2); // IF CHANGING
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0); // ALSO CHANGE GLAD
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4); // IF CHANGING
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5); // ALSO CHANGE GLAD
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
 #if defined(DEBUG)
         if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG)) {

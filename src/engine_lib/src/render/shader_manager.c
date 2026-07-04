@@ -59,7 +59,7 @@ prv_shader_manager_destroy(te_shader_manager* manager) {
 
 unsigned int
 prv_shader_manager_compile_shader(const char* path, bool is_frag) {
-    const char* prefix = "#version 100\n"
+    const char* prefix = "#version 450\n"
                          "precision highp float;\n"
                          "precision highp int;\n\n";
     const size_t prefix_len = strlen(prefix);
