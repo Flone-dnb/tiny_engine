@@ -117,14 +117,17 @@ typedef struct te_debug_drawer {
     unsigned int line_count;
 
     // Quad geometry.
+    unsigned int vao_quad;
     unsigned int vbo_quad;
     unsigned int ebo_quad;
 
     // AABB geometry.
+    unsigned int vao_aabb;
     unsigned int vbo_aabb;
     unsigned int ebo_aabb;
 
     // Line geometry.
+    unsigned int vao_line;
     unsigned int vbo_line;
     unsigned int ebo_line;
 
@@ -144,10 +147,13 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
     drawer.text_count = 0;
     drawer.aabb_count = 0;
     drawer.line_count = 0;
+    drawer.vao_quad = 0;
     drawer.vbo_quad = 0;
     drawer.ebo_quad = 0;
+    drawer.vao_aabb = 0;
     drawer.vbo_aabb = 0;
     drawer.ebo_aabb = 0;
+    drawer.vao_line = 0;
     drawer.vbo_line = 0;
     drawer.ebo_line = 0;
     drawer.renderer = renderer;
@@ -174,7 +180,8 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
     {
         te_shader_manager* shader_manager = renderer_get_shader_manager(renderer);
         drawer.aabb_shader.prog_id = shader_manager_request_shader(
-            shader_manager, "engine/shader/debug/aabb.vert.glsl", "engine/shader/debug/aabb.frag.glsl");
+            shader_manager, "engine/shader/debug/aabb.vert.glsl",
+            "engine/shader/debug/aabb.frag.glsl");
 
         drawer.aabb_shader.uniform_pos_offset =
             get_uniform_location(drawer.aabb_shader.prog_id, "pos_offset");
@@ -193,8 +200,7 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
 
         drawer.line_shader.uniform_from =
             get_uniform_location(drawer.line_shader.prog_id, "from");
-        drawer.line_shader.uniform_to =
-            get_uniform_location(drawer.line_shader.prog_id, "to");
+        drawer.line_shader.uniform_to = get_uniform_location(drawer.line_shader.prog_id, "to");
         drawer.line_shader.uniform_view_proj_mat =
             get_uniform_location(drawer.line_shader.prog_id, "view_proj_mat");
     }
@@ -208,8 +214,11 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
         glm_vec4_copy((vec4){1.0f, 0.0f, 1.0f, 0.0f}, &vertices[3][0]);
         const unsigned short indices[6] = {0, 1, 2, 0, 2, 3};
 
+        glGenVertexArrays(1, &drawer.vao_quad);
         glGenBuffers(1, &drawer.vbo_quad);
         glGenBuffers(1, &drawer.ebo_quad);
+
+        glBindVertexArray(drawer.vao_quad);
 
         glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_quad);
         glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(vec4), &vertices[0][0], GL_STATIC_DRAW);
@@ -218,9 +227,10 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
         glBufferData(
             GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
 
-        glBindAttribLocation(drawer.text_shader.prog_id, 0, "vertex");
         glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(vec4), NULL);
 
+        glBindVertexArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
@@ -248,8 +258,11 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
             0, 4, 1, 5, 2, 6, 3, 7  // vertical lines
         };
 
+        glGenVertexArrays(1, &drawer.vao_aabb);
         glGenBuffers(1, &drawer.vbo_aabb);
         glGenBuffers(1, &drawer.ebo_aabb);
+
+        glBindVertexArray(drawer.vao_aabb);
 
         glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_aabb);
         glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(vec3), &vertices[0][0], GL_STATIC_DRAW);
@@ -258,9 +271,10 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
         glBufferData(
             GL_ELEMENT_ARRAY_BUFFER, 24 * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
 
-        glBindAttribLocation(drawer.aabb_shader.prog_id, 0, "local_pos");
         glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), NULL);
 
+        glBindVertexArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
@@ -274,8 +288,11 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
 
         const unsigned short indices[2] = {0, 1};
 
+        glGenVertexArrays(1, &drawer.vao_line);
         glGenBuffers(1, &drawer.vbo_line);
         glGenBuffers(1, &drawer.ebo_line);
+
+        glBindVertexArray(drawer.vao_line);
 
         glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_line);
         glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(vec3), &vertices[0][0], GL_STATIC_DRAW);
@@ -284,9 +301,10 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
         glBufferData(
             GL_ELEMENT_ARRAY_BUFFER, 2 * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
 
-        glBindAttribLocation(drawer.line_shader.prog_id, 0, "local_pos");
         glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), NULL);
 
+        glBindVertexArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
@@ -323,21 +341,24 @@ prv_debug_drawer_deinit(struct te_renderer* renderer) {
     shader_manager_mark_unused_shader(shader_manager, drawer.line_shader.prog_id);
 
     // Free geometry.
+    glDeleteVertexArrays(1, &drawer.vao_quad);
     glDeleteBuffers(1, &drawer.vbo_quad);
     glDeleteBuffers(1, &drawer.ebo_quad);
+    glDeleteVertexArrays(1, &drawer.vao_aabb);
     glDeleteBuffers(1, &drawer.vbo_aabb);
     glDeleteBuffers(1, &drawer.ebo_aabb);
+    glDeleteVertexArrays(1, &drawer.vao_line);
     glDeleteBuffers(1, &drawer.vbo_line);
     glDeleteBuffers(1, &drawer.ebo_line);
 
     drawer.renderer = NULL;
 }
 
-void debug_drawer_draw_aabb(te_aabb_shape* aabb, float time_sec) {
-    te_debug_drawer_aabb* aabbs = malloc(sizeof(te_debug_drawer_aabb) * (drawer.aabb_count + 1));
-    memcpy(
-        aabbs, drawer.aabbs,
-        sizeof(te_debug_drawer_aabb) * drawer.aabb_count);
+void
+debug_drawer_draw_aabb(te_aabb_shape* aabb, float time_sec) {
+    te_debug_drawer_aabb* aabbs =
+        malloc(sizeof(te_debug_drawer_aabb) * (drawer.aabb_count + 1));
+    memcpy(aabbs, drawer.aabbs, sizeof(te_debug_drawer_aabb) * drawer.aabb_count);
 
     free(drawer.aabbs);
     drawer.aabbs = aabbs;
@@ -349,7 +370,8 @@ void debug_drawer_draw_aabb(te_aabb_shape* aabb, float time_sec) {
     drawer.aabb_count += 1;
 }
 
-void debug_drawer_draw_line(vec3 from, vec3 to, float time_sec) {
+void
+debug_drawer_draw_line(vec3 from, vec3 to, float time_sec) {
     te_debug_drawer_line* lines =
         malloc(sizeof(te_debug_drawer_line) * (drawer.line_count + 1));
     memcpy(lines, drawer.lines, sizeof(te_debug_drawer_line) * drawer.line_count);
@@ -446,10 +468,7 @@ prv_debug_drawer_draw(
 
     if (drawer.line_count > 0) {
         glUseProgram(drawer.line_shader.prog_id);
-        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_line);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_line);
-
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), NULL);
+        glBindVertexArray(drawer.vao_line);
 
         glUniformMatrix4fv(
             drawer.line_shader.uniform_view_proj_mat, 1, GL_FALSE, (*view_proj_mat)[0]);
@@ -489,12 +508,10 @@ prv_debug_drawer_draw(
 
     if (drawer.aabb_count > 0) {
         glUseProgram(drawer.aabb_shader.prog_id);
-        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_aabb);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_aabb);
+        glBindVertexArray(drawer.vao_aabb);
 
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), NULL);
-
-        glUniformMatrix4fv(drawer.aabb_shader.uniform_view_proj_mat, 1, GL_FALSE, (*view_proj_mat)[0]);
+        glUniformMatrix4fv(
+            drawer.aabb_shader.uniform_view_proj_mat, 1, GL_FALSE, (*view_proj_mat)[0]);
 
         for (unsigned int i = 0; i < drawer.aabb_count;) {
             te_debug_drawer_aabb* wireframe = &drawer.aabbs[i];
@@ -514,11 +531,9 @@ prv_debug_drawer_draw(
                     free(drawer.aabbs);
                     drawer.aabbs = NULL;
                 } else {
-                    te_debug_drawer_aabb* new_wireframes = malloc(
-                        sizeof(te_debug_drawer_aabb) * (drawer.aabb_count - 1));
-                    memcpy(
-                        new_wireframes, drawer.aabbs,
-                        sizeof(te_debug_drawer_aabb) * i);
+                    te_debug_drawer_aabb* new_wireframes =
+                        malloc(sizeof(te_debug_drawer_aabb) * (drawer.aabb_count - 1));
+                    memcpy(new_wireframes, drawer.aabbs, sizeof(te_debug_drawer_aabb) * i);
                     memcpy(
                         new_wireframes + i, drawer.aabbs + (i + 1),
                         sizeof(te_debug_drawer_aabb) * (drawer.aabb_count - i - 1));
@@ -537,11 +552,9 @@ prv_debug_drawer_draw(
         const float font_scale = debug_drawer_default_text_height / font_height;
 
         glUseProgram(drawer.text_shader.prog_id);
-        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_quad);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_quad);
-        glActiveTexture(GL_TEXTURE0); // glyph's bitmap
+        glBindVertexArray(drawer.vao_quad);
 
-        glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(vec4), NULL);
+        glActiveTexture(GL_TEXTURE0); // glyph's bitmap
 
         vec4 clip_rect;
         glm_vec4_copy((vec4){0.0f, 0.0f, 1.0f, 1.0f}, clip_rect);
