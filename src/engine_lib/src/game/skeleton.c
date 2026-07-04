@@ -360,44 +360,48 @@ update_skeleton_bone_skinning_mat(
 
     mat4 global_transform;
     glm_mat4_identity(global_transform);
-    {
-        mat4 mat1;
+
+    mat4 mat1;
+    mat4 mat2;
+
+    if (skeleton->playing_anim != NULL
+        && skeleton->playing_anim->bone_anim_indices[*bone_idx] != 0xFFFFFFFF) {
+        // Apply base scale and rotation (in case they were changed/adjusted using the code).
+        glm_scale_make(mat1, bone->scale);
+        math_make_rotation_mat(bone->rotation, mat2);
+        glm_mat4_mul(mat2, mat1, global_transform);
+
+        te_skeleton_bone_animation* bone_anim =
+            &skeleton->playing_anim
+                 ->bone_anims[skeleton->playing_anim->bone_anim_indices[*bone_idx]];
+
+        skeleton_bone_interpolate_pos_scale(
+            skeleton->playing_anim->current_time_sec, bone_anim, TE_ACT_SCALE, mat1);
+
+        skeleton_bone_interpolate_rotation(
+            skeleton->playing_anim->current_time_sec, bone_anim, mat2);
+
+        // Scale, rotate.
+        glm_mat4_mul(mat2, mat1, mat1);
+
+        // Translate.
+        skeleton_bone_interpolate_pos_scale(
+            skeleton->playing_anim->current_time_sec, bone_anim, TE_ACT_POSITION, mat2);
+        glm_mat4_mul(mat2, mat1, mat1);
+
+        glm_mat4_mul(mat1, global_transform, global_transform);
+    } else {
         glm_scale_make(mat1, bone->scale);
 
-        mat4 mat2;
         math_make_rotation_mat(bone->rotation, mat2);
 
         // Scale, rotate and then translate.
         glm_mat4_mul(mat2, mat1, global_transform);
         glm_translate_make(mat2, bone->position);
         glm_mat4_mul(mat2, global_transform, global_transform);
-
-        if (skeleton->playing_anim != NULL
-            && skeleton->playing_anim->bone_anim_indices[*bone_idx] != 0xFFFFFFFF) {
-            te_skeleton_bone_animation* bone_anim =
-                &skeleton->playing_anim
-                     ->bone_anims[skeleton->playing_anim->bone_anim_indices[*bone_idx]];
-
-            skeleton_bone_interpolate_pos_scale(
-                skeleton->playing_anim->current_time_sec, bone_anim, TE_ACT_SCALE, mat1);
-
-            skeleton_bone_interpolate_rotation(
-                skeleton->playing_anim->current_time_sec, bone_anim, mat2);
-
-            // Scale, rotate.
-            glm_mat4_mul(mat2, mat1, mat1);
-
-            // Translate.
-            skeleton_bone_interpolate_pos_scale(
-                skeleton->playing_anim->current_time_sec, bone_anim, TE_ACT_POSITION, mat2);
-            glm_mat4_mul(mat2, mat1, mat1);
-
-            glm_mat4_mul(mat1, global_transform, global_transform);
-        }
-
-        glm_mat4_mul(parent_transform, global_transform, global_transform);
     }
 
+    glm_mat4_mul(parent_transform, global_transform, global_transform);
     glm_mat4_mul(
         global_transform, bone->inverse_bind_pose_mat, skeleton->skinning_mats[*bone_idx]);
 

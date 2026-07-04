@@ -27,7 +27,7 @@ void main(void) {
         mat4 bone_mat = skinning_mats[bone_indices[i]];
 
         // passing 0 as 4th component for position to avoid applying translation twice
-        skinned_pos += (bone_mat * vec4(pos, 0.0)) * bone_weight;
+        skinned_pos += (bone_mat * vec4(pos, 1.0)) * bone_weight;
         skinned_normal += (bone_mat * vec4(normal, 0.0)) * bone_weight;
     }
     vec3 posModelSpace = skinned_pos.xyz;
