@@ -4,12 +4,14 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include <render/font_manager.h>
 #include <render/renderer.h>
 #include <render/shader_manager.h>
 #include <shape/aabb_shape.h>
 #include <window.h>
 #include <glad/glad.h>
+#include <io/log.h>
 
 #define TE_DEBUG_DRAWER_AABB_INDEX_COUNT 24
 
@@ -388,8 +390,29 @@ debug_drawer_draw_line(vec3 from, vec3 to, float time_sec) {
 }
 
 void
-debug_drawer_draw_text(const char* text, float time_sec) {
-    debug_drawer_draw_text_color(text, time_sec, (vec3){1.0f, 1.0f, 1.0f});
+debug_drawer_draw_text_fmt(float time_sec, const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    va_list args_copy;
+    va_copy(args_copy, args);
+
+    int test_size = vsnprintf(NULL, 0, fmt, args);
+    if (test_size <= 0) {
+        log_error("failed to format last log message");
+        abort();
+    }
+    size_t size = (size_t)test_size;
+    char* message = malloc(size + 1);
+    memset(message, 0, size + 1);
+
+    vsprintf(message, fmt, args_copy);
+
+    va_end(args_copy);
+    va_end(args);
+
+    debug_drawer_draw_text_color(message, time_sec, (vec3){1.0f, 1.0f, 1.0f});
+
+    free(message);
 }
 
 void

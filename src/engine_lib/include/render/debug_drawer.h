@@ -16,7 +16,7 @@ struct te_aabb_shape;
 // adjusted if there is already some text being displayed this way
 // (so multiple text object won't be drawn on top of each other),
 // otherwise specify a position (relative to the window's top-left corner) in range [0.0; 1.0].
-void debug_drawer_draw_text(const char* text, float time_sec);
+void debug_drawer_draw_text_fmt(float time_sec, const char* fmt, ...);
 void debug_drawer_draw_text_color(const char* text, float time_sec, vec3 color);
 void debug_drawer_draw_text_color_pos(const char* text, float time_sec, vec3 color, vec2 pos);
 
@@ -38,6 +38,7 @@ void prv_debug_drawer_init(struct te_renderer* renderer);
 void prv_debug_drawer_deinit(struct te_renderer* renderer);
 
 // Must be called every frame to draw debug objects.
-void prv_debug_drawer_draw(struct te_renderer* renderer, float delta_time_sec, mat4* view_proj_mat);
+void
+prv_debug_drawer_draw(struct te_renderer* renderer, float delta_time_sec, mat4* view_proj_mat);
 
 #endif
