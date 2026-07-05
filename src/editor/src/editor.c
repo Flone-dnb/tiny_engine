@@ -23,6 +23,7 @@
 #include <gizmo.h>
 
 #define EDITOR_STATS_POS_OFFSET 0.01f
+#define EDITOR_SHORTCUTS_Y_POS 0.89f
 
 struct te_editor {
     // Not NULL if @ref game_world was loaded from a file (relative to the `res` directory).
@@ -34,8 +35,11 @@ struct te_editor {
     // Always valid pointer. Must be destroyed during the editor's destruction.
     te_editor_camera* editor_camera;
 
-    // Non NULL if @ref game_world is valid. Displays FPS and RAM in the corner of the viewport.
+    // Not NULL if @ref game_world is valid. Displays FPS and RAM in the corner of the viewport.
     te_text_widget* game_world_stats_widget;
+
+    // Not NULL if @ref game_world is  valid. Displays keyboard shortcuts.
+    te_text_widget* shortcuts_widget;
 
     // Not NULL if game world exists.
     te_world* game_world;
@@ -66,6 +70,7 @@ editor_create() {
     editor->game_manager = NULL;
     editor->ui = editor_ui_create(editor);
     editor->game_world_stats_widget = NULL;
+    editor->shortcuts_widget = NULL;
     editor->game_world = NULL;
     editor->dialog_world = NULL;
     editor->file_dialog = NULL;
@@ -114,6 +119,7 @@ destroy_game_world(te_editor* editor, te_game_manager* game_manager) {
     game_manager_destroy_world(game_manager, editor->game_world);
     editor->game_world = NULL;
     editor->game_world_stats_widget = NULL;
+    editor->shortcuts_widget = NULL;
 
     free(editor->game_world_relative_path);
     editor->game_world_relative_path = NULL;
@@ -206,25 +212,51 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
 
     editor_camera_spawn(editor->editor_camera, editor->game_world);
 
-    // Prepare stats widget.
-    editor->game_world_stats_widget = text_widget_create();
-    widget_set_relative_position(
-        text_widget_get_widget(editor->game_world_stats_widget),
-        (vec2){EDITOR_STATS_POS_OFFSET, EDITOR_STATS_POS_OFFSET});
-    widget_set_relative_size(
-        text_widget_get_widget(editor->game_world_stats_widget), (vec2){0.5f, 0.2f});
-    widget_set_is_serialization_allowed(
-        text_widget_get_widget(editor->game_world_stats_widget), false);
-    text_widget_set_is_multiline(editor->game_world_stats_widget, true);
-    editor->time_since_stats_update_sec = 10.0f;
+    // Prepare and spawn stats widget.
+    {
+        editor->game_world_stats_widget = text_widget_create();
+        widget_set_relative_position(
+            text_widget_get_widget(editor->game_world_stats_widget),
+            (vec2){EDITOR_STATS_POS_OFFSET, EDITOR_STATS_POS_OFFSET});
+        widget_set_relative_size(
+            text_widget_get_widget(editor->game_world_stats_widget), (vec2){0.5f, 0.2f});
+        widget_set_is_serialization_allowed(
+            text_widget_get_widget(editor->game_world_stats_widget), false);
+        text_widget_set_is_multiline(editor->game_world_stats_widget, true);
+        editor->time_since_stats_update_sec = 10.0f;
 
-    unsigned int text_len;
-    wchar_t* stats_text = wchar_from_char("", &text_len);
-    text_widget_set_text_own(editor->game_world_stats_widget, stats_text, text_len);
+        unsigned int text_len;
+        wchar_t* stats_text = wchar_from_char("", &text_len);
+        text_widget_set_text_own(editor->game_world_stats_widget, stats_text, text_len);
 
-    // Spawn stats widget.
-    world_spawn_widget(
-        editor->game_world, text_widget_get_widget(editor->game_world_stats_widget));
+        world_spawn_widget(
+            editor->game_world, text_widget_get_widget(editor->game_world_stats_widget));
+    }
+
+    // Prepare and spawn shortcuts widget.
+    {
+        editor->shortcuts_widget = text_widget_create();
+        widget_set_relative_position(
+            text_widget_get_widget(editor->shortcuts_widget),
+            (vec2){EDITOR_STATS_POS_OFFSET, EDITOR_SHORTCUTS_Y_POS});
+        widget_set_relative_size(
+            text_widget_get_widget(editor->shortcuts_widget), (vec2){0.5f, 0.2f});
+        widget_set_is_serialization_allowed(
+            text_widget_get_widget(editor->shortcuts_widget), false);
+        text_widget_set_is_multiline(editor->shortcuts_widget, true);
+
+        text_widget_set_text_height(editor->shortcuts_widget, 0.022f);
+
+        unsigned int text_len;
+        wchar_t* shortcuts_text = wchar_from_char(
+            "Ctrl+N - new world\nCtrl+S - save world\nCtrl+Shift+S - save world as\nTab - "
+            "toggle fullscreen",
+            &text_len);
+        text_widget_set_text_own(editor->shortcuts_widget, shortcuts_text, text_len);
+
+        world_spawn_widget(
+            editor->game_world, text_widget_get_widget(editor->shortcuts_widget));
+    }
 
     // Refresh world inspector.
     te_world_inspector* inspector = editor_ui_get_world_inspector(editor->ui);
@@ -327,6 +359,11 @@ show_ui(te_editor* editor) {
     widget_set_relative_position(
         widget, (vec2){EDITOR_STATS_POS_OFFSET, EDITOR_STATS_POS_OFFSET});
 
+    // Show shortcuts.
+    widget = text_widget_get_widget(editor->shortcuts_widget);
+    widget_set_relative_position(
+        widget, (vec2){EDITOR_STATS_POS_OFFSET, EDITOR_SHORTCUTS_Y_POS});
+
     editor_ui_set_visibility(editor->ui, true);
     set_camera_editor_shape_visibility(editor->game_world, true);
 
@@ -339,6 +376,10 @@ hide_ui(te_editor* editor) {
 
     // Hide stats.
     te_widget* widget = text_widget_get_widget(editor->game_world_stats_widget);
+    widget_set_relative_position(widget, (vec2){1.0f, 1.0f});
+
+    // Hide shortcuts.
+    widget = text_widget_get_widget(editor->shortcuts_widget);
     widget_set_relative_position(widget, (vec2){1.0f, 1.0f});
 
     editor_ui_set_visibility(editor->ui, false);
@@ -444,6 +485,9 @@ on_new_world_file_selected(void* custom, const char* path_to_file) {
 
     world_save_to_file(editor->game_world, relative_path, true);
 
+    if (editor->game_world_relative_path != NULL) {
+        free(editor->game_world_relative_path);
+    }
     editor->game_world_relative_path = relative_path;
 
     editor_ui_refresh_filesystem_view(editor->ui);
@@ -460,7 +504,19 @@ editor_on_keyboard_button_pressed(
         return;
     }
 
-    if (keyboard_modifiers_is_ctrl_pressed(&modifiers) && button == TE_KB_S) {
+    if (keyboard_modifiers_is_ctrl_pressed(&modifiers) && button == TE_KB_N) {
+        // Create new world.
+        editor_create_game_world(editor, NULL);
+        return;
+    } else if (
+        keyboard_modifiers_is_ctrl_pressed(&modifiers)
+        && keyboard_modifiers_is_shift_pressed(&modifiers) && button == TE_KB_S) {
+        // Save world as.
+        editor_show_file_dialog(
+            editor, editor, on_new_world_file_selected, NULL, TE_FDM_SELECT_NEW_FILE);
+        return;
+    } else if (keyboard_modifiers_is_ctrl_pressed(&modifiers) && button == TE_KB_S) {
+        // Save world.
         if (editor->game_world_relative_path == NULL) {
             editor_show_file_dialog(
                 editor, editor, on_new_world_file_selected, NULL, TE_FDM_SELECT_NEW_FILE);
@@ -469,6 +525,7 @@ editor_on_keyboard_button_pressed(
         }
         return;
     } else if (button == TE_KB_TAB) {
+        // Toggle fullscreen.
         if (editor_camera_is_fullscreen(editor->editor_camera)) {
             show_ui(editor);
         } else {
