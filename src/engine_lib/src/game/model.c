@@ -58,7 +58,7 @@ prv_model_set_attribute_pointers_model_vertex_skinned(void) {
 
     // Bone indices.
     glEnableVertexAttribArray(3);
-    glVertexAttribIPointer(                // <- note `I` here, passing array of integers
+    glVertexAttribIPointer( // <- note `I` here, passing array of integers
         3, 4, GL_UNSIGNED_BYTE, sizeof(te_model_vertex_skinned),
         (void*)(sizeof(vec3) * 2 + sizeof(vec2)));
 
@@ -249,7 +249,7 @@ model_destroy(te_model* model) {
         model->custom_on_before_destroyed(model);
     }
 
-    for (unsigned int i = 0; i < model->child_model_count; i++ ) {
+    for (unsigned int i = 0; i < model->child_model_count; i++) {
         if (model->child_models[i]->world != NULL) {
             // We should have despawned it in our despawn callback.
             log_error("expected the child model to be despawned already");
@@ -349,7 +349,8 @@ prv_model_get_renderer(te_model* model) {
 
 static void prv_model_calc_world_normal_matrices(te_model* model, mat4 world, mat3 normal);
 
-static void prv_model_update_child_model_mats(te_model* model) {
+static void
+prv_model_update_child_model_mats(te_model* model) {
     for (unsigned int i = 0; i < model->child_model_count; i++) {
         te_model* child_model = model->child_models[i];
 
@@ -372,61 +373,46 @@ prv_model_on_after_skeleton_updated(te_model* model) {
 }
 
 static void
-prv_model_calc_world_normal_matrices(te_model* model, mat4 world, mat3 normal) {
-    mat4 translate_mat;
-    glm_translate_make(translate_mat, model->position);
+prv_model_calc_world_normal_matrices(te_model* model, mat4 out_world, mat3 out_normal) {
+    mat4 mat2;
+    math_make_rotation_mat(model->rotation, mat2);
 
-    mat4 rot_mat;
-    math_make_rotation_mat(model->rotation, rot_mat);
-
-    mat4 scale_mat;
-    glm_scale_make(scale_mat, model->scale);
+    mat4 mat1;
+    glm_scale_make(mat1, model->scale);
 
     // Scale, rotate and then translate.
-    glm_mat4_mul(rot_mat, scale_mat, world);
-    glm_mat4_mul(translate_mat, world, world);
-
-    mat4 normal_mat;
-    glm_mat4_inv(world, normal_mat);
-    glm_mat4_transpose(normal_mat);
-
-    glm_mat4_pick3(normal_mat, normal);
+    glm_mat4_mul(mat2, mat1, out_world);
+    glm_translate_make(mat1, model->position);
+    glm_mat4_mul(mat1, out_world, out_world);
 
     if (model->parent_model != NULL && model->parent_model->render_data_handle != 0xffffffff) {
         if (model->parent_bone_idx != 0xFFFFFFFF) {
-            te_skeleton* skeleton = model->skeleton;
+            te_skeleton* skeleton = model->parent_model->skeleton;
             if (skeleton == NULL) {
                 log_error("expected parent model to have a skeleton");
                 abort();
             }
-            glm_mat4_copy(
-                skeleton_get_skinning_mats(skeleton)[model->parent_bone_idx], world);
-
-            // Ignore parent's scale.
-            math_normalize_safely(world[0]);
-            math_normalize_safely(world[1]);
-            math_normalize_safely(world[2]);
-
-            mat4 normal_mat;
-            glm_mat4_inv(world, normal_mat);
-            glm_mat4_transpose(normal_mat);
-
-            glm_mat4_pick3(normal_mat, normal);
+            glm_mat4_copy(skeleton_get_skinning_mats(skeleton)[model->parent_bone_idx], mat1);
         } else {
             te_model_renderer* renderer = prv_model_get_renderer(model->parent_model);
             te_model_render_data* data = model_renderer_get_render_data_tmp(
                 renderer, model->parent_model->render_data_handle);
 
-            glm_mat4_copy(data->world_mat, world);
-
-            // Ignore parent's scale.
-            math_normalize_safely(world[0]);
-            math_normalize_safely(world[1]);
-            math_normalize_safely(world[2]);
-
-            glm_mat3_copy(data->normal_mat, normal);
+            glm_mat4_copy(data->world_mat, mat1);
         }
+
+        // Ignore parent's scale.
+        math_normalize_safely(mat1[0]);
+        math_normalize_safely(mat1[1]);
+        math_normalize_safely(mat1[2]);
+
+        glm_mat4_mul(mat1, out_world, out_world);
     }
+
+    // Calculate normal matrix.
+    glm_mat4_inv(out_world, mat1);
+    glm_mat4_transpose(mat1);
+    glm_mat4_pick3(mat1, out_normal);
 
     prv_model_update_child_model_mats(model);
 
@@ -947,7 +933,8 @@ prv_model_add_to_model_renderer(te_model* model) {
     te_game_manager* game_manager = world_get_game_manager(model->world);
 
     if (model->skeleton_relative_path != NULL) {
-        model->skeleton = prv_skeleton_create(model->skeleton_relative_path, model, game_manager);
+        model->skeleton =
+            prv_skeleton_create(model->skeleton_relative_path, model, game_manager);
     }
 
     // Add to rendering.
@@ -972,8 +959,8 @@ prv_model_add_to_model_renderer(te_model* model) {
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
 
         if (model->tex_relative_path != NULL) {
-            te_texture_manager* texture_manager = renderer_get_texture_manager(
-                game_manager_get_renderer(game_manager));
+            te_texture_manager* texture_manager =
+                renderer_get_texture_manager(game_manager_get_renderer(game_manager));
 
             data->tex_id = texture_manager_request_texture(
                 texture_manager, model->tex_relative_path, MODEL_TEX_LOAD_OPTION);
@@ -1274,7 +1261,8 @@ type_despawn(te_world* world, te_model* model) {
     }
 
     if (model->parent_model != NULL) {
-        model_set_parent(model, NULL, 0xFFFFFFFF); // make model to be in the array of root world objects
+        model_set_parent(
+            model, NULL, 0xFFFFFFFF); // make model to be in the array of root world objects
     }
     world_despawn_game_object(
         model->world, model->game_object_info); // despawn root world object

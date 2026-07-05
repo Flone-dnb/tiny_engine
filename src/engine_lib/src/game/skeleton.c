@@ -739,6 +739,7 @@ skeleton_stop_animation(te_skeleton* skeleton) {
     prv_skeleton_update(skeleton, 0.0f);
 
     game_manager_remove_tick_callback(skeleton->game_manager, skeleton->tick_callback_id);
+    skeleton->tick_callback_id = 0xFFFFFFFF;
 }
 
 void
