@@ -53,6 +53,16 @@ struct te_skeleton {
     // Do not destroy/free this pointer, references an animation from @ref preloaded_anims.
     te_skeleton_animation* playing_anim;
 
+    // Not NULL if blending old animation (this one) with a new one (@ref playing_anim).
+    // Blend time is @ref anim_blend_time_sec and the current progress is @ref curr_anim_blend_factor.
+    te_skeleton_animation* prev_anim;
+
+    // Time (in seconds) to blend @ref prev_anim and @ref playing_anim.
+    float anim_blend_time_sec;
+
+    // Value in range [0.0; @ref anim_blend_time_sec] that determines the blend state.
+    float curr_anim_blend_time_sec;
+
     unsigned int bone_count;
 
     // ID used to unregister tick callback.
@@ -126,6 +136,10 @@ prv_skeleton_create(
     skeleton->game_manager = game_manager;
     skeleton->model = model;
     skeleton->playing_anim = NULL;
+    skeleton->prev_anim = NULL;
+    skeleton->anim_blend_time_sec = 0.0f;
+    skeleton->curr_anim_blend_time_sec = 0.0f;
+    skeleton->tick_callback_id = 0xFFFFFFFF;
 
     skeleton->preloaded_anims = hashmap_new(
         sizeof(te_skeleton_animation*), 8, 0, 0, anim_hash, anim_compare, NULL, NULL);
@@ -402,8 +416,21 @@ update_skeleton_bone_skinning_mat(
     }
 
     glm_mat4_mul(parent_transform, global_transform, global_transform);
-    glm_mat4_mul(
-        global_transform, bone->inverse_bind_pose_mat, skeleton->skinning_mats[*bone_idx]);
+    if (skeleton->prev_anim == NULL) {
+        glm_mat4_mul(
+            global_transform, bone->inverse_bind_pose_mat, skeleton->skinning_mats[*bone_idx]);
+    } else {
+        glm_mat4_mul(global_transform, bone->inverse_bind_pose_mat, mat1);
+
+        // skinning_mats already has prev_anim matrices for this frame, we need to blend animations now
+        const float factor =
+            skeleton->curr_anim_blend_time_sec / skeleton->anim_blend_time_sec;
+        for (unsigned int i = 0; i < 4; i++) {
+            glm_vec4_lerp(
+                skeleton->skinning_mats[*bone_idx][i], mat1[i], factor,
+                skeleton->skinning_mats[*bone_idx][i]);
+        }
+    }
 
     (*bone_idx) += 1;
     for (unsigned int i = 0; i < bone->child_count; i++) {
@@ -423,6 +450,29 @@ prv_skeleton_update(te_skeleton* skeleton, float delta_time_sec) {
         } else {
             anim->current_time_sec =
                 glm_clamp(anim->current_time_sec, 0.0f, anim->duration_sec);
+        }
+
+        if (skeleton->prev_anim != NULL) {
+            skeleton->curr_anim_blend_time_sec += delta_time_sec;
+            if (skeleton->curr_anim_blend_time_sec >= skeleton->anim_blend_time_sec) {
+                skeleton->prev_anim = NULL;
+                skeleton->curr_anim_blend_time_sec = 0.0f;
+                skeleton->anim_blend_time_sec = 0.0f;
+            } else {
+                mat4 identity;
+                glm_mat4_identity(identity);
+
+                // Fully sample previous animation to later blend with the current one.
+                te_skeleton_animation* temp = skeleton->playing_anim;
+                skeleton->playing_anim = skeleton->prev_anim;
+                skeleton->prev_anim = NULL;
+
+                unsigned int bone_idx = 0;
+                update_skeleton_bone_skinning_mat(skeleton, &bone_idx, identity);
+
+                skeleton->prev_anim = skeleton->playing_anim;
+                skeleton->playing_anim = temp;
+            }
         }
     }
 
@@ -642,7 +692,8 @@ skeleton_load_animations(te_skeleton* skeleton, const char* relative_path) {
 }
 
 void
-skeleton_play_animation(te_skeleton* skeleton, const char* anim_name, bool loop) {
+skeleton_play_animation(
+    te_skeleton* skeleton, const char* anim_name, bool loop, float blend_time_sec) {
     te_skeleton_animation lookup;
     lookup.name = (char*)anim_name; // <- only for lookup
     te_skeleton_animation* lookup_ptr = &lookup;
@@ -652,15 +703,23 @@ skeleton_play_animation(te_skeleton* skeleton, const char* anim_name, bool loop)
         abort();
     }
 
+    if (blend_time_sec >= 0.01f) {
+        skeleton->prev_anim = skeleton->playing_anim;
+        skeleton->anim_blend_time_sec = blend_time_sec;
+        skeleton->curr_anim_blend_time_sec = 0.0f;
+    }
+
     skeleton->playing_anim = *found;
     skeleton->playing_anim->loop = loop;
     skeleton->playing_anim->current_time_sec = 0.0f;
 
     prv_skeleton_update(skeleton, 0.0f);
 
-    // Register tick callback to update animation.
-    skeleton->tick_callback_id =
-        game_manager_add_tick_callback(skeleton->game_manager, skeleton, prv_skeleton_update);
+    if (skeleton->tick_callback_id == 0xFFFFFFFF) {
+        // Register tick callback to update animation.
+        skeleton->tick_callback_id = game_manager_add_tick_callback(
+            skeleton->game_manager, skeleton, prv_skeleton_update);
+    }
 }
 
 void
@@ -672,6 +731,10 @@ skeleton_stop_animation(te_skeleton* skeleton) {
     skeleton->playing_anim->loop = false;
     skeleton->playing_anim->current_time_sec = 0.0f;
     skeleton->playing_anim = NULL;
+
+    skeleton->prev_anim = NULL;
+    skeleton->anim_blend_time_sec = 0.0f;
+    skeleton->curr_anim_blend_time_sec = 0.0f;
 
     prv_skeleton_update(skeleton, 0.0f);
 

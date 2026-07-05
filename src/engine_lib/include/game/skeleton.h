@@ -16,7 +16,10 @@ void skeleton_load_animations(te_skeleton* skeleton, const char* relative_path);
 
 // Plays an animation (that was previously loaded using @ref skeleton_load_animations)
 // accepts animation file name (without extension).
-void skeleton_play_animation(te_skeleton* skeleton, const char* anim_name, bool loop);
+// If another animation is already playing `blend_time_sec` specifies time (in seconds)
+// to blend from the old animation to the new one, specify 0.0 for no blending.
+void skeleton_play_animation(
+    te_skeleton* skeleton, const char* anim_name, bool loop, float blend_time_sec);
 
 // Stops any currently playing animation.
 void skeleton_stop_animation(te_skeleton* skeleton);
@@ -57,7 +60,8 @@ enum te_keyframe_interpolation_type {
 };
 
 // Loads skeleton from a file relative to the `res` directory.
-te_skeleton* prv_skeleton_create(const char* relative_path, struct te_model* model, struct te_game_manager* game_manager);
+te_skeleton* prv_skeleton_create(
+    const char* relative_path, struct te_model* model, struct te_game_manager* game_manager);
 void prv_skeleton_destroy(te_skeleton* skeleton);
 
 // Updates inverse bind pose matrices for all skeleton bones and calculates skinning matrices

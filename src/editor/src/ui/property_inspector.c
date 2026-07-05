@@ -238,7 +238,8 @@ on_button_pilot_camera_clicked(te_button_widget* button) {
     property_inspector_hide(inspector);
 }
 
-static void on_preview_animation_selected(void* custom, const char* absolute_path_to_file) {
+static void
+on_preview_animation_selected(void* custom, const char* absolute_path_to_file) {
     te_property_inspector* inspector = custom;
 
     te_model* model = inspector->obj;
@@ -249,7 +250,7 @@ static void on_preview_animation_selected(void* custom, const char* absolute_pat
     skeleton_load_animations(skeleton, relative_path_to_anim);
 
     const char* filename = filesystem_find_filename(relative_path_to_anim, false, NULL);
-    skeleton_play_animation(skeleton, filename, true);
+    skeleton_play_animation(skeleton, filename, true, 0.0f);
 
     free(relative_path_to_anim);
 }
