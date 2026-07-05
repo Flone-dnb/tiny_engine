@@ -702,8 +702,8 @@ world_add_from_file_with_offset(
         void* obj = type_info->create();
         type_info_load_from_config(type_info, config, section_idx, obj);
 
-        const unsigned int child_model_count = config_section_get_uint(
-            config, section_idx, CONFIG_VAR_NAME_CHILD_MODEL_COUNT, 0);
+        const unsigned int child_model_count =
+            config_section_get_uint(config, section_idx, CONFIG_VAR_NAME_CHILD_MODEL_COUNT, 0);
         const bool has_attached_camera = config_section_get_bool(
             config, section_idx, CONFIG_VAR_NAME_HAS_ATTACHED_CAMERA, false);
         const unsigned int child_widget_count = config_section_get_uint(
@@ -763,7 +763,7 @@ world_add_from_file_with_offset(
                 }
                 te_model* child_model = model_create();
                 type_info_load_from_config(model_type_info, config, section_idx, child_model);
-                model_set_parent(child_model, model, 0xFFFFFFFF);
+                model_set_parent(child_model, model, model_get_parent_bone_idx(child_model));
                 section_idx += 1;
             }
         } else if (child_widget_count > 0) {

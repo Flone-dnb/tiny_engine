@@ -761,6 +761,11 @@ model_get_child_model_count(te_model* model) {
     return model->child_model_count;
 }
 
+unsigned int
+model_get_parent_bone_idx(te_model* model) {
+    return model->parent_bone_idx;
+}
+
 void
 model_attach_camera(te_model* model, te_camera* camera) {
     if (model->attached_camera == camera) {
@@ -1268,6 +1273,15 @@ type_despawn(te_world* world, te_model* model) {
         model->world, model->game_object_info); // despawn root world object
 }
 
+static void
+set_parent_bone_idx(te_model* model, unsigned int parent_bone_idx) {
+    model->parent_bone_idx = parent_bone_idx;
+}
+static unsigned int
+get_parent_bone_idx(te_model* model) {
+    return model->parent_bone_idx;
+}
+
 void
 model_register_type(void) {
     te_type_info* info = type_info_create(
@@ -1285,6 +1299,8 @@ model_register_type(void) {
     type_info_add_vec2_variable(info, "uv_offset", model_set_uv_offset, model_get_uv_offset);
     type_info_add_bool_variable(
         info, "transparent", model_enable_transparency, model_is_transparency_enabled);
+    type_info_add_uint_variable(
+        info, "parent_bone_idx", set_parent_bone_idx, get_parent_bone_idx);
     type_info_add_string_variable(info, "geometry", model_set_geometry, model_get_geometry);
     type_info_add_string_variable(
         info, "custom_vert_shader", model_set_custom_vert_shader,

@@ -442,6 +442,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                     widget_set_custom_value(widget, var_idx);
                 }
                 text_edit_widget_set_text_height(text_edit, theme_get_text_height());
+                text_edit_widget_set_on_text_changed(text_edit, on_variable_text_edit_changed);
 
                 int len = snprintf(NULL, 0, "%u", value);
                 if (len < 0) {
