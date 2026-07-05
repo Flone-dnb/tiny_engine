@@ -81,12 +81,11 @@ The camera is a game object that's needed to view the world, here's an example o
 te_camera* camera = camera_create();
 world_spawn_game_object(game_world, camera_get_game_object_info(camera)); // spawn first
 world_set_active_camera(game_world, camera); // then set active
-
-// ... and later:
-camera_destroy(camera);
 ```
 
-Other game objects include things like models (AKA meshes), their usage is similar.
+After you spawn some game object in the world the world takes the ownership of the object and becames responsible for despawning and destroying that object so you don't have to manually despawn/destroy spawned game objects. In case you need to manually manage some game object's lifetime you need to explicitly despawn a game object then it's your responsibility to destroy the object.
+
+Other game objects include things like models (meshes, optionally with a skeleton), their usage is similar.
 
 # Lighting
 
@@ -107,27 +106,27 @@ te_sound_manager* sound_manager = game_manager_get_sound_manager(game_manager);
 te_sound* sound = sound_create(sound_manager, "game/sound.mp3"); // located at "res/game/sound.mp3"
 ```
 
-Then you can configure it using the `sound_...` functions. After than you can transfer the ownership of the sound to a world like so:
+Then you can configure it using the `sound_...` functions. After that you can transfer the ownership of the sound to a world like so:
 
 ```C
 world_play_sound_2d(world, sound);
 // or
-world_play_sound_3d(world, sound, some_world_pos);
+world_play_sound_3d(world, sound, world_pos);
 ```
 
 In this case when the sound is finished (or when world is destroyed) the sound will also stop and will be automatically destroyed.
 
 # Debug tools
 
-Debug tools include things like `debug_drawer` (for rendering debug shapes) and `debug_console` (for registering new dev cheat commands and performance stats). In order to show/hide `debug_console` press the tilde (~) button on your keyboard.
+Debug tools include things like `debug_drawer` (for rendering debug text and shapes) and `debug_console` (for registering new dev cheat commands and performance stats). In order to show/hide `debug_console` press the tilde (~) button on your keyboard.
 
-Debug console can also show various statistics such as FPS, RAM usage, number of drawn meshes, various GPU metrics and etc. In order to view such statistics use the commands `show_stats` and `hide_stats`. Note that with `show_stats` you might want to also use the command `set_fps_limit 0` to make sure your GPU is running at max power (not being limited).
+Debug console can show various statistics such as FPS, RAM usage, number of drawn meshes, various GPU metrics and etc. In order to show/hide such statistics use the commands `show_stats` and `hide_stats`. Note that with `show_stats` you might want to also use the command `set_fps_limit 0` to make sure your GPU is running at max power (not being limited).
+
+To view debug stats using a gamepad you can click both the "start" button and the "menu" button (sometimes called the "back" button) to both toggle debug stats command and disable fps limit while the stats are visible.
 
 Debug tools are disabled in the "Release" build mode but if you need them in your release builds you can enable them if you pass -DENGINE_FORCE_ENABLE_DEBUG_TOOLS=ON while configuring cmake, cmake will then print a warning that you enabled debug tools in release build.
 
 Note that in case you created a custom game object and want it to (for example) draw something when used in the editor you can use `ifdef ENGINE_EDITOR` macro for code that will only run in the editor.
-
-In case your only input device is a gamepad you can click both the "start" button and the "menu" button (sometimes called the "back" button) to toggle debug stats command and disable fps limit while the stats are visible.
 
 # Texture import
 
@@ -157,15 +156,15 @@ void on_game_started(void* game_instance, te_game_manager* game_manager) {
 
 # Widgets
 
-UI elements are called widgets, you can find them in the "src/engine_lib/include/widgets" directory.
+UI elements are called widgets, you can find them in the `src/engine_lib/include/widgets` directory.
 
-All widgets contain a `te_widget` object inside of them, it implement base widget functionality such as: position, size, being able to attach to other widgets (thus creating a widget hierarchy) and so on. You can get `te_widget*` by using "..._get_widget" function.
+All widgets contain a `te_widget` object inside of them, it implement base widget functionality such as: position, size, being able to attach to other widgets (thus creating a widget hierarchy) and so on. You can get `te_widget*` by using `..._get_widget` function on your widget.
 
-In order to display a widget (and all of its attached child widgets) you need to spawn the root widget in a world (same as with models). You can also spawn widget by attaching a non-spawned widget to a spawned widget using the `set_parent` function.
+In order to display a widget (and all of its attached child widgets) you need to spawn the root widget in a world (same as with regular game objects). You can also spawn widget by attaching a non-spawned widget to a spawned widget using the `set_parent` function.
 
-# Reflection
+# Type reflection
 
-`type_database.h` is used for registering a type info, you need to define a unique string (ID) of your type and then register it in the type database, here's a short example from `te_model` type:
+`type_database.h` is used for registering a type info, you need to define a unique string (ID) of your type and then register it in the type database, here's a short example from `te_model`:
 
 ```C
 void model_get_type_id(void) {
@@ -191,4 +190,15 @@ if (info == NULL) {
 }
 
 // use setters/getters from `info`
+```
+
+# Tick callbacks
+
+`te_game_manager` provides a way to register tick callbacks (called every frame):
+
+```C
+unsigned int id = game_manager_add_tick_callback(game_manager, my_obj, my_callback);
+
+// ... later:
+game_manager_remove_tick_callback(game_manager, id);
 ```
