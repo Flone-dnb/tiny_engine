@@ -54,7 +54,7 @@ struct te_skeleton {
     te_skeleton_animation* playing_anim;
 
     // Not NULL if blending old animation (this one) with a new one (@ref playing_anim).
-    // Blend time is @ref anim_blend_time_sec and the current progress is @ref curr_anim_blend_factor.
+    // Blend time is @ref anim_blend_time_sec and the current progress is @ref curr_anim_blend_time_sec.
     te_skeleton_animation* prev_anim;
 
     // Time (in seconds) to blend @ref prev_anim and @ref playing_anim.
