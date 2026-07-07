@@ -68,7 +68,8 @@ filesystem_does_path_exists(const char* path) {
 #endif
 }
 
-bool filesystem_path_is_directory(const char* path) {
+bool
+filesystem_path_is_directory(const char* path) {
 #if defined(WIN32)
     DWORD dwAttrib = GetFileAttributesA(path);
     if (dwAttrib == INVALID_FILE_ATTRIBUTES) {
@@ -308,13 +309,14 @@ char*
 filesystem_append_path(
     const char* path, unsigned int path_len, const char* add, unsigned int add_len,
     unsigned int* ret_strlen) {
-    const bool have_slash = path[path_len - 1] == '/' || path[path_len - 1] == '\\';
     if (path_len == 0) {
         path_len = (unsigned int)strlen(path);
     }
     if (add_len == 0) {
         add_len = (unsigned int)strlen(add);
     }
+
+    const bool have_slash = path[path_len - 1] == '/' || path[path_len - 1] == '\\';
 
     const unsigned int out_len = path_len + !have_slash + add_len;
     char* out = malloc(sizeof(char) * (out_len + 1));
@@ -340,7 +342,6 @@ char*
 filesystem_append_path_ext(
     const char* path, unsigned int path_len, const char* add, unsigned int add_len,
     const char* extension, unsigned int extension_len, unsigned int* ret_strlen) {
-    const bool have_slash = path[path_len - 1] == '/' || path[path_len - 1] == '\\';
     if (path_len == 0) {
         path_len = (unsigned int)strlen(path);
     }
@@ -350,6 +351,8 @@ filesystem_append_path_ext(
     if (extension_len == 0) {
         extension_len = (unsigned int)strlen(extension);
     }
+
+    const bool have_slash = path[path_len - 1] == '/' || path[path_len - 1] == '\\';
 
     const unsigned int out_len = path_len + !have_slash + add_len + extension_len;
     char* out = malloc(sizeof(char) * (out_len + 1));
