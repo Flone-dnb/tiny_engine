@@ -5,6 +5,7 @@
 #include <world.h>
 #include <ui/theme.h>
 #include <ui/property_inspector.h>
+#include <ui/scene_animation_editor.h>
 #include <game/game_object_info.h>
 #include <game/model.h>
 #include <game/camera.h>
@@ -60,9 +61,15 @@ struct te_world_inspector {
     // NULL if not set yet.
     te_world* game_world;
 
+    // NULL if not opened.
+    te_scene_animation_editor* scene_animation_editor;
+
     // Widgets for changing @ref is_3dobj_mode_selected.
     te_button_widget* button_3dobj;
     te_button_widget* button_2dobj;
+
+    // Always valid.
+    te_button_widget* scene_animation_button;
 
     // "Create new game object" by default.
     te_button_widget* top_button;
@@ -104,12 +111,14 @@ world_inspector_create(te_editor* editor, te_property_inspector* property_inspec
 
     inspector->property_inspector = property_inspector;
     inspector->left_panel = NULL;
+    inspector->scene_animation_editor = NULL;
     inspector->editor = editor;
     inspector->item_list = NULL;
     inspector->button_2dobj = NULL;
     inspector->button_3dobj = NULL;
     inspector->game_world = NULL;
     inspector->top_button = NULL;
+    inspector->scene_animation_button = NULL;
     inspector->top_button_text = NULL;
     inspector->page_text = NULL;
     inspector->selected_item = NULL;
@@ -545,6 +554,22 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
 }
 
 void
+world_inspector_reset(te_world_inspector* inspector) {
+    if (inspector->scene_animation_editor != NULL) {
+        scene_animation_editor_destroy(inspector->scene_animation_editor);
+        inspector->scene_animation_editor = NULL;
+
+        vec4 color;
+        theme_get_button_color(color);
+        button_widget_set_color(inspector->scene_animation_button, color);
+    }
+
+    free(inspector->item_list);
+    inspector->item_list = NULL;
+    inspector->item_list_count = 0;
+}
+
+void
 world_inspector_rebuild_list(te_world_inspector* inspector, te_world* game_world) {
     inspector->game_world = game_world;
 
@@ -651,6 +676,11 @@ world_inspector_refresh_names(te_world_inspector* inspector) {
         || inspector->state == TE_WIS_SHOW_ATTACH_TO) {
         refresh_item_names(inspector);
     }
+}
+
+te_scene_animation_editor*
+world_inspector_get_scene_animation_editor(te_world_inspector* inspector) {
+    return inspector->scene_animation_editor;
 }
 
 static void
@@ -887,7 +917,8 @@ on_button_list_item_clicked(te_button_widget* button) {
                         }
                         case (TE_GOT_MODEL): {
                             model_set_parent(
-                                inspector->selected_item->game_object_info->game_object, NULL, 0xFFFFFFFF);
+                                inspector->selected_item->game_object_info->game_object, NULL,
+                                0xFFFFFFFF);
                             break;
                         }
                     }
@@ -1044,7 +1075,29 @@ on_button_world_settings_clicked(te_button_widget* button) {
     property_inspector_show(inspector->property_inspector, light_params, "light_params");
 }
 
-static void on_add_world_selected(void* custom, const char* absolute_path) {
+static void
+on_button_scene_animation_clicked(te_button_widget* button) {
+    te_world_inspector* inspector = widget_get_custom_ptr(button_widget_get_widget(button));
+
+    if (inspector->scene_animation_editor == NULL) {
+        inspector->scene_animation_editor =
+            scene_animation_editor_create(inspector->game_world);
+
+        vec4 color;
+        theme_get_accent_color(color);
+        button_widget_set_color(inspector->scene_animation_button, color);
+    } else {
+        scene_animation_editor_destroy(inspector->scene_animation_editor);
+        inspector->scene_animation_editor = NULL;
+
+        vec4 color;
+        theme_get_button_color(color);
+        button_widget_set_color(inspector->scene_animation_button, color);
+    }
+}
+
+static void
+on_add_world_selected(void* custom, const char* absolute_path) {
     te_world_inspector* inspector = custom;
 
     char* relative_path = filesystem_convert_path_to_relative(absolute_path);
@@ -1125,6 +1178,50 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
 
         unsigned int text_len;
         wchar_t* text = wchar_from_char("World settings", &text_len);
+        text_widget_set_text_own(text_widget, text, text_len);
+    }
+    y_pos += theme_get_button_height() + vspacing;
+
+    // Scene animation.
+    {
+        te_button_widget* button = button_widget_create();
+        {
+            te_widget* widget = button_widget_get_widget(button);
+            widget_set_custom_ptr(widget, inspector);
+            widget_set_parent(widget, left_panel);
+            widget_set_relative_position(widget, (vec2){hpadding, y_pos});
+            widget_set_relative_size(widget, (vec2){total_width, theme_get_button_height()});
+        }
+        inspector->scene_animation_button = button;
+
+        vec4 color;
+        theme_get_button_color(color);
+        button_widget_set_color(button, color);
+
+        theme_get_button_color_hovered(color);
+        button_widget_set_color_hovered(button, color);
+
+        theme_get_button_color_pressed(color);
+        button_widget_set_color_pressed(button, color);
+
+        button_widget_set_on_clicked(button, on_button_scene_animation_clicked);
+
+        // Button text.
+
+        te_text_widget* text_widget = text_widget_create();
+        {
+            te_widget* widget = text_widget_get_widget(text_widget);
+            widget_set_parent(widget, button_widget_get_widget(button));
+            widget_set_relative_position(
+                widget, (vec2){hpadding_in_button, vpadding_in_button});
+            widget_set_relative_size(
+                widget, (vec2){1.0f - hpadding_in_button, 1.0f - vpadding_in_button});
+        }
+
+        text_widget_set_text_height(text_widget, theme_get_text_height());
+
+        unsigned int text_len;
+        wchar_t* text = wchar_from_char("Scene animation", &text_len);
         text_widget_set_text_own(text_widget, text, text_len);
     }
     y_pos += theme_get_button_height() + vspacing;

@@ -19,11 +19,13 @@
 #include <ui/file_dialog.h>
 #include <ui/editor_ui.h>
 #include <ui/world_inspector.h>
+#include <ui/scene_animation_editor.h>
 #include <obj_picking.h>
 #include <gizmo.h>
 
 #define EDITOR_STATS_POS_OFFSET 0.01f
-#define EDITOR_SHORTCUTS_Y_POS 0.89f
+#define EDITOR_SHORTCUTS_X_POS 0.01f
+#define EDITOR_SHORTCUTS_Y_POS 0.075f
 
 struct te_editor {
     // Not NULL if @ref game_world was loaded from a file (relative to the `res` directory).
@@ -104,6 +106,8 @@ editor_get_game_world(te_editor* editor) {
 
 static void
 destroy_game_world(te_editor* editor, te_game_manager* game_manager) {
+    editor_ui_reset(editor->ui);
+
     if (editor->file_dialog != NULL) {
         file_dialog_destroy(editor->file_dialog);
         editor->file_dialog = NULL;
@@ -173,8 +177,6 @@ editor_on_game_started(void* game_instance, te_game_manager* game_manager) {
 
 void
 editor_create_game_world(te_editor* editor, const char* relative_path_to_world) {
-    // Cleanup.
-    editor_ui_reset(editor->ui);
     if (editor->game_world != NULL) {
         destroy_game_world(editor, editor->game_manager);
     }
@@ -225,6 +227,8 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
         text_widget_set_is_multiline(editor->game_world_stats_widget, true);
         editor->time_since_stats_update_sec = 10.0f;
 
+        text_widget_set_text_height(editor->game_world_stats_widget, 0.025f);
+
         unsigned int text_len;
         wchar_t* stats_text = wchar_from_char("", &text_len);
         text_widget_set_text_own(editor->game_world_stats_widget, stats_text, text_len);
@@ -238,14 +242,14 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
         editor->shortcuts_widget = text_widget_create();
         widget_set_relative_position(
             text_widget_get_widget(editor->shortcuts_widget),
-            (vec2){EDITOR_STATS_POS_OFFSET, EDITOR_SHORTCUTS_Y_POS});
+            (vec2){EDITOR_SHORTCUTS_X_POS, EDITOR_SHORTCUTS_Y_POS});
         widget_set_relative_size(
             text_widget_get_widget(editor->shortcuts_widget), (vec2){0.5f, 0.2f});
         widget_set_is_serialization_allowed(
             text_widget_get_widget(editor->shortcuts_widget), false);
         text_widget_set_is_multiline(editor->shortcuts_widget, true);
 
-        text_widget_set_text_height(editor->shortcuts_widget, 0.022f);
+        text_widget_set_text_height(editor->shortcuts_widget, 0.018f);
 
         unsigned int text_len;
         wchar_t* shortcuts_text = wchar_from_char(
@@ -362,12 +366,18 @@ show_ui(te_editor* editor) {
     // Show shortcuts.
     widget = text_widget_get_widget(editor->shortcuts_widget);
     widget_set_relative_position(
-        widget, (vec2){EDITOR_STATS_POS_OFFSET, EDITOR_SHORTCUTS_Y_POS});
+        widget, (vec2){EDITOR_SHORTCUTS_X_POS, EDITOR_SHORTCUTS_Y_POS});
 
     editor_ui_set_visibility(editor->ui, true);
     set_camera_editor_shape_visibility(editor->game_world, true);
 
     editor_camera_set_is_fullscreen(editor->editor_camera, false);
+
+    te_scene_animation_editor* anim_editor =
+        world_inspector_get_scene_animation_editor(editor_ui_get_world_inspector(editor->ui));
+    if (anim_editor != NULL) {
+        scene_animation_editor_show(anim_editor);
+    }
 }
 
 static void
@@ -384,6 +394,12 @@ hide_ui(te_editor* editor) {
 
     editor_ui_set_visibility(editor->ui, false);
     set_camera_editor_shape_visibility(editor->game_world, false);
+
+    te_scene_animation_editor* anim_editor =
+        world_inspector_get_scene_animation_editor(editor_ui_get_world_inspector(editor->ui));
+    if (anim_editor != NULL) {
+        scene_animation_editor_hide(anim_editor);
+    }
 }
 
 void
@@ -671,7 +687,23 @@ editor_on_mouse_button_pressed(
     if (button == TE_MB_RIGHT) {
         window_capture_mouse_cursor(window, true);
         editor_camera_enable_input(editor->editor_camera, true);
-    } else if (button == TE_MB_LEFT) {
+    } else if (button == TE_MB_LEFT && !editor_camera_is_fullscreen(editor->editor_camera)) {
+        // Check if we clicked on scene animation editor.
+        te_scene_animation_editor* anim_editor = world_inspector_get_scene_animation_editor(
+            editor_ui_get_world_inspector(editor->ui));
+        if (anim_editor != NULL) {
+            te_widget* widget = scene_animation_editor_get_root_widget(anim_editor);
+            vec2 pos;
+            widget_get_screen_position(widget, pos);
+            vec2 size;
+            widget_get_screen_size(widget, size);
+            if (cursor_pos[0] > pos[0] && cursor_pos[0] < pos[0] + size[0]
+                && cursor_pos[1] > pos[1] && cursor_pos[1] < pos[1] + size[1]) {
+                // Clicked on it.
+                return;
+            }
+        }
+
         te_game_object_info* obj_info = obj_picking_find_obj_under_cursor(
             cursor_pos, game_camera, editor->game_world, editor->gizmo);
 

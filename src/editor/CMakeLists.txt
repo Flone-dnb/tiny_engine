@@ -25,6 +25,8 @@ set(PROJECT_SOURCES
     src/ui/filesystem_view.h
     src/ui/file_dialog.c
     src/ui/file_dialog.h
+    src/ui/scene_animation_editor.c
+    src/ui/scene_animation_editor.h
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})

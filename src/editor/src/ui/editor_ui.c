@@ -106,7 +106,8 @@ editor_ui_get_world_inspector(te_editor_ui* ui) {
     return ui->world_inspector;
 }
 
-struct te_editor* editor_ui_get_editor(te_editor_ui* ui) {
+struct te_editor*
+editor_ui_get_editor(te_editor_ui* ui) {
     return ui->editor;
 }
 
@@ -115,6 +116,8 @@ editor_ui_refresh_filesystem_view(te_editor_ui* ui) {
     filesystem_view_refresh(ui->filesystem_view);
 }
 
-void editor_ui_reset(te_editor_ui* ui) {
+void
+editor_ui_reset(te_editor_ui* ui) {
     property_inspector_hide(ui->property_inspector);
+    world_inspector_reset(ui->world_inspector);
 }
