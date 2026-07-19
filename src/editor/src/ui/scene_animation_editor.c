@@ -11,6 +11,7 @@
 #include <widget/checkbox_widget.h>
 #include <misc/wchar_funcs.h>
 #include <ui/theme.h>
+#include <game/scene_animation.h>
 
 #define TE_SCENE_ANIM_EDITOR_X_POS 0.05f
 #define TE_SCENE_ANIM_MENU_WIDTH 0.09f
@@ -22,6 +23,8 @@ struct te_scene_animation_editor {
 
     te_text_widget* left_border_time_text;
     te_text_widget* right_border_time_text;
+
+    te_scene_animation* animation;
 
     te_button_widget** track_buttons;
 
@@ -45,6 +48,7 @@ scene_animation_editor_create(te_world* world) {
     editor->left_border_time = 0;
     editor->right_border_time = 4;
     editor->current_time = 0.0f;
+    editor->animation = scene_animation_create();
 
     vec2 pos;
     glm_vec2_copy((vec2){TE_SCENE_ANIM_EDITOR_X_POS, 0.73f}, pos);
@@ -418,6 +422,10 @@ scene_animation_editor_destroy(te_scene_animation_editor* editor) {
     widget_destroy(editor->root_widget);
 
     free(editor->track_buttons);
+
+    if (editor->animation != NULL) {
+        scene_animation_destroy(editor->animation);
+    }
 
     free(editor);
 }

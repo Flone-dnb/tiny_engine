@@ -34,6 +34,7 @@ set(PROJECT_SOURCES
     src/game/camera.c
     src/game/model.c
     src/game/skeleton.c
+    src/game/scene_animation.c
     src/widget/widget.c
     src/widget/text_widget.c
     src/widget/rect_widget.c
@@ -77,6 +78,7 @@ set(PROJECT_SOURCES
     include/game/model.h
     include/game/game_object_info.h
     include/game/skeleton.h
+    include/game/scene_animation.h
     include/widget/widget.h
     include/widget/text_widget.h
     include/widget/rect_widget.h

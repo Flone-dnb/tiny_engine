@@ -270,6 +270,9 @@ skeleton_bone_interpolate_pos_scale(
         }
         break;
     }
+    if (left_idx >= keyframe_count) {
+        left_idx = keyframe_count - 1;
+    }
 
     vec3 out_value;
 
@@ -320,6 +323,9 @@ skeleton_bone_interpolate_rotation(
             left_idx -= 1;
         }
         break;
+    }
+    if (left_idx >= keyframe_count) {
+        left_idx = keyframe_count - 1;
     }
 
     vec4 from;
