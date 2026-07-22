@@ -11,6 +11,7 @@
 #include <ui/theme.h>
 #include <ui/editor_ui.h>
 #include <ui/world_inspector.h>
+#include <ui/scene_animation_editor.h>
 #include <widget/widget.h>
 #include <widget/checkbox_widget.h>
 #include <widget/text_widget.h>
@@ -389,6 +390,12 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
         }
     }
 
+    te_scene_animation_editor* anim_editor = world_inspector_get_scene_animation_editor(
+        editor_ui_get_world_inspector(inspector->ui));
+    if (anim_editor != NULL) {
+        scene_animation_editor_show_tracks(anim_editor, obj, type_info);
+    }
+
     for (unsigned int var_idx = 0; var_idx < type_info->variable_count; var_idx++) {
         te_variable_info* var_info = &type_info->variables[var_idx];
 
@@ -673,6 +680,12 @@ property_inspector_hide(te_property_inspector* inspector) {
 
     inspector->obj = NULL;
     inspector->obj_type_id = NULL;
+
+    te_scene_animation_editor* anim_editor = world_inspector_get_scene_animation_editor(
+        editor_ui_get_world_inspector(inspector->ui));
+    if (anim_editor != NULL) {
+        scene_animation_editor_show_tracks(anim_editor, NULL, NULL);
+    }
 
     if (inspector->right_panel == NULL) {
         return;

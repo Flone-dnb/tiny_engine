@@ -10,12 +10,15 @@
 #include <widget/text_widget.h>
 #include <widget/checkbox_widget.h>
 #include <misc/wchar_funcs.h>
+#include <type_database.h>
+#include <game/game_object_info.h>
 #include <ui/theme.h>
 #include <game/scene_animation.h>
 
 #define TE_SCENE_ANIM_EDITOR_X_POS 0.05f
 #define TE_SCENE_ANIM_MENU_WIDTH 0.09f
 #define TE_SCENE_ANIM_TRACK_NAME_WIDTH 0.14f
+#define BUTTON_HIDDEN_X_POS 10.0f
 
 struct te_scene_animation_editor {
     te_world* world;
@@ -28,12 +31,18 @@ struct te_scene_animation_editor {
 
     te_button_widget** track_buttons;
 
+    // Not NULL if showing available tracks from an object.
+    void* selected_obj;
+    const te_type_info* selected_obj_type_info;
+
     float current_time;
 
     float timeline_x_pos;
     float button_height;
+    float track_buttons_x;
 
     unsigned int track_button_count;
+    unsigned int track_scroll_count;
 
     unsigned int left_border_time;
     unsigned int right_border_time;
@@ -48,7 +57,10 @@ scene_animation_editor_create(te_world* world) {
     editor->left_border_time = 0;
     editor->right_border_time = 4;
     editor->current_time = 0.0f;
+    editor->track_scroll_count = 0;
     editor->animation = scene_animation_create();
+    editor->selected_obj = NULL;
+    editor->selected_obj_type_info = NULL;
 
     vec2 pos;
     glm_vec2_copy((vec2){TE_SCENE_ANIM_EDITOR_X_POS, 0.73f}, pos);
@@ -294,9 +306,11 @@ scene_animation_editor_create(te_world* world) {
                 text_widget_set_text_height(text, theme_get_text_height());
 
                 unsigned int text_len;
-                wchar_t* wtext = wchar_from_char("Tracks:", &text_len);
+                wchar_t* wtext = wchar_from_char("Animated tracks:", &text_len);
                 text_widget_set_text_own(text, wtext, text_len);
             }
+
+            editor->track_buttons_x = x;
 
             // Count how much track names will fit.
             y = timeline_top_height;
@@ -389,7 +403,7 @@ scene_animation_editor_create(te_world* world) {
         }
 
         // Split timeline into N sections.
-        const unsigned int section_count = 16;
+        const unsigned int section_count = 20;
         const float section_size = (1.0f - timeline_x) / (float)section_count;
 
         for (unsigned int i = 0; i < section_count; i++) {
@@ -468,6 +482,26 @@ time_to_border_str(unsigned int src) {
     return dst;
 }
 
+static te_text_widget*
+get_button_text(te_button_widget* button) {
+    unsigned int child_count;
+    te_widget** child_widgets =
+        widget_get_child_widgets(button_widget_get_widget(button), &child_count);
+
+    te_text_widget* button_text = NULL;
+    for (unsigned int i = 0; i < child_count; i++) {
+        if (!widget_is_serialization_allowed(child_widgets[i])) {
+            // Internal widget (rect) of the button.
+            continue;
+        }
+        button_text = widget_get_owner(child_widgets[i]);
+        break;
+    }
+
+    free(child_widgets);
+    return button_text;
+}
+
 static void
 redraw_timeline(te_scene_animation_editor* editor) {
     // Update left border time.
@@ -504,4 +538,115 @@ redraw_timeline(te_scene_animation_editor* editor) {
         theme_get_accent_color(color);
         rect_widget_set_color(separator, color);
     }
+
+    // First hide all tracks.
+    for (unsigned int i = 0; i < editor->track_button_count; i++) {
+        te_widget* widget = button_widget_get_widget(editor->track_buttons[i]);
+
+        vec2 pos;
+        widget_get_relative_position(widget, pos);
+        pos[0] = BUTTON_HIDDEN_X_POS;
+
+        widget_set_relative_position(button_widget_get_widget(editor->track_buttons[i]), pos);
+    }
+
+#define DISPLAY_ANIMATION_TRACKS(type)                                                        \
+    {                                                                                         \
+        unsigned int var_count;                                                               \
+        char** var_names = scene_animation_get_##type##_variable_names(                       \
+            editor->animation, obj_names[obj_idx], &var_count);                               \
+        for (unsigned int var_idx = 0; var_idx < var_count; var_idx++) {                      \
+            if (editor->track_scroll_count > total_track_count) {                             \
+                continue;                                                                     \
+            }                                                                                 \
+                                                                                              \
+            te_text_widget* button_text =                                                     \
+                get_button_text(editor->track_buttons[track_button_idx]);                     \
+                                                                                              \
+            unsigned int name_len;                                                            \
+            wchar_t* wname = wchar_from_char(var_names[var_idx], &name_len);                  \
+            text_widget_set_text_own(button_text, wname, name_len);                           \
+                                                                                              \
+            vec2 pos;                                                                         \
+            widget_get_relative_position(                                                     \
+                button_widget_get_widget(editor->track_buttons[track_button_idx]), pos);      \
+            pos[0] = editor->track_buttons_x;                                                 \
+            widget_set_relative_position(                                                     \
+                button_widget_get_widget(editor->track_buttons[track_button_idx]), pos);      \
+                                                                                              \
+            total_track_count += 1;                                                           \
+            track_button_idx += 1;                                                            \
+            if (track_button_idx == editor->track_button_count) {                             \
+                break;                                                                        \
+            }                                                                                 \
+        }                                                                                     \
+        free(var_names);                                                                      \
+        if (track_button_idx == editor->track_button_count) {                                 \
+            break;                                                                            \
+        }                                                                                     \
+    }
+
+    // Show only available tracks.
+    unsigned int total_track_count = 0;
+    unsigned int track_button_idx = 0;
+    unsigned int obj_count;
+    char** obj_names = scene_animation_get_object_names(editor->animation, &obj_count);
+    for (unsigned int obj_idx = 0; obj_idx < obj_count; obj_idx++) {
+        DISPLAY_ANIMATION_TRACKS(vec4)
+        DISPLAY_ANIMATION_TRACKS(vec3)
+        DISPLAY_ANIMATION_TRACKS(vec2)
+        DISPLAY_ANIMATION_TRACKS(float)
+        DISPLAY_ANIMATION_TRACKS(uint)
+        DISPLAY_ANIMATION_TRACKS(bool)
+    }
+    free(obj_names);
+
+    if (editor->selected_obj != NULL && editor->selected_obj_type_info != NULL
+        && track_button_idx < editor->track_button_count) {
+#define DISPLAY_AVAILABLE_TRACKS(var_type)                                                    \
+    for (unsigned int var_idx = 0; var_idx < editor->selected_obj_type_info->variable_count   \
+                                   && track_button_idx < editor->track_button_count;          \
+         var_idx++) {                                                                         \
+        if (editor->selected_obj_type_info->variables[var_idx].type != TE_VT_##var_type) {    \
+            continue;                                                                         \
+        }                                                                                     \
+        if (editor->track_scroll_count > total_track_count) {                                 \
+            continue;                                                                         \
+        }                                                                                     \
+                                                                                              \
+        te_text_widget* button_text =                                                         \
+            get_button_text(editor->track_buttons[track_button_idx]);                         \
+                                                                                              \
+        unsigned int name_len;                                                                \
+        wchar_t* wname = wchar_from_char(                                                     \
+            editor->selected_obj_type_info->variables[var_idx].name, &name_len);              \
+        text_widget_set_text_own(button_text, wname, name_len);                               \
+                                                                                              \
+        vec2 pos;                                                                             \
+        widget_get_relative_position(                                                         \
+            button_widget_get_widget(editor->track_buttons[track_button_idx]), pos);          \
+        pos[0] = editor->track_buttons_x;                                                     \
+        widget_set_relative_position(                                                         \
+            button_widget_get_widget(editor->track_buttons[track_button_idx]), pos);          \
+                                                                                              \
+        total_track_count += 1;                                                               \
+        track_button_idx += 1;                                                                \
+    }
+
+        DISPLAY_AVAILABLE_TRACKS(VEC4)
+        DISPLAY_AVAILABLE_TRACKS(VEC3)
+        DISPLAY_AVAILABLE_TRACKS(VEC2)
+        DISPLAY_AVAILABLE_TRACKS(FLOAT)
+        DISPLAY_AVAILABLE_TRACKS(UINT)
+        DISPLAY_AVAILABLE_TRACKS(BOOL)
+    }
+}
+
+void
+scene_animation_editor_show_tracks(
+    te_scene_animation_editor* editor, void* obj, const te_type_info* type_info) {
+    editor->selected_obj = obj;
+    editor->selected_obj_type_info = type_info;
+
+    redraw_timeline(editor);
 }

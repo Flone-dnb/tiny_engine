@@ -32,6 +32,26 @@ SCENE_ANIM_KEYFRAME_TYPE(vec4)
 te_scene_animation* scene_animation_create();
 void scene_animation_destroy(te_scene_animation* scene_animation);
 
+// Returns names of all objects animated in this scene animation.
+// You must free the array pointer but not the individual strings.
+char**
+scene_animation_get_object_names(te_scene_animation* scene_animation, unsigned int* out_count);
+
+// Returns names of all variables (of the object) animated in this scene animation.
+// You must free the array pointer but not the individual strings.
+char** scene_animation_get_bool_variable_names(
+    te_scene_animation* scene_animation, const char* object_name, unsigned int* out_count);
+char** scene_animation_get_uint_variable_names(
+    te_scene_animation* scene_animation, const char* object_name, unsigned int* out_count);
+char** scene_animation_get_float_variable_names(
+    te_scene_animation* scene_animation, const char* object_name, unsigned int* out_count);
+char** scene_animation_get_vec2_variable_names(
+    te_scene_animation* scene_animation, const char* object_name, unsigned int* out_count);
+char** scene_animation_get_vec3_variable_names(
+    te_scene_animation* scene_animation, const char* object_name, unsigned int* out_count);
+char** scene_animation_get_vec4_variable_names(
+    te_scene_animation* scene_animation, const char* object_name, unsigned int* out_count);
+
 void scene_animation_add_keyframe_bool(
     te_scene_animation* scene_animation, const char* object_name, const char* variable_name,
     float time, bool value);

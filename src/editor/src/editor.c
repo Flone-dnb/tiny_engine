@@ -719,6 +719,7 @@ editor_on_mouse_button_pressed(
                 return;
             }
         }
+
         world_inspector_select_obj(editor_ui_get_world_inspector(editor->ui), obj_info);
     }
 }

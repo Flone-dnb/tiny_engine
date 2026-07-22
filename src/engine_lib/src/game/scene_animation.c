@@ -124,6 +124,49 @@ scene_animation_destroy(te_scene_animation* scene_animation) {
     free(scene_animation);
 }
 
+char**
+scene_animation_get_object_names(
+    te_scene_animation* scene_animation, unsigned int* out_count) {
+    (*out_count) = scene_animation->animated_object_count;
+
+    char** names = malloc(sizeof(char*) * scene_animation->animated_object_count);
+    for (unsigned int i = 0; i < scene_animation->animated_object_count; i++) {
+        names[i] = scene_animation->animated_objects[i].name;
+    }
+
+    return names;
+}
+
+#define SCENE_ANIM_CREATE_GET_VAR_NAMES(type)                                                 \
+    char** scene_animation_get_##type##_variable_names(                                       \
+        te_scene_animation* scene_animation, const char* object_name,                         \
+        unsigned int* out_count) {                                                            \
+        for (unsigned int obj_idx = 0; obj_idx < scene_animation->animated_object_count;      \
+             obj_idx++) {                                                                     \
+            te_scene_animation_obj* obj = &scene_animation->animated_objects[obj_idx];        \
+            if (strcmp(object_name, obj->name) != 0) {                                        \
+                continue;                                                                     \
+            }                                                                                 \
+                                                                                              \
+            char** names = malloc(sizeof(char*) * obj->type##_count);                         \
+            for (unsigned int i = 0; i < obj->type##_count; i++) {                            \
+                names[i] = obj->type##s[i].name;                                              \
+            }                                                                                 \
+                                                                                              \
+            (*out_count) = obj->type##_count;                                                 \
+            return names;                                                                     \
+        }                                                                                     \
+                                                                                              \
+        (*out_count) = 0;                                                                     \
+        return NULL;                                                                          \
+    }
+SCENE_ANIM_CREATE_GET_VAR_NAMES(bool)
+SCENE_ANIM_CREATE_GET_VAR_NAMES(uint)
+SCENE_ANIM_CREATE_GET_VAR_NAMES(float)
+SCENE_ANIM_CREATE_GET_VAR_NAMES(vec2)
+SCENE_ANIM_CREATE_GET_VAR_NAMES(vec3)
+SCENE_ANIM_CREATE_GET_VAR_NAMES(vec4)
+
 static te_scene_animation_obj*
 get_obj(te_scene_animation* scene_animation, const char* object_name) {
     for (unsigned int i = 0; i < scene_animation->animated_object_count; i++) {
