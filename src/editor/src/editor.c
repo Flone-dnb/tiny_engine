@@ -20,6 +20,7 @@
 #include <ui/editor_ui.h>
 #include <ui/world_inspector.h>
 #include <ui/scene_animation_editor.h>
+#include <game/scene_animation.h>
 #include <obj_picking.h>
 #include <gizmo.h>
 
@@ -427,13 +428,28 @@ editor_pilot_camera(te_editor* editor, te_camera* camera) {
 
 void
 editor_on_before_game_obj_deleted(te_editor* editor, te_game_object_info* info) {
-    if (editor->gizmo == NULL) {
-        return;
+    te_scene_animation* anim = world_get_scene_animation(editor->game_world);
+    const char* go_name = info->get_name(info->game_object);
+    if (go_name != NULL && anim != NULL && scene_animation_is_playing(anim)) {
+        // Is animated?
+        unsigned int obj_count;
+        char** obj_names = scene_animation_get_object_names(anim, &obj_count);
+        for (unsigned int i = 0; i < obj_count; i++) {
+            if (strcmp(obj_names[i], go_name) != 0) {
+                continue;
+            }
+            scene_animation_stop(anim);
+            break;
+        }
+        free(obj_names);
     }
 
-    if (gizmo_get_target(editor->gizmo) == info->game_object) {
-        gizmo_destroy_in_world_now(editor->gizmo, editor->game_world);
-        editor->gizmo = NULL;
+    if (editor->gizmo != NULL) {
+        // Is selected with gizmo?
+        if (gizmo_get_target(editor->gizmo) == info->game_object) {
+            gizmo_destroy_in_world_now(editor->gizmo, editor->game_world);
+            editor->gizmo = NULL;
+        }
     }
 }
 
@@ -443,6 +459,12 @@ editor_on_game_tick(void* game_instance, te_game_manager* game_manager, float de
 
     te_editor* editor = game_instance;
     editor_camera_on_game_tick(editor->editor_camera, delta_time_sec);
+
+    te_scene_animation_editor* anim_editor =
+        world_inspector_get_scene_animation_editor(editor_ui_get_world_inspector(editor->ui));
+    if (anim_editor != NULL) {
+        prv_scene_animation_editor_tick(anim_editor);
+    }
 
     // Update stats.
     editor->time_since_stats_update_sec += delta_time_sec;
@@ -668,44 +690,57 @@ editor_on_mouse_button_pressed(
     vec4 viewport;
     camera_get_viewport(game_camera, viewport);
 
-    vec2 cursor_pos;
+    vec2 window_cursor_pos;
     te_window* window = game_manager_get_window(game_manager);
-    window_get_cursor_position(window, &cursor_pos[0], &cursor_pos[1]);
+    window_get_cursor_position(window, &window_cursor_pos[0], &window_cursor_pos[1]);
 
     unsigned int window_width;
     unsigned int window_height;
     window_get_size(window, &window_width, &window_height);
-    glm_vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
+    glm_vec2_div(
+        window_cursor_pos, (vec2){(float)window_width, (float)window_height},
+        window_cursor_pos);
 
-    if (cursor_pos[0] < viewport[0] || cursor_pos[1] < viewport[1]
-        || cursor_pos[0] > viewport[0] + viewport[2]
-        || cursor_pos[1] > viewport[1] + viewport[3]) {
+    if (window_cursor_pos[0] < viewport[0] || window_cursor_pos[1] < viewport[1]
+        || window_cursor_pos[0] > viewport[0] + viewport[2]
+        || window_cursor_pos[1] > viewport[1] + viewport[3]) {
         // Outside of the game viewport.
         return;
+    }
+
+    // Check if we clicked on scene animation editor.
+    te_scene_animation_editor* anim_editor =
+        world_inspector_get_scene_animation_editor(editor_ui_get_world_inspector(editor->ui));
+    if (anim_editor != NULL) {
+        // Remap to viewport for scene animation.
+        vec2 cursor_pos;
+        glm_vec2_sub(window_cursor_pos, viewport, cursor_pos);
+        glm_vec2_div(cursor_pos, &viewport[2], cursor_pos);
+
+        te_widget* widget = scene_animation_editor_get_root_widget(anim_editor);
+
+        vec2 pos;
+        widget_get_screen_position(widget, pos);
+        vec2 size;
+        widget_get_screen_size(widget, size);
+
+        if (cursor_pos[0] > pos[0] && cursor_pos[0] < pos[0] + size[0]
+            && cursor_pos[1] > pos[1] && cursor_pos[1] < pos[1] + size[1]) {
+            glm_vec2_sub(cursor_pos, pos, cursor_pos);
+            glm_vec2_div(cursor_pos, size, cursor_pos);
+            prv_scene_animation_editor_on_mouse_click(anim_editor, button, cursor_pos);
+            return;
+        }
     }
 
     if (button == TE_MB_RIGHT) {
         window_capture_mouse_cursor(window, true);
         editor_camera_enable_input(editor->editor_camera, true);
-    } else if (button == TE_MB_LEFT && !editor_camera_is_fullscreen(editor->editor_camera)) {
-        // Check if we clicked on scene animation editor.
-        te_scene_animation_editor* anim_editor = world_inspector_get_scene_animation_editor(
-            editor_ui_get_world_inspector(editor->ui));
-        if (anim_editor != NULL) {
-            te_widget* widget = scene_animation_editor_get_root_widget(anim_editor);
-            vec2 pos;
-            widget_get_screen_position(widget, pos);
-            vec2 size;
-            widget_get_screen_size(widget, size);
-            if (cursor_pos[0] > pos[0] && cursor_pos[0] < pos[0] + size[0]
-                && cursor_pos[1] > pos[1] && cursor_pos[1] < pos[1] + size[1]) {
-                // Clicked on it.
-                return;
-            }
-        }
-
+        return;
+    }
+    if (button == TE_MB_LEFT && !editor_camera_is_fullscreen(editor->editor_camera)) {
         te_game_object_info* obj_info = obj_picking_find_obj_under_cursor(
-            cursor_pos, game_camera, editor->game_world, editor->gizmo);
+            window_cursor_pos, game_camera, editor->game_world, editor->gizmo);
 
         if (editor->gizmo != NULL && obj_info != NULL) {
             if (obj_info->game_object == gizmo_get_model_x(editor->gizmo)) {

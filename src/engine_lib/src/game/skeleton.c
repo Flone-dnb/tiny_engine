@@ -65,7 +65,7 @@ struct te_skeleton {
 
     unsigned int bone_count;
 
-    // ID used to unregister tick callback.
+    // ID used to unregister tick callback. 0xFFFFFFFF if not registered.
     unsigned int tick_callback_id;
 };
 

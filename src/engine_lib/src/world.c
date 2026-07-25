@@ -6,6 +6,7 @@
 #include <game/model.h>
 #include <game/camera.h>
 #include <game/game_object_info.h>
+#include <game/scene_animation.h>
 #include <game_manager.h>
 #include <io/log.h>
 #include <io/config.h>
@@ -58,6 +59,9 @@ struct te_world {
     // Renders widgets of the world.
     te_widget_renderer* widget_renderer;
 
+    // NULL if not loaded/created.
+    te_scene_animation* scene_animation;
+
     // May be NULL. Item from array @ref interactable_widgets that currently hovered.
     te_widget* hovered_interactable_widget;
 
@@ -102,6 +106,8 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
     world->game_manager = game_manager;
 
     world->active_camera = NULL;
+
+    world->scene_animation = NULL;
 
     world->spawned_widgets = NULL;
     world->spawned_widget_count = 0;
@@ -149,6 +155,12 @@ void
 prv_world_destroy(te_world* world) {
     world->is_being_destroyed = true;
 
+    if (world->scene_animation != NULL) {
+        scene_animation_stop(world->scene_animation);
+        prv_scene_animation_destroy(world->scene_animation);
+        world->scene_animation = NULL;
+    }
+
     // Despawn and destroy world objects.
     {
         // Game objects.
@@ -192,6 +204,21 @@ prv_world_destroy(te_world* world) {
 #endif
 
     free(world);
+}
+
+te_scene_animation*
+world_create_scene_animation(te_world* world) {
+    if (world->scene_animation != NULL) {
+        prv_scene_animation_destroy(world->scene_animation);
+    }
+
+    world->scene_animation = prv_scene_animation_create(world);
+    return world->scene_animation;
+}
+
+te_scene_animation*
+world_get_scene_animation(te_world* world) {
+    return world->scene_animation;
 }
 
 bool

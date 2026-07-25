@@ -1086,6 +1086,19 @@ on_button_scene_animation_clicked(te_button_widget* button) {
         vec4 color;
         theme_get_accent_color(color);
         button_widget_set_color(inspector->scene_animation_button, color);
+
+        // Show tracks of selected object.
+        void* obj = property_inspector_get_inspected_obj(inspector->property_inspector);
+        const char* type_id = property_inspector_get_inspected_obj_type_id(inspector->property_inspector);
+        if (obj != NULL && type_id != NULL) {
+            const te_type_info* type_info = type_database_get_type_info(type_id);
+            if (type_info == NULL) {
+                log_error("expected type info to be valid");
+                abort();
+            }
+            scene_animation_editor_show_tracks(
+                inspector->scene_animation_editor, obj, type_info);
+        }
     } else {
         scene_animation_editor_destroy(inspector->scene_animation_editor);
         inspector->scene_animation_editor = NULL;

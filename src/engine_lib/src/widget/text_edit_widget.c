@@ -119,7 +119,8 @@ prv_text_edit_widget_on_before_base_destroyed(void* this) {
 void
 text_edit_widget_set_on_text_changed(
     te_text_edit_widget* text_edit_widget,
-    void (*on_text_changed)(te_text_edit_widget* text_edit_widget, wchar_t* new_text, unsigned int strlen)) {
+    void (*on_text_changed)(
+        te_text_edit_widget* text_edit_widget, wchar_t* new_text, unsigned int strlen)) {
     text_edit_widget->on_text_changed = on_text_changed;
 }
 
@@ -368,7 +369,8 @@ prv_text_edit_widget_update_cursor(te_text_edit_widget* text_edit_widget) {
         const float glyph_scale =
             text_edit_widget->text_height / prv_font_manager_get_font_height_to_load();
         bool found = false;
-        for (unsigned int char_idx = 0, glyph_idx = 0; char_idx < text_len; char_idx++) {
+        for (unsigned int char_idx = 0, glyph_idx = 0;
+             char_idx < text_len && glyph_idx < data->glyph_count; char_idx++) {
             te_font_glyph glyph =
                 font_manager_get_glyph(font_manager, (unsigned long)text[char_idx]);
 

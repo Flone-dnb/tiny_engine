@@ -13,6 +13,7 @@ struct te_game_object_info;
 struct te_widget;
 struct te_camera;
 struct te_sound;
+struct te_scene_animation;
 
 // Returns world's name.
 // Do not free/destroy returned pointer.
@@ -39,6 +40,16 @@ void world_set_active_camera(te_world* world, struct te_camera* camera);
 // (or when the world is destroyed).
 void world_play_sound_2d(te_world* world, struct te_sound* sound);
 void world_play_sound_3d(te_world* world, struct te_sound* sound, vec3 world_position);
+
+// Creates a new scene animation that will be saved next to the world file (separately)
+// when @ref world_save_to_file is called.
+// Do not destroy returned pointer, it will be automatically destroyed by world during world
+// destruction or when another scene animation will replace it.
+struct te_scene_animation* world_create_scene_animation(te_world* world);
+
+// Returns NULL if no scene animation was created/loaded previously,
+// see @ref world_create_scene_animation.
+struct te_scene_animation* world_get_scene_animation(te_world* world);
 
 // Serializes all spawned world entities into the specified file
 // (path relative to the `res` directory).
