@@ -20,7 +20,9 @@ wchar_to_char(const wchar_t* src, unsigned int* dst_strlen) {
         log_error("failed to convert wchar* to char* - text is too long");
         abort();
     }
-    (*dst_strlen) = (unsigned int)len;
+    if (dst_strlen != NULL) {
+        (*dst_strlen) = (unsigned int)len;
+    }
 
     return dst;
 }
@@ -40,7 +42,9 @@ wchar_from_char(const char* src, unsigned int* dst_strlen) {
         log_error("failed to convert wchar* to char* - text is too long");
         abort();
     }
-    (*dst_strlen) = (unsigned int)len;
+    if (dst_strlen != NULL) {
+        (*dst_strlen) = (unsigned int)len;
+    }
 
     return dst;
 }

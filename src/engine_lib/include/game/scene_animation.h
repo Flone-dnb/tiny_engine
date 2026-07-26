@@ -83,6 +83,18 @@ SCENE_ANIM_GET_KEYFRAMES(vec2)
 SCENE_ANIM_GET_KEYFRAMES(vec3)
 SCENE_ANIM_GET_KEYFRAMES(vec4)
 
+// Removes all keyframes (animation) of the specified variable.
+#define SCENE_ANIM_REMOVE_KEYFRAMES(var_type)                                                 \
+    void scene_animation_remove_keyframes_##var_type(                                         \
+        te_scene_animation* scene_animation, const char* object_name,                         \
+        const char* variable_name);
+SCENE_ANIM_REMOVE_KEYFRAMES(bool)
+SCENE_ANIM_REMOVE_KEYFRAMES(uint)
+SCENE_ANIM_REMOVE_KEYFRAMES(float)
+SCENE_ANIM_REMOVE_KEYFRAMES(vec2)
+SCENE_ANIM_REMOVE_KEYFRAMES(vec3)
+SCENE_ANIM_REMOVE_KEYFRAMES(vec4)
+
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API
 // ------------------------------------------------------------------------------------------------
