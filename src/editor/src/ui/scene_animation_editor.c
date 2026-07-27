@@ -20,8 +20,15 @@
 #define TE_SCENE_ANIM_TRACK_NAME_WIDTH 0.14f
 #define BUTTON_HIDDEN_X_POS 10.0f
 
+typedef struct te_keyframe_button_data {
+    te_scene_animation_editor* editor;
+    const char* variable_name;
+    void* keyframe;
+} te_keyframe_button_data;
+
 typedef struct te_keyframe_button_array {
     te_button_widget** buttons;
+    te_keyframe_button_data* datas;
     unsigned int count;
     unsigned int capacity;
 } te_keyframe_button_array;
@@ -30,6 +37,7 @@ static te_keyframe_button_array*
 keyframe_button_array_create(void) {
     te_keyframe_button_array* array = malloc(sizeof(te_keyframe_button_array));
     array->buttons = NULL;
+    array->datas = NULL;
     array->count = 0;
     array->capacity = 0;
     return array;
@@ -37,7 +45,8 @@ keyframe_button_array_create(void) {
 
 static void
 keyframe_button_array_add(
-    te_keyframe_button_array* array, te_widget* parent, float topleft_x, float topleft_y,
+    te_keyframe_button_array* array, te_scene_animation_editor* editor, te_widget* root_widget,
+    void* keyframe, const char* variable_name, float topleft_x, float topleft_y,
     float track_width, float track_height) {
     if (array->count == array->capacity) {
         array->capacity += 50;
@@ -47,6 +56,11 @@ keyframe_button_array_add(
 
         free(array->buttons);
         array->buttons = new_buttons;
+
+        te_keyframe_button_data* new_datas =
+            malloc(sizeof(te_keyframe_button_data) * array->capacity);
+        free(array->datas);
+        array->datas = new_datas;
     }
 
     te_button_widget* button = button_widget_create();
@@ -57,10 +71,16 @@ keyframe_button_array_add(
         size[0] = size[1] / aspect;
 
         te_widget* widget = button_widget_get_widget(button);
-        widget_set_parent(widget, parent);
+        widget_set_parent(widget, root_widget);
         widget_set_relative_position(
             widget, (vec2){topleft_x - size[0] / 2.0f, topleft_y + size[1] / 2.0f});
         widget_set_relative_size(widget, size);
+
+        te_keyframe_button_data* data = &array->datas[array->count];
+        data->editor = editor;
+        data->keyframe = keyframe;
+        data->variable_name = variable_name;
+        widget_set_custom_ptr(widget, data);
     }
 
     button_widget_set_color(button, (vec4){1.0f, 0.0f, 0.0f, 1.0f});
@@ -83,7 +103,9 @@ keyframe_button_array_clear(te_keyframe_button_array* array) {
     array->count = 0;
     array->capacity = 0;
     free(array->buttons);
+    free(array->datas);
     array->buttons = NULL;
+    array->datas = NULL;
 }
 
 static void
@@ -749,8 +771,9 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
                                    + (1.0f - editor->timeline_x_pos) * keyframe_x_portion;    \
                 float keyframe_y = pos[1];                                                    \
                 keyframe_button_array_add(                                                    \
-                    editor->keyframe_button_array, editor->root_widget, keyframe_x,           \
-                    keyframe_y, (1.0f - editor->timeline_x_pos), editor->button_height);      \
+                    editor->keyframe_button_array, editor, editor->root_widget,               \
+                    &keyframes[keyframe_idx], var_names[var_idx], keyframe_x, keyframe_y,     \
+                    (1.0f - editor->timeline_x_pos), editor->button_height);                  \
             }                                                                                 \
                                                                                               \
             total_track_count += 1;                                                           \
@@ -988,9 +1011,58 @@ prv_scene_animation_editor_on_mouse_click(
 
             return;
         }
-    } else if (button == TE_MB_LEFT) {
-        // Move current position or select a keyframe.
-        // TODO
+    } else if (button == TE_MB_RIGHT) {
+        te_scene_animation* anim = world_get_scene_animation(editor->world);
+        if (anim == NULL) {
+            return;
+        }
+
+        const char* object_name = get_selected_obj_name(editor);
+        if (object_name == NULL) {
+            return;
+        }
+
+        // Delete keyframe.
+        for (unsigned int i = 0; i < editor->keyframe_button_array->count; i++) {
+            te_widget* widget =
+                button_widget_get_widget(editor->keyframe_button_array->buttons[i]);
+
+            vec2 pos;
+            vec2 size;
+            widget_get_relative_position(widget, pos);
+            widget_get_relative_size(widget, size);
+
+            if (cursor_pos[0] > pos[0] && cursor_pos[0] < pos[0] + size[0]
+                && cursor_pos[1] > pos[1] && cursor_pos[1] < pos[1] + size[1]) {
+                unsigned int count;
+                te_scene_animation_keyframe_vec3* keyframes =
+                    scene_animation_get_keyframes_vec3(anim, object_name, "position", &count);
+                for (unsigned int k = 0; k < count; k++) {
+                    float time = keyframes[k].time;
+                    int a = 2;
+                    a++;
+                    (void)time;
+                    (void)a;
+                }
+
+                te_keyframe_button_data* data = widget_get_custom_ptr(widget);
+                scene_animation_remove_keyframe(
+                    anim, object_name, data->variable_name, data->keyframe);
+
+                keyframes =
+                    scene_animation_get_keyframes_vec3(anim, object_name, "position", &count);
+                for (unsigned int k = 0; k < count; k++) {
+                    float time = keyframes[k].time;
+                    int a = 2;
+                    a++;
+                    (void)time;
+                    (void)a;
+                }
+
+                redraw_timeline(editor, true);
+                return;
+            }
+        }
     }
 }
 
@@ -1058,27 +1130,27 @@ on_track_right_clicked(te_button_widget* button) {
 
         switch (var_info->type) {
             case (TE_VT_BOOL): {
-                scene_animation_remove_keyframes_bool(anim, obj_name, variable_name);
+                scene_animation_remove_all_keyframes_bool(anim, obj_name, variable_name);
                 break;
             }
             case (TE_VT_FLOAT): {
-                scene_animation_remove_keyframes_float(anim, obj_name, variable_name);
+                scene_animation_remove_all_keyframes_float(anim, obj_name, variable_name);
                 break;
             }
             case (TE_VT_UINT): {
-                scene_animation_remove_keyframes_uint(anim, obj_name, variable_name);
+                scene_animation_remove_all_keyframes_uint(anim, obj_name, variable_name);
                 break;
             }
             case (TE_VT_VEC2): {
-                scene_animation_remove_keyframes_vec2(anim, obj_name, variable_name);
+                scene_animation_remove_all_keyframes_vec2(anim, obj_name, variable_name);
                 break;
             }
             case (TE_VT_VEC3): {
-                scene_animation_remove_keyframes_vec3(anim, obj_name, variable_name);
+                scene_animation_remove_all_keyframes_vec3(anim, obj_name, variable_name);
                 break;
             }
             case (TE_VT_VEC4): {
-                scene_animation_remove_keyframes_vec4(anim, obj_name, variable_name);
+                scene_animation_remove_all_keyframes_vec4(anim, obj_name, variable_name);
                 break;
             }
             default: {

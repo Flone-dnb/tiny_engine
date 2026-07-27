@@ -84,16 +84,33 @@ SCENE_ANIM_GET_KEYFRAMES(vec3)
 SCENE_ANIM_GET_KEYFRAMES(vec4)
 
 // Removes all keyframes (animation) of the specified variable.
-#define SCENE_ANIM_REMOVE_KEYFRAMES(var_type)                                                 \
-    void scene_animation_remove_keyframes_##var_type(                                         \
+#define SCENE_ANIM_REMOVE_ALL_KEYFRAMES(var_type)                                             \
+    void scene_animation_remove_all_keyframes_##var_type(                                     \
         te_scene_animation* scene_animation, const char* object_name,                         \
         const char* variable_name);
-SCENE_ANIM_REMOVE_KEYFRAMES(bool)
-SCENE_ANIM_REMOVE_KEYFRAMES(uint)
-SCENE_ANIM_REMOVE_KEYFRAMES(float)
-SCENE_ANIM_REMOVE_KEYFRAMES(vec2)
-SCENE_ANIM_REMOVE_KEYFRAMES(vec3)
-SCENE_ANIM_REMOVE_KEYFRAMES(vec4)
+SCENE_ANIM_REMOVE_ALL_KEYFRAMES(bool)
+SCENE_ANIM_REMOVE_ALL_KEYFRAMES(uint)
+SCENE_ANIM_REMOVE_ALL_KEYFRAMES(float)
+SCENE_ANIM_REMOVE_ALL_KEYFRAMES(vec2)
+SCENE_ANIM_REMOVE_ALL_KEYFRAMES(vec3)
+SCENE_ANIM_REMOVE_ALL_KEYFRAMES(vec4)
+
+// Removes a keyframe (finds the keyframe automatically).
+void scene_animation_remove_keyframe(
+    te_scene_animation* scene_animation, const char* object_name, const char* variable_name,
+    void* keyframe);
+
+// Removes a keyframe (type is specified explicitly).
+#define SCENE_ANIM_REMOVE_KEYFRAME(var_type)                                                  \
+    void scene_animation_remove_keyframe_##var_type(                                          \
+        te_scene_animation* scene_animation, const char* object_name,                         \
+        const char* variable_name, te_scene_animation_keyframe_##var_type* keyframe);
+SCENE_ANIM_REMOVE_KEYFRAME(bool)
+SCENE_ANIM_REMOVE_KEYFRAME(uint)
+SCENE_ANIM_REMOVE_KEYFRAME(float)
+SCENE_ANIM_REMOVE_KEYFRAME(vec2)
+SCENE_ANIM_REMOVE_KEYFRAME(vec3)
+SCENE_ANIM_REMOVE_KEYFRAME(vec4)
 
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API

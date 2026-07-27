@@ -498,8 +498,8 @@ SCENE_ANIM_GET_KEYFRAME_FUNC_IMPL(vec2)
 SCENE_ANIM_GET_KEYFRAME_FUNC_IMPL(vec3)
 SCENE_ANIM_GET_KEYFRAME_FUNC_IMPL(vec4);
 
-#define SCENE_ANIM_REMOVE_KEYFRAMES_IMPL(var_type)                                            \
-    void scene_animation_remove_keyframes_##var_type(                                         \
+#define SCENE_ANIM_REMOVE_ALL_KEYFRAMES_IMPL(var_type)                                        \
+    void scene_animation_remove_all_keyframes_##var_type(                                     \
         te_scene_animation* scene_animation, const char* object_name,                         \
         const char* variable_name) {                                                          \
         te_scene_animation_obj* obj = get_obj(scene_animation, object_name);                  \
@@ -514,14 +514,14 @@ SCENE_ANIM_GET_KEYFRAME_FUNC_IMPL(vec4);
                 obj->var_type##s = NULL;                                                      \
             } else {                                                                          \
                 te_scene_animation_obj_variable_##var_type* new_vars = malloc(                \
-                    sizeof(te_scene_animation_obj_variable_##var_type*)                       \
+                    sizeof(te_scene_animation_obj_variable_##var_type)                        \
                     * (obj->var_type##_count - 1));                                           \
                 memcpy(                                                                       \
                     new_vars, obj->var_type##s,                                               \
-                    sizeof(te_scene_animation_obj_variable_##var_type*) * var_idx);           \
+                    sizeof(te_scene_animation_obj_variable_##var_type) * var_idx);            \
                 memcpy(                                                                       \
                     new_vars + var_idx, obj->var_type##s + (var_idx + 1),                     \
-                    sizeof(te_scene_animation_obj_variable_##var_type*)                       \
+                    sizeof(te_scene_animation_obj_variable_##var_type)                        \
                         * (obj->var_type##_count - var_idx - 1));                             \
                                                                                               \
                 free(obj->var_type##s);                                                       \
@@ -532,12 +532,82 @@ SCENE_ANIM_GET_KEYFRAME_FUNC_IMPL(vec4);
             break;                                                                            \
         }                                                                                     \
     }
-SCENE_ANIM_REMOVE_KEYFRAMES_IMPL(bool)
-SCENE_ANIM_REMOVE_KEYFRAMES_IMPL(uint)
-SCENE_ANIM_REMOVE_KEYFRAMES_IMPL(float)
-SCENE_ANIM_REMOVE_KEYFRAMES_IMPL(vec2)
-SCENE_ANIM_REMOVE_KEYFRAMES_IMPL(vec3)
-SCENE_ANIM_REMOVE_KEYFRAMES_IMPL(vec4)
+SCENE_ANIM_REMOVE_ALL_KEYFRAMES_IMPL(bool)
+SCENE_ANIM_REMOVE_ALL_KEYFRAMES_IMPL(uint)
+SCENE_ANIM_REMOVE_ALL_KEYFRAMES_IMPL(float)
+SCENE_ANIM_REMOVE_ALL_KEYFRAMES_IMPL(vec2)
+SCENE_ANIM_REMOVE_ALL_KEYFRAMES_IMPL(vec3)
+SCENE_ANIM_REMOVE_ALL_KEYFRAMES_IMPL(vec4)
+
+void
+scene_animation_remove_keyframe(
+    te_scene_animation* scene_animation, const char* object_name, const char* variable_name,
+    void* keyframe) {
+    te_scene_animation_obj* obj = get_obj(scene_animation, object_name);
+
+#define FIND_AND_REMOVE_KEYFRAME(var_type)                                                    \
+    for (unsigned int i = 0; i < obj->var_type##_count; i++) {                                \
+        if (strcmp(obj->var_type##s[i].name, variable_name) == 0) {                           \
+            scene_animation_remove_keyframe_##var_type(                                       \
+                scene_animation, object_name, variable_name, keyframe);                       \
+            return;                                                                           \
+        }                                                                                     \
+    }
+    FIND_AND_REMOVE_KEYFRAME(bool)
+    FIND_AND_REMOVE_KEYFRAME(uint)
+    FIND_AND_REMOVE_KEYFRAME(float)
+    FIND_AND_REMOVE_KEYFRAME(vec2)
+    FIND_AND_REMOVE_KEYFRAME(vec3)
+    FIND_AND_REMOVE_KEYFRAME(vec4)
+}
+
+#define SCENE_ANIM_REMOVE_KEYFRAME_IMPL(var_type)                                             \
+    void scene_animation_remove_keyframe_##var_type(                                          \
+        te_scene_animation* scene_animation, const char* object_name,                         \
+        const char* variable_name, te_scene_animation_keyframe_##var_type* target_keyframe) { \
+        te_scene_animation_obj* obj = get_obj(scene_animation, object_name);                  \
+        const size_t keyframe_size = sizeof(te_scene_animation_keyframe_##var_type);          \
+        for (unsigned int var_idx = 0; var_idx < obj->var_type##_count; var_idx++) {          \
+            te_scene_animation_obj_variable_##var_type* var = &obj->var_type##s[var_idx];     \
+            if (strcmp(var->name, variable_name) != 0) {                                      \
+                continue;                                                                     \
+            }                                                                                 \
+                                                                                              \
+            for (unsigned int keyframe_idx = 0; keyframe_idx < var->keyframe_count;           \
+                 keyframe_idx++) {                                                            \
+                te_scene_animation_keyframe_##var_type* keyframe =                            \
+                    &var->keyframes[keyframe_idx];                                            \
+                if (keyframe != target_keyframe) {                                            \
+                    continue;                                                                 \
+                }                                                                             \
+                                                                                              \
+                if (var->keyframe_count == 1) {                                               \
+                    scene_animation_remove_all_keyframes_##var_type(                          \
+                        scene_animation, object_name, variable_name);                         \
+                } else {                                                                      \
+                    te_scene_animation_keyframe_##var_type* new_keyframes =                   \
+                        malloc(keyframe_size * (var->keyframe_count - 1));                    \
+                    memcpy(new_keyframes, var->keyframes, keyframe_size* keyframe_idx);       \
+                    memcpy(                                                                   \
+                        new_keyframes + keyframe_idx, var->keyframes + (keyframe_idx + 1),    \
+                        keyframe_size * (var->keyframe_count - keyframe_idx - 1));            \
+                                                                                              \
+                    free(var->keyframes);                                                     \
+                    var->keyframes = new_keyframes;                                           \
+                    var->keyframe_count -= 1;                                                 \
+                }                                                                             \
+                break;                                                                        \
+            }                                                                                 \
+                                                                                              \
+            break;                                                                            \
+        }                                                                                     \
+    }
+SCENE_ANIM_REMOVE_KEYFRAME_IMPL(bool)
+SCENE_ANIM_REMOVE_KEYFRAME_IMPL(uint)
+SCENE_ANIM_REMOVE_KEYFRAME_IMPL(float)
+SCENE_ANIM_REMOVE_KEYFRAME_IMPL(vec2)
+SCENE_ANIM_REMOVE_KEYFRAME_IMPL(vec3)
+SCENE_ANIM_REMOVE_KEYFRAME_IMPL(vec4)
 
 void
 scene_animation_add_keyframe_bool(
@@ -876,6 +946,8 @@ scene_animation_play(te_scene_animation* scene_animation) {
     }
 
     cache_obj_and_var(scene_animation);
+
+    scene_animation->current_time_sec = 0.0f;
 
     // Init animated objects.
     scene_animation_tick(scene_animation, 0.0f);
