@@ -70,6 +70,10 @@ void world_add_from_file_with_offset(
 // Do not free/destroy returned pointer, valid until the camera is not destroyed.
 struct te_camera* world_get_active_camera(te_world* world);
 
+// Returns `false` if the cursor is outside of the world's viewport (or if there's no active camera).
+// Otherwise returns cursor pos relative to the world camera's viewport.
+bool world_get_cursor_relative_pos(te_world* world, vec2 cursor_pos);
+
 // Returns NULL if no objects are spawned, otherwise all spawned objects.
 // You must free returned array (but not the items in the array).
 // Note: returned array only contains "root" game objects (does not include attached/child game objects).

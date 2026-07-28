@@ -36,6 +36,7 @@ void scene_animation_set_is_looping(te_scene_animation* scene_animation, bool lo
 void scene_animation_play(te_scene_animation* scene_animation);
 void scene_animation_pause(te_scene_animation* scene_animation);
 void scene_animation_stop(te_scene_animation* scene_animation);
+void scene_animation_set_current_time(te_scene_animation* scene_animation, float time_sec);
 
 bool scene_animation_is_playing(te_scene_animation* scene_animation);
 float scene_animation_get_current_time(te_scene_animation* scene_animation);
@@ -71,9 +72,12 @@ SCENE_ANIM_ADD_KEYFRAME_FUNC(vec2, vec2)
 SCENE_ANIM_ADD_KEYFRAME_FUNC(vec3, vec3)
 SCENE_ANIM_ADD_KEYFRAME_FUNC(vec4, vec4)
 
-// Do not delete returned pointer, valid until keyframes are not modified.
+// Do not delete returned pointer, valid until keyframes are not added/changed/removed from the animation.
+// Do not modify properties of the returned keyframes (such as time) instead to modify a keyframe's time
+// remove the keyframe and add it again with the new time.
+// Note: if you really want to you can change non-time properties of a keyframe, it should be safe.
 #define SCENE_ANIM_GET_KEYFRAMES(var_type)                                                    \
-    te_scene_animation_keyframe_##var_type* scene_animation_get_keyframes_##var_type(         \
+    const te_scene_animation_keyframe_##var_type* scene_animation_get_keyframes_##var_type(   \
         te_scene_animation* scene_animation, const char* object_name,                         \
         const char* variable_name, unsigned int* out_keyframe_count);
 SCENE_ANIM_GET_KEYFRAMES(bool)

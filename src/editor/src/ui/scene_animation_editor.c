@@ -9,21 +9,26 @@
 #include <widget/rect_widget.h>
 #include <widget/text_widget.h>
 #include <widget/checkbox_widget.h>
+#include <widget/text_edit_widget.h>
 #include <misc/wchar_funcs.h>
 #include <type_database.h>
+#include <misc/globals.h>
 #include <ui/theme.h>
 #include <game/game_object_info.h>
 #include <game/scene_animation.h>
 
 #define TE_SCENE_ANIM_EDITOR_X_POS 0.05f
-#define TE_SCENE_ANIM_MENU_WIDTH 0.09f
+#define TE_SCENE_ANIM_EDITOR_Y_POS 0.73f
+#define TE_SCENE_ANIM_MENU_WIDTH 0.15f
 #define TE_SCENE_ANIM_TRACK_NAME_WIDTH 0.14f
 #define BUTTON_HIDDEN_X_POS 10.0f
 
 typedef struct te_keyframe_button_data {
     te_scene_animation_editor* editor;
-    const char* variable_name;
+    char* variable_name;
     void* keyframe;
+    float time_sec;
+    enum te_scene_animation_interpolation_type interpolation;
 } te_keyframe_button_data;
 
 typedef struct te_keyframe_button_array {
@@ -31,6 +36,7 @@ typedef struct te_keyframe_button_array {
     te_keyframe_button_data* datas;
     unsigned int count;
     unsigned int capacity;
+    unsigned int selected_idx; // 0xFFFFFFFF if not selected
 } te_keyframe_button_array;
 
 static te_keyframe_button_array*
@@ -40,15 +46,39 @@ keyframe_button_array_create(void) {
     array->datas = NULL;
     array->count = 0;
     array->capacity = 0;
+    array->selected_idx = 0xFFFFFFFF;
     return array;
+}
+
+static void
+keyframe_button_array_select_keyframe(
+    te_keyframe_button_array* array, unsigned int button_idx) {
+    if (array->selected_idx != 0xFFFFFFFF) {
+        button_widget_set_color(
+            array->buttons[array->selected_idx], (vec4){1.0f, 0.0f, 0.0f, 1.0f});
+        button_widget_set_color_hovered(
+            array->buttons[array->selected_idx], (vec4){1.0f, 0.1f, 0.1f, 1.0f});
+    }
+
+    array->selected_idx = button_idx;
+
+    if (array->selected_idx != 0xFFFFFFFF) {
+        button_widget_set_color(
+            array->buttons[array->selected_idx], (vec4){0.8f, 0.8f, 0.8f, 1.0f});
+        button_widget_set_color_hovered(
+            array->buttons[array->selected_idx], (vec4){1.0f, 1.0f, 1.0f, 1.0f});
+    }
 }
 
 static void
 keyframe_button_array_add(
     te_keyframe_button_array* array, te_scene_animation_editor* editor, te_widget* root_widget,
-    void* keyframe, const char* variable_name, float topleft_x, float topleft_y,
-    float track_width, float track_height) {
+    void* keyframe, enum te_scene_animation_interpolation_type interpolation, float time_sec,
+    const char* variable_name, float topleft_x, float topleft_y, float track_width,
+    float track_height) {
     if (array->count == array->capacity) {
+        keyframe_button_array_select_keyframe(array, 0xFFFFFFFF);
+
         array->capacity += 50;
 
         te_button_widget** new_buttons = malloc(sizeof(te_button_widget*) * array->capacity);
@@ -79,7 +109,14 @@ keyframe_button_array_add(
         te_keyframe_button_data* data = &array->datas[array->count];
         data->editor = editor;
         data->keyframe = keyframe;
-        data->variable_name = variable_name;
+        data->time_sec = time_sec;
+        data->interpolation = interpolation;
+
+        size_t len = strlen(variable_name);
+        data->variable_name = malloc(sizeof(char) * (len + 1));
+        memcpy(data->variable_name, variable_name, sizeof(char) * len);
+        data->variable_name[len] = 0;
+
         widget_set_custom_ptr(widget, data);
     }
 
@@ -99,6 +136,8 @@ keyframe_button_array_clear(te_keyframe_button_array* array) {
         te_world* world = widget_get_world(widget);
         world_despawn_widget(world, widget);
         widget_destroy(widget);
+
+        free(array->datas[i].variable_name);
     }
     array->count = 0;
     array->capacity = 0;
@@ -106,6 +145,7 @@ keyframe_button_array_clear(te_keyframe_button_array* array) {
     free(array->datas);
     array->buttons = NULL;
     array->datas = NULL;
+    array->selected_idx = 0xFFFFFFFF;
 }
 
 static void
@@ -121,9 +161,20 @@ struct te_scene_animation_editor {
 
     te_text_widget* left_border_time_text;
     te_text_widget* right_border_time_text;
-    te_text_widget* time_widget;
+    te_text_edit_widget* time_widget;
+
+    // Visible only when keyframe is selected.
+    te_text_widget* keyframe_time_widget;
+    te_text_edit_widget* keyframe_time_edit_widget;
+    te_text_widget* keyframe_interpolation_widget;
+    te_button_widget* keyframe_interpolation_button_step;
+    te_button_widget* keyframe_interpolation_button_linear;
+    te_button_widget* keyframe_interpolation_button_cubic;
+    te_button_widget* keyframe_update_value_button;
 
     te_button_widget** track_buttons;
+
+    te_button_widget* play_pause_button;
 
     te_rect_widget* current_time_separator;
 
@@ -136,35 +187,47 @@ struct te_scene_animation_editor {
     float timeline_x_pos;
     float button_height;
     float track_buttons_x;
+    float menu_padding_x;
+    float keyframe_time_edit_x;
+    float keyframe_interpolation_buttons_x;
+    float interpolation_button_width;
 
     unsigned int track_button_count;
     unsigned int track_scroll_count;
 
     unsigned int left_border_time;
     unsigned int right_border_time;
+
+    // How much seconds between left and right time border on the timeline.
+    unsigned int displayed_time_interval;
 };
 
-static void redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes);
+static void redraw_timeline(te_scene_animation_editor* editor, bool);
 static void on_play_pause_clicked(te_button_widget* button);
 static void on_stop_clicked(te_button_widget* button);
 static void on_track_right_clicked(te_button_widget* button);
+static void on_keyframe_time_changed(te_text_edit_widget* text_edit);
+static void on_current_time_changed(te_text_edit_widget* text_edit);
+static void on_keyframe_interpolation_changed(te_button_widget* button);
+static void on_update_keyframe_value_clicked(te_button_widget* button);
 
 te_scene_animation_editor*
 scene_animation_editor_create(te_world* world) {
     te_scene_animation_editor* editor = malloc(sizeof(te_scene_animation_editor));
     editor->world = world;
+    editor->displayed_time_interval = 4;
     editor->left_border_time = 0;
-    editor->right_border_time = 4;
+    editor->right_border_time = editor->displayed_time_interval;
     editor->track_scroll_count = 0;
     editor->selected_obj = NULL;
     editor->selected_obj_type_info = NULL;
     editor->keyframe_button_array = keyframe_button_array_create();
 
     vec2 pos;
-    glm_vec2_copy((vec2){TE_SCENE_ANIM_EDITOR_X_POS, 0.76f}, pos);
+    glm_vec2_copy((vec2){TE_SCENE_ANIM_EDITOR_X_POS, TE_SCENE_ANIM_EDITOR_Y_POS}, pos);
 
     vec2 size;
-    glm_vec2_copy((vec2){1.0f - pos[0] * 2.0f, 0.98f - pos[1]}, size);
+    glm_vec2_copy((vec2){1.0f - pos[0] * 2.0f, 0.99f - pos[1]}, size);
 
     const float padding_x = theme_get_horizontal_padding() / size[0];
     const float padding_y = theme_get_vertical_padding() / size[1];
@@ -199,6 +262,7 @@ scene_animation_editor_create(te_world* world) {
         // Play/pause button.
         {
             te_button_widget* button = button_widget_create();
+            editor->play_pause_button = button;
             {
                 te_widget* widget = button_widget_get_widget(button);
                 widget_set_relative_position(widget, (vec2){padding_x, y_pos});
@@ -280,24 +344,332 @@ scene_animation_editor_create(te_world* world) {
         }
         y_pos += button_height + vspacing;
 
-        // Time.
+        // Current time.
         {
-            te_text_widget* text = text_widget_create();
-            editor->time_widget = text;
+            float title_width = button_width * 0.5f;
+
+            // Title
             {
-                te_widget* widget = text_widget_get_widget(text);
-                widget_set_relative_position(widget, (vec2){padding_x, y_pos});
-                widget_set_relative_size(widget, (vec2){button_width, button_height});
-                widget_set_parent(widget, editor->root_widget);
+                te_text_widget* text = text_widget_create();
+                {
+                    te_widget* widget = text_widget_get_widget(text);
+                    widget_set_relative_position(widget, (vec2){padding_x, y_pos});
+                    widget_set_relative_size(widget, (vec2){title_width, button_height});
+                    widget_set_parent(widget, editor->root_widget);
+                }
+
+                text_widget_set_text_height(text, theme_get_text_height());
+
+                unsigned int text_len;
+                wchar_t* wtext = wchar_from_char("Current time: ", &text_len);
+                text_widget_set_text_own(text, wtext, text_len);
             }
 
-            text_widget_set_text_height(text, theme_get_text_height());
+            // Background.
+            te_rect_widget* rect = rect_widget_create();
+            {
+                te_widget* widget = rect_widget_get_widget(rect);
+                widget_set_relative_position(
+                    widget, (vec2){padding_x + title_width + padding_x, y_pos});
+                widget_set_relative_size(
+                    widget,
+                    (vec2){button_width - title_width - padding_x * 2.0f, button_height});
+                widget_set_parent(widget, editor->root_widget);
+            }
+            vec4 text_edit_background_color;
+            theme_get_text_edit_background_color(text_edit_background_color);
+            rect_widget_set_color(rect, text_edit_background_color);
+
+            // Text edit.
+            te_text_edit_widget* text = text_edit_widget_create();
+            editor->time_widget = text;
+            {
+                te_widget* widget = text_edit_widget_get_widget(text);
+                widget_set_relative_position(widget, (vec2){0.1f, 0.0f});
+                widget_set_relative_size(widget, (vec2){0.9f, 1.0f});
+                widget_set_parent(widget, rect_widget_get_widget(rect));
+
+                widget_set_custom_ptr(widget, editor);
+            }
+
+            text_edit_widget_set_text_height(text, theme_get_text_height());
+            text_edit_widget_set_on_text_accepted(text, on_current_time_changed);
 
             unsigned int text_len;
-            wchar_t* wtext = wchar_from_char("Time: 0.0 sec", &text_len);
-            text_widget_set_text_own(text, wtext, text_len);
+            wchar_t* wtext = wchar_from_char("0.0", &text_len);
+            text_edit_widget_set_text_own(text, wtext, text_len);
         }
         y_pos += button_height + vspacing;
+
+        // When keyframe is selected:
+        {
+            editor->menu_padding_x = padding_x;
+
+            float title_width = button_width * 0.65f;
+            editor->keyframe_time_edit_x = padding_x + title_width;
+
+            // Keyframe time.
+            {
+                // Title.
+                {
+                    te_text_widget* text = text_widget_create();
+                    editor->keyframe_time_widget = text;
+                    {
+                        te_widget* widget = text_widget_get_widget(text);
+                        widget_set_relative_position(
+                            widget, (vec2){BUTTON_HIDDEN_X_POS, y_pos});
+                        widget_set_relative_size(widget, (vec2){title_width, button_height});
+                        widget_set_parent(widget, editor->root_widget);
+                    }
+
+                    text_widget_set_text_height(text, theme_get_text_height());
+
+                    unsigned int text_len;
+                    wchar_t* wtext = wchar_from_char("Keyframe time: ", &text_len);
+                    text_widget_set_text_own(text, wtext, text_len);
+                }
+
+                // Text edit.
+                {
+                    // Background.
+                    te_rect_widget* rect = rect_widget_create();
+                    {
+                        te_widget* widget = rect_widget_get_widget(rect);
+                        widget_set_relative_position(
+                            widget, (vec2){BUTTON_HIDDEN_X_POS, y_pos});
+                        widget_set_relative_size(
+                            widget, (vec2){button_width - title_width, button_height});
+                        widget_set_parent(widget, editor->root_widget);
+                    }
+                    vec4 text_edit_background_color;
+                    theme_get_text_edit_background_color(text_edit_background_color);
+                    rect_widget_set_color(rect, text_edit_background_color);
+
+                    // Text edit.
+                    te_text_edit_widget* text_edit = text_edit_widget_create();
+                    editor->keyframe_time_edit_widget = text_edit;
+                    {
+                        te_widget* widget = text_edit_widget_get_widget(text_edit);
+                        widget_set_parent(widget, rect_widget_get_widget(rect));
+                        widget_set_relative_position(widget, (vec2){0.05f, 0.0f});
+                        widget_set_relative_size(widget, (vec2){1.0f, 1.0f});
+
+                        widget_set_custom_ptr(widget, editor);
+                    }
+
+                    text_edit_widget_set_text_height(text_edit, theme_get_text_height());
+                    text_edit_widget_set_on_text_accepted(text_edit, on_keyframe_time_changed);
+                }
+            }
+            y_pos += button_height + vspacing;
+
+            title_width = button_width * 0.5f;
+            editor->keyframe_interpolation_buttons_x = padding_x + title_width;
+
+            // Keyframe interpolation.
+            {
+                // Title.
+                {
+                    te_text_widget* text = text_widget_create();
+                    editor->keyframe_interpolation_widget = text;
+                    {
+                        te_widget* widget = text_widget_get_widget(text);
+                        widget_set_relative_position(
+                            widget, (vec2){BUTTON_HIDDEN_X_POS, y_pos});
+                        widget_set_relative_size(widget, (vec2){title_width, button_height});
+                        widget_set_parent(widget, editor->root_widget);
+                    }
+
+                    text_widget_set_text_height(text, theme_get_text_height());
+
+                    unsigned int text_len;
+                    wchar_t* wtext = wchar_from_char("Interpolation: ", &text_len);
+                    text_widget_set_text_own(text, wtext, text_len);
+                }
+
+                float interpolation_button_width = (button_width - title_width) / 3;
+                editor->interpolation_button_width = interpolation_button_width;
+
+                // Step.
+                {
+                    te_button_widget* button = button_widget_create();
+                    editor->keyframe_interpolation_button_step = button;
+                    {
+                        te_widget* widget = button_widget_get_widget(button);
+                        widget_set_relative_position(
+                            widget, (vec2){BUTTON_HIDDEN_X_POS, y_pos});
+                        widget_set_relative_size(
+                            widget, (vec2){interpolation_button_width, button_height});
+                        widget_set_parent(widget, editor->root_widget);
+
+                        widget_set_custom_ptr(widget, editor);
+                    }
+
+                    theme_get_button_color(color);
+                    button_widget_set_color(button, color);
+
+                    theme_get_button_color_hovered(color);
+                    button_widget_set_color_hovered(button, color);
+
+                    theme_get_button_color_pressed(color);
+                    button_widget_set_color_pressed(button, color);
+
+                    button_widget_set_on_clicked(button, on_keyframe_interpolation_changed);
+
+                    // Text.
+                    {
+                        te_text_widget* text = text_widget_create();
+                        {
+                            te_widget* widget = text_widget_get_widget(text);
+                            widget_set_relative_position(widget, (vec2){0.3f, 0.0f});
+                            widget_set_relative_size(widget, (vec2){0.7f, 1.0f});
+                            widget_set_parent(widget, button_widget_get_widget(button));
+                        }
+
+                        text_widget_set_text_height(text, theme_get_text_height());
+
+                        unsigned int text_len;
+                        wchar_t* wtext = wchar_from_char("S", &text_len);
+                        text_widget_set_text_own(text, wtext, text_len);
+                    }
+                }
+
+                // Linear.
+                {
+                    te_button_widget* button = button_widget_create();
+                    editor->keyframe_interpolation_button_linear = button;
+                    {
+                        te_widget* widget = button_widget_get_widget(button);
+                        widget_set_relative_position(
+                            widget, (vec2){BUTTON_HIDDEN_X_POS, y_pos});
+                        widget_set_relative_size(
+                            widget, (vec2){interpolation_button_width, button_height});
+                        widget_set_parent(widget, editor->root_widget);
+
+                        widget_set_custom_ptr(widget, editor);
+                    }
+
+                    theme_get_button_color(color);
+                    button_widget_set_color(button, color);
+
+                    theme_get_button_color_hovered(color);
+                    button_widget_set_color_hovered(button, color);
+
+                    theme_get_button_color_pressed(color);
+                    button_widget_set_color_pressed(button, color);
+
+                    button_widget_set_on_clicked(button, on_keyframe_interpolation_changed);
+
+                    // Text.
+                    {
+                        te_text_widget* text = text_widget_create();
+                        {
+                            te_widget* widget = text_widget_get_widget(text);
+                            widget_set_relative_position(widget, (vec2){0.3f, 0.0f});
+                            widget_set_relative_size(widget, (vec2){0.7f, 1.0f});
+                            widget_set_parent(widget, button_widget_get_widget(button));
+                        }
+
+                        text_widget_set_text_height(text, theme_get_text_height());
+
+                        unsigned int text_len;
+                        wchar_t* wtext = wchar_from_char("L", &text_len);
+                        text_widget_set_text_own(text, wtext, text_len);
+                    }
+                }
+
+                // Cubic spline.
+                {
+                    te_button_widget* button = button_widget_create();
+                    editor->keyframe_interpolation_button_cubic = button;
+                    {
+                        te_widget* widget = button_widget_get_widget(button);
+                        widget_set_relative_position(
+                            widget, (vec2){BUTTON_HIDDEN_X_POS, y_pos});
+                        widget_set_relative_size(
+                            widget, (vec2){interpolation_button_width, button_height});
+                        widget_set_parent(widget, editor->root_widget);
+
+                        widget_set_custom_ptr(widget, editor);
+                    }
+
+                    theme_get_button_color(color);
+                    button_widget_set_color(button, color);
+
+                    theme_get_button_color_hovered(color);
+                    button_widget_set_color_hovered(button, color);
+
+                    theme_get_button_color_pressed(color);
+                    button_widget_set_color_pressed(button, color);
+
+                    button_widget_set_on_clicked(button, on_keyframe_interpolation_changed);
+
+                    // Text.
+                    {
+                        te_text_widget* text = text_widget_create();
+                        {
+                            te_widget* widget = text_widget_get_widget(text);
+                            widget_set_relative_position(widget, (vec2){0.3f, 0.0f});
+                            widget_set_relative_size(widget, (vec2){0.7f, 1.0f});
+                            widget_set_parent(widget, button_widget_get_widget(button));
+                        }
+
+                        text_widget_set_text_height(text, theme_get_text_height());
+
+                        unsigned int text_len;
+                        wchar_t* wtext = wchar_from_char("C", &text_len);
+                        text_widget_set_text_own(text, wtext, text_len);
+                    }
+                }
+            }
+            y_pos += button_height + vspacing;
+
+            // Update keyframe value.
+            {
+                te_button_widget* button = button_widget_create();
+                editor->keyframe_update_value_button = button;
+                {
+                    te_widget* widget = button_widget_get_widget(button);
+                    widget_set_relative_position(widget, (vec2){BUTTON_HIDDEN_X_POS, y_pos});
+                    widget_set_relative_size(widget, (vec2){button_width, button_height});
+                    widget_set_parent(widget, editor->root_widget);
+
+                    widget_set_custom_ptr(widget, editor);
+                }
+
+                theme_get_button_color(color);
+                button_widget_set_color(button, color);
+
+                theme_get_button_color_hovered(color);
+                button_widget_set_color_hovered(button, color);
+
+                theme_get_button_color_pressed(color);
+                button_widget_set_color_pressed(button, color);
+
+                button_widget_set_on_clicked(button, on_update_keyframe_value_clicked);
+
+                // Text.
+                {
+                    te_text_widget* text = text_widget_create();
+                    {
+                        te_widget* widget = text_widget_get_widget(text);
+                        widget_set_relative_position(widget, (vec2){text_padding_x, 0.0f});
+                        widget_set_relative_size(widget, (vec2){1.0f - text_padding_x, 1.0f});
+                        widget_set_parent(widget, button_widget_get_widget(button));
+                    }
+
+                    text_widget_set_text_height(text, theme_get_text_height());
+
+                    unsigned int text_len;
+                    wchar_t* wtext = wchar_from_char("Update keyframe value", &text_len);
+                    text_widget_set_text_own(text, wtext, text_len);
+                }
+            }
+            y_pos += button_height + vspacing;
+        }
+
+        // Switch to bottom.
+        y_pos = 1.0f - padding_y - button_height - padding_y - button_height;
 
         // Save button.
         {
@@ -336,9 +708,6 @@ scene_animation_editor_create(te_world* world) {
             }
         }
         y_pos += button_height + vspacing;
-
-        // Switch to bottom.
-        y_pos = 1.0f - padding_y - button_height;
 
         // Load button.
         {
@@ -509,7 +878,7 @@ scene_animation_editor_create(te_world* world) {
             editor->right_border_time_text = text;
             {
                 te_widget* widget = text_widget_get_widget(text);
-                widget_set_relative_position(widget, (vec2){1.0f - button_width / 2.0f, 0.0f});
+                widget_set_relative_position(widget, (vec2){1.0f - button_width / 4.0f, 0.0f});
                 widget_set_relative_size(widget, (vec2){button_width, button_height});
                 widget_set_parent(widget, editor->root_widget);
             }
@@ -650,7 +1019,257 @@ get_selected_obj_name(te_scene_animation_editor* editor) {
 }
 
 static void
+show_selected_keyframe_menu(te_scene_animation_editor* editor) {
+    te_keyframe_button_data* keyframe_data =
+        &editor->keyframe_button_array->datas[editor->keyframe_button_array->selected_idx];
+
+    // Keyframe time title.
+    {
+        te_widget* widget = text_widget_get_widget(editor->keyframe_time_widget);
+        vec2 pos;
+        widget_get_relative_position(widget, pos);
+
+        widget_set_relative_position(widget, (vec2){editor->menu_padding_x, pos[1]});
+    }
+
+    // Keyframe time edit.
+    {
+        te_widget* rect = widget_get_parent( // taking parent rect (background of text edit)
+            text_edit_widget_get_widget(editor->keyframe_time_edit_widget));
+        vec2 pos;
+        widget_get_relative_position(rect, pos);
+
+        widget_set_relative_position(rect, (vec2){editor->keyframe_time_edit_x, pos[1]});
+
+        int len = snprintf(NULL, 0, "%.2f", keyframe_data->time_sec);
+        if (len < 0) {
+            log_error("snprintf error");
+            abort();
+        }
+        char* src_text = malloc(sizeof(char) * (size_t)(len + 1));
+        snprintf(src_text, (size_t)len + 1, "%.2f", keyframe_data->time_sec);
+
+        unsigned int text_len;
+        wchar_t* text = wchar_from_char(src_text, &text_len);
+        text_edit_widget_set_text_own(editor->keyframe_time_edit_widget, text, text_len);
+
+        free(src_text);
+    }
+
+    // Interpolation.
+    {
+        // Title.
+        {
+            te_widget* widget = text_widget_get_widget(editor->keyframe_interpolation_widget);
+            vec2 pos;
+            widget_get_relative_position(widget, pos);
+
+            widget_set_relative_position(widget, (vec2){editor->menu_padding_x, pos[1]});
+        }
+
+        // Step.
+        {
+            te_widget* widget =
+                button_widget_get_widget(editor->keyframe_interpolation_button_step);
+            vec2 pos;
+            widget_get_relative_position(widget, pos);
+
+            widget_set_relative_position(
+                widget, (vec2){editor->keyframe_interpolation_buttons_x, pos[1]});
+
+            vec4 color;
+            if (keyframe_data->interpolation == TE_SAIT_STEP) {
+                theme_get_accent_color(color);
+            } else {
+                theme_get_button_color(color);
+            }
+            button_widget_set_color(editor->keyframe_interpolation_button_step, color);
+        }
+
+        // Linear.
+        {
+            te_widget* widget =
+                button_widget_get_widget(editor->keyframe_interpolation_button_linear);
+            vec2 pos;
+            widget_get_relative_position(widget, pos);
+
+            widget_set_relative_position(
+                widget, (vec2){editor->keyframe_interpolation_buttons_x
+                                   + editor->interpolation_button_width,
+                               pos[1]});
+
+            vec4 color;
+            if (keyframe_data->interpolation == TE_SAIT_LINEAR) {
+                theme_get_accent_color(color);
+            } else {
+                theme_get_button_color(color);
+            }
+            button_widget_set_color(editor->keyframe_interpolation_button_linear, color);
+        }
+
+        // Cubic.
+        {
+            te_widget* widget =
+                button_widget_get_widget(editor->keyframe_interpolation_button_cubic);
+            vec2 pos;
+            widget_get_relative_position(widget, pos);
+
+            widget_set_relative_position(
+                widget, (vec2){editor->keyframe_interpolation_buttons_x
+                                   + editor->interpolation_button_width * 2,
+                               pos[1]});
+
+            vec4 color;
+            if (keyframe_data->interpolation == TE_SAIT_CUBIC_SPLINE) {
+                theme_get_accent_color(color);
+            } else {
+                theme_get_button_color(color);
+            }
+            button_widget_set_color(editor->keyframe_interpolation_button_cubic, color);
+        }
+    }
+
+    // Update keyframe value.
+    {
+        te_widget* widget = button_widget_get_widget(editor->keyframe_update_value_button);
+        vec2 pos;
+        widget_get_relative_position(widget, pos);
+
+        widget_set_relative_position(widget, (vec2){editor->menu_padding_x, pos[1]});
+    }
+}
+
+static void
+hide_selected_keyframe_menu(te_scene_animation_editor* editor) {
+    // Keyframe time title.
+    {
+        te_widget* widget = text_widget_get_widget(editor->keyframe_time_widget);
+        vec2 pos;
+        widget_get_relative_position(widget, pos);
+
+        widget_set_relative_position(widget, (vec2){BUTTON_HIDDEN_X_POS, pos[1]});
+    }
+
+    // Keyframe time edit.
+    {
+        te_widget* rect = widget_get_parent( // taking parent rect (background of text edit)
+            text_edit_widget_get_widget(editor->keyframe_time_edit_widget));
+        vec2 pos;
+        widget_get_relative_position(rect, pos);
+
+        widget_set_relative_position(rect, (vec2){BUTTON_HIDDEN_X_POS, pos[1]});
+    }
+
+    // Interpolation.
+    {
+        // Title.
+        {
+            te_widget* widget = text_widget_get_widget(editor->keyframe_interpolation_widget);
+            vec2 pos;
+            widget_get_relative_position(widget, pos);
+
+            widget_set_relative_position(widget, (vec2){BUTTON_HIDDEN_X_POS, pos[1]});
+        }
+
+        // Step.
+        {
+            te_widget* widget =
+                button_widget_get_widget(editor->keyframe_interpolation_button_step);
+            vec2 pos;
+            widget_get_relative_position(widget, pos);
+
+            widget_set_relative_position(widget, (vec2){BUTTON_HIDDEN_X_POS, pos[1]});
+
+            vec4 color;
+            theme_get_button_color(color);
+            button_widget_set_color(editor->keyframe_interpolation_button_step, color);
+        }
+
+        // Linear.
+        {
+            te_widget* widget =
+                button_widget_get_widget(editor->keyframe_interpolation_button_linear);
+            vec2 pos;
+            widget_get_relative_position(widget, pos);
+
+            widget_set_relative_position(widget, (vec2){BUTTON_HIDDEN_X_POS, pos[1]});
+
+            vec4 color;
+            theme_get_button_color(color);
+            button_widget_set_color(editor->keyframe_interpolation_button_linear, color);
+        }
+
+        // Cubic.
+        {
+            te_widget* widget =
+                button_widget_get_widget(editor->keyframe_interpolation_button_cubic);
+            vec2 pos;
+            widget_get_relative_position(widget, pos);
+
+            widget_set_relative_position(widget, (vec2){BUTTON_HIDDEN_X_POS, pos[1]});
+
+            vec4 color;
+            theme_get_button_color(color);
+            button_widget_set_color(editor->keyframe_interpolation_button_cubic, color);
+        }
+    }
+
+    // Update keyframe value.
+    {
+        te_widget* widget = button_widget_get_widget(editor->keyframe_update_value_button);
+        vec2 pos;
+        widget_get_relative_position(widget, pos);
+
+        widget_set_relative_position(widget, (vec2){BUTTON_HIDDEN_X_POS, pos[1]});
+    }
+}
+
+static void
 redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
+    te_scene_animation* animation = world_get_scene_animation(editor->world);
+
+    // Update current time separator and time text.
+    {
+        float current_time = 0.0f;
+        if (animation != NULL) {
+            current_time = glm_clamp(
+                scene_animation_get_current_time(animation), (float)editor->left_border_time,
+                (float)editor->right_border_time);
+        }
+
+        if (current_time > (float)editor->right_border_time) {
+            editor->left_border_time = editor->right_border_time;
+            editor->right_border_time =
+                editor->left_border_time + editor->displayed_time_interval;
+        }
+
+        const float current_portion =
+            current_time / (float)(editor->right_border_time - editor->left_border_time);
+
+        te_widget* widget = rect_widget_get_widget(editor->current_time_separator);
+        widget_set_relative_position(
+            widget,
+            (vec2){editor->timeline_x_pos + (1.0f - editor->timeline_x_pos) * current_portion,
+                   editor->button_height});
+        widget_set_relative_size(widget, (vec2){0.004f, 1.0f - editor->button_height});
+        widget_set_parent(widget, editor->root_widget);
+
+        // Current time.
+        int len = snprintf(NULL, 0, "%.1f", current_time);
+        if (len < 0) {
+            log_error("snprintf failed");
+            abort();
+        }
+        char* time_text = malloc(sizeof(char) * (size_t)(len + 1));
+        snprintf(time_text, (size_t)(len + 1), "%.1f", current_time);
+
+        unsigned int text_len;
+        wchar_t* wtext = wchar_from_char(time_text, &text_len);
+        text_edit_widget_set_text_own(editor->time_widget, wtext, text_len);
+
+        free(time_text);
+    }
+
     // Update left border time.
     char* timestr = time_to_border_str(editor->left_border_time);
     unsigned int text_len;
@@ -664,41 +1283,19 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
     text_widget_set_text_own(editor->right_border_time_text, wtext, text_len);
     free(timestr);
 
-    te_scene_animation* animation = world_get_scene_animation(editor->world);
+    if (editor->keyframe_button_array->selected_idx == 0xFFFFFFFF) {
+        hide_selected_keyframe_menu(editor);
+    }
 
-    // Update current time separator and time text.
-    {
-        float current_time = 0.0f;
-        if (animation != NULL) {
-            current_time = glm_clamp(
-                scene_animation_get_current_time(animation), (float)editor->left_border_time,
-                (float)editor->right_border_time);
-        }
-        const float current_portion =
-            current_time / (float)(editor->right_border_time - editor->left_border_time);
-
-        te_widget* widget = rect_widget_get_widget(editor->current_time_separator);
-        widget_set_relative_position(
-            widget,
-            (vec2){editor->timeline_x_pos + (1.0f - editor->timeline_x_pos) * current_portion,
-                   editor->button_height});
-        widget_set_relative_size(widget, (vec2){0.004f, 1.0f - editor->button_height});
-        widget_set_parent(widget, editor->root_widget);
-
-        // Current time.
-        int len = snprintf(NULL, 0, "Time: %.1f sec", current_time);
-        if (len < 0) {
-            log_error("snprintf failed");
-            abort();
-        }
-        char* time_text = malloc(sizeof(char) * (size_t)(len + 1));
-        snprintf(time_text, (size_t)(len + 1), "Time: %.1f sec", current_time);
-
-        unsigned int text_len;
-        wchar_t* wtext = wchar_from_char(time_text, &text_len);
-        text_widget_set_text_own(editor->time_widget, wtext, text_len);
-
-        free(time_text);
+    // Play / pause button state.
+    if (animation != NULL && scene_animation_is_playing(animation)) {
+        vec4 color;
+        theme_get_accent_color(color);
+        button_widget_set_color(editor->play_pause_button, color);
+    } else {
+        vec4 color;
+        theme_get_button_color(color);
+        button_widget_set_color(editor->play_pause_button, color);
     }
 
     if (!update_keyframes) {
@@ -755,7 +1352,7 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
             widget_set_custom_value(widget, 0xFFFFFFFF); /* reflected type variable index */  \
                                                                                               \
             unsigned int keyframe_count;                                                      \
-            te_scene_animation_keyframe_##type* keyframes =                                   \
+            const te_scene_animation_keyframe_##type* keyframes =                             \
                 scene_animation_get_keyframes_##type(                                         \
                     animation, selected_obj_name, var_names[var_idx], &keyframe_count);       \
             for (unsigned int keyframe_idx = 0; keyframe_idx < keyframe_count;                \
@@ -772,7 +1369,8 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
                 float keyframe_y = pos[1];                                                    \
                 keyframe_button_array_add(                                                    \
                     editor->keyframe_button_array, editor, editor->root_widget,               \
-                    &keyframes[keyframe_idx], var_names[var_idx], keyframe_x, keyframe_y,     \
+                    (void*)&keyframes[keyframe_idx], keyframes[keyframe_idx].interpolation,   \
+                    keyframes[keyframe_idx].time, var_names[var_idx], keyframe_x, keyframe_y, \
                     (1.0f - editor->timeline_x_pos), editor->button_height);                  \
             }                                                                                 \
                                                                                               \
@@ -848,6 +1446,10 @@ scene_animation_editor_show_tracks(
     te_scene_animation_editor* editor, void* obj, const te_type_info* type_info) {
     editor->selected_obj = obj;
     editor->selected_obj_type_info = type_info;
+
+    if (editor->selected_obj == NULL) {
+        keyframe_button_array_select_keyframe(editor->keyframe_button_array, 0xFFFFFFFF);
+    }
 
     redraw_timeline(editor, true);
 }
@@ -951,6 +1553,7 @@ prv_scene_animation_editor_on_mouse_click(
 
     if (button == TE_MB_MIDDLE) {
         // Want to create keyframe. Find which track was clicked on.
+        keyframe_button_array_select_keyframe(editor->keyframe_button_array, 0xFFFFFFFF);
         for (unsigned int button_idx = 0; button_idx < editor->track_button_count;
              button_idx++) {
             te_widget* widget = button_widget_get_widget(editor->track_buttons[button_idx]);
@@ -1017,6 +1620,8 @@ prv_scene_animation_editor_on_mouse_click(
             return;
         }
 
+        keyframe_button_array_select_keyframe(editor->keyframe_button_array, 0xFFFFFFFF);
+
         const char* object_name = get_selected_obj_name(editor);
         if (object_name == NULL) {
             return;
@@ -1034,40 +1639,68 @@ prv_scene_animation_editor_on_mouse_click(
 
             if (cursor_pos[0] > pos[0] && cursor_pos[0] < pos[0] + size[0]
                 && cursor_pos[1] > pos[1] && cursor_pos[1] < pos[1] + size[1]) {
-                unsigned int count;
-                te_scene_animation_keyframe_vec3* keyframes =
-                    scene_animation_get_keyframes_vec3(anim, object_name, "position", &count);
-                for (unsigned int k = 0; k < count; k++) {
-                    float time = keyframes[k].time;
-                    int a = 2;
-                    a++;
-                    (void)time;
-                    (void)a;
-                }
-
                 te_keyframe_button_data* data = widget_get_custom_ptr(widget);
                 scene_animation_remove_keyframe(
                     anim, object_name, data->variable_name, data->keyframe);
-
-                keyframes =
-                    scene_animation_get_keyframes_vec3(anim, object_name, "position", &count);
-                for (unsigned int k = 0; k < count; k++) {
-                    float time = keyframes[k].time;
-                    int a = 2;
-                    a++;
-                    (void)time;
-                    (void)a;
-                }
 
                 redraw_timeline(editor, true);
                 return;
             }
         }
+    } else if (button == TE_MB_LEFT) {
+        // Change current time or select a keyframe.
+        te_scene_animation* anim = world_get_scene_animation(editor->world);
+        if (anim == NULL) {
+            return;
+        }
+
+        for (unsigned int i = 0; i < editor->keyframe_button_array->count; i++) {
+            te_widget* widget =
+                button_widget_get_widget(editor->keyframe_button_array->buttons[i]);
+
+            vec2 pos;
+            vec2 size;
+            widget_get_relative_position(widget, pos);
+            widget_get_relative_size(widget, size);
+
+            if (cursor_pos[0] > pos[0] && cursor_pos[0] < pos[0] + size[0]
+                && cursor_pos[1] > pos[1] && cursor_pos[1] < pos[1] + size[1]) {
+                // Selected a keyframe.
+                if (editor->keyframe_button_array->selected_idx == i) {
+                    // Deselect.
+                    keyframe_button_array_select_keyframe(
+                        editor->keyframe_button_array, 0xFFFFFFFF);
+                } else {
+                    keyframe_button_array_select_keyframe(editor->keyframe_button_array, i);
+                    show_selected_keyframe_menu(editor);
+                }
+                redraw_timeline(editor, false);
+                return;
+            }
+        }
+
+        keyframe_button_array_select_keyframe(editor->keyframe_button_array, 0xFFFFFFFF);
+
+        // Move current time.
+        float keyframe_time_portion =
+            (cursor_pos[0] - editor->timeline_x_pos) / (1.0f - editor->timeline_x_pos);
+        float time_sec =
+            (float)editor->left_border_time
+            + keyframe_time_portion
+                  * ((float)editor->right_border_time - (float)editor->left_border_time);
+        scene_animation_set_current_time(anim, time_sec);
+
+        redraw_timeline(editor, false);
     }
 }
 
 void
 prv_scene_animation_editor_tick(te_scene_animation_editor* editor) {
+    te_scene_animation* anim = world_get_scene_animation(editor->world);
+    if (anim == NULL || !scene_animation_is_playing(anim)) {
+        return;
+    }
+
     redraw_timeline(editor, false);
 }
 
@@ -1086,6 +1719,8 @@ on_play_pause_clicked(te_button_widget* button) {
     } else {
         scene_animation_play(anim);
     }
+
+    keyframe_button_array_select_keyframe(editor->keyframe_button_array, 0xFFFFFFFF);
 }
 
 static void
@@ -1099,6 +1734,8 @@ on_stop_clicked(te_button_widget* button) {
     }
 
     scene_animation_stop(anim);
+
+    keyframe_button_array_select_keyframe(editor->keyframe_button_array, 0xFFFFFFFF);
 }
 
 static void
@@ -1110,6 +1747,8 @@ on_track_right_clicked(te_button_widget* button) {
     if (anim == NULL) {
         return;
     }
+
+    keyframe_button_array_select_keyframe(editor->keyframe_button_array, 0xFFFFFFFF);
 
     if (scene_animation_is_playing(anim)) {
         scene_animation_stop(anim);
@@ -1166,4 +1805,354 @@ on_track_right_clicked(te_button_widget* button) {
     free(variable_name);
 
     redraw_timeline(editor, true);
+}
+
+static void
+on_current_time_changed(te_text_edit_widget* text_edit) {
+    te_scene_animation_editor* editor =
+        widget_get_custom_ptr(text_edit_widget_get_widget(text_edit));
+
+    te_scene_animation* anim = world_get_scene_animation(editor->world);
+    if (anim == NULL) {
+        return;
+    }
+
+    // Get text.
+    unsigned int text_len;
+    const wchar_t* src_text = text_edit_widget_get_text(text_edit, &text_len);
+    char* text = wchar_to_char(src_text, &text_len);
+
+    char* endptr;
+    const float new_time_sec = globals_convert_string_to_float(text, &endptr);
+    free(text);
+
+    scene_animation_set_current_time(anim, new_time_sec);
+
+    // Update left/right borders.
+    unsigned int step = (unsigned int)(new_time_sec / (float)editor->displayed_time_interval);
+    editor->left_border_time = step * editor->displayed_time_interval;
+    editor->right_border_time = editor->left_border_time + editor->displayed_time_interval;
+
+    redraw_timeline(editor, true);
+}
+
+static void
+on_keyframe_time_changed(te_text_edit_widget* text_edit) {
+    // Remove keyframe and re-add with new time.
+
+    te_scene_animation_editor* editor =
+        widget_get_custom_ptr(text_edit_widget_get_widget(text_edit));
+
+    te_scene_animation* anim = world_get_scene_animation(editor->world);
+    if (anim == NULL) {
+        return;
+    }
+
+    if (editor->keyframe_button_array->selected_idx == 0xFFFFFFFF) {
+        return;
+    }
+
+    scene_animation_pause(anim);
+
+    // Get text.
+    unsigned int text_len;
+    const wchar_t* src_text = text_edit_widget_get_text(text_edit, &text_len);
+    char* text = wchar_to_char(src_text, &text_len);
+
+    char* endptr;
+    const float new_time_sec = globals_convert_string_to_float(text, &endptr);
+    free(text);
+
+    te_keyframe_button_data* keyframe_data =
+        &editor->keyframe_button_array->datas[editor->keyframe_button_array->selected_idx];
+
+    const char* object_name = get_selected_obj_name(editor);
+
+    // Copy variable name because it will be invalid after we redraw after adding new keyframe.
+    size_t var_name_len = strlen(keyframe_data->variable_name);
+    char* var_name = malloc(sizeof(char) * (var_name_len + 1));
+    memcpy(var_name, keyframe_data->variable_name, sizeof(char) * var_name_len);
+    var_name[var_name_len] = 0;
+
+    // Switch time to keyframe's old time to not accidentally change animated value
+    // (because we just query the current value of the variable), we will change it back later.
+    float anim_time_sec = scene_animation_get_current_time(anim);
+    scene_animation_set_current_time(anim, keyframe_data->time_sec);
+
+    scene_animation_remove_keyframe(
+        anim, object_name, keyframe_data->variable_name, keyframe_data->keyframe);
+
+    // Find variable info.
+    for (unsigned int i = 0; i < editor->selected_obj_type_info->variable_count; i++) {
+        if (strcmp(var_name, editor->selected_obj_type_info->variables[i].name) != 0) {
+            continue;
+        }
+
+        te_variable_info* var_info = &editor->selected_obj_type_info->variables[i];
+
+        // Add keyframe with new time.
+        switch (var_info->type) {
+            case (TE_VT_BOOL): {
+                scene_animation_add_keyframe_bool(
+                    anim, object_name, var_name, new_time_sec,
+                    editor->selected_obj_type_info->bool_getters[var_info->set_get_index](
+                        editor->selected_obj));
+                break;
+            }
+            case (TE_VT_UINT): {
+                scene_animation_add_keyframe_uint(
+                    anim, object_name, var_name, new_time_sec,
+                    editor->selected_obj_type_info->uint_getters[var_info->set_get_index](
+                        editor->selected_obj));
+                break;
+            }
+            case (TE_VT_FLOAT): {
+                scene_animation_add_keyframe_float(
+                    anim, object_name, var_name, new_time_sec,
+                    editor->selected_obj_type_info->float_getters[var_info->set_get_index](
+                        editor->selected_obj));
+                break;
+            }
+            case (TE_VT_VEC2): {
+                vec2 val;
+                editor->selected_obj_type_info->vec2_getters[var_info->set_get_index](
+                    editor->selected_obj, val);
+
+                scene_animation_add_keyframe_vec2(
+                    anim, object_name, var_name, new_time_sec, val);
+                break;
+            }
+            case (TE_VT_VEC3): {
+                vec3 val;
+                editor->selected_obj_type_info->vec3_getters[var_info->set_get_index](
+                    editor->selected_obj, val);
+
+                scene_animation_add_keyframe_vec3(
+                    anim, object_name, var_name, new_time_sec, val);
+                break;
+            }
+            case (TE_VT_VEC4): {
+                vec4 val;
+                editor->selected_obj_type_info->vec4_getters[var_info->set_get_index](
+                    editor->selected_obj, val);
+
+                scene_animation_add_keyframe_vec4(
+                    anim, object_name, var_name, new_time_sec, val);
+                break;
+            }
+            default: {
+                log_error("unhandled case");
+                abort();
+                break;
+            }
+        }
+
+        break;
+    }
+
+    redraw_timeline(editor, true);
+
+    // Find this keyframe again and reselect it.
+    for (unsigned int i = 0; i < editor->keyframe_button_array->count; i++) {
+        te_keyframe_button_data* data = &editor->keyframe_button_array->datas[i];
+        if (strcmp(data->variable_name, var_name) != 0) {
+            continue;
+        }
+        if (fabsf(data->time_sec - new_time_sec) >= 0.005f) {
+            continue;
+        }
+        keyframe_button_array_select_keyframe(editor->keyframe_button_array, i);
+        break;
+    }
+
+    // Restore time.
+    scene_animation_set_current_time(anim, anim_time_sec);
+
+    redraw_timeline(editor, false);
+
+    free(var_name);
+}
+
+static void
+on_keyframe_interpolation_changed(te_button_widget* button) {
+    te_scene_animation_editor* editor =
+        widget_get_custom_ptr(button_widget_get_widget(button));
+
+    te_scene_animation* anim = world_get_scene_animation(editor->world);
+    if (anim == NULL) {
+        return;
+    }
+
+    if (editor->keyframe_button_array->selected_idx == 0xFFFFFFFF) {
+        return;
+    }
+
+    enum te_scene_animation_interpolation_type new_interpolation = TE_SAIT_COUNT;
+    if (button == editor->keyframe_interpolation_button_step) {
+        new_interpolation = TE_SAIT_STEP;
+    } else if (button == editor->keyframe_interpolation_button_linear) {
+        new_interpolation = TE_SAIT_LINEAR;
+    } else if (button == editor->keyframe_interpolation_button_cubic) {
+        new_interpolation = TE_SAIT_CUBIC_SPLINE;
+    }
+
+    if (new_interpolation == TE_SAIT_COUNT) {
+        log_error("unexpected state");
+        return;
+    }
+
+    te_keyframe_button_data* data =
+        &editor->keyframe_button_array->datas[editor->keyframe_button_array->selected_idx];
+
+    // Find variable info.
+    for (unsigned int i = 0; i < editor->selected_obj_type_info->variable_count; i++) {
+        if (strcmp(data->variable_name, editor->selected_obj_type_info->variables[i].name)
+            != 0) {
+            continue;
+        }
+
+        te_variable_info* var_info = &editor->selected_obj_type_info->variables[i];
+
+        // Add keyframe with new time.
+        switch (var_info->type) {
+            case (TE_VT_BOOL): {
+                te_scene_animation_keyframe_bool* keyframe =
+                    (te_scene_animation_keyframe_bool*)data->keyframe;
+                keyframe->interpolation = new_interpolation;
+                break;
+            }
+            case (TE_VT_UINT): {
+                te_scene_animation_keyframe_uint* keyframe =
+                    (te_scene_animation_keyframe_uint*)data->keyframe;
+                keyframe->interpolation = new_interpolation;
+                break;
+            }
+            case (TE_VT_FLOAT): {
+                te_scene_animation_keyframe_float* keyframe =
+                    (te_scene_animation_keyframe_float*)data->keyframe;
+                keyframe->interpolation = new_interpolation;
+                break;
+            }
+            case (TE_VT_VEC2): {
+                te_scene_animation_keyframe_vec2* keyframe =
+                    (te_scene_animation_keyframe_vec2*)data->keyframe;
+                keyframe->interpolation = new_interpolation;
+                break;
+            }
+            case (TE_VT_VEC3): {
+                te_scene_animation_keyframe_vec3* keyframe =
+                    (te_scene_animation_keyframe_vec3*)data->keyframe;
+                keyframe->interpolation = new_interpolation;
+                break;
+            }
+            case (TE_VT_VEC4): {
+                te_scene_animation_keyframe_vec4* keyframe =
+                    (te_scene_animation_keyframe_vec4*)data->keyframe;
+                keyframe->interpolation = new_interpolation;
+                break;
+            }
+            default: {
+                log_error("unhandled case");
+                abort();
+                break;
+            }
+        }
+
+        break;
+    }
+
+    data->interpolation = new_interpolation;
+
+    // Update highlighted interpolation button.
+    show_selected_keyframe_menu(editor);
+}
+
+static void
+on_update_keyframe_value_clicked(te_button_widget* button) {
+    te_scene_animation_editor* editor =
+        widget_get_custom_ptr(button_widget_get_widget(button));
+
+    te_scene_animation* anim = world_get_scene_animation(editor->world);
+    if (anim == NULL) {
+        return;
+    }
+
+    if (editor->keyframe_button_array->selected_idx == 0xFFFFFFFF) {
+        return;
+    }
+
+    te_keyframe_button_data* data =
+        &editor->keyframe_button_array->datas[editor->keyframe_button_array->selected_idx];
+
+    // Find variable info.
+    for (unsigned int i = 0; i < editor->selected_obj_type_info->variable_count; i++) {
+        if (strcmp(data->variable_name, editor->selected_obj_type_info->variables[i].name)
+            != 0) {
+            continue;
+        }
+
+        te_variable_info* var_info = &editor->selected_obj_type_info->variables[i];
+
+        // Add keyframe with new time.
+        switch (var_info->type) {
+            case (TE_VT_BOOL): {
+                te_scene_animation_keyframe_bool* keyframe =
+                    (te_scene_animation_keyframe_bool*)data->keyframe;
+                keyframe->value =
+                    editor->selected_obj_type_info->bool_getters[var_info->set_get_index](
+                        editor->selected_obj);
+                break;
+            }
+            case (TE_VT_UINT): {
+                te_scene_animation_keyframe_uint* keyframe =
+                    (te_scene_animation_keyframe_uint*)data->keyframe;
+                keyframe->value =
+                    editor->selected_obj_type_info->uint_getters[var_info->set_get_index](
+                        editor->selected_obj);
+                break;
+            }
+            case (TE_VT_FLOAT): {
+                te_scene_animation_keyframe_float* keyframe =
+                    (te_scene_animation_keyframe_float*)data->keyframe;
+                keyframe->value =
+                    editor->selected_obj_type_info->float_getters[var_info->set_get_index](
+                        editor->selected_obj);
+                break;
+            }
+            case (TE_VT_VEC2): {
+                te_scene_animation_keyframe_vec2* keyframe =
+                    (te_scene_animation_keyframe_vec2*)data->keyframe;
+                vec2 val;
+                editor->selected_obj_type_info->vec2_getters[var_info->set_get_index](
+                    editor->selected_obj, val);
+                glm_vec2_copy(val, keyframe->value);
+                break;
+            }
+            case (TE_VT_VEC3): {
+                te_scene_animation_keyframe_vec3* keyframe =
+                    (te_scene_animation_keyframe_vec3*)data->keyframe;
+                vec3 val;
+                editor->selected_obj_type_info->vec3_getters[var_info->set_get_index](
+                    editor->selected_obj, val);
+                glm_vec3_copy(val, keyframe->value);
+                break;
+            }
+            case (TE_VT_VEC4): {
+                te_scene_animation_keyframe_vec4* keyframe =
+                    (te_scene_animation_keyframe_vec4*)data->keyframe;
+                vec4 val;
+                editor->selected_obj_type_info->vec4_getters[var_info->set_get_index](
+                    editor->selected_obj, val);
+                glm_vec4_copy(val, keyframe->value);
+                break;
+            }
+            default: {
+                log_error("unhandled case");
+                abort();
+                break;
+            }
+        }
+
+        break;
+    }
 }

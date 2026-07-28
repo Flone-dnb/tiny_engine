@@ -26,6 +26,7 @@ struct te_text_edit_widget {
 
     // May be NULL if not set.
     void (*on_text_changed)(te_text_edit_widget*, wchar_t*, unsigned int);
+    void (*on_text_accepted)(te_text_edit_widget*);
 
     vec4 text_color;
 
@@ -87,6 +88,7 @@ text_edit_widget_create(void) {
         prv_text_edit_widget_on_keyboard_input_text, prv_text_edit_widget_on_keyboard_input);
 
     text_edit_widget->on_text_changed = NULL;
+    text_edit_widget->on_text_accepted = NULL;
 
     return text_edit_widget;
 }
@@ -122,6 +124,13 @@ text_edit_widget_set_on_text_changed(
     void (*on_text_changed)(
         te_text_edit_widget* text_edit_widget, wchar_t* new_text, unsigned int strlen)) {
     text_edit_widget->on_text_changed = on_text_changed;
+}
+
+void
+text_edit_widget_set_on_text_accepted(
+    te_text_edit_widget* text_edit_widget,
+    void (*on_text_accepted)(te_text_edit_widget* text_edit_widget)) {
+    text_edit_widget->on_text_accepted = on_text_accepted;
 }
 
 void
@@ -256,7 +265,8 @@ prv_text_edit_widget_on_mouse_button_pressed(
         bool found = false;
         const float glyph_scale =
             text_edit_widget->text_height / prv_font_manager_get_font_height_to_load();
-        for (unsigned int char_idx = 0, glyph_idx = 0; char_idx < text_len; char_idx++) {
+        for (unsigned int char_idx = 0, glyph_idx = 0;
+             char_idx < text_len && glyph_idx < data->glyph_count; char_idx++) {
             te_font_glyph glyph =
                 font_manager_get_glyph(font_manager, (unsigned long)text[char_idx]);
 
@@ -464,9 +474,13 @@ prv_text_edit_widget_on_keyboard_input_text(void* this, const char* input_text) 
 
 static void
 prv_text_edit_widget_on_keyboard_input(void* this, enum te_keyboard_button button) {
-    if (button == TE_KB_BACKSPACE) {
-        te_text_edit_widget* text_edit_widget = this;
+    te_text_edit_widget* text_edit_widget = this;
 
+    if (button == TE_KB_ENTER) {
+        if (text_edit_widget->on_text_accepted != NULL) {
+            text_edit_widget->on_text_accepted(text_edit_widget);
+        }
+    } else if (button == TE_KB_BACKSPACE) {
         unsigned int old_text_len;
         wchar_t* old_text = text_widget_get_text(text_edit_widget->text_widget, &old_text_len);
 
@@ -494,8 +508,6 @@ prv_text_edit_widget_on_keyboard_input(void* this, enum te_keyboard_button butto
             text_edit_widget->on_text_changed(text_edit_widget, new_text, new_text_len);
         }
     } else if (button == TE_KB_RIGHT) {
-        te_text_edit_widget* text_edit_widget = this;
-
         unsigned int text_len;
         (void)text_widget_get_text(text_edit_widget->text_widget, &text_len);
 
@@ -506,8 +518,6 @@ prv_text_edit_widget_on_keyboard_input(void* this, enum te_keyboard_button butto
         text_edit_widget->text_cursor_index += 1;
         prv_text_edit_widget_update_cursor(text_edit_widget);
     } else if (button == TE_KB_LEFT) {
-        te_text_edit_widget* text_edit_widget = this;
-
         unsigned int text_len;
         (void)text_widget_get_text(text_edit_widget->text_widget, &text_len);
 
@@ -537,6 +547,13 @@ text_edit_widget_set_text(te_text_edit_widget* text_edit_widget, const wchar_t* 
 void
 text_edit_widget_set_text_own(
     te_text_edit_widget* text_edit_widget, wchar_t* text, unsigned int strlen) {
+    unsigned int old_strlen;
+    wchar_t* old_text = text_widget_get_text(text_edit_widget->text_widget, &old_strlen);
+    if (old_strlen == strlen && wcscmp(text, old_text) == 0) {
+        free(text);
+        return;
+    }
+
     text_widget_set_text_own(text_edit_widget->text_widget, text, strlen);
 
     if (text_edit_widget->rect_cursor_widget != NULL) {

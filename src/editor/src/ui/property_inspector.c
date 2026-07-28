@@ -78,9 +78,9 @@ on_variable_checkbox_changed(te_checkbox_widget* checkbox, bool is_checked) {
 }
 
 static void
-on_variable_text_edit_changed(
-    te_text_edit_widget* text_edit, wchar_t* src_text, unsigned int src_len) {
-    (void)src_len;
+on_variable_text_edit_changed(te_text_edit_widget* text_edit) {
+    unsigned int src_text_len;
+    const wchar_t* src_text = text_edit_widget_get_text(text_edit, &src_text_len);
 
     te_widget* widget = text_edit_widget_get_widget(text_edit);
     te_property_inspector* inspector = widget_get_custom_ptr(widget);
@@ -214,7 +214,7 @@ add_float_widget(
         }
     }
     text_edit_widget_set_text_height(text_edit, theme_get_text_height() * 0.95f);
-    text_edit_widget_set_on_text_changed(text_edit, on_variable_text_edit_changed);
+    text_edit_widget_set_on_text_accepted(text_edit, on_variable_text_edit_changed);
 
     int len = snprintf(NULL, 0, "%.2f", value);
     if (len < 0) {
@@ -449,7 +449,8 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                     widget_set_custom_value(widget, var_idx);
                 }
                 text_edit_widget_set_text_height(text_edit, theme_get_text_height());
-                text_edit_widget_set_on_text_changed(text_edit, on_variable_text_edit_changed);
+                text_edit_widget_set_on_text_accepted(
+                    text_edit, on_variable_text_edit_changed);
 
                 int len = snprintf(NULL, 0, "%u", value);
                 if (len < 0) {
@@ -611,7 +612,8 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                     widget_set_custom_value(widget, var_idx);
                 }
                 text_edit_widget_set_text_height(text_edit, theme_get_text_height());
-                text_edit_widget_set_on_text_changed(text_edit, on_variable_text_edit_changed);
+                text_edit_widget_set_on_text_accepted(
+                    text_edit, on_variable_text_edit_changed);
 
                 if (var_text == NULL) {
                     text_edit_widget_set_text(text_edit, L"");
@@ -650,7 +652,8 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                     widget_set_custom_value(widget, var_idx);
                 }
                 text_edit_widget_set_text_height(text_edit, theme_get_text_height());
-                text_edit_widget_set_on_text_changed(text_edit, on_variable_text_edit_changed);
+                text_edit_widget_set_on_text_accepted(
+                    text_edit, on_variable_text_edit_changed);
 
                 if (var_text == NULL) {
                     text_edit_widget_set_text(text_edit, L"");

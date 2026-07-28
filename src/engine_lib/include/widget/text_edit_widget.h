@@ -18,7 +18,13 @@ struct te_widget* text_edit_widget_get_widget(te_text_edit_widget* text_edit_wid
 // Sets a callback that will be triggered after the text was changed by user input.
 void text_edit_widget_set_on_text_changed(
     te_text_edit_widget* text_edit_widget,
-    void (*on_text_changed)(te_text_edit_widget* text_edit_widget, wchar_t* new_text, unsigned int strlen));
+    void (*on_text_changed)(
+        te_text_edit_widget* text_edit_widget, wchar_t* new_text, unsigned int strlen));
+
+// Sets a callback that will be triggered after the Enter key was pressed.
+void text_edit_widget_set_on_text_accepted(
+    te_text_edit_widget* text_edit_widget,
+    void (*on_text_accepted)(te_text_edit_widget* text_edit_widget));
 
 // Text will be copied to the widget's data.
 void text_edit_widget_set_text(te_text_edit_widget* text_edit_widget, const wchar_t* text);

@@ -816,6 +816,40 @@ world_get_active_camera(te_world* world) {
     return world->active_camera;
 }
 
+bool
+world_get_cursor_relative_pos(te_world* world, vec2 cursor_pos) {
+    te_window* window = game_manager_get_window(world_get_game_manager(world));
+
+    window_get_cursor_position(window, &cursor_pos[0], &cursor_pos[1]);
+
+    unsigned int window_width;
+    unsigned int window_height;
+    window_get_size(window, &window_width, &window_height);
+
+    glm_vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
+
+    te_camera* camera = world_get_active_camera(world);
+    if (camera == NULL) {
+        return false;
+    }
+
+    vec4 viewport;
+    camera_get_viewport(camera, viewport);
+
+    if (cursor_pos[0] < viewport[0] || cursor_pos[1] < viewport[1]
+        || cursor_pos[0] > viewport[0] + viewport[2]
+        || cursor_pos[1] > viewport[1] + viewport[3]) {
+        // Outside of the game viewport.
+        return false;
+    }
+
+    // Remap to viewport.
+    glm_vec2_sub(cursor_pos, viewport, cursor_pos);
+    glm_vec2_div(cursor_pos, &viewport[2], cursor_pos);
+
+    return true;
+}
+
 te_game_object_info**
 world_get_root_game_objects(te_world* world, unsigned int* count) {
     (*count) = world->spawned_root_game_object_count;
@@ -989,16 +1023,10 @@ prv_world_remove_interactable_widget(te_world* world, te_widget* widget) {
 
 void
 prv_world_interactable_widget_pos_size_changed(te_world* world) {
-    te_window* window = game_manager_get_window(world->game_manager);
-
     vec2 cursor_pos;
-    window_get_cursor_position(window, &cursor_pos[0], &cursor_pos[1]);
-
-    unsigned int window_width;
-    unsigned int window_height;
-    window_get_size(window, &window_width, &window_height);
-
-    glm_vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
+    if (!world_get_cursor_relative_pos(world, cursor_pos)) {
+        return;
+    }
 
     prv_world_on_mouse_moved(world, cursor_pos);
 }

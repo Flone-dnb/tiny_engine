@@ -68,6 +68,7 @@ struct te_scene_animation {
     unsigned int tick_callback_id;
 
     bool loop;
+    bool objects_cached;
 };
 
 #define SCENE_ANIM_VAR_INIT(var_type)                                                         \
@@ -159,6 +160,7 @@ prv_scene_animation_create(te_world* world) {
     scene_animation->transient_duration_sec = 0.0f;
     scene_animation->tick_callback_id = 0xFFFFFFFF;
     scene_animation->loop = true;
+    scene_animation->objects_cached = false;
 
     return scene_animation;
 }
@@ -218,6 +220,10 @@ find_game_obj_recursive(te_game_object_info* info, te_scene_animation_obj* targe
 
 static void
 cache_obj_and_var(te_scene_animation* anim) {
+    if (anim->objects_cached) {
+        return;
+    }
+
     unsigned int root_game_obj_count;
     te_game_object_info** root_game_objs =
         world_get_root_game_objects(anim->world, &root_game_obj_count);
@@ -274,10 +280,14 @@ cache_obj_and_var(te_scene_animation* anim) {
     }
 
     free(root_game_objs);
+    anim->objects_cached = true;
 }
 
 static void
 clear_obj_and_var_cache(te_scene_animation* anim) {
+    if (!anim->objects_cached) {
+        return;
+    }
 #define CLEAR_TRANSIENT_VAR_INFO(var_type)                                                    \
     for (unsigned int var_idx = 0; var_idx < obj->var_type##_count; var_idx++) {              \
         obj->var_type##s[var_idx].transient_var_info = NULL;                                  \
@@ -297,6 +307,7 @@ clear_obj_and_var_cache(te_scene_animation* anim) {
     }
 
     anim->transient_duration_sec = 0.0f;
+    anim->objects_cached = false;
 }
 
 void
@@ -335,6 +346,15 @@ scene_animation_stop(te_scene_animation* scene_animation) {
     scene_animation_tick(scene_animation, 0.0f);
 
     clear_obj_and_var_cache(scene_animation);
+}
+
+void
+scene_animation_set_current_time(te_scene_animation* scene_animation, float time_sec) {
+    scene_animation->current_time_sec = time_sec;
+
+    // Update animated objects.
+    cache_obj_and_var(scene_animation);
+    scene_animation_tick(scene_animation, 0.0f);
 }
 
 bool
@@ -543,6 +563,9 @@ void
 scene_animation_remove_keyframe(
     te_scene_animation* scene_animation, const char* object_name, const char* variable_name,
     void* keyframe) {
+    scene_animation_pause(scene_animation);
+    clear_obj_and_var_cache(scene_animation);
+
     te_scene_animation_obj* obj = get_obj(scene_animation, object_name);
 
 #define FIND_AND_REMOVE_KEYFRAME(var_type)                                                    \
@@ -565,6 +588,8 @@ scene_animation_remove_keyframe(
     void scene_animation_remove_keyframe_##var_type(                                          \
         te_scene_animation* scene_animation, const char* object_name,                         \
         const char* variable_name, te_scene_animation_keyframe_##var_type* target_keyframe) { \
+        scene_animation_pause(scene_animation);                                               \
+        clear_obj_and_var_cache(scene_animation);                                             \
         te_scene_animation_obj* obj = get_obj(scene_animation, object_name);                  \
         const size_t keyframe_size = sizeof(te_scene_animation_keyframe_##var_type);          \
         for (unsigned int var_idx = 0; var_idx < obj->var_type##_count; var_idx++) {          \
@@ -613,6 +638,8 @@ void
 scene_animation_add_keyframe_bool(
     te_scene_animation* scene_animation, const char* object_name, const char* variable_name,
     float time, bool value) {
+    scene_animation_pause(scene_animation);
+    clear_obj_and_var_cache(scene_animation);
     te_scene_animation_obj* obj = get_obj(scene_animation, object_name);
     te_scene_animation_obj_variable_bool* var = get_var_bool(obj, variable_name);
     te_scene_animation_keyframe_bool* keyframe = get_keyframe_bool(var, time);
@@ -626,6 +653,8 @@ void
 scene_animation_add_keyframe_uint(
     te_scene_animation* scene_animation, const char* object_name, const char* variable_name,
     float time, unsigned int value) {
+    scene_animation_pause(scene_animation);
+    clear_obj_and_var_cache(scene_animation);
     te_scene_animation_obj* obj = get_obj(scene_animation, object_name);
     te_scene_animation_obj_variable_uint* var = get_var_uint(obj, variable_name);
     te_scene_animation_keyframe_uint* keyframe = get_keyframe_uint(var, time);
@@ -639,6 +668,8 @@ void
 scene_animation_add_keyframe_float(
     te_scene_animation* scene_animation, const char* object_name, const char* variable_name,
     float time, float value) {
+    scene_animation_pause(scene_animation);
+    clear_obj_and_var_cache(scene_animation);
     te_scene_animation_obj* obj = get_obj(scene_animation, object_name);
     te_scene_animation_obj_variable_float* var = get_var_float(obj, variable_name);
     te_scene_animation_keyframe_float* keyframe = get_keyframe_float(var, time);
@@ -652,6 +683,8 @@ void
 scene_animation_add_keyframe_vec2(
     te_scene_animation* scene_animation, const char* object_name, const char* variable_name,
     float time, vec2 value) {
+    scene_animation_pause(scene_animation);
+    clear_obj_and_var_cache(scene_animation);
     te_scene_animation_obj* obj = get_obj(scene_animation, object_name);
     te_scene_animation_obj_variable_vec2* var = get_var_vec2(obj, variable_name);
     te_scene_animation_keyframe_vec2* keyframe = get_keyframe_vec2(var, time);
@@ -665,6 +698,8 @@ void
 scene_animation_add_keyframe_vec3(
     te_scene_animation* scene_animation, const char* object_name, const char* variable_name,
     float time, vec3 value) {
+    scene_animation_pause(scene_animation);
+    clear_obj_and_var_cache(scene_animation);
     te_scene_animation_obj* obj = get_obj(scene_animation, object_name);
     te_scene_animation_obj_variable_vec3* var = get_var_vec3(obj, variable_name);
     te_scene_animation_keyframe_vec3* keyframe = get_keyframe_vec3(var, time);
@@ -678,6 +713,8 @@ void
 scene_animation_add_keyframe_vec4(
     te_scene_animation* scene_animation, const char* object_name, const char* variable_name,
     float time, vec4 value) {
+    scene_animation_pause(scene_animation);
+    clear_obj_and_var_cache(scene_animation);
     te_scene_animation_obj* obj = get_obj(scene_animation, object_name);
     te_scene_animation_obj_variable_vec4* var = get_var_vec4(obj, variable_name);
     te_scene_animation_keyframe_vec4* keyframe = get_keyframe_vec4(var, time);
@@ -688,7 +725,7 @@ scene_animation_add_keyframe_vec4(
 }
 
 #define SCENE_ANIM_GET_KEYFRAMES_IMPL(var_type)                                               \
-    te_scene_animation_keyframe_##var_type* scene_animation_get_keyframes_##var_type(         \
+    const te_scene_animation_keyframe_##var_type* scene_animation_get_keyframes_##var_type(   \
         te_scene_animation* scene_animation, const char* object_name,                         \
         const char* variable_name, unsigned int* out_keyframe_count) {                        \
         te_scene_animation_obj* obj = get_obj(scene_animation, object_name);                  \
@@ -897,10 +934,18 @@ static void
 scene_animation_tick(te_scene_animation* anim, float delta_time_sec) {
     anim->current_time_sec += delta_time_sec;
     if (anim->loop) {
-        anim->current_time_sec = fmodf(anim->current_time_sec, anim->transient_duration_sec);
+        if (anim->transient_duration_sec < 0.001f) { // to avoid NaN in current time
+            anim->current_time_sec = 0.0f;
+        } else if (
+            anim->current_time_sec
+            > anim->transient_duration_sec) { // to allow ticking on the last anim frame
+            anim->current_time_sec =
+                fmodf(anim->current_time_sec, anim->transient_duration_sec);
+        }
     } else {
-        anim->current_time_sec =
-            glm_clamp(anim->current_time_sec, 0.0f, anim->transient_duration_sec);
+        if (anim->current_time_sec > anim->transient_duration_sec) {
+            anim->current_time_sec = anim->transient_duration_sec;
+        }
     }
 
     for (unsigned int obj_idx = 0; obj_idx < anim->animated_object_count; obj_idx++) {
@@ -946,8 +991,6 @@ scene_animation_play(te_scene_animation* scene_animation) {
     }
 
     cache_obj_and_var(scene_animation);
-
-    scene_animation->current_time_sec = 0.0f;
 
     // Init animated objects.
     scene_animation_tick(scene_animation, 0.0f);

@@ -114,6 +114,11 @@ text_widget_set_text_own(te_text_widget* text_widget, wchar_t* text, unsigned in
         abort();
     }
 
+    if (text_widget->text_len == strlen && wcscmp(text, text_widget->text) == 0) {
+        free(text);
+        return;
+    }
+
     free(text_widget->text);
 
     text_widget->text = text;
