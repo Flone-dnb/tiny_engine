@@ -41,6 +41,12 @@ void scene_animation_set_current_time(te_scene_animation* scene_animation, float
 bool scene_animation_is_playing(te_scene_animation* scene_animation);
 float scene_animation_get_current_time(te_scene_animation* scene_animation);
 
+void scene_animation_save(te_scene_animation* scene_animation, const char* relative_path);
+
+// Returns NULL if not loaded from a file (or was not saved to a file previously).
+// Do not delete returned string.
+const char* scene_animation_get_relative_path(te_scene_animation* scene_animation);
+
 // Returns names of all objects animated in this scene animation.
 // You must free the array pointer but not the individual strings.
 char**
@@ -121,5 +127,7 @@ SCENE_ANIM_REMOVE_KEYFRAME(vec4)
 // ------------------------------------------------------------------------------------------------
 
 // World is supposed to create/load scene animations.
-te_scene_animation* prv_scene_animation_create(struct te_world* world);
+// Path can be NULL to create a new animation instead of loading from disk.
+te_scene_animation*
+prv_scene_animation_create(struct te_world* world, const char* relative_path_to_load);
 void prv_scene_animation_destroy(te_scene_animation* scene_animation);

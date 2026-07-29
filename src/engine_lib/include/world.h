@@ -41,11 +41,11 @@ void world_set_active_camera(te_world* world, struct te_camera* camera);
 void world_play_sound_2d(te_world* world, struct te_sound* sound);
 void world_play_sound_3d(te_world* world, struct te_sound* sound, vec3 world_position);
 
-// Creates a new scene animation that will be saved next to the world file (separately)
-// when @ref world_save_to_file is called.
+// Creates (or loads if path is not NULL) a new scene animation that will be saved next to the world file
+// (separately) when @ref world_save_to_file is called.
 // Do not destroy returned pointer, it will be automatically destroyed by world during world
 // destruction or when another scene animation will replace it.
-struct te_scene_animation* world_create_scene_animation(te_world* world);
+struct te_scene_animation* world_create_scene_animation(te_world* world, const char* relative_path_to_load);
 
 // Returns NULL if no scene animation was created/loaded previously,
 // see @ref world_create_scene_animation.

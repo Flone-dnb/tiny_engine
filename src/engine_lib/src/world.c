@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-
+#include <stdio.h>
 #include <game/model.h>
 #include <game/camera.h>
 #include <game/game_object_info.h>
@@ -207,12 +207,13 @@ prv_world_destroy(te_world* world) {
 }
 
 te_scene_animation*
-world_create_scene_animation(te_world* world) {
+world_create_scene_animation(te_world* world, const char* relative_path_to_load) {
     if (world->scene_animation != NULL) {
         prv_scene_animation_destroy(world->scene_animation);
+        world->scene_animation = NULL;
     }
 
-    world->scene_animation = prv_scene_animation_create(world);
+    world->scene_animation = prv_scene_animation_create(world, relative_path_to_load);
     return world->scene_animation;
 }
 
@@ -523,6 +524,24 @@ prv_save_widget_recursive(te_config* config, te_widget* widget) {
 
 void
 world_save_to_file(te_world* world, const char* relative_path, bool write_light_params) {
+    if (world->scene_animation != NULL) {
+        const char* anim_path = scene_animation_get_relative_path(world->scene_animation);
+        if (anim_path != NULL) {
+            scene_animation_save(world->scene_animation, anim_path);
+        } else {
+            int len = snprintf(NULL, 0, "%s.scene_anim.txt", relative_path);
+            if (len < 0) {
+                log_error("snprintf error");
+                abort();
+            }
+            char* path = malloc(sizeof(char) * ((size_t)len + 1));
+            snprintf(path, (size_t)len + 1, "%s.scene_anim.txt", relative_path);
+
+            scene_animation_save(world->scene_animation, path);
+            free(path);
+        }
+    }
+
     te_config* config = config_create(NULL);
 
     if (write_light_params) {

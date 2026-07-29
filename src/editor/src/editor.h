@@ -29,6 +29,8 @@ void editor_show_file_dialog(
     te_editor* editor, void* custom, void (*on_selected)(void* custom, const char* path),
     void (*on_cancel)(void* custom), enum te_file_dialog_mode mode);
 
+void editor_refresh_filesystem_view(te_editor* editor);
+
 // Shows or hides gizmo around the specified model.
 // Specify NULL to hide the gizmo.
 void editor_set_gizmo(te_editor* editor, struct te_model* target);

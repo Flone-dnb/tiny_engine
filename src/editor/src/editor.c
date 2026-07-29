@@ -318,6 +318,11 @@ editor_show_file_dialog(
 }
 // ------------------------------------------------------------------------------------------------
 
+void
+editor_refresh_filesystem_view(te_editor* editor) {
+    editor_ui_refresh_filesystem_view(editor->ui);
+}
+
 static void
 set_camera_editor_shape_visibility(te_world* world, bool is_visible) {
     bool found_camera = false;
@@ -531,6 +536,52 @@ on_new_world_file_selected(void* custom, const char* path_to_file) {
     editor_ui_refresh_filesystem_view(editor->ui);
 }
 
+// Returns false if outside of game world viewport.
+// Returned cursor pos is in range [0; 1] relative to window.
+// Returned game camera is always valid if returned value is `true`
+static bool
+get_game_world_cursor_pos_relative_window(
+    te_editor* editor, vec2 out_cursor_pos, te_camera** out_game_camera) {
+    (*out_game_camera) = NULL;
+
+    if (editor->dialog_world != NULL) {
+        return false;
+    }
+
+    if (editor->game_world == NULL) {
+        return false;
+    }
+    te_camera* game_camera = world_get_active_camera(editor->game_world);
+    if (game_camera == NULL) {
+        return false;
+    }
+
+    vec4 viewport;
+    camera_get_viewport(game_camera, viewport);
+
+    vec2 window_cursor_pos;
+    te_window* window = game_manager_get_window(editor->game_manager);
+    window_get_cursor_position(window, &window_cursor_pos[0], &window_cursor_pos[1]);
+
+    unsigned int window_width;
+    unsigned int window_height;
+    window_get_size(window, &window_width, &window_height);
+    glm_vec2_div(
+        window_cursor_pos, (vec2){(float)window_width, (float)window_height},
+        window_cursor_pos);
+
+    if (window_cursor_pos[0] < viewport[0] || window_cursor_pos[1] < viewport[1]
+        || window_cursor_pos[0] > viewport[0] + viewport[2]
+        || window_cursor_pos[1] > viewport[1] + viewport[3]) {
+        // Outside of the game viewport.
+        return false;
+    }
+
+    glm_vec2_copy(window_cursor_pos, out_cursor_pos);
+    (*out_game_camera) = game_camera;
+    return true;
+}
+
 void
 editor_on_keyboard_button_pressed(
     void* game_instance, struct te_game_manager* game_manager, enum te_keyboard_button button,
@@ -540,6 +591,12 @@ editor_on_keyboard_button_pressed(
     te_editor* editor = game_instance;
     if (editor->game_world == NULL) {
         return;
+    }
+
+    te_scene_animation_editor* anim_editor =
+        world_inspector_get_scene_animation_editor(editor_ui_get_world_inspector(editor->ui));
+    if (anim_editor != NULL) {
+        prv_scene_animation_editor_on_keyboard_button_pressed(anim_editor, button, modifiers);
     }
 
     if (keyboard_modifiers_is_ctrl_pressed(&modifiers) && button == TE_KB_N) {
@@ -578,9 +635,14 @@ void
 editor_on_keyboard_button_released(
     void* game_instance, struct te_game_manager* game_manager, enum te_keyboard_button button,
     te_keyboard_modifiers modifiers) {
-    (void)modifiers;
-
     te_editor* editor = game_instance;
+
+    te_scene_animation_editor* anim_editor =
+        world_inspector_get_scene_animation_editor(editor_ui_get_world_inspector(editor->ui));
+    if (anim_editor != NULL) {
+        prv_scene_animation_editor_on_keyboard_button_released(anim_editor, button, modifiers);
+    }
+
     editor_camera_on_keyboard_button_released(editor->editor_camera, button);
 
     if (button == TE_KB_ESCAPE) {
@@ -592,30 +654,9 @@ editor_on_keyboard_button_released(
         }
     }
 
-    if (editor->game_world == NULL) {
-        return;
-    }
-    te_camera* game_camera = world_get_active_camera(editor->game_world);
-    if (game_camera == NULL) {
-        return;
-    }
-
-    vec4 viewport;
-    camera_get_viewport(game_camera, viewport);
-
-    vec2 cursor_pos;
-    te_window* window = game_manager_get_window(game_manager);
-    window_get_cursor_position(window, &cursor_pos[0], &cursor_pos[1]);
-
-    unsigned int window_width;
-    unsigned int window_height;
-    window_get_size(window, &window_width, &window_height);
-    glm_vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
-
-    if (cursor_pos[0] < viewport[0] || cursor_pos[1] < viewport[1]
-        || cursor_pos[0] > viewport[0] + viewport[2]
-        || cursor_pos[1] > viewport[1] + viewport[3]) {
-        // Outside of the game viewport.
+    te_camera* game_camera;
+    vec2 window_cursor_pos;
+    if (!get_game_world_cursor_pos_relative_window(editor, window_cursor_pos, &game_camera)) {
         return;
     }
 
@@ -673,40 +714,17 @@ editor_on_mouse_button_pressed(
     void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button,
     bool was_handled_by_widget) {
     (void)was_handled_by_widget;
+    (void)game_manager;
     te_editor* editor = game_instance;
 
-    if (editor->dialog_world != NULL) {
-        return;
-    }
-
-    if (editor->game_world == NULL) {
-        return;
-    }
-    te_camera* game_camera = world_get_active_camera(editor->game_world);
-    if (game_camera == NULL) {
+    te_camera* game_camera;
+    vec2 window_cursor_pos;
+    if (!get_game_world_cursor_pos_relative_window(editor, window_cursor_pos, &game_camera)) {
         return;
     }
 
     vec4 viewport;
     camera_get_viewport(game_camera, viewport);
-
-    vec2 window_cursor_pos;
-    te_window* window = game_manager_get_window(game_manager);
-    window_get_cursor_position(window, &window_cursor_pos[0], &window_cursor_pos[1]);
-
-    unsigned int window_width;
-    unsigned int window_height;
-    window_get_size(window, &window_width, &window_height);
-    glm_vec2_div(
-        window_cursor_pos, (vec2){(float)window_width, (float)window_height},
-        window_cursor_pos);
-
-    if (window_cursor_pos[0] < viewport[0] || window_cursor_pos[1] < viewport[1]
-        || window_cursor_pos[0] > viewport[0] + viewport[2]
-        || window_cursor_pos[1] > viewport[1] + viewport[3]) {
-        // Outside of the game viewport.
-        return;
-    }
 
     // Check if we clicked on scene animation editor.
     te_scene_animation_editor* anim_editor =
@@ -734,7 +752,7 @@ editor_on_mouse_button_pressed(
     }
 
     if (button == TE_MB_RIGHT) {
-        window_capture_mouse_cursor(window, true);
+        window_capture_mouse_cursor(game_manager_get_window(editor->game_manager), true);
         editor_camera_enable_input(editor->editor_camera, true);
         return;
     }
@@ -808,9 +826,44 @@ editor_on_mouse_moved(
 void
 editor_on_mouse_scroll_moved(
     void* game_instance, struct te_game_manager* game_manager, float offset) {
-    (void)game_instance;
     (void)game_manager;
     (void)offset;
+
+    te_editor* editor = game_instance;
+
+    te_camera* game_camera;
+    vec2 window_cursor_pos;
+    if (!get_game_world_cursor_pos_relative_window(editor, window_cursor_pos, &game_camera)) {
+        return;
+    }
+
+    vec4 viewport;
+    camera_get_viewport(game_camera, viewport);
+
+    // Check if we clicked on scene animation editor.
+    te_scene_animation_editor* anim_editor =
+        world_inspector_get_scene_animation_editor(editor_ui_get_world_inspector(editor->ui));
+    if (anim_editor != NULL) {
+        // Remap to viewport for scene animation.
+        vec2 cursor_pos;
+        glm_vec2_sub(window_cursor_pos, viewport, cursor_pos);
+        glm_vec2_div(cursor_pos, &viewport[2], cursor_pos);
+
+        te_widget* widget = scene_animation_editor_get_root_widget(anim_editor);
+
+        vec2 pos;
+        widget_get_screen_position(widget, pos);
+        vec2 size;
+        widget_get_screen_size(widget, size);
+
+        if (cursor_pos[0] > pos[0] && cursor_pos[0] < pos[0] + size[0]
+            && cursor_pos[1] > pos[1] && cursor_pos[1] < pos[1] + size[1]) {
+            glm_vec2_sub(cursor_pos, pos, cursor_pos);
+            glm_vec2_div(cursor_pos, size, cursor_pos);
+            prv_scene_animation_editor_on_mouse_scroll_moved(anim_editor, offset, cursor_pos);
+            return;
+        }
+    }
 }
 
 void

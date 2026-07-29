@@ -1081,7 +1081,7 @@ on_button_scene_animation_clicked(te_button_widget* button) {
 
     if (inspector->scene_animation_editor == NULL) {
         inspector->scene_animation_editor =
-            scene_animation_editor_create(inspector->game_world);
+            scene_animation_editor_create(inspector->game_world, inspector->editor);
 
         vec4 color;
         theme_get_accent_color(color);
