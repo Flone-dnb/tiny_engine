@@ -52,7 +52,7 @@ struct te_game_manager {
 
 te_game_manager*
 prv_game_manager_create(struct te_window* window) {
-    te_game_manager* game_manager = (te_game_manager*)malloc(sizeof(te_game_manager));
+    te_game_manager* game_manager = malloc(sizeof(te_game_manager));
 
     game_manager->sound_manager = sound_manager_create();
     game_manager->window = window;

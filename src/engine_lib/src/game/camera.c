@@ -28,6 +28,10 @@ struct te_camera {
     // Always valid.
     te_game_object_info* game_object_info;
 
+    // NULL if not set. Custom callback.
+    void (*custom_on_before_destroyed)(te_camera*);
+    void* custom_ptr;
+
 #if defined(ENGINE_EDITOR)
     // Model to visualize the camera in the editor.
     te_model* editor_model;
@@ -114,6 +118,8 @@ camera_create() {
     camera->is_proj_mat_outdated = true;
     camera->is_directions_outdated = true;
     camera->is_serialization_allowed = true;
+    camera->custom_on_before_destroyed = NULL;
+    camera->custom_ptr = NULL;
 
     camera->game_object_info = malloc(sizeof(te_game_object_info));
     camera->game_object_info->type_id = camera_get_type_id();
@@ -130,6 +136,10 @@ camera_create() {
 
 void
 camera_destroy(te_camera* camera) {
+    if (camera->custom_on_before_destroyed != NULL) {
+        camera->custom_on_before_destroyed(camera);
+    }
+
     free(camera->name);
     free(camera->game_object_info);
 
@@ -449,6 +459,22 @@ camera_get_up(te_camera* camera, vec3 out) {
     }
 
     glm_vec3_copy(camera->up, out);
+}
+
+void
+camera_set_custom_ptr(te_camera* camera, void* ptr) {
+    camera->custom_ptr = ptr;
+}
+
+void*
+camera_get_custom_ptr(te_camera* camera) {
+    return camera->custom_ptr;
+}
+
+void
+camera_set_custom_on_before_destroyed(
+    te_camera* camera, void (*custom_on_before_destroyed)(te_camera*)) {
+    camera->custom_on_before_destroyed = custom_on_before_destroyed;
 }
 
 bool

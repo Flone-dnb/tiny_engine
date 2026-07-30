@@ -115,7 +115,7 @@ endif()
 #                                       DEPENDENCIES
 # -------------------------------------------------------------------------------------------------
 
-# Group all dependencies into a single interface library, later we will link it to 2 version of the engine_lib
+# Group all dependencies into a single interface library, later we will link it to 2 versions of the engine_lib
 # one for the editor (with some editor macros) and one for the game.
 set(ENGINE_LIB_DEPS_TARGET engine_lib_deps)
 add_library(${ENGINE_LIB_DEPS_TARGET} INTERFACE)
@@ -135,7 +135,7 @@ set(SDL_INSTALL OFF CACHE BOOL "" FORCE)
 set(SDL_INSTALL_DOCS OFF CACHE BOOL "" FORCE)
 set(SDL_INSTALL_TESTS OFF CACHE BOOL "" FORCE)
 target_include_directories(${ENGINE_LIB_DEPS_TARGET} SYSTEM INTERFACE ${RELATIVE_EXT_PATH}/SDL/include)
-add_subdirectory(${RELATIVE_EXT_PATH}/SDL ${DEPENDENCY_BUILD_DIR_NAME}/SDL EXCLUDE_FROM_ALL)
+add_subdirectory(${RELATIVE_EXT_PATH}/SDL ${DEPENDENCY_BUILD_DIR_NAME}/SDL)
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE SDL3::SDL3)
 if(ENGINE_MEMCHECK_ENABLED)
     target_compile_definitions(SDL3-shared PRIVATE ENGINE_MEMCHECK_ENABLED)
@@ -160,7 +160,7 @@ set(CGLM_STATIC ON CACHE BOOL "" FORCE)
 set(CGLM_USE_C99 ON CACHE BOOL "" FORCE)
 set(CGLM_USE_TEST OFF CACHE BOOL "" FORCE)
 set(CGLM_INSTALL OFF CACHE BOOL "" FORCE)
-add_subdirectory(${RELATIVE_EXT_PATH}/cglm ${DEPENDENCY_BUILD_DIR_NAME}/cglm EXCLUDE_FROM_ALL)
+add_subdirectory(${RELATIVE_EXT_PATH}/cglm ${DEPENDENCY_BUILD_DIR_NAME}/cglm)
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE cglm_headers)
 target_compile_definitions(cglm_headers INTERFACE CGLM_ALL_UNALIGNED)
 
@@ -169,7 +169,7 @@ message(STATUS "${PROJECT_NAME}: adding external dependency \"FreeType\"...")
 set(FT_DISABLE_BROTLI ON CACHE BOOL "" FORCE)
 set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
 set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
-add_subdirectory(${RELATIVE_EXT_PATH}/freetype ${DEPENDENCY_BUILD_DIR_NAME}/freetype EXCLUDE_FROM_ALL)
+add_subdirectory(${RELATIVE_EXT_PATH}/freetype ${DEPENDENCY_BUILD_DIR_NAME}/freetype)
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE freetype)
 
 # Add hashmap.c
@@ -185,7 +185,7 @@ set(MINIAUDIO_NO_FLAC ON CACHE BOOL "" FORCE)
 set(MINIAUDIO_NO_AVX2 ON CACHE BOOL "" FORCE)
 set(MINIAUDIO_NO_RUNTIME_LINKING OFF CACHE BOOL "" FORCE)
 set(MINIAUDIO_INSTALL OFF CACHE BOOL "" FORCE)
-add_subdirectory(${RELATIVE_EXT_PATH}/miniaudio ${DEPENDENCY_BUILD_DIR_NAME}/miniaudio EXCLUDE_FROM_ALL)
+add_subdirectory(${RELATIVE_EXT_PATH}/miniaudio ${DEPENDENCY_BUILD_DIR_NAME}/miniaudio)
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE miniaudio)
 
 # Link engine library to dependencies.

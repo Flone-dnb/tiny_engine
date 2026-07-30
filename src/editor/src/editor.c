@@ -24,6 +24,8 @@
 #include <obj_picking.h>
 #include <gizmo.h>
 
+#include <game.h>
+
 #define EDITOR_STATS_POS_OFFSET 0.01f
 #define EDITOR_SHORTCUTS_X_POS 0.01f
 #define EDITOR_SHORTCUTS_Y_POS 0.075f
@@ -163,6 +165,8 @@ editor_create_editor_world(te_editor* editor, struct te_game_manager* game_manag
 
 void
 editor_on_game_started(void* game_instance, te_game_manager* game_manager) {
+    game_register_custom_types();
+
     // Load font.
     te_renderer* renderer = game_manager_get_renderer(game_manager);
     te_font_manager* font_manager = renderer_get_font_manager(renderer);

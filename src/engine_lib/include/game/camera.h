@@ -53,6 +53,14 @@ void camera_get_forward(te_camera* camera, vec3 out);
 void camera_get_right(te_camera* camera, vec3 out);
 void camera_get_up(te_camera* camera, vec3 out);
 
+// Optionally you can set a custom pointer to be stored in the camera.
+void camera_set_custom_ptr(te_camera* camera, void* ptr);
+void* camera_get_custom_ptr(te_camera* camera);
+
+// Optionally you can set a custom callback that will be called before the camera is destroyed.
+void camera_set_custom_on_before_destroyed(
+    te_camera* camera, void (*custom_on_before_destroyed)(te_camera*));
+
 // Uses mouse cursor's position in range [0.0; 1.0] (relative to the window)
 // and converts it into a world space direction from the camera along the cursor.
 // Returns `false` if the cursor is outside of the camera's viewport.

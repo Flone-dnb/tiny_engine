@@ -2,9 +2,9 @@
 
 This is a manual - a step-by-step guide to introduce you to various aspects of the engine. This manual will not explain every piece of code, only some high-level entities and their usage, more specific documentation can be always found in the source code comments.
 
-# Project manager
+# Creating a new game project
 
-TODO
+To create a new game project just clone the repository. There are already 2 game targets included with base game code see `src/game` and `src/game_lib`. After cloning just continue working in `game_lib` target (which is included by the `game` target where you can change the game name and contents of `main.c`). In case you would want to update engine to a newer version just merge changes from the engine repository.
 
 # Thread safety
 

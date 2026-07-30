@@ -39,8 +39,8 @@ create_symlink_to_res(${PROJECT_NAME})
 #                                         DEPENDENCIES
 # -------------------------------------------------------------------------------------------------
 
-# Add engine library.
-set(ENGINE_LIB_TARGET_FOR_EDITOR engine_lib_for_editor)
-target_link_libraries(${PROJECT_NAME} PUBLIC ${ENGINE_LIB_TARGET_FOR_EDITOR})
-add_dependencies(${PROJECT_NAME} ${ENGINE_LIB_TARGET_FOR_EDITOR})
-
+# Include game lib target to allow using custom game types in the editor.
+# It already includes engine lib.
+set(GAME_LIB_TARGET_FOR_EDITOR game_lib_for_editor)
+target_link_libraries(${PROJECT_NAME} PUBLIC ${GAME_LIB_TARGET_FOR_EDITOR})
+add_dependencies(${PROJECT_NAME} ${GAME_LIB_TARGET_FOR_EDITOR})

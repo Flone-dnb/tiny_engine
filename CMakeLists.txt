@@ -58,16 +58,16 @@ function(tiny_engine_configure_target TARGET_NAME)
 
     # Add `DEBUG` macro in non-release builds.
     if(NOT IS_RELEASE_BUILD)
-	message(STATUS "${PROJECT_NAME}: adding DEBUG macro")
-	target_compile_definitions(${TARGET_NAME} PUBLIC DEBUG)
+	    message(STATUS "${PROJECT_NAME}: adding DEBUG macro")
+	    target_compile_definitions(${TARGET_NAME} PUBLIC DEBUG)
     endif()
 
     # Debug tools.
     if(NOT IS_RELEASE_BUILD)
-	target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_DEBUG_TOOLS)
+	    target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_DEBUG_TOOLS)
     elseif(ENGINE_FORCE_ENABLE_DEBUG_TOOLS)
-	message(WARNING "Note: you enabled ENGINE_DEBUG_TOOLS in release build.")
-	target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_DEBUG_TOOLS)
+	    message(WARNING "Note: you enabled ENGINE_DEBUG_TOOLS in release build.")
+	    target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_DEBUG_TOOLS)
     endif()
 
     # Add includes (relative to the target's directory).
@@ -84,21 +84,22 @@ function(tiny_engine_configure_target TARGET_NAME)
 
     # Enable ASan.
     if(IS_ARM64 EQUAL 0 AND NOT IS_RELEASE_BUILD AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT ENGINE_DISABLE_ASAN_IN_DEBUG AND (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER MATCHES "clang"))
-	message(STATUS "${TARGET_NAME}: Address sanitizer is enabled.")
-	target_compile_definitions(${TARGET_NAME} PRIVATE ENGINE_ASAN_ENABLED)
-	target_compile_options(${TARGET_NAME} PRIVATE -fno-omit-frame-pointer)
-	target_compile_options(${TARGET_NAME} PRIVATE -fsanitize=address)
-	target_link_libraries(${TARGET_NAME} PRIVATE -fno-omit-frame-pointer)
-	target_link_libraries(${TARGET_NAME} PRIVATE -fsanitize=address)
-	if (CMAKE_COMPILER_IS_GNUCC)
-	    target_compile_options(${TARGET_NAME} PRIVATE -static-libasan)
-	endif()
+        message(STATUS "${TARGET_NAME}: Address sanitizer is enabled.")
+        target_compile_definitions(${TARGET_NAME} PRIVATE ENGINE_ASAN_ENABLED)
+        target_compile_options(${TARGET_NAME} PRIVATE -fno-omit-frame-pointer)
+        target_compile_options(${TARGET_NAME} PRIVATE -fsanitize=address)
+        target_link_libraries(${TARGET_NAME} PRIVATE -fno-omit-frame-pointer)
+        target_link_libraries(${TARGET_NAME} PRIVATE -fsanitize=address)
+        if (CMAKE_COMPILER_IS_GNUCC)
+            target_compile_options(${TARGET_NAME} PRIVATE -static-libasan)
+        endif()
     else()
-	if (NOT IS_RELEASE_BUILD AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
-	    message(WARNING "${TARGET_NAME}: Address sanitizer is disabled.")
-	else()
-	    message(STATUS "${TARGET_NAME}: Address sanitizer is disabled.")
-	endif()
+	    if (NOT IS_RELEASE_BUILD AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT MSVC)
+            # 64-bit debug non-msvc build, asan should be used but for some reason is disabled, make it more noticable
+	        message(WARNING "${TARGET_NAME}: Address sanitizer is disabled.")
+	    else()
+	        message(STATUS "${TARGET_NAME}: Address sanitizer is disabled.")
+	    endif()
     endif()
 
     # Memcheck macro.
@@ -139,3 +140,12 @@ set(EDITOR_TARGET_DIR_NAME editor)
 message(STATUS "Adding ${EDITOR_TARGET_DIR_NAME}...")
 add_subdirectory(src/${EDITOR_TARGET_DIR_NAME} ${BUILD_DIRECTORY_NAME}/${EDITOR_TARGET_DIR_NAME})
 
+# Add game_lib.
+set(GAME_LIB_DIR game_lib)
+message(STATUS "Adding ${GAME_LIB_DIR}...")
+add_subdirectory(src/${GAME_LIB_DIR} ${BUILD_DIRECTORY_NAME}/${GAME_LIB_DIR})
+
+# Add game.
+set(GAME_DIR game)
+message(STATUS "Adding ${GAME_DIR}...")
+add_subdirectory(src/${GAME_DIR} ${BUILD_DIRECTORY_NAME}/${GAME_DIR})
