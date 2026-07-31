@@ -59,9 +59,42 @@ prv_shader_manager_destroy(te_shader_manager* manager) {
 
 unsigned int
 prv_shader_manager_compile_shader(const char* path, bool is_frag) {
-    const char* prefix = "#version 450\n"
-                         "precision highp float;\n"
-                         "precision highp int;\n\n";
+    const char* prefix = NULL;
+#if defined(ENGINE_GLES)
+    if (is_frag) {
+        prefix = "#version 100\n"
+                 "precision highp float;\n"
+                 "precision highp int;\n"
+                 "#define ENGINE_GLES\n"
+                 "#define ATTRIBUTE_IN varying\n"
+                 "#define out_color gl_FragColor\n"
+                 "\n";
+    } else {
+        prefix = "#version 100\n"
+                 "precision highp float;\n"
+                 "precision highp int;\n"
+                 "#define ENGINE_GLES\n"
+                 "#define ATTRIBUTE_IN attribute\n"
+                 "#define ATTRIBUTE_OUT varying\n"
+                 "\n";
+    }
+#else
+    if (is_frag) {
+        prefix = "#version 450\n"
+                 "precision highp float;\n"
+                 "precision highp int;\n"
+                 "#define ATTRIBUTE_IN in\n"
+                 "out vec4 out_color;\n"
+                 "\n";
+    } else {
+        prefix = "#version 450\n"
+                 "precision highp float;\n"
+                 "precision highp int;\n"
+                 "#define ATTRIBUTE_IN in\n"
+                 "#define ATTRIBUTE_OUT out\n"
+                 "\n";
+    }
+#endif
     const size_t prefix_len = strlen(prefix);
 
     FILE* f = fopen(path, "rb");

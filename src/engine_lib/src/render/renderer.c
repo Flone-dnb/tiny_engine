@@ -30,6 +30,18 @@
 #include <glad/glad.h>
 #include <SDL3/SDL_messagebox.h>
 
+#if defined(ENGINE_GLES)
+#define glGenQueries glGenQueriesEXT
+#define glQueryCounter glQueryCounterEXT
+#define GL_TIMESTAMP GL_TIMESTAMP_EXT
+#define glDeleteQueries glDeleteQueriesEXT
+#define glGetQueryObjectui64v glGetQueryObjectui64vEXT
+#define GL_QUERY_RESULT GL_QUERY_RESULT_EXT
+#define glGetQueryObjectuiv glGetQueryObjectuivEXT
+#define GL_QUERY_RESULT_AVAILABLE GL_QUERY_RESULT_AVAILABLE_EXT
+#define glGetQueryObjecti64v glGetQueryObjecti64vEXT
+#endif
+
 // Stuff needed to calculate FPS and keep frame limit.
 typedef struct te_renderer_frame_stats {
     // Stats collected for the last second.
@@ -174,22 +186,34 @@ renderer_create(struct te_window* window) {
     }
 
     // Initialize GLAD.
+#if defined(ENGINE_GLES)
+    if (gladLoadGLES2Loader((GLADloadproc)SDL_GL_GetProcAddress) == 0) {
+#else
     if (gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress) == 0) {
+#endif
 #if defined(WIN32)
         SDL_ShowSimpleMessageBox(
-            SDL_MESSAGEBOX_ERROR, "Error", "failed to load OpenGL ES", NULL);
+            SDL_MESSAGEBOX_ERROR, "Error", "failed to initialize OpenGL", NULL);
 #endif
-        log_error("failed to load OpenGL ES");
+        log_error("failed to initialize OpenGL");
         abort();
     }
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    glGenQueries(1, &renderer->gl_timestamp_frame_start);
-    glGenQueries(1, &renderer->gl_timestamp_frame_end);
-    glGenQueries(1, &renderer->gl_query_draw_debug);
+#if defined(ENGINE_GLES)
+    if (GLAD_GL_EXT_disjoint_timer_query != 1) {
+        log_info("the GPU does not support GL_EXT_disjoint_timer_query extension, GPU time "
+                 "metrics are disabled");
+    } else {
+#endif
+        glGenQueries(1, &renderer->gl_timestamp_frame_start);
+        glGenQueries(1, &renderer->gl_timestamp_frame_end);
+        glGenQueries(1, &renderer->gl_query_draw_debug);
+#if defined(ENGINE_GLES)
+    }
+#endif
 
     // Init timers.
-
     glQueryCounter(renderer->gl_timestamp_frame_start, GL_TIMESTAMP);
     glQueryCounter(renderer->gl_timestamp_frame_end, GL_TIMESTAMP);
 
@@ -286,9 +310,15 @@ renderer_destroy(te_renderer* renderer) {
     free(renderer->light_params);
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    glDeleteQueries(1, &renderer->gl_timestamp_frame_start);
-    glDeleteQueries(1, &renderer->gl_timestamp_frame_end);
-    glDeleteQueries(1, &renderer->gl_query_draw_debug);
+#if defined(ENGINE_GLES)
+    if (GLAD_GL_EXT_disjoint_timer_query == 1) {
+#endif
+        glDeleteQueries(1, &renderer->gl_timestamp_frame_start);
+        glDeleteQueries(1, &renderer->gl_timestamp_frame_end);
+        glDeleteQueries(1, &renderer->gl_query_draw_debug);
+#if defined(ENGINE_GLES)
+    }
+#endif
 #endif
 
     if (!SDL_GL_DestroyContext(renderer->gl_context)) {
@@ -442,6 +472,15 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     te_debug_stats* debug_stats = prv_debug_console_get_stats();
     bool record_new_queries = true;
 
+#if defined(ENGINE_GLES)
+    if (GLAD_GL_EXT_disjoint_timer_query != 1) {
+        record_new_queries = false;
+    }
+#endif
+
+#if defined(ENGINE_GLES)
+    if (GLAD_GL_EXT_disjoint_timer_query == 1)
+#endif
     {
         // Check if the GPU finished commands.
         GLuint available = 0;

@@ -1,12 +1,12 @@
 // Stores position in XY in [0.0; 1.0] and UV in ZW.
-layout (location = 0) in vec4 vertex;
+ATTRIBUTE_IN vec4 vertex;
 
 uniform vec2 in_pos;      // in pixels
 uniform vec2 in_size;     // in pixels
 uniform vec4 clip_rect;   // [0.0; 1.0] where XY mark clip start and ZW mark clip size.
 uniform vec2 window_size; // in pixels
 
-out vec2 fragment_uv;
+ATTRIBUTE_OUT vec2 fragment_uv;
 
 void main() {
     vec2 pos = vec2(in_pos + in_size * clip_rect.xy);

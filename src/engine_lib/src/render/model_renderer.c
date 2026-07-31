@@ -245,8 +245,7 @@ model_renderer_add_model(te_model_renderer* renderer, unsigned int prog_id) {
         // Also shift handles.
         for (unsigned int i = 0; i < renderer->render_handle_arrays_size; i++) {
             if (renderer->handle_to_data[i] == INVALID_DATA_INDEX
-                || renderer->handle_to_data[i] < data_index
-                || i == handle) {
+                || renderer->handle_to_data[i] < data_index || i == handle) {
                 continue;
             }
             renderer->handle_to_data[i] += 1;
@@ -355,6 +354,13 @@ model_renderer_draw(
     for (unsigned int group_idx = 0; group_idx < renderer->shader_group_count; group_idx++) {
         te_shader_group* group = &renderer->shader_groups[group_idx];
 
+#if defined(ENGINE_GLES)
+        void (*set_vertex_attribute_pointers)(void) =
+            group->uniform_skin_mats == -1
+                ? prv_model_set_attribute_pointers_model_vertex
+                : prv_model_set_attribute_pointers_model_vertex_skinned;
+#endif
+
         glUseProgram(group->prog_id);
 
         glUniformMatrix4fv(group->uniform_view_proj_mat, 1, GL_FALSE, (*view_proj_mat)[0]);
@@ -388,7 +394,9 @@ model_renderer_draw(
                     continue;
                 }
             } else {
-                glUniformMatrix4fv(group->uniform_skin_mats, (int)data->skinning_mats_count, GL_FALSE, (*data->skinning_mats)[0]);
+                glUniformMatrix4fv(
+                    group->uniform_skin_mats, (int)data->skinning_mats_count, GL_FALSE,
+                    (*data->skinning_mats)[0]);
             }
 
             glUniformMatrix4fv(group->uniform_world_mat, 1, GL_FALSE, data->world_mat[0]);
@@ -399,7 +407,13 @@ model_renderer_draw(
 
             glBindTexture(GL_TEXTURE_2D, data->tex_id); // binds 0 if not set
 
+#if defined(ENGINE_GLES)
+            glBindBuffer(GL_ARRAY_BUFFER, data->vbo);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data->ebo);
+            set_vertex_attribute_pointers();
+#else
             glBindVertexArray(data->vao);
+#endif
 
             glDrawElements(GL_TRIANGLES, data->index_count, GL_UNSIGNED_SHORT, NULL);
             model_count += 1;

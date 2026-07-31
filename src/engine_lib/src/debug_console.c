@@ -318,18 +318,28 @@ prv_debug_console_draw(float delta_time_sec) {
             screen_pos, "- %s: %.2f", "debug", stats->cpu_time_submit_debug_ms);
         prv_debug_console_draw_stat(screen_pos, "- %s: %.2f", "swap", stats->cpu_time_swap_ms);
 
-        // GPU stats.
-        prv_debug_console_draw_stat(
-            screen_pos, "CPU is ahead of the GPU on %u frame(s)",
-            stats->cpu_ahead_gpu_frame_count);
-        prv_debug_console_draw_stat(
-            screen_pos, "%s: %.2f", "GPU time to draw a frame (ms)", stats->gpu_time_frame_ms);
-        prv_debug_console_draw_stat(
-            screen_pos, "- %s: %.2f", "models", stats->gpu_time_draw_models_ms);
-        prv_debug_console_draw_stat(
-            screen_pos, "- %s: %.2f", "widgets", stats->gpu_time_draw_widgets_ms);
-        prv_debug_console_draw_stat(
-            screen_pos, "- %s: %.2f", "debug", stats->gpu_time_draw_debug_ms);
+#if defined(ENGINE_GLES)
+        if (GLAD_GL_EXT_disjoint_timer_query != 1) {
+            prv_debug_console_draw_stat(
+                screen_pos, "%s", "GL_EXT_disjoint_timer_query not supported");
+        } else {
+#endif
+            // GPU stats.
+            prv_debug_console_draw_stat(
+                screen_pos, "CPU is ahead of the GPU on %u frame(s)",
+                stats->cpu_ahead_gpu_frame_count);
+            prv_debug_console_draw_stat(
+                screen_pos, "%s: %.2f", "GPU time to draw a frame (ms)",
+                stats->gpu_time_frame_ms);
+            prv_debug_console_draw_stat(
+                screen_pos, "- %s: %.2f", "models", stats->gpu_time_draw_models_ms);
+            prv_debug_console_draw_stat(
+                screen_pos, "- %s: %.2f", "widgets", stats->gpu_time_draw_widgets_ms);
+            prv_debug_console_draw_stat(
+                screen_pos, "- %s: %.2f", "debug", stats->gpu_time_draw_debug_ms);
+#if defined(ENGINE_GLES)
+        }
+#endif
 
         if (fps_limit > 0) {
             prv_debug_console_draw_stat(screen_pos, "%s", "! FPS LIMIT AFFECTS STATS !");

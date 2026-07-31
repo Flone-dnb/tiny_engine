@@ -2,6 +2,7 @@
 
 project(tiny_engine C)
 
+option(ENGINE_GLES "If enabled changes the rendering from regular OpenGL to OpenGL ES which is usually needed for ARM64 Linux retro-handhelds" OFF)
 option(ENGINE_FORCE_ENABLE_DEBUG_TOOLS "Can be useful in Release builds to measure performance, enabled in non-release builds by default" OFF)
 option(ENGINE_DISABLE_ASAN_IN_DEBUG "ASan is enabled in non-release builds, this option disables it. Note that memcheck is still enabled in non-release builds" OFF)
 
@@ -70,15 +71,19 @@ function(tiny_engine_configure_target TARGET_NAME)
 	    target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_DEBUG_TOOLS)
     endif()
 
+    if(ENGINE_GLES)
+        target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_GLES)
+    endif()
+
     # Add includes (relative to the target's directory).
     target_include_directories(${TARGET_NAME} SYSTEM PUBLIC "../../ext")
     target_include_directories(${TARGET_NAME} PUBLIC include)
     target_include_directories(${TARGET_NAME} PRIVATE src)
 
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "v8|arm64|aarch64")
-	set(IS_ARM64 1)
+	    set(IS_ARM64 1)
     else()
-	set(IS_ARM64 0)
+	    set(IS_ARM64 0)
     endif()
     message(STATUS "${TARGET_NAME}: is running ARM64: ${IS_ARM64}")
 

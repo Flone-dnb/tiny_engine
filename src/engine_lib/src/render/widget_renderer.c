@@ -10,6 +10,8 @@
 
 #define INVALID_DATA_INDEX 0xffffffff
 
+#define WIDGET_QUAD_GL_VERT_ATTRIB_PTR glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(vec4), NULL);
+
 // Groups render data related to a specific type of a widget.
 typedef struct te_widgets_render_data {
     // Array of render data of all currently registered items.
@@ -205,7 +207,9 @@ struct te_widget_renderer {
     te_renderer* renderer;
 
     // Quad geometry.
+#if !defined(ENGINE_GLES)
     unsigned int vao;
+#endif
     unsigned int vbo;
     unsigned int ebo;
 
@@ -262,11 +266,15 @@ widget_renderer_create(te_renderer* renderer) {
         glm_vec4_copy((vec4){1.0f, 0.0f, 1.0f, 0.0f}, &vertices[3][0]);
         const unsigned short indices[6] = {0, 1, 2, 0, 2, 3};
 
+#if !defined(ENGINE_GLES)
         glGenVertexArrays(1, &widget_renderer->vao);
+#endif
         glGenBuffers(1, &widget_renderer->vbo);
         glGenBuffers(1, &widget_renderer->ebo);
 
+#if !defined(ENGINE_GLES)
         glBindVertexArray(widget_renderer->vao);
+#endif
         {
             // Vertex buffer.
             glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
@@ -274,7 +282,7 @@ widget_renderer_create(te_renderer* renderer) {
 
             // Vertex layout.
             glEnableVertexAttribArray(0);
-            glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(vec4), NULL);
+            WIDGET_QUAD_GL_VERT_ATTRIB_PTR
 
             // Index buffer.
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
@@ -282,7 +290,9 @@ widget_renderer_create(te_renderer* renderer) {
                 GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned short), &indices[0],
                 GL_STATIC_DRAW);
         }
+#if !defined(ENGINE_GLES)
         glBindVertexArray(0);
+#endif
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
@@ -313,7 +323,9 @@ widget_renderer_destroy(te_widget_renderer* widget_renderer) {
         renderer_get_shader_manager(widget_renderer->renderer),
         widget_renderer->quad_shader.prog_id);
 
+#if !defined(ENGINE_GLES)
     glDeleteVertexArrays(1, &widget_renderer->vao);
+#endif
     glDeleteBuffers(1, &widget_renderer->vbo);
     glDeleteBuffers(1, &widget_renderer->ebo);
 
@@ -392,7 +404,14 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
         GPU_SECTION_BEGIN("rect");
 
         glUseProgram(shader->prog_id);
+
+#if defined(ENGINE_GLES)
+        glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
+        WIDGET_QUAD_GL_VERT_ATTRIB_PTR
+#else
         glBindVertexArray(widget_renderer->vao);
+#endif
 
         glActiveTexture(GL_TEXTURE0); // quad texture
 
@@ -426,7 +445,14 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
         GPU_SECTION_BEGIN("text");
 
         glUseProgram(shader->prog_id);
+
+#if defined(ENGINE_GLES)
+        glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
+        WIDGET_QUAD_GL_VERT_ATTRIB_PTR
+#else
         glBindVertexArray(widget_renderer->vao);
+#endif
 
         glActiveTexture(GL_TEXTURE0); // glyph's bitmap
 

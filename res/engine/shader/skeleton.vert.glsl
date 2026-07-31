@@ -1,16 +1,20 @@
 // same as in the C code
 #define TE_MAX_BONE_COUNT 80
 
-layout (location = 0) in vec3 pos;
-layout (location = 1) in vec3 normal;
-layout (location = 2) in vec2 uv;
-layout (location = 3) in uvec4 bone_indices;
-layout (location = 4) in vec4 bone_weights;
+ATTRIBUTE_IN vec3 pos;
+ATTRIBUTE_IN vec3 normal;
+ATTRIBUTE_IN vec2 uv;
+#ifdef ENGINE_GLES
+ATTRIBUTE_IN vec4 bone_indices;
+#else
+ATTRIBUTE_IN uvec4 bone_indices;
+#endif
+ATTRIBUTE_IN vec4 bone_weights;
 
-out vec3 frag_pos;
-out vec3 frag_normal;
-out vec2 frag_uv;
-out vec3 view_space_pos;
+ATTRIBUTE_OUT vec3 frag_pos;
+ATTRIBUTE_OUT vec3 frag_normal;
+ATTRIBUTE_OUT vec2 frag_uv;
+ATTRIBUTE_OUT vec3 view_space_pos;
 
 uniform mat4 view_mat;
 uniform mat4 view_proj_mat;
@@ -24,7 +28,11 @@ void main(void) {
     vec4 skinned_normal = vec4(0.0);
     for (int i = 0; i < 4; i++) {
         float bone_weight = bone_weights[i];
+#ifdef ENGINE_GLES
+        mat4 bone_mat = skinning_mats[int(bone_indices[i])];
+#else
         mat4 bone_mat = skinning_mats[bone_indices[i]];
+#endif
 
         // passing 0 as 4th component for position to avoid applying translation twice
         skinned_pos += (bone_mat * vec4(pos, 1.0)) * bone_weight;

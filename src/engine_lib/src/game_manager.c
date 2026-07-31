@@ -104,6 +104,12 @@ prv_game_manager_create(struct te_window* window) {
     log_info("- ENGINE_MEMCHECK_ENABLED is NOT defined");
 #endif
 
+#if defined(ENGINE_GLES)
+    log_info("- ENGINE_GLES is defined, using OpenGL ES");
+#else
+    log_info("- ENGINE_GLES is NOT defined, using regular OpenGL");
+#endif
+
     return game_manager;
 }
 

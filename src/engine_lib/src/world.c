@@ -26,6 +26,11 @@
 #define CONFIG_VAR_NAME_HAS_ATTACHED_CAMERA "has_attached_camera"
 #define CONFIG_VAR_NAME_CHILD_WIDGET_COUNT "child_widget_count"
 
+#if defined(ENGINE_GLES)
+#define glGenQueries glGenQueriesEXT
+#define glDeleteQueries glDeleteQueriesEXT
+#endif
+
 // World represents several objects: audio system, cameras, game objects and etc.
 struct te_world {
     // Always valid pointer. Game manager that owns this world. You should not free/destroy this pointer.
@@ -138,8 +143,14 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
     world->name[name_len] = 0;
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    glGenQueries(1, &world->gl_query_draw_models);
-    glGenQueries(1, &world->gl_query_draw_widgets);
+#if defined(ENGINE_GLES)
+    if (GLAD_GL_EXT_disjoint_timer_query == 1) {
+#endif
+        glGenQueries(1, &world->gl_query_draw_models);
+        glGenQueries(1, &world->gl_query_draw_widgets);
+#if defined(ENGINE_GLES)
+    }
+#endif
 
     // Init timers.
     GPU_TIME_SECTION_BEGIN(world->gl_query_draw_models);
@@ -199,8 +210,14 @@ prv_world_destroy(te_world* world) {
     widget_renderer_destroy(world->widget_renderer);
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    glDeleteQueries(1, &world->gl_query_draw_models);
-    glDeleteQueries(1, &world->gl_query_draw_widgets);
+#if defined(ENGINE_GLES)
+    if (GLAD_GL_EXT_disjoint_timer_query == 1) {
+#endif
+        glDeleteQueries(1, &world->gl_query_draw_models);
+        glDeleteQueries(1, &world->gl_query_draw_widgets);
+#if defined(ENGINE_GLES)
+    }
+#endif
 #endif
 
     free(world);

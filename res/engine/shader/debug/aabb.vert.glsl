@@ -1,4 +1,4 @@
-layout (location = 0) in vec3 local_pos;
+ATTRIBUTE_IN vec3 local_pos;
 
 uniform vec3 pos_offset;
 uniform vec3 extents;

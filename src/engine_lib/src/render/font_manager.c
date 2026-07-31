@@ -198,13 +198,20 @@ font_manager_cache_glyphs(
         // Create texture.
         unsigned int tex_id = 0;
         glGenTextures(1, &tex_id);
-        const int gl_format = GL_UNSIGNED_BYTE;
+
+        unsigned int gl_type = GL_UNSIGNED_BYTE;
+#if defined(ENGINE_GLES)
+        unsigned int gl_format = GL_LUMINANCE;
+#else
+        unsigned int gl_format = GL_RED;
+#endif
+
         glBindTexture(GL_TEXTURE_2D, tex_id);
         {
             glTexImage2D(
-                GL_TEXTURE_2D, 0, GL_RED, (int)manager->ft_face->glyph->bitmap.width,
-                (int)manager->ft_face->glyph->bitmap.rows, 0, GL_RED,
-                (unsigned int)gl_format, manager->ft_face->glyph->bitmap.buffer);
+                GL_TEXTURE_2D, 0, gl_format, (int)manager->ft_face->glyph->bitmap.width,
+                (int)manager->ft_face->glyph->bitmap.rows, 0, gl_format,
+                gl_type, manager->ft_face->glyph->bitmap.buffer);
 
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

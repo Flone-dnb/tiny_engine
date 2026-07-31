@@ -1,7 +1,7 @@
-in vec3 frag_pos;
-in vec3 frag_normal;
-in vec2 frag_uv;
-in vec3 view_space_pos;
+ATTRIBUTE_IN vec3 frag_pos;
+ATTRIBUTE_IN vec3 frag_normal;
+ATTRIBUTE_IN vec2 frag_uv;
+ATTRIBUTE_IN vec3 view_space_pos;
 
 uniform vec4 model_color;
 uniform vec2 tiling; // stores -1 if texture not set
@@ -16,8 +16,6 @@ uniform vec3 directional_light_direction;
 uniform vec3 ambient_light_color;
 uniform vec3 distance_fog_color;
 uniform vec2 distance_fog_range; // start/end distance from camera
-
-out vec4 out_color;
 
 vec3 calculate_light_color(vec3 frag_pos, vec3 frag_normal_unit, vec3 model_color) {
     vec3 light = ambient_light_color * model_color;

@@ -6,7 +6,7 @@ Supported platforms: Windows (x32, x64), Linux (x32, x64, ARM64).
 
 # Features
 
-- [X] Simple forward renderer using OpenGL 4.5
+- [X] Simple forward renderer using OpenGL 4.5 (can be switched to OpenGL ES 2.0 with a cmake option)
 - [X] Game save/config management
 - [X] GUI
 - [X] Type reflection

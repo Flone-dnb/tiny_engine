@@ -23,6 +23,46 @@
 
 #define MODEL_TEX_LOAD_OPTION TE_TLO_GENERATE_MIPMAPS
 
+#if defined(ENGINE_GLES)
+static void
+bind_gl_vertex_attributes_model_vertex(unsigned int shader_prog_id) {
+    // Position.
+    glBindAttribLocation(shader_prog_id, 0, "pos");
+    glEnableVertexAttribArray(0);
+
+    // Normal.
+    glBindAttribLocation(shader_prog_id, 1, "normal");
+    glEnableVertexAttribArray(1);
+
+    // UV.
+    glBindAttribLocation(shader_prog_id, 2, "uv");
+    glEnableVertexAttribArray(2);
+}
+
+static void
+bind_gl_vertex_attributes_model_vertex_skinned(unsigned int shader_prog_id) {
+    // Position.
+    glBindAttribLocation(shader_prog_id, 0, "pos");
+    glEnableVertexAttribArray(0);
+
+    // Normal.
+    glBindAttribLocation(shader_prog_id, 1, "normal");
+    glEnableVertexAttribArray(1);
+
+    // UV.
+    glBindAttribLocation(shader_prog_id, 2, "uv");
+    glEnableVertexAttribArray(2);
+
+    // Bone indices.
+    glBindAttribLocation(shader_prog_id, 3, "bone_indices");
+    glEnableVertexAttribArray(3);
+
+    // Bone weights.
+    glBindAttribLocation(shader_prog_id, 4, "bone_weights");
+    glEnableVertexAttribArray(4);
+}
+#endif
+
 void
 prv_model_set_attribute_pointers_model_vertex(void) {
     // Position.
@@ -58,9 +98,15 @@ prv_model_set_attribute_pointers_model_vertex_skinned(void) {
 
     // Bone indices.
     glEnableVertexAttribArray(3);
+#if defined(ENGINE_GLES)
+    glVertexAttribPointer(
+        3, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(te_model_vertex_skinned),
+        (void*)(sizeof(vec3) * 2 + sizeof(vec2)));
+#else
     glVertexAttribIPointer( // <- note `I` here, passing array of integers
         3, 4, GL_UNSIGNED_BYTE, sizeof(te_model_vertex_skinned),
         (void*)(sizeof(vec3) * 2 + sizeof(vec2)));
+#endif
 
     // Bone weights.
     glEnableVertexAttribArray(4);
@@ -84,6 +130,9 @@ vertex_pack_create(unsigned int vertex_count, bool is_skinned) {
         offset += sizeof(vec3);
         pack->attribute_offsets[TE_VA_UV] = offset;
 
+#if defined(ENGINE_GLES)
+        pack->bind_gl_vertex_attributes = bind_gl_vertex_attributes_model_vertex;
+#endif
         pack->set_attribute_pointers = prv_model_set_attribute_pointers_model_vertex;
     } else {
         pack->vertex_sizeof = sizeof(te_model_vertex_skinned);
@@ -99,6 +148,9 @@ vertex_pack_create(unsigned int vertex_count, bool is_skinned) {
         offset += sizeof(te_bone_index_t) * 4;
         pack->attribute_offsets[TE_VA_BONE_WEIGHTS] = offset;
 
+#if defined(ENGINE_GLES)
+        pack->bind_gl_vertex_attributes = bind_gl_vertex_attributes_model_vertex_skinned;
+#endif
         pack->set_attribute_pointers = prv_model_set_attribute_pointers_model_vertex_skinned;
     }
     pack->data = malloc(pack->vertex_sizeof * pack->vertex_count);
@@ -179,7 +231,9 @@ struct te_model {
     unsigned int parent_bone_idx;
 
     // 0xFFFFFFFF if not being rendered, OpenGL vertex array object, vertex buffer object and element buffer object IDs.
+#if !defined(ENGINE_GLES)
     unsigned int vao;
+#endif
     unsigned int vbo;
     unsigned int ebo;
 
@@ -902,11 +956,15 @@ prv_model_add_to_model_renderer(te_model* model) {
             mesh_generator_cube(&vertices, &indices, &index_count);
         }
 
+#if !defined(ENGINE_GLES)
         glGenVertexArrays(1, &model->vao);
+#endif
         glGenBuffers(1, &model->vbo);
         glGenBuffers(1, &model->ebo);
 
+#if !defined(ENGINE_GLES)
         glBindVertexArray(model->vao);
+#endif
         {
             // Vertex buffer.
             glBindBuffer(GL_ARRAY_BUFFER, model->vbo);
@@ -923,7 +981,9 @@ prv_model_add_to_model_renderer(te_model* model) {
 
             vertices->set_attribute_pointers();
         }
+#if !defined(ENGINE_GLES)
         glBindVertexArray(0);
+#endif
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
@@ -955,7 +1015,12 @@ prv_model_add_to_model_renderer(te_model* model) {
         glm_vec4_copy(model->color, data->color);
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
 
+#if defined(ENGINE_GLES)
+        data->vbo = model->vbo;
+        data->ebo = model->ebo;
+#else
         data->vao = model->vao;
+#endif
         data->index_count = (int)index_count;
 
         data->tex_id = 0;
@@ -1017,7 +1082,9 @@ prv_model_remove_from_model_renderer(te_model* model) {
     }
 
     // Release geometry.
+#if !defined(ENGINE_GLES)
     glGenVertexArrays(1, &model->vao);
+#endif
     glDeleteBuffers(1, &model->vbo);
     glDeleteBuffers(1, &model->ebo);
 
