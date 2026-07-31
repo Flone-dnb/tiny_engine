@@ -124,10 +124,6 @@ camera_controller_on_gamepad_axis_moved(
         controller->movement_input[0] = -new_pos;
     } else if (axis == TE_GA_LEFT_STICK_X) {
         controller->movement_input[1] = new_pos;
-    } else if (axis == TE_GA_LEFT_TRIGGER) {
-        controller->movement_input[2] = -new_pos;
-    } else if (axis == TE_GA_RIGHT_TRIGGER) {
-        controller->movement_input[2] = new_pos;
     }
 }
 
@@ -149,10 +145,6 @@ camera_controller_on_keyboard_button_pressed(
         controller->movement_input[1] = 1.0f;
     } else if (button == TE_KB_A) {
         controller->movement_input[1] = -1.0f;
-    } else if (button == TE_KB_E) {
-        controller->movement_input[2] = 1.0f;
-    } else if (button == TE_KB_Q) {
-        controller->movement_input[2] = -1.0f;
     }
 }
 
