@@ -264,5 +264,7 @@ cmake --build . --target <game_target_name> --config=Release -j 4
 
 > Note: -DENGINE_GLES is optional but is often required for retro-handhelds because they only support OpenGL ES (not the regular GL).
 
-Then copy the resulting binary (from `build/OUTPUT/game`) to your ARM64 Linux device. We don't worry about installing SDL libraries because we link SDL statically. Inside of your ARM64 Linux device launch the game using some file explorer or a console.
+Then copy the resulting binary (from `build/OUTPUT/game`) to your ARM64 Linux device. We don't worry about installing SDL libraries because we link SDL statically. Also don't forget to copy the `res` directory next to the binary.
+
+Inside of your ARM64 Linux device launch the game using some file explorer or a console.
 
