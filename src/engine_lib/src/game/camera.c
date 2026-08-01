@@ -31,6 +31,7 @@ struct te_camera {
     // NULL if not set. Custom callback.
     void (*custom_on_before_destroyed)(te_camera*);
     void* custom_ptr;
+    unsigned int custom_value;
 
 #if defined(ENGINE_EDITOR)
     // Model to visualize the camera in the editor.
@@ -114,6 +115,7 @@ camera_create() {
     camera->vertical_fov = 90;
     camera->render_width = 0;  // not set yet
     camera->render_height = 0; // not set yet
+    camera->custom_value = 0;
     camera->is_view_mat_outdated = true;
     camera->is_proj_mat_outdated = true;
     camera->is_directions_outdated = true;
@@ -287,6 +289,8 @@ camera_register_type(void) {
     type_info_add_vec3_variable(info, "rotation", camera_set_rotation, camera_get_rotation);
     type_info_add_uint_variable(
         info, "vertical_fov", camera_set_vertical_fov, camera_get_vertical_fov);
+    type_info_add_uint_variable(
+        info, "custom_value", camera_set_custom_value, camera_get_custom_value);
     type_info_add_float_variable(
         info, "near_clip", camera_set_near_clip, camera_get_near_clip);
     type_info_add_float_variable(info, "far_clip", camera_set_far_clip, camera_get_far_clip);
@@ -469,6 +473,16 @@ camera_set_custom_ptr(te_camera* camera, void* ptr) {
 void*
 camera_get_custom_ptr(te_camera* camera) {
     return camera->custom_ptr;
+}
+
+void
+camera_set_custom_value(te_camera* camera, unsigned int value) {
+    camera->custom_value = value;
+}
+
+unsigned int
+camera_get_custom_value(te_camera* camera) {
+    return camera->custom_value;
 }
 
 void

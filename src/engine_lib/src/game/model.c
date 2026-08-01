@@ -205,7 +205,7 @@ struct te_model {
     void (*custom_get_geometry)(
         te_model* model, te_vertex_pack** vertices, unsigned short** indices,
         unsigned int* vertex_count, bool* free_custom_geometry);
-    size_t custom_value;
+    unsigned int custom_value;
 
     // Color in RGBA format in range [0.0; 1.0].
     vec4 color;
@@ -890,7 +890,7 @@ model_get_custom_ptr(te_model* model) {
 }
 
 void
-model_set_custom_value(te_model* model, size_t value) {
+model_set_custom_value(te_model* model, unsigned int value) {
     model->custom_value = value;
 }
 
@@ -1364,6 +1364,8 @@ model_register_type(void) {
     type_info_add_vec2_variable(
         info, "texture_tiling", model_set_texture_tiling, model_get_texture_tiling);
     type_info_add_vec2_variable(info, "uv_offset", model_set_uv_offset, model_get_uv_offset);
+    type_info_add_uint_variable(
+        info, "custom_value", model_set_custom_value, model_get_custom_value);
     type_info_add_bool_variable(
         info, "transparent", model_enable_transparency, model_is_transparency_enabled);
     type_info_add_uint_variable(

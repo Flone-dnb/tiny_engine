@@ -57,6 +57,10 @@ void camera_get_up(te_camera* camera, vec3 out);
 void camera_set_custom_ptr(te_camera* camera, void* ptr);
 void* camera_get_custom_ptr(te_camera* camera);
 
+// Optionally you can set a custom value which will also be saved/loaded along with the camera.
+void camera_set_custom_value(te_camera* camera, unsigned int value);
+unsigned int camera_get_custom_value(te_camera* camera);
+
 // Optionally you can set a custom callback that will be called before the camera is destroyed.
 void camera_set_custom_on_before_destroyed(
     te_camera* camera, void (*custom_on_before_destroyed)(te_camera*));

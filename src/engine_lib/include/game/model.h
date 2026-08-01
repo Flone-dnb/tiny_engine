@@ -168,8 +168,8 @@ struct te_camera* model_get_attached_camera(te_model* model);
 void model_set_custom_ptr(te_model* model, void* ptr);
 void* model_get_custom_ptr(te_model* model);
 
-// Optionally you can set a custom value to be stored in the model.
-void model_set_custom_value(te_model* model, size_t value);
+// Optionally you can set a custom value which will also be saved/loaded along with the model.
+void model_set_custom_value(te_model* model, unsigned int value);
 size_t model_get_custom_value(te_model* model);
 
 // Optionally you can set a custom callback that will be called before the model
