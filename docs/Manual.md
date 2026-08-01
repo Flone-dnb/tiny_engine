@@ -202,3 +202,67 @@ unsigned int id = game_manager_add_tick_callback(game_manager, my_obj, my_callba
 // ... later:
 game_manager_remove_tick_callback(game_manager, id);
 ```
+
+# Build for ARM64 Linux (retro-handhelds)
+
+## Setup environment
+
+Instructions for Ubuntu Linux (use WSL in case you're on Windows):
+
+```
+sudo apt install -y build-essential binfmt-support daemonize libarchive-tools qemu-system qemu-user qemu-user-static
+wget "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-arm64-root.tar.xz"
+mkdir arm64ubuntu
+sudo bsdtar -xpf ubuntu-24.04-server-cloudimg-arm64-root.tar.xz -C arm64ubuntu
+
+sudo cp /usr/bin/qemu-aarch64-static arm64ubuntu/usr/bin
+
+# If your host system is Ubuntu:
+sudo daemonize /usr/bin/unshare -fp --mount-proc /lib/systemd/systemd --system-unit=basic.target
+# If your host system is Void Linux:
+sudo daemonize /usr/bin/unshare -fp --mount-proc /usr/bin/runsvdir /etc/sv
+
+sudo mount -o bind /dev arm64ubuntu/dev
+sudo chroot arm64ubuntu qemu-aarch64-static /bin/bash
+rm /etc/resolv.conf
+echo 'nameserver 8.8.8.8' > /etc/resolv.conf
+exit
+mkdir -p arm64ubuntu/tmp/.X11-unix
+
+echo '#!/bin/bash' > chroot.sh
+echo 'sudo daemonize /usr/bin/unshare -fp --mount-proc /lib/systemd/systemd --system-unit=basic.target' >> chroot.sh
+# or if you're on Void linux: echo 'sudo daemonize /usr/bin/unshare -fp --mount-proc /usr/bin/runsvdir /etc/sv' >> chroot.sh
+echo 'sudo mount -o bind /proc/ arm64ubuntu/proc/' >> chroot.sh
+echo 'sudo mount --rbind /dev/ arm64ubuntu/dev/' >> chroot.sh
+echo 'sudo mount -o bind /tmp/.X11-unix arm64ubuntu/tmp/.X11-unix' >> chroot.sh
+echo 'sudo chroot arm64ubuntu qemu-aarch64-static /bin/bash' >> chroot.sh
+chmod +x chroot.sh
+sudo ./chroot.sh
+```
+
+Try `sudo apt update && sudo apt upgrade -y` if you get an error `sudo: unable to resolve host ...` write the hostname that you got in that message in the file `/etc/hostname` (replace the old one) and in the file `/etc/hosts` under the localhost string (use the same 127.0.0.1 address).
+
+```
+sudo apt update && sudo apt upgrade -y
+sudo apt install --no-install-recommends build-essential git wget libdrm-dev libopenal-dev premake4 autoconf libevdev-dev pkg-config zlib1g-dev cmake cmake-data libarchive13 libcurl4 libfreetype6-dev librhash0 libuv1 libgbm-dev clang libvorbis-dev libflac-dev
+```
+
+Then install SDL dependencies: https://github.com/libsdl-org/SDL/blob/main/docs/README-linux.md#build-dependencies, including the Wayland packages.
+
+## Steps for each release of your game
+
+Clone your game's repository to arm64ubuntu/home then chroot into the system:
+
+```
+sudo ./chroot.sh
+cd home/<game_dir>
+mkdir build
+cd build
+cmake -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Release -DENGINE_GLES=ON ..
+cmake --build . --target <game_target_name> --config=Release --parallel
+```
+
+> Note: -DENGINE_GLES is optional but is often required for retro-handhelds because they only support OpenGL ES (not the regular GL).
+
+Then copy the resulting binary (from `build/OUTPUT/game`) to your ARM64 Linux device. We don't worry about installing SDL libraries because we link SDL statically. Inside of your ARM64 Linux device launch the game using some file explorer or a console.
+
