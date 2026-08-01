@@ -259,7 +259,7 @@ cd home/<game_dir>
 mkdir build
 cd build
 cmake -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Release -DENGINE_GLES=ON ..
-cmake --build . --target <game_target_name> --config=Release --parallel
+cmake --build . --target <game_target_name> --config=Release -j 4
 ```
 
 > Note: -DENGINE_GLES is optional but is often required for retro-handhelds because they only support OpenGL ES (not the regular GL).
