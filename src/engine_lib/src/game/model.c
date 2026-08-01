@@ -894,7 +894,7 @@ model_set_custom_value(te_model* model, unsigned int value) {
     model->custom_value = value;
 }
 
-size_t
+unsigned int
 model_get_custom_value(te_model* model) {
     return model->custom_value;
 }

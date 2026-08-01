@@ -170,7 +170,7 @@ void* model_get_custom_ptr(te_model* model);
 
 // Optionally you can set a custom value which will also be saved/loaded along with the model.
 void model_set_custom_value(te_model* model, unsigned int value);
-size_t model_get_custom_value(te_model* model);
+unsigned int model_get_custom_value(te_model* model);
 
 // Optionally you can set a custom callback that will be called before the model
 // is destroyed.
