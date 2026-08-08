@@ -209,16 +209,16 @@ renderer_create(struct te_window* window) {
         glGenQueries(1, &renderer->gl_timestamp_frame_start);
         glGenQueries(1, &renderer->gl_timestamp_frame_end);
         glGenQueries(1, &renderer->gl_query_draw_debug);
+
+        // Init timers.
+        glQueryCounter(renderer->gl_timestamp_frame_start, GL_TIMESTAMP);
+        glQueryCounter(renderer->gl_timestamp_frame_end, GL_TIMESTAMP);
+
+        GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_debug);
+        GPU_TIME_SECTION_END;
 #if defined(ENGINE_GLES)
     }
 #endif
-
-    // Init timers.
-    glQueryCounter(renderer->gl_timestamp_frame_start, GL_TIMESTAMP);
-    glQueryCounter(renderer->gl_timestamp_frame_end, GL_TIMESTAMP);
-
-    GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_debug);
-    GPU_TIME_SECTION_END;
 #endif
 
 #if defined(DEBUG)
