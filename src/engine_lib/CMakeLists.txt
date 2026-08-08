@@ -192,6 +192,10 @@ set(MINIAUDIO_NO_RUNTIME_LINKING OFF CACHE BOOL "" FORCE)
 set(MINIAUDIO_INSTALL OFF CACHE BOOL "" FORCE)
 add_subdirectory(${RELATIVE_EXT_PATH}/miniaudio ${DEPENDENCY_BUILD_DIR_NAME}/miniaudio)
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE miniaudio)
+if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT MSVC)
+    cmake_policy(SET CMP0079 NEW)
+    target_link_libraries(miniaudio PUBLIC atomic)
+endif()
 
 # Link engine library to dependencies.
 target_link_libraries(${ENGINE_LIB_TARGET} PUBLIC ${ENGINE_LIB_DEPS_TARGET})

@@ -5,6 +5,7 @@ project(tiny_engine C)
 option(ENGINE_GLES "If enabled changes the rendering from regular OpenGL to OpenGL ES which is usually needed for ARM64 Linux retro-handhelds" OFF)
 option(ENGINE_FORCE_ENABLE_DEBUG_TOOLS "Can be useful in Release builds to measure performance, enabled in non-release builds by default" OFF)
 option(ENGINE_DISABLE_ASAN_IN_DEBUG "ASan is enabled in non-release builds, this option disables it. Note that memcheck is still enabled in non-release builds" OFF)
+option(ENGINE_DISABLE_MEMCHECK_IN_DEBUG OFF "Can be used to disable our little memory leak checker")
 
 # -------------------------------------------------------------------------------------------------
 #                              PREPARE FOR ADDING ENGINE TARGETS
@@ -23,7 +24,7 @@ set(DEPENDENCY_BUILD_DIR_NAME dep)
 set(RELATIVE_EXT_PATH "../../ext") # relative to a subdirectory target (from the src directory)
 
 # Enable memcheck.
-if(NOT IS_RELEASE_BUILD AND NOT MSVC)
+if(NOT IS_RELEASE_BUILD AND NOT MSVC AND NOT ENGINE_DISABLE_MEMCHECK_IN_DEBUG)
     # Memcheck is our silly little memory leak checker. It can be used in cases where ASan is not available or if it uses too much RAM.
     set(ENGINE_MEMCHECK_ENABLED ON CACHE BOOL "" FORCE)
     message(STATUS "Memcheck enabled.")
