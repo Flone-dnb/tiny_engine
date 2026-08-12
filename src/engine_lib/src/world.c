@@ -424,10 +424,19 @@ world_set_active_camera(te_world* world, te_camera* camera) {
 
 void
 prv_world_tick(te_world* world) {
+    // World handles "fire and forget" sounds and if they were stopped/paused (not finished) they should be destroyed.
+    for (unsigned int i = 0; i < world->spawned_sound_count; i++) {
+        if (!sound_is_playing(world->spawned_sounds[i])) {
+            world->some_sounds_finished = true;
+            break;
+        }
+    }
+
     if (world->some_sounds_finished) {
         // For now this silly cleanup implementation is enough.
         for (unsigned int i = 0; i < world->spawned_sound_count;) {
-            if (!sound_is_finished_playing(world->spawned_sounds[i])) {
+            if (!sound_is_finished_playing(world->spawned_sounds[i])
+                && sound_is_playing(world->spawned_sounds[i])) {
                 i += 1;
                 continue;
             }
@@ -471,7 +480,7 @@ on_sound_finished_audio_thread(void* user_data, te_sound* sound) {
 }
 
 void
-world_play_sound_2d(te_world* world, te_sound* sound) {
+world_play_fire_and_forget_sound_2d(te_world* world, te_sound* sound) {
     te_sound** new_sounds = malloc(sizeof(te_sound*) * (world->spawned_sound_count + 1));
     memcpy(new_sounds, world->spawned_sounds, sizeof(te_sound*) * world->spawned_sound_count);
 
@@ -488,7 +497,8 @@ world_play_sound_2d(te_world* world, te_sound* sound) {
 }
 
 void
-world_play_sound_3d(te_world* world, struct te_sound* sound, vec3 world_position) {
+world_play_fire_and_forget_sound_3d(
+    te_world* world, struct te_sound* sound, vec3 world_position) {
     te_sound** new_sounds = malloc(sizeof(te_sound*) * (world->spawned_sound_count + 1));
     memcpy(new_sounds, world->spawned_sounds, sizeof(te_sound*) * world->spawned_sound_count);
 

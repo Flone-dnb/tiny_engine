@@ -10,6 +10,7 @@ struct te_camera;
 struct te_model_renderer;
 struct te_game_object_info;
 struct te_skeleton;
+struct te_sound;
 
 // ------------------------------------------------------------------------------------------------
 //                                       VERTEX API
@@ -163,6 +164,12 @@ unsigned int model_get_parent_bone_idx(te_model* model);
 // In order to despawn such camera first detach it from the parent to make it "root" camera and then despawn using the world.
 void model_attach_camera(te_model* model, struct te_camera* camera);
 struct te_camera* model_get_attached_camera(te_model* model);
+
+// The model takes the ownership of the sound. Multiple sounds can be attached.
+// Spawns the sound if needed, the model does not autoplay the sound you need to do it yourself.
+// The sound will not be destroyed until the model is destroyed but the sounds are stopped after the model is despawned.
+void model_attach_sound(te_model* model, struct te_sound* sound);
+struct te_sound* model_get_attached_sound(te_model* model, unsigned int idx);
 
 // Optionally you can set a custom pointer to be stored in the model.
 void model_set_custom_ptr(te_model* model, void* ptr);

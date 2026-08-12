@@ -13,6 +13,7 @@ struct te_game_object_info;
 struct te_widget;
 struct te_camera;
 struct te_sound;
+struct te_model;
 struct te_scene_animation;
 
 // Returns world's name.
@@ -36,16 +37,20 @@ void world_despawn_widget(te_world* world, struct te_widget* widget);
 // The camera must be previously spawned in this world.
 void world_set_active_camera(te_world* world, struct te_camera* camera);
 
-// Worlds takes the ownership of the sound and will destroy it once the sound is finished
-// (or when the world is destroyed).
-void world_play_sound_2d(te_world* world, struct te_sound* sound);
-void world_play_sound_3d(te_world* world, struct te_sound* sound, vec3 world_position);
+// Worlds takes the ownership of the sound and plays it.
+// The world will destroy the sound once the sound is finished or paused/stopped (or when the world is destroyed).
+// Generally you are NOT expected to use the sound pointer after calling this function.
+// In case you want to attach a 3D sound to a model use model's functionality.
+void world_play_fire_and_forget_sound_2d(te_world* world, struct te_sound* sound);
+void world_play_fire_and_forget_sound_3d(
+    te_world* world, struct te_sound* sound, vec3 world_position);
 
 // Creates (or loads if path is not NULL) a new scene animation that will be saved next to the world file
 // (separately) when @ref world_save_to_file is called.
 // Do not destroy returned pointer, it will be automatically destroyed by world during world
 // destruction or when another scene animation will replace it.
-struct te_scene_animation* world_create_scene_animation(te_world* world, const char* relative_path_to_load);
+struct te_scene_animation*
+world_create_scene_animation(te_world* world, const char* relative_path_to_load);
 
 // Returns NULL if no scene animation was created/loaded previously,
 // see @ref world_create_scene_animation.

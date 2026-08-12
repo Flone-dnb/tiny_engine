@@ -27,6 +27,7 @@ void sound_destroy(te_sound* sound);
 
 void sound_play(te_sound* sound);
 void sound_stop(te_sound* sound);
+bool sound_is_playing(te_sound* sound);
 
 // Sets sound volume where 0 means silent,
 // 1 - unchanged audio volume and 1+ will result in volume amplification.

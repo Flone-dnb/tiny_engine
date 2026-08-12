@@ -106,15 +106,27 @@ te_sound_manager* sound_manager = game_manager_get_sound_manager(game_manager);
 te_sound* sound = sound_create(sound_manager, "game/sound.mp3"); // located at "res/game/sound.mp3"
 ```
 
-Then you can configure it using the `sound_...` functions. After that you can transfer the ownership of the sound to a world like so:
+Then you can configure it using the `sound_...` functions.
+
+To play the sound you have multiple options, you can manually manage the sound's lifetime and have full control over the sound, for that just use the sound's functionality (like `sound_play`, `sound_stop` and etc.).
+
+Otherwise you can transfer the ownership of the sound to a world like so:
 
 ```C
-world_play_sound_2d(world, sound);
+// autoplays the sound and later destroys it:
+world_play_fire_and_forget_sound_2d(world, sound);
 // or
-world_play_sound_3d(world, sound, world_pos);
+world_play_fire_and_forget_sound_3d(world, sound, world_pos);
 ```
 
-In this case when the sound is finished (or when world is destroyed) the sound will also stop and will be automatically destroyed.
+or to a model like so:
+
+```C
+// attaches the sound but does not autoplay
+model_attach_sound(model, sound);
+```
+
+In this case of a world when the sound is finished or stopped (or when the world is destroyed) the sound will also stop and will be automatically destroyed. In the case of a model the sound is destroyed when the model is destroyed.
 
 # Debug tools
 

@@ -90,6 +90,11 @@ sound_stop(te_sound* sound) {
     }
 }
 
+bool
+sound_is_playing(te_sound* sound) {
+    return ma_sound_is_playing(&sound->ma_sound) != 0;
+}
+
 void
 sound_set_volume(te_sound* sound, float volume) {
     ma_sound_set_volume(&sound->ma_sound, volume);

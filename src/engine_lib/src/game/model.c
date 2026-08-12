@@ -16,6 +16,7 @@
 #include <render/shader_manager.h>
 #include <render/texture_manager.h>
 #include <shape/aabb_shape.h>
+#include <sound_manager.h>
 #include <type_database.h>
 #include <misc/mesh_generator.h>
 #include <world.h>
@@ -198,6 +199,7 @@ struct te_model {
     te_model** child_models;
     te_model* parent_model;
     te_camera* attached_camera;
+    te_sound** attached_sounds;
 
     // Custom user-specified data.
     void* custom_ptr;
@@ -226,6 +228,9 @@ struct te_model {
     // Number of elements in the array @ref child_models.
     unsigned int child_model_count;
 
+    // Number of elements in the array @ref attached_sounds.
+    unsigned int attached_sound_count;
+
     // 0xFFFFFFFF if invalid, otherwise points to a bone of @ref parent_model skeleton
     // to which the model is attached to.
     unsigned int parent_bone_idx;
@@ -236,6 +241,9 @@ struct te_model {
 #endif
     unsigned int vbo;
     unsigned int ebo;
+
+    // ID used to unregister tick callback. 0xFFFFFFFF if not registered.
+    unsigned int tick_callback_id;
 
     // NULL if not spawned or if @ref skeleton_relative_path is NULL.
     te_skeleton* skeleton;
@@ -258,8 +266,11 @@ model_create() {
     model->parent_bone_idx = 0xFFFFFFFF;
     model->vbo = 0xFFFFFFFF;
     model->ebo = 0xFFFFFFFF;
+    model->tick_callback_id = 0xFFFFFFFF;
     model->child_models = NULL;
     model->child_model_count = 0;
+    model->attached_sounds = NULL;
+    model->attached_sound_count = 0;
     model->attached_camera = NULL;
     model->parent_model = NULL;
     model->tex_relative_path = NULL;
@@ -303,6 +314,7 @@ model_destroy(te_model* model) {
         model->custom_on_before_destroyed(model);
     }
 
+    // Destroy models.
     for (unsigned int i = 0; i < model->child_model_count; i++) {
         if (model->child_models[i]->world != NULL) {
             // We should have despawned it in our despawn callback.
@@ -312,15 +324,26 @@ model_destroy(te_model* model) {
         model_destroy(model->child_models[i]);
     }
     free(model->child_models);
+    model->child_models = NULL;
     model->child_model_count = 0;
 
+    // Destroy camera.
     if (model->attached_camera != NULL) {
         if (camera_get_world(model->attached_camera) != NULL) {
             log_error("expected the attached camera to be despawned already");
             abort();
         }
         camera_destroy(model->attached_camera);
+        model->attached_camera = NULL;
     }
+
+    // Destroy sounds.
+    for (unsigned int i = 0; i < model->attached_sound_count; i++) {
+        sound_destroy(model->attached_sounds[i]);
+    }
+    free(model->attached_sounds);
+    model->attached_sounds = NULL;
+    model->attached_sound_count = 0;
 
     free(model->name);
     free(model->tex_relative_path);
@@ -879,6 +902,50 @@ model_get_attached_camera(te_model* model) {
     return model->attached_camera;
 }
 
+// WARNING: Only called while needed for ex. while have attached sounds, otherwise NOT CALLED!
+static void
+model_tick(te_model* model, float delta_time_sec) {
+    (void)delta_time_sec;
+
+    vec3 pos;
+    model_get_world_position(model, pos);
+    for (unsigned int i = 0; i < model->attached_sound_count; i++) {
+        sound_set_3d_position(model->attached_sounds[i], pos);
+    }
+}
+
+void
+model_attach_sound(te_model* model, te_sound* sound) {
+    te_sound** sounds = malloc(sizeof(te_sound*) * (model->attached_sound_count + 1));
+    memcpy(sound, model->attached_sounds, sizeof(te_sound*) * model->attached_sound_count);
+
+    free(model->attached_sounds);
+    model->attached_sounds = sounds;
+
+    model->attached_sounds[model->attached_sound_count] = sound;
+    model->attached_sound_count += 1;
+
+    if (model->world != NULL) {
+        vec3 pos;
+        model_get_world_position(model, pos);
+        sound_set_3d_position(sound, pos);
+
+        if (model->tick_callback_id == 0xFFFFFFFF) {
+            model->tick_callback_id = game_manager_add_tick_callback(
+                world_get_game_manager(model->world), model, model_tick);
+        }
+    }
+}
+
+te_sound*
+model_get_attached_sound(te_model* model, unsigned int idx) {
+    if (idx >= model->attached_sound_count) {
+        return NULL;
+    }
+
+    return model->attached_sounds[idx];
+}
+
 void
 model_set_custom_ptr(te_model* model, void* ptr) {
     model->custom_ptr = ptr;
@@ -1287,10 +1354,29 @@ on_spawned(te_model* model, te_world* world) {
         camera_get_game_object_info(model->attached_camera)
             ->on_spawned(model->attached_camera, world);
     }
+
+    // Play sounds.
+    if (model->attached_sound_count > 0) {
+        vec3 pos;
+        model_get_world_position(model, pos);
+        for (unsigned int i = 0; i < model->attached_sound_count; i++) {
+            sound_set_3d_position(model->attached_sounds[i], pos);
+        }
+
+        // Register tick callback to update sound positions.
+        model->tick_callback_id = game_manager_add_tick_callback(
+            world_get_game_manager(model->world), model, model_tick);
+    }
 }
 
 static void
 on_despawned(te_model* model) {
+    if (model->tick_callback_id != 0xFFFFFFFF) {
+        game_manager_remove_tick_callback(
+            world_get_game_manager(model->world), model->tick_callback_id);
+        model->tick_callback_id = 0xFFFFFFFF;
+    }
+
     // Despawn child models.
     for (unsigned int i = 0; i < model->child_model_count; i++) {
         te_model* child_model = model->child_models[i];
@@ -1304,6 +1390,11 @@ on_despawned(te_model* model) {
     if (model->attached_camera != NULL && camera_get_world(model->attached_camera) != NULL) {
         camera_get_game_object_info(model->attached_camera)
             ->on_despawned(model->attached_camera);
+    }
+
+    // Stop sounds.
+    for (unsigned int i = 0; i < model->attached_sound_count; i++) {
+        sound_stop(model->attached_sounds[i]);
     }
 
     prv_model_remove_from_model_renderer(model);
