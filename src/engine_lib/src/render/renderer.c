@@ -24,6 +24,7 @@
 #include <render/shader_manager.h>
 #include <render/texture_manager.h>
 #include <render/widget_renderer.h>
+#include <render/particle_renderer.h>
 #include <type_database.h>
 #include <window.h>
 #include <world.h>
@@ -499,6 +500,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
             // Reset world-dependant GPU metrics.
             debug_stats->gpu_time_draw_models_ms = 0.0f;
             debug_stats->gpu_time_draw_widgets_ms = 0.0f;
+            debug_stats->gpu_time_draw_particles_ms = 0.0f;
 
             {
                 GLint64 start_time = 0;
@@ -553,6 +555,8 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
                 prv_renderer_get_query_time_ms(prv_world_get_gl_query_draw_models(worlds[i]));
             debug_stats->gpu_time_draw_widgets_ms +=
                 prv_renderer_get_query_time_ms(prv_world_get_gl_query_draw_widgets(worlds[i]));
+            debug_stats->gpu_time_draw_particles_ms += prv_renderer_get_query_time_ms(
+                prv_world_get_gl_query_draw_particles(worlds[i]));
         }
 #endif
 
@@ -560,6 +564,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         te_model_renderer* transparent_model_renderer =
             world_get_transparent_model_renderer(worlds[i]);
         te_widget_renderer* widget_renderer = world_get_widget_renderer(worlds[i]);
+        te_particle_renderer* particle_renderer = world_get_particle_renderer(worlds[i]);
 
         // Set camera's aspect ratio.
         vec4 viewport;
@@ -571,6 +576,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 
         mat4* view_proj_mat = camera_get_view_proj_mat(camera);
         mat4* view_mat = camera_get_view_mat(camera);
+        mat4* proj_mat = camera_get_proj_mat(camera);
         struct te_frustum_shape* camera_frustum = camera_get_frustum(camera);
 
         ivec4 gl_viewport;
@@ -627,6 +633,29 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
             debug_stats->cpu_time_submit_models_ms +=
                 (float)(SDL_GetPerformanceCounter() - cpu_start_counter) * 1000.0f
                 / (float)(SDL_GetPerformanceFrequency());
+#endif
+        }
+
+        // Draw particles.
+        {
+#if defined(ENGINE_DEBUG_TOOLS)
+            GPU_SECTION_BEGIN("widgets");
+            const Uint64 cpu_start_counter = SDL_GetPerformanceCounter();
+            if (record_new_queries) {
+                GPU_TIME_SECTION_BEGIN(prv_world_get_gl_query_draw_particles(worlds[i]));
+            }
+#endif
+
+            particle_renderer_draw(particle_renderer, view_mat, proj_mat);
+
+#if defined(ENGINE_DEBUG_TOOLS)
+            if (record_new_queries) {
+                GPU_TIME_SECTION_END;
+            }
+            debug_stats->cpu_time_submit_particles_ms +=
+                (float)(SDL_GetPerformanceCounter() - cpu_start_counter) * 1000.0f
+                / (float)(SDL_GetPerformanceFrequency());
+            GPU_SECTION_END;
 #endif
         }
 

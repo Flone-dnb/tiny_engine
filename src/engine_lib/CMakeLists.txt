@@ -29,12 +29,17 @@ set(PROJECT_SOURCES
     src/render/debug_drawer.c
     src/render/widget_renderer.c
     src/render/widget_renderer.h
+    src/render/particle_renderer.c
+    src/render/particle_renderer.h
+    src/render/render_data_array.c
+    src/render/render_data_array.h
     src/render/gpu_section.h
     src/render/gpu_time_section.h
     src/game/camera.c
     src/game/model.c
     src/game/skeleton.c
     src/game/scene_animation.c
+    src/game/particle_emitter.c
     src/widget/widget.c
     src/widget/text_widget.c
     src/widget/rect_widget.c
@@ -79,6 +84,7 @@ set(PROJECT_SOURCES
     include/game/game_object_info.h
     include/game/skeleton.h
     include/game/scene_animation.h
+    include/game/particle_emitter.h
     include/widget/widget.h
     include/widget/text_widget.h
     include/widget/rect_widget.h

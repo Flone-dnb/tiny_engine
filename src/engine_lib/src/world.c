@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <game/model.h>
 #include <game/camera.h>
+#include <game/particle_emitter.h>
 #include <game/game_object_info.h>
 #include <game/scene_animation.h>
 #include <game_manager.h>
@@ -13,6 +14,7 @@
 #include <type_database.h>
 #include <render/model_renderer.h>
 #include <render/widget_renderer.h>
+#include <render/particle_renderer.h>
 #include <render/renderer.h>
 #include <sound_manager.h>
 #include <widget/widget.h>
@@ -57,12 +59,11 @@ struct te_world {
     // NULL if nothing spawned, size of this array is @ref spawned_sound_count.
     te_sound** spawned_sounds;
 
-    // Renders models of the world.
     te_model_renderer* opaque_model_renderer;
     te_model_renderer* transparent_model_renderer;
 
-    // Renders widgets of the world.
     te_widget_renderer* widget_renderer;
+    te_particle_renderer* particle_renderer;
 
     // NULL if not loaded/created.
     te_scene_animation* scene_animation;
@@ -95,6 +96,7 @@ struct te_world {
 #if defined(ENGINE_DEBUG_TOOLS)
     // GPU time query IDs.
     unsigned int gl_query_draw_models;
+    unsigned int gl_query_draw_particles;
     unsigned int gl_query_draw_widgets;
 #endif
 };
@@ -134,6 +136,8 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
     world->opaque_model_renderer = model_renderer_create(128, 128);
     world->transparent_model_renderer = model_renderer_create(4, 4);
     world->widget_renderer = widget_renderer_create(game_manager_get_renderer(game_manager));
+    world->particle_renderer =
+        particle_renderer_create(game_manager_get_renderer(game_manager));
     world->is_being_destroyed = false;
 
     // Copy name.
@@ -147,6 +151,7 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
     if (GLAD_GL_EXT_disjoint_timer_query == 1) {
 #endif
         glGenQueries(1, &world->gl_query_draw_models);
+        glGenQueries(1, &world->gl_query_draw_particles);
         glGenQueries(1, &world->gl_query_draw_widgets);
 #if defined(ENGINE_GLES)
     }
@@ -154,6 +159,8 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
 
     // Init timers.
     GPU_TIME_SECTION_BEGIN(world->gl_query_draw_models);
+    GPU_TIME_SECTION_END;
+    GPU_TIME_SECTION_BEGIN(world->gl_query_draw_particles);
     GPU_TIME_SECTION_END;
     GPU_TIME_SECTION_BEGIN(world->gl_query_draw_widgets);
     GPU_TIME_SECTION_END;
@@ -208,12 +215,14 @@ prv_world_destroy(te_world* world) {
     model_renderer_destroy(world->opaque_model_renderer);
     model_renderer_destroy(world->transparent_model_renderer);
     widget_renderer_destroy(world->widget_renderer);
+    particle_renderer_destroy(world->particle_renderer);
 
 #if defined(ENGINE_DEBUG_TOOLS)
 #if defined(ENGINE_GLES)
     if (GLAD_GL_EXT_disjoint_timer_query == 1) {
 #endif
         glDeleteQueries(1, &world->gl_query_draw_models);
+        glDeleteQueries(1, &world->gl_query_draw_particles);
         glDeleteQueries(1, &world->gl_query_draw_widgets);
 #if defined(ENGINE_GLES)
     }
@@ -790,6 +799,8 @@ world_add_from_file_with_offset(
                 case (TE_GOT_MODEL): {
                     te_model* model = obj;
 
+                    // TODO: move position to game object and remove includes for final game object types
+
                     vec3 pos;
                     model_get_position(model, pos);
                     glm_vec3_add(pos, location_offset, pos);
@@ -803,6 +814,15 @@ world_add_from_file_with_offset(
                     camera_get_position(camera, pos);
                     glm_vec3_add(pos, location_offset, pos);
                     camera_set_position(camera, pos);
+                    break;
+                }
+                case (TE_GOT_PARTICLE_EMITTER): {
+                    te_particle_emitter* emitter = obj;
+
+                    vec3 pos;
+                    particle_emitter_get_position(emitter, pos);
+                    glm_vec3_add(pos, location_offset, pos);
+                    particle_emitter_set_position(emitter, pos);
                     break;
                 }
             }
@@ -925,6 +945,11 @@ world_get_transparent_model_renderer(te_world* world) {
 te_widget_renderer*
 world_get_widget_renderer(te_world* world) {
     return world->widget_renderer;
+}
+
+te_particle_renderer*
+world_get_particle_renderer(te_world* world) {
+    return world->particle_renderer;
 }
 
 struct te_game_manager*
@@ -1238,6 +1263,11 @@ prv_world_on_input_source_changed(te_world* world) {
 unsigned int
 prv_world_get_gl_query_draw_models(te_world* world) {
     return world->gl_query_draw_models;
+}
+
+unsigned int
+prv_world_get_gl_query_draw_particles(te_world* world) {
+    return world->gl_query_draw_particles;
 }
 
 unsigned int

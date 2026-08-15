@@ -5,175 +5,12 @@
 #include <render/gpu_section.h>
 #include <render/renderer.h>
 #include <render/shader_manager.h>
+#include <render/render_data_array.h>
 #include <window.h>
 #include <glad/glad.h>
 
-#define INVALID_DATA_INDEX 0xffffffff
-
-#define WIDGET_QUAD_GL_VERT_ATTRIB_PTR glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(vec4), NULL);
-
-// Groups render data related to a specific type of a widget.
-typedef struct te_widgets_render_data {
-    // Array of render data of all currently registered items.
-    //
-    // Max size of this array is @ref array_size but the actual number of valid
-    // (used) elements might be different (see @ref render_data_count). When some widget's render data is removed all next
-    // elements are shifted to the left to make sure the array does not have any "holes".
-    // This array does not shrink.
-    void* render_data;
-
-    // Index into this array using a widget's handle to get index into @ref render_data.
-    //
-    // Public API users store indices into this array so items cannot be reordered/moved.
-    // This array CAN have "holes" in it (invalid items). Invalid items store INVALID_DATA_INDEX value.
-    // This array does not shrink. Size of this array is @ref array_size.
-    unsigned int* handle_to_data;
-
-    // Max number of elements in the arrays @ref render_data and @ref handle_to_data.
-    unsigned int array_size;
-
-    // sizeof for a single render data item.
-    unsigned int sizeof_render_data;
-
-    // Actual number of used (valid) elements in @ref render_data.
-    unsigned int render_data_count;
-} te_widgets_render_data;
-
-static te_widgets_render_data*
-widgets_render_data_create(unsigned int sizeof_render_data) {
-    te_widgets_render_data* data = malloc(sizeof(te_widgets_render_data));
-
-    data->sizeof_render_data = sizeof_render_data;
-    data->array_size = 4;
-    data->render_data = malloc(sizeof_render_data * data->array_size);
-    data->handle_to_data = malloc(sizeof(unsigned int) * data->array_size);
-    for (unsigned int i = 0; i < data->array_size; i++) {
-        data->handle_to_data[i] = INVALID_DATA_INDEX;
-    }
-    data->render_data_count = 0;
-
-    return data;
-}
-
-static void
-widgets_render_data_destroy(te_widgets_render_data* data) {
-    free(data->render_data);
-    free(data->handle_to_data);
-    free(data);
-}
-
-static unsigned int
-widgets_render_data_add_widget(te_widgets_render_data* data) {
-    // Find unused handle.
-    unsigned int handle = 0;
-    bool found = false;
-    for (unsigned int i = 0; i < data->array_size; i++) {
-        if (data->handle_to_data[i] != INVALID_DATA_INDEX) {
-            continue;
-        }
-        handle = i;
-        found = true;
-        break;
-    }
-    if (!found) {
-        // Expand array.
-        const unsigned int expand_size = 4;
-
-        unsigned int* new_handles =
-            malloc(sizeof(unsigned int) * (data->array_size + expand_size));
-        memcpy(new_handles, data->handle_to_data, sizeof(unsigned int) * data->array_size);
-
-        free(data->handle_to_data);
-        data->handle_to_data = new_handles;
-
-        void* new_data = malloc(data->sizeof_render_data * (data->array_size + expand_size));
-        memcpy(
-            new_data, data->render_data, data->sizeof_render_data * data->render_data_count);
-
-        free(data->render_data);
-        data->render_data = new_data;
-
-        for (unsigned int i = data->array_size; i < data->array_size + expand_size; i++) {
-            data->handle_to_data[i] = INVALID_DATA_INDEX;
-        }
-
-        handle = data->array_size;
-        data->array_size += expand_size;
-    }
-
-    data->handle_to_data[handle] = data->render_data_count;
-    data->render_data_count += 1;
-
-    return handle;
-}
-
-static void
-widgets_render_data_remove_widget(te_widgets_render_data* data, unsigned int handle) {
-#if defined(DEBUG)
-    if (handle >= data->array_size) {
-        log_error("the specified widget handle is invalid");
-        abort();
-    }
-#endif
-
-    const unsigned int render_data_index = data->handle_to_data[handle];
-
-#if defined(DEBUG)
-    if (render_data_index == INVALID_DATA_INDEX) {
-        log_error("the specified widget handle is invalid");
-        abort();
-    }
-#endif
-
-    data->handle_to_data[handle] = INVALID_DATA_INDEX;
-
-    if (data->render_data_count > 1) {
-        // Remove "hole" from the array.
-        char* render_data = data->render_data; // <- cast from void*
-        memmove(
-            render_data + data->sizeof_render_data * render_data_index,
-            render_data + data->sizeof_render_data * (render_data_index + 1),
-            data->sizeof_render_data * (data->render_data_count - render_data_index - 1));
-    }
-
-    // Shift render data indices after the removed one.
-    for (unsigned int i = 0; i < data->array_size; i++) {
-        if (data->handle_to_data[i] == INVALID_DATA_INDEX
-            || data->handle_to_data[i] < render_data_index) {
-            continue;
-        }
-        data->handle_to_data[i] -= 1;
-    }
-
-    data->render_data_count -= 1;
-}
-
-void*
-widgets_render_data_get_widget_data(te_widgets_render_data* data, unsigned int handle) {
-#if defined(DEBUG)
-    if (handle >= data->array_size) {
-        log_error("invalid handle specified");
-        abort();
-    }
-#endif
-
-    char* render_data = data->render_data; // <- cast from void*
-    return render_data + data->sizeof_render_data * data->handle_to_data[handle];
-}
-
-unsigned int
-widgets_render_data_count(te_widgets_render_data* data) {
-    return data->render_data_count;
-}
-
-void*
-widgets_render_data_get(te_widgets_render_data* data) {
-    return data->render_data;
-}
-
-// ----------------------------------------------------------------------------------------------------------
-// ----------------------------------------------------------------------------------------------------------
-// ----------------------------------------------------------------------------------------------------------
+#define WIDGET_QUAD_GL_VERT_ATTRIB_PTR                                                        \
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(vec4), NULL);
 
 // Groups data related to the text shader program.
 typedef struct te_text_shader_data {
@@ -199,9 +36,8 @@ typedef struct te_quad_shader_data {
 } te_quad_shader_data;
 
 struct te_widget_renderer {
-    te_widgets_render_data* text_widget_data;
-
-    te_widgets_render_data* rect_widget_data;
+    te_render_data_array* text_widget_data;
+    te_render_data_array* rect_widget_data;
 
     // Do not free/destroy this pointer.
     te_renderer* renderer;
@@ -222,9 +58,9 @@ widget_renderer_create(te_renderer* renderer) {
     te_widget_renderer* widget_renderer = malloc(sizeof(te_widget_renderer));
 
     widget_renderer->text_widget_data =
-        widgets_render_data_create(sizeof(te_text_widget_render_data));
+        render_data_array_create(sizeof(te_text_widget_render_data), 64, 64);
     widget_renderer->rect_widget_data =
-        widgets_render_data_create(sizeof(te_rect_widget_render_data));
+        render_data_array_create(sizeof(te_rect_widget_render_data), 32, 32);
     widget_renderer->renderer = renderer;
 
     // Load text shader.
@@ -302,19 +138,19 @@ widget_renderer_create(te_renderer* renderer) {
 
 void
 widget_renderer_destroy(te_widget_renderer* widget_renderer) {
-    if (widgets_render_data_count(widget_renderer->text_widget_data) > 0) {
+    if (render_data_array_get_item_count(widget_renderer->text_widget_data) > 0) {
         log_error("widget renderer is being destroyed but there are still some text widgets "
                   "rendering");
         abort();
     }
-    widgets_render_data_destroy(widget_renderer->text_widget_data);
+    render_data_array_destroy(widget_renderer->text_widget_data);
 
-    if (widgets_render_data_count(widget_renderer->rect_widget_data) > 0) {
+    if (render_data_array_get_item_count(widget_renderer->rect_widget_data) > 0) {
         log_error("widget renderer is being destroyed but there are still some rect widgets "
                   "rendering");
         abort();
     }
-    widgets_render_data_destroy(widget_renderer->rect_widget_data);
+    render_data_array_destroy(widget_renderer->rect_widget_data);
 
     shader_manager_mark_unused_shader(
         renderer_get_shader_manager(widget_renderer->renderer),
@@ -334,11 +170,11 @@ widget_renderer_destroy(te_widget_renderer* widget_renderer) {
 
 unsigned int
 widget_renderer_add_text_widget(te_widget_renderer* renderer) {
-    const unsigned int handle = widgets_render_data_add_widget(renderer->text_widget_data);
+    const unsigned int handle = render_data_array_add_item(renderer->text_widget_data);
 
     // Init data.
     te_text_widget_render_data* data =
-        widgets_render_data_get_widget_data(renderer->text_widget_data, handle);
+        render_data_array_get_item_data_tmp(renderer->text_widget_data, handle);
     memset(data, 0, sizeof(te_text_widget_render_data));
 
     return handle;
@@ -347,32 +183,32 @@ widget_renderer_add_text_widget(te_widget_renderer* renderer) {
 te_text_widget_render_data*
 widget_renderer_get_text_widget_render_data_tmp(
     te_widget_renderer* renderer, unsigned int handle) {
-    return widgets_render_data_get_widget_data(renderer->text_widget_data, handle);
+    return render_data_array_get_item_data_tmp(renderer->text_widget_data, handle);
 }
 
 te_rect_widget_render_data*
 widget_renderer_get_rect_widget_render_data_tmp(
     te_widget_renderer* renderer, unsigned int handle) {
-    return widgets_render_data_get_widget_data(renderer->rect_widget_data, handle);
+    return render_data_array_get_item_data_tmp(renderer->rect_widget_data, handle);
 }
 
 void
 widget_renderer_remove_text_widget(te_widget_renderer* renderer, unsigned int handle) {
     // Cleanup.
     te_text_widget_render_data* data =
-        widgets_render_data_get_widget_data(renderer->text_widget_data, handle);
+        render_data_array_get_item_data_tmp(renderer->text_widget_data, handle);
     free(data->glyphs);
 
-    widgets_render_data_remove_widget(renderer->text_widget_data, handle);
+    render_data_array_remove_item(renderer->text_widget_data, handle);
 }
 
 unsigned int
 widget_renderer_add_rect_widget(te_widget_renderer* renderer) {
-    const unsigned int handle = widgets_render_data_add_widget(renderer->rect_widget_data);
+    const unsigned int handle = render_data_array_add_item(renderer->rect_widget_data);
 
     // Init data.
     te_rect_widget_render_data* data =
-        widgets_render_data_get_widget_data(renderer->rect_widget_data, handle);
+        render_data_array_get_item_data_tmp(renderer->rect_widget_data, handle);
     memset(data, 0, sizeof(te_rect_widget_render_data));
 
     return handle;
@@ -380,7 +216,7 @@ widget_renderer_add_rect_widget(te_widget_renderer* renderer) {
 
 void
 widget_renderer_remove_rect_widget(te_widget_renderer* renderer, unsigned int handle) {
-    widgets_render_data_remove_widget(renderer->rect_widget_data, handle);
+    render_data_array_remove_item(renderer->rect_widget_data, handle);
 }
 
 void
@@ -398,7 +234,7 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
     // Draw rect widgets.
     const unsigned int rect_widget_count =
-        widgets_render_data_count(widget_renderer->rect_widget_data);
+        render_data_array_get_item_count(widget_renderer->rect_widget_data);
     if (rect_widget_count > 0) {
         te_quad_shader_data* shader = &widget_renderer->quad_shader;
         GPU_SECTION_BEGIN("rect");
@@ -417,11 +253,10 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
         glUniform2fv(shader->uniform_window_size, 1, window_size);
 
-        for (unsigned int widget_idx = 0; widget_idx < rect_widget_count; widget_idx++) {
-            te_rect_widget_render_data* data =
-                widgets_render_data_get(widget_renderer->rect_widget_data);
-            data += widget_idx;
+        te_rect_widget_render_data* data =
+            render_data_array_get_internal_array(widget_renderer->rect_widget_data);
 
+        for (unsigned int widget_idx = 0; widget_idx < rect_widget_count; widget_idx++) {
             glUniform4fv(shader->uniform_quad_color, 1, data->color);
             glUniform4fv(shader->uniform_clip_rect, 1, data->clip_rect);
 
@@ -432,6 +267,8 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
             glBindTexture(GL_TEXTURE_2D, data->tex_id);
 
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
+
+            data += 1;
         }
 
         GPU_SECTION_END;
@@ -439,7 +276,7 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
     // Draw text widgets.
     const unsigned int text_widget_count =
-        widgets_render_data_count(widget_renderer->text_widget_data);
+        render_data_array_get_item_count(widget_renderer->text_widget_data);
     if (text_widget_count > 0) {
         te_text_shader_data* shader = &widget_renderer->text_shader;
         GPU_SECTION_BEGIN("text");
@@ -462,14 +299,13 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
         glUniform2fv(shader->uniform_window_size, 1, window_size);
 
-        for (unsigned int widget_idx = 0; widget_idx < text_widget_count; widget_idx++) {
-            te_text_widget_render_data* data =
-                widgets_render_data_get(widget_renderer->text_widget_data);
-            data += widget_idx;
+        te_text_widget_render_data* data =
+            render_data_array_get_internal_array(widget_renderer->text_widget_data);
+        vec2 pos_pix;
 
+        for (unsigned int widget_idx = 0; widget_idx < text_widget_count; widget_idx++) {
             glUniform4fv(shader->uniform_text_color, 1, data->color);
 
-            vec2 pos_pix;
             for (unsigned int glyph_idx = 0; glyph_idx < data->glyph_count; glyph_idx++) {
                 glm_vec2_add(data->pos_pix, data->glyphs[glyph_idx].offset_pix, pos_pix);
 
@@ -480,6 +316,8 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
                 glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
             }
+
+            data += 1;
         }
 
         GPU_SECTION_END;

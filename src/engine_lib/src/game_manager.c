@@ -291,6 +291,11 @@ game_manager_get_sound_manager(te_game_manager* game_manager) {
     return game_manager->sound_manager;
 }
 
+unsigned int
+game_manager_get_tick_callback_count(te_game_manager* game_manager) {
+    return game_manager->tick_callback_count;
+}
+
 void
 prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
     (void)delta_time_sec;

@@ -61,12 +61,14 @@ typedef struct te_debug_stats {
 
     float cpu_time_frame_ms;
     float cpu_time_submit_models_ms;
+    float cpu_time_submit_particles_ms;
     float cpu_time_submit_widgets_ms;
     float cpu_time_submit_debug_ms;
     float cpu_time_swap_ms;
 
     float gpu_time_frame_ms;
     float gpu_time_draw_models_ms;
+    float gpu_time_draw_particles_ms;
     float gpu_time_draw_widgets_ms;
     float gpu_time_draw_debug_ms;
 } te_debug_stats;

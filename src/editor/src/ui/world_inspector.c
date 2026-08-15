@@ -921,6 +921,9 @@ on_button_list_item_clicked(te_button_widget* button) {
                                 0xFFFFFFFF);
                             break;
                         }
+                        default: {
+                            break;
+                        }
                     }
                 } else {
                     if (inspector->selected_item->widget == NULL) {
@@ -977,6 +980,9 @@ on_button_list_item_clicked(te_button_widget* button) {
                         model_set_parent(
                             inspector->selected_item->game_object_info->game_object,
                             target_info->game_object_info->game_object, 0xFFFFFFFF);
+                        break;
+                    }
+                    default: {
                         break;
                     }
                 }
@@ -1089,7 +1095,8 @@ on_button_scene_animation_clicked(te_button_widget* button) {
 
         // Show tracks of selected object.
         void* obj = property_inspector_get_inspected_obj(inspector->property_inspector);
-        const char* type_id = property_inspector_get_inspected_obj_type_id(inspector->property_inspector);
+        const char* type_id =
+            property_inspector_get_inspected_obj_type_id(inspector->property_inspector);
         if (obj != NULL && type_id != NULL) {
             const te_type_info* type_info = type_database_get_type_info(type_id);
             if (type_info == NULL) {

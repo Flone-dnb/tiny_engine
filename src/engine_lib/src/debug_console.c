@@ -284,7 +284,7 @@ prv_debug_console_draw(float delta_time_sec) {
     if (console.show_stats && update_stats) {
         te_debug_stats* stats = &console.displayed_stats;
         vec2 screen_pos;
-        glm_vec2_copy((vec2){0.01f, 0.5f}, screen_pos);
+        glm_vec2_copy((vec2){0.01f, 0.45f}, screen_pos);
 
         // FPS.
         const unsigned int fps_limit =
@@ -299,6 +299,10 @@ prv_debug_console_draw(float delta_time_sec) {
         prv_debug_console_draw_stat(
             screen_pos, ram_fmt, stats->process_mem, stats->total_used_mem, stats->total_mem);
 
+        prv_debug_console_draw_stat(
+            screen_pos, "tick callbacks: %u",
+            game_manager_get_tick_callback_count(console.game_manager));
+
         // Rendered model count.
         prv_debug_console_draw_stat(
             screen_pos, "rendered opaque model count: %u", stats->rendered_opaque_model_count);
@@ -312,6 +316,8 @@ prv_debug_console_draw(float delta_time_sec) {
             stats->cpu_time_frame_ms);
         prv_debug_console_draw_stat(
             screen_pos, "- %s: %.2f", "models", stats->cpu_time_submit_models_ms);
+        prv_debug_console_draw_stat(
+            screen_pos, "- %s: %.2f", "particles", stats->cpu_time_submit_particles_ms);
         prv_debug_console_draw_stat(
             screen_pos, "- %s: %.2f", "widgets", stats->cpu_time_submit_widgets_ms);
         prv_debug_console_draw_stat(
@@ -333,6 +339,8 @@ prv_debug_console_draw(float delta_time_sec) {
                 stats->gpu_time_frame_ms);
             prv_debug_console_draw_stat(
                 screen_pos, "- %s: %.2f", "models", stats->gpu_time_draw_models_ms);
+            prv_debug_console_draw_stat(
+                screen_pos, "- %s: %.2f", "particles", stats->gpu_time_draw_particles_ms);
             prv_debug_console_draw_stat(
                 screen_pos, "- %s: %.2f", "widgets", stats->gpu_time_draw_widgets_ms);
             prv_debug_console_draw_stat(

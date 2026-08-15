@@ -9,6 +9,7 @@ typedef struct te_world te_world;
 struct te_game_manager;
 struct te_model_renderer;
 struct te_widget_renderer;
+struct te_particle_renderer;
 struct te_game_object_info;
 struct te_widget;
 struct te_camera;
@@ -92,6 +93,9 @@ struct te_model_renderer* world_get_transparent_model_renderer(te_world* world);
 // Do not free/destroy returned pointer, valid while the world exists.
 struct te_widget_renderer* world_get_widget_renderer(te_world* world);
 
+// Do not free/destroy returned pointer, valid while the world exists.
+struct te_particle_renderer* world_get_particle_renderer(te_world* world);
+
 // Returns game manager.
 // Always valid pointer. Do not free/destroy returned pointer.
 struct te_game_manager* world_get_game_manager(te_world* world);
@@ -147,5 +151,6 @@ void prv_world_on_input_source_changed(te_world* world);
 
 #if defined(ENGINE_DEBUG_TOOLS)
 unsigned int prv_world_get_gl_query_draw_models(te_world* world);
+unsigned int prv_world_get_gl_query_draw_particles(te_world* world);
 unsigned int prv_world_get_gl_query_draw_widgets(te_world* world);
 #endif

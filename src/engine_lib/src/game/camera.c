@@ -616,6 +616,12 @@ camera_get_view_mat(te_camera* camera) {
     return &camera->view_mat;
 }
 
+mat4*
+camera_get_proj_mat(te_camera* camera) {
+    make_sure_view_proj_mat_updated(camera);
+    return &camera->proj_mat;
+}
+
 struct te_world*
 camera_get_world(te_camera* camera) {
     return camera->world;

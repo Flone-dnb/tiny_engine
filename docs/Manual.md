@@ -215,6 +215,10 @@ unsigned int id = game_manager_add_tick_callback(game_manager, my_obj, my_callba
 game_manager_remove_tick_callback(game_manager, id);
 ```
 
+# Creating a custom game object and a renderer
+
+In case your game needs more custom functionality you can modify the engine code for your game specifically. Use `te_particle_emitter` and `te_particle_renderer` as a reference, they are small and fairly easy to replicate.
+
 # Build for ARM64 Linux (retro-handhelds)
 
 ## Setup environment

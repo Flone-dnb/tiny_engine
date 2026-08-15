@@ -1,6 +1,6 @@
 #pragma once
 
-enum te_game_object_type { TE_GOT_CAMERA, TE_GOT_MODEL };
+enum te_game_object_type { TE_GOT_CAMERA, TE_GOT_MODEL, TE_GOT_PARTICLE_EMITTER };
 
 struct te_world;
 

@@ -52,6 +52,9 @@ void* game_manager_get_game_instance(te_game_manager* game_manager);
 // Do not destroy/free returned pointer, valid while the game manager exists.
 struct te_sound_manager* game_manager_get_sound_manager(te_game_manager* game_manager);
 
+// Returns the total number of currently registered tick callbacks, see @ref game_manager_add_tick_callback.
+unsigned int game_manager_get_tick_callback_count(te_game_manager* game_manager);
+
 // ------------------------------------------------------------------------------------------------
 //                                       PRIVATE API
 // ------------------------------------------------------------------------------------------------
