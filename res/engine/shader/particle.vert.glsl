@@ -5,11 +5,10 @@ ATTRIBUTE_OUT vec2 particle_uv;
 
 uniform mat4 view_mat;
 uniform mat4 proj_mat;
-uniform vec4 in_color;
 uniform vec4 in_world_pos_size; // size in W
 
 void main() {
-    uv = vec2(in_quad_uv.x, 1.0 - in_quad_uv.y);
+    particle_uv = vec2(in_quad_uv.x, 1.0 - in_quad_uv.y);
 
     vec4 particle_view_pos = view_mat * vec4(in_world_pos_size.xyz, 1.0);
     vec3 up = vec3(view_mat * vec4(0.0, 1.0, 0.0, 0.0));

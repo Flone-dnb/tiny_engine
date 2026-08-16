@@ -302,6 +302,9 @@ prv_debug_console_draw(float delta_time_sec) {
         prv_debug_console_draw_stat(
             screen_pos, "tick callbacks: %u",
             game_manager_get_tick_callback_count(console.game_manager));
+        prv_debug_console_draw_stat(
+            screen_pos, "%s: %.2f", "CPU time on tick callbacks (ms)",
+            stats->cpu_time_tick_callbacks_ms);
 
         // Rendered model count.
         prv_debug_console_draw_stat(

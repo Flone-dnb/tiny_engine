@@ -263,7 +263,8 @@ get_name(te_button_widget* widget) {
     return widget_get_name(widget->widget);
 }
 
-static bool is_serialization_allowed(te_button_widget* widget) {
+static bool
+is_serialization_allowed(te_button_widget* widget) {
     return widget_is_serialization_allowed(widget->widget);
 }
 
@@ -354,7 +355,7 @@ button_widget_set_texture(te_button_widget* button_widget, const char* relative_
     free(button_widget->tex_relative_path);
     button_widget->tex_relative_path = NULL;
 
-    if (relative_path != NULL) {
+    if (relative_path != NULL && strcmp(relative_path, "") != 0) {
         const size_t len = strlen(relative_path);
         button_widget->tex_relative_path = malloc(sizeof(char) * (len + 1));
         memcpy(button_widget->tex_relative_path, relative_path, sizeof(char) * len);

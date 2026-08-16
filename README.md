@@ -15,10 +15,10 @@ Supported platforms: Windows (x32, x64), Linux (x32, x64, ARM64).
 - [X] Audio
 - [X] Skeletal animations
 - [X] Scene animations (cutscene editor)
+- [X] Particle effects
 
 These features are enough for me to make games but there are some additional "nice to have" features planned:
 
-- [ ] Particle effects
 - [ ] Simple physics engine
 
 # Documentation

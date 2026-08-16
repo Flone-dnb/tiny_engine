@@ -520,6 +520,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 
     // Reset world-dependant CPU metrics.
     debug_stats->cpu_time_submit_models_ms = 0.0f;
+    debug_stats->cpu_time_submit_particles_ms = 0.0f;
     debug_stats->cpu_time_submit_widgets_ms = 0.0f;
 
     const Uint64 cpu_frame_start_counter = SDL_GetPerformanceCounter();
@@ -639,7 +640,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         // Draw particles.
         {
 #if defined(ENGINE_DEBUG_TOOLS)
-            GPU_SECTION_BEGIN("widgets");
+            GPU_SECTION_BEGIN("particles");
             const Uint64 cpu_start_counter = SDL_GetPerformanceCounter();
             if (record_new_queries) {
                 GPU_TIME_SECTION_BEGIN(prv_world_get_gl_query_draw_particles(worlds[i]));

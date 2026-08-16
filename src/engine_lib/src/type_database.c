@@ -4,6 +4,7 @@
 #include <string.h>
 #include <game/camera.h>
 #include <game/model.h>
+#include <game/particle_emitter.h>
 #include <hashmap.c/hashmap.h>
 #include <io/log.h>
 #include <io/config.h>
@@ -48,6 +49,7 @@ prv_type_database_init(void) {
     // Register engine types.
     model_register_type();
     camera_register_type();
+    particle_emitter_register_type();
     button_widget_register_type();
     checkbox_widget_register_type();
     progress_widget_register_type();
@@ -60,11 +62,9 @@ prv_type_database_init(void) {
 
 te_type_info*
 type_info_create(
-    const char* id, void* (*create)(void),
-    void (*destroy)(void* obj),
+    const char* id, void* (*create)(void), void (*destroy)(void* obj),
     void (*spawn)(struct te_world* world, void* obj),
-    void (*despawn)(struct te_world* world, void* obj),
-    struct te_widget* (*get_widget)(void*),
+    void (*despawn)(struct te_world* world, void* obj), struct te_widget* (*get_widget)(void*),
     struct te_game_object_info* (*get_game_object_info)(void* obj),
     bool (*is_serialization_allowed)(void* obj)) {
     te_type_info* info = malloc(sizeof(te_type_info));

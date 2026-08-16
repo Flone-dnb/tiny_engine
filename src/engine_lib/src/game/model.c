@@ -563,7 +563,7 @@ model_set_texture(te_model* model, const char* relative_path) {
     free(model->tex_relative_path);
     model->tex_relative_path = NULL;
 
-    if (relative_path == NULL) {
+    if (relative_path == NULL || strcmp(relative_path, "") == 0) {
         // Remove current texture.
         model->tex_relative_path = NULL;
         if (model->world != NULL) {

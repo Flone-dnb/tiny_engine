@@ -12,6 +12,8 @@
 #include <window.h>
 #include <world.h>
 #include <sound_manager.h>
+#include <time.h>
+#include <SDL3/SDL_timer.h>
 
 typedef struct te_game_tick_callback {
     void* custom;
@@ -52,6 +54,8 @@ struct te_game_manager {
 
 te_game_manager*
 prv_game_manager_create(struct te_window* window) {
+    srand((unsigned int)time(NULL));
+
     te_game_manager* game_manager = malloc(sizeof(te_game_manager));
 
     game_manager->sound_manager = sound_manager_create();
@@ -340,6 +344,12 @@ prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
 
     // Tick custom callbacks.
     {
+#if defined(ENGINE_DEBUG_TOOLS)
+        te_debug_stats* debug_stats = prv_debug_console_get_stats();
+        debug_stats->cpu_time_tick_callbacks_ms = 0.0f;
+        const Uint64 cpu_start_counter = SDL_GetPerformanceCounter();
+#endif
+
         game_manager->is_processing_tick_callbacks = true;
 
         // Because logic inside a callback can add/remove tick callbacks (array we are iterating)
@@ -401,6 +411,12 @@ prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
         free(notified_ids);
 
         game_manager->is_processing_tick_callbacks = false;
+
+#if defined(ENGINE_DEBUG_TOOLS)
+        debug_stats->cpu_time_tick_callbacks_ms +=
+            (float)(SDL_GetPerformanceCounter() - cpu_start_counter) * 1000.0f
+            / (float)(SDL_GetPerformanceFrequency());
+#endif
     }
 }
 

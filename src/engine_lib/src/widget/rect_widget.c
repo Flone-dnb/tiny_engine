@@ -146,7 +146,7 @@ rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) 
     free(res_path);
 #endif
 
-    if (relative_path == NULL) {
+    if (relative_path == NULL || strcmp(relative_path, "") == 0) {
         // Remove current texture.
         rect_widget->tex_relative_path = NULL;
         if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {

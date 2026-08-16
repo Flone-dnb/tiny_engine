@@ -764,10 +764,15 @@ on_top_button_clicked(te_button_widget* button) {
 
     // Rebuild item list.
     free(inspector->item_list);
-    inspector->item_list_count = type_count;
-    const char** type_ids = malloc(sizeof(const char*) * type_count);
-    for (unsigned int i = 0; i < type_count; i++) {
-        type_ids[i] = (void*)(types[i]);
+    inspector->item_list_count = (type_count - 1);
+    const char** type_ids = malloc(sizeof(const char*) * inspector->item_list_count);
+    for (unsigned int i = 0, idx = 0; i < type_count; i++) {
+        if (strcmp(types[i], "light_params") == 0) {
+            // light params is a world-global data, don't show it here
+            continue;
+        }
+        type_ids[idx] = (void*)(types[i]);
+        idx += 1;
     }
     inspector->item_list = type_ids;
 

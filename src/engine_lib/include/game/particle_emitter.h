@@ -91,6 +91,12 @@ float particle_emitter_get_fade_in_life_portion(te_particle_emitter* emitter);
 void particle_emitter_set_fade_out_life_portion(te_particle_emitter* emitter, float portion);
 float particle_emitter_get_fade_out_life_portion(te_particle_emitter* emitter);
 
+// Can be used to pause emitting of new particles while keeping already existing particles simulated.
+void particle_emitter_set_emit_new_particles(te_particle_emitter* emitter, bool emit);
+bool particle_emitter_get_emit_new_particles(te_particle_emitter* emitter);
+
+// Pauses the whole simulation. If you only need to stop emitting new particles use
+// @ref particle_emitter_set_emit_new_particles.
 void particle_emitter_set_is_paused(te_particle_emitter* emitter, bool is_paused);
 bool particle_emitter_get_is_paused(te_particle_emitter* emitter);
 
