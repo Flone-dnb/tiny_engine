@@ -1007,7 +1007,7 @@ import_file_as_world(
             }
 
             // Spawn.
-            world_spawn_game_object(world, model_get_game_object_info(model));
+            world_spawn_game_object(world, model, model_get_game_object_info());
 
             free(geo_path);
             free(geo_relative);

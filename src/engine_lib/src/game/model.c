@@ -189,9 +189,6 @@ struct te_model {
     // NULL if not set.
     char* name;
 
-    // Always valid pointer.
-    te_game_object_info* game_object_info;
-
     // NULL if not spawned. Do not free/destroy this pointer.
     te_world* world;
 
@@ -295,16 +292,6 @@ model_create() {
     glm_vec3_zero(model->rotation);
     glm_vec3_one(model->scale);
 
-    model->game_object_info = malloc(sizeof(te_game_object_info));
-    model->game_object_info->type_id = model_get_type_id();
-    model->game_object_info->type = TE_GOT_MODEL;
-    model->game_object_info->game_object = model;
-    model->game_object_info->get_world = model_get_world;
-    model->game_object_info->get_name = model_get_name;
-    model->game_object_info->on_spawned = on_spawned;
-    model->game_object_info->on_despawned = on_despawned;
-    model->game_object_info->destroy = model_destroy;
-
     return model;
 }
 
@@ -351,7 +338,6 @@ model_destroy(te_model* model) {
     free(model->custom_vert_relative_path);
     free(model->skeleton_relative_path);
     free(model->path_to_geo);
-    free(model->game_object_info);
 
     free(model);
 }
@@ -386,8 +372,8 @@ check_file_path(const char* relative_path) {
 #endif
 
 te_game_object_info*
-model_get_game_object_info(te_model* model) {
-    return model->game_object_info;
+model_get_game_object_info() {
+    return type_database_get_type_info(model_get_type_id())->game_object_info;
 }
 
 void
@@ -785,14 +771,13 @@ model_set_parent(te_model* model, te_model* new_parent, unsigned int parent_bone
 
     if (model->world == NULL) {
         if (new_parent != NULL && new_parent->world != NULL) {
-            world_spawn_game_object(new_parent->world, model_get_game_object_info(model));
-            prv_world_remove_root_game_object_no_notify(
-                new_parent->world, model_get_game_object_info(model), true);
+            world_spawn_game_object(new_parent->world, model, model_get_game_object_info());
+            prv_world_remove_root_game_object_no_notify(new_parent->world, model, true);
         }
     } else {
         if (new_parent == NULL) {
             prv_world_add_root_game_object_no_notify(
-                model->world, model_get_game_object_info(model), true);
+                model->world, model, model_get_game_object_info(), true);
         } else {
             if (new_parent->world != NULL) {
                 if (new_parent->world != model->world) {
@@ -800,11 +785,10 @@ model_set_parent(te_model* model, te_model* new_parent, unsigned int parent_bone
                               "model first");
                     abort();
                 } else {
-                    prv_world_remove_root_game_object_no_notify(
-                        model->world, model_get_game_object_info(model), false);
+                    prv_world_remove_root_game_object_no_notify(model->world, model, false);
                 }
             } else {
-                world_despawn_game_object(model->world, model_get_game_object_info(model));
+                world_despawn_game_object(model->world, model, model_get_game_object_info());
             }
         }
     }
@@ -879,20 +863,19 @@ model_attach_camera(te_model* model, te_camera* camera) {
 
         if (model->world == NULL) {
             if (camera_world != NULL) {
-                world_despawn_game_object(camera_world, camera_get_game_object_info(camera));
+                world_despawn_game_object(camera_world, camera, camera_get_game_object_info());
             }
         } else {
             if (camera_world == NULL) {
-                world_spawn_game_object(model->world, camera_get_game_object_info(camera));
+                world_spawn_game_object(model->world, camera, camera_get_game_object_info());
             }
-            prv_world_remove_root_game_object_no_notify(
-                model->world, camera_get_game_object_info(camera), true);
+            prv_world_remove_root_game_object_no_notify(model->world, camera, true);
         }
     } else if (old_camera != NULL) {
         te_world* camera_world = camera_get_world(old_camera);
         if (camera_world != NULL) {
             prv_world_add_root_game_object_no_notify(
-                camera_world, camera_get_game_object_info(old_camera), true);
+                camera_world, old_camera, camera_get_game_object_info(), true);
         }
     }
 }
@@ -1351,8 +1334,7 @@ on_spawned(te_model* model, te_world* world) {
             log_error("expected the attached camera to not be spawned yet");
             abort();
         }
-        camera_get_game_object_info(model->attached_camera)
-            ->on_spawned(model->attached_camera, world);
+        camera_get_game_object_info()->on_spawned(model->attached_camera, world);
     }
 
     // Play sounds.
@@ -1388,8 +1370,7 @@ on_despawned(te_model* model) {
 
     // Despawn attached camera.
     if (model->attached_camera != NULL && camera_get_world(model->attached_camera) != NULL) {
-        camera_get_game_object_info(model->attached_camera)
-            ->on_despawned(model->attached_camera);
+        camera_get_game_object_info()->on_despawned(model->attached_camera);
     }
 
     // Stop sounds.
@@ -1413,7 +1394,7 @@ type_spawn(te_world* world, te_model* model) {
         abort();
     }
 
-    world_spawn_game_object(world, model->game_object_info);
+    world_spawn_game_object(world, model, model_get_game_object_info());
 }
 
 static void
@@ -1428,7 +1409,7 @@ type_despawn(te_world* world, te_model* model) {
             model, NULL, 0xFFFFFFFF); // make model to be in the array of root world objects
     }
     world_despawn_game_object(
-        model->world, model->game_object_info); // despawn root world object
+        model->world, model, model_get_game_object_info()); // despawn root world object
 }
 
 static void
@@ -1442,9 +1423,18 @@ get_parent_bone_idx(te_model* model) {
 
 void
 model_register_type(void) {
+    te_game_object_info* game_object_info = malloc(sizeof(te_game_object_info));
+    game_object_info->type_id = model_get_type_id();
+    game_object_info->type = TE_GOT_MODEL;
+    game_object_info->get_world = model_get_world;
+    game_object_info->get_name = model_get_name;
+    game_object_info->on_spawned = on_spawned;
+    game_object_info->on_despawned = on_despawned;
+    game_object_info->destroy = model_destroy;
+
     te_type_info* info = type_info_create(
         model_get_type_id(), model_create, model_destroy, type_spawn, type_despawn, NULL,
-        model_get_game_object_info, model_is_serialization_allowed);
+        game_object_info, model_is_serialization_allowed);
     type_info_add_vec3_variable(info, "position", model_set_position, model_get_position);
     type_info_add_vec3_variable(info, "rotation", model_set_rotation, model_get_rotation);
     type_info_add_vec3_variable(info, "scale", model_set_scale, model_get_scale);

@@ -304,8 +304,8 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
     pos[0] = hpadding;
     pos[1] = theme_get_vertical_padding() / 2.0f;
 
-    if (type_info->get_game_object_info != NULL) {
-        if (type_info->get_game_object_info(obj)->type == TE_GOT_CAMERA) {
+    if (type_info->game_object_info != NULL) {
+        if (type_info->game_object_info->type == TE_GOT_CAMERA) {
             // Add a button to pilot the camera.
             te_button_widget* button = button_widget_create();
             {
@@ -346,7 +346,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
             pos[1] += size[1];
         } else if (
-            type_info->get_game_object_info(obj)->type == TE_GOT_MODEL
+            type_info->game_object_info->type == TE_GOT_MODEL
             && model_get_skeleton(obj) != NULL) {
             // Add a button to preview skeleton animation.
             te_button_widget* button = button_widget_create();
@@ -672,8 +672,8 @@ property_inspector_hide(te_property_inspector* inspector) {
     {
         // Check if we have a model with skeleton animation preview playing.
         const te_type_info* type_info = type_database_get_type_info(inspector->obj_type_id);
-        if (type_info != NULL && type_info->get_game_object_info != NULL
-            && type_info->get_game_object_info(inspector->obj)->type == TE_GOT_MODEL) {
+        if (type_info != NULL && type_info->game_object_info != NULL
+            && type_info->game_object_info->type == TE_GOT_MODEL) {
             te_skeleton* skeleton = model_get_skeleton(inspector->obj);
             if (skeleton != NULL) {
                 skeleton_unload_animations(skeleton);

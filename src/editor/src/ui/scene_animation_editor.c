@@ -1026,8 +1026,7 @@ get_selected_obj_name(te_scene_animation_editor* editor) {
         abort();
     }
 
-    te_game_object_info* go_info =
-        editor->selected_obj_type_info->get_game_object_info(editor->selected_obj);
+    te_game_object_info* go_info = editor->selected_obj_type_info->game_object_info;
     if (go_info == NULL) {
         log_error("expected to have game object info to get object name");
         abort();
@@ -1464,7 +1463,7 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
         DISPLAY_AVAILABLE_TRACKS(VEC2)
         DISPLAY_AVAILABLE_TRACKS(FLOAT)
         DISPLAY_AVAILABLE_TRACKS(UINT)
-        DISPLAY_AVAILABLE_TRACKS(BOOL)
+        DISPLAY_AVAILABLE_TRACKS(BOOL);
     }
 }
 

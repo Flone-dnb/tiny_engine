@@ -26,8 +26,6 @@ typedef struct te_particle_data {
 } te_particle_data;
 
 struct te_particle_emitter {
-    te_game_object_info* game_object_info;
-
     char* tex_relative_path;
     char* name;
 
@@ -130,31 +128,20 @@ particle_emitter_create(void) {
     emitter->is_buf_a = true;
     emitter->tex_relative_path = NULL;
 
-    emitter->game_object_info = malloc(sizeof(te_game_object_info));
-    emitter->game_object_info->type_id = particle_emitter_get_type_id();
-    emitter->game_object_info->type = TE_GOT_PARTICLE_EMITTER;
-    emitter->game_object_info->game_object = emitter;
-    emitter->game_object_info->get_world = particle_emitter_get_world;
-    emitter->game_object_info->get_name = particle_emitter_get_name;
-    emitter->game_object_info->on_spawned = on_spawned;
-    emitter->game_object_info->on_despawned = on_despawned;
-    emitter->game_object_info->destroy = particle_emitter_destroy;
-
     return emitter;
 }
 
 void
 particle_emitter_destroy(te_particle_emitter* emitter) {
     free(emitter->name);
-    free(emitter->game_object_info);
     free(emitter->tex_relative_path);
 
     free(emitter);
 }
 
 te_game_object_info*
-particle_emitter_get_game_object_info(te_particle_emitter* emitter) {
-    return emitter->game_object_info;
+particle_emitter_get_game_object_info() {
+    return type_database_get_type_info(particle_emitter_get_type_id())->game_object_info;
 }
 
 void
@@ -480,7 +467,7 @@ type_spawn(te_world* world, te_particle_emitter* emitter) {
         abort();
     }
 
-    world_spawn_game_object(world, emitter->game_object_info);
+    world_spawn_game_object(world, emitter, particle_emitter_get_game_object_info());
 }
 
 static void
@@ -490,14 +477,24 @@ type_despawn(te_world* world, te_particle_emitter* emitter) {
         abort();
     }
 
-    world_despawn_game_object(emitter->world, emitter->game_object_info);
+    world_despawn_game_object(
+        emitter->world, emitter, particle_emitter_get_game_object_info());
 }
 
 void
 particle_emitter_register_type(void) {
+    te_game_object_info* game_object_info = malloc(sizeof(te_game_object_info));
+    game_object_info->type_id = particle_emitter_get_type_id();
+    game_object_info->type = TE_GOT_PARTICLE_EMITTER;
+    game_object_info->get_world = particle_emitter_get_world;
+    game_object_info->get_name = particle_emitter_get_name;
+    game_object_info->on_spawned = on_spawned;
+    game_object_info->on_despawned = on_despawned;
+    game_object_info->destroy = particle_emitter_destroy;
+
     te_type_info* info = type_info_create(
         particle_emitter_get_type_id(), particle_emitter_create, particle_emitter_destroy,
-        type_spawn, type_despawn, NULL, particle_emitter_get_game_object_info,
+        type_spawn, type_despawn, NULL, game_object_info,
         particle_emitter_is_serialization_allowed);
 
     type_info_add_vec3_variable(

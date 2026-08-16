@@ -13,8 +13,7 @@ te_camera* camera_create();
 void camera_destroy(te_camera* camera);
 
 // Returns game object info.
-// Returned pointer is valid while the game object is valid.
-struct te_game_object_info* camera_get_game_object_info(te_camera* camera);
+struct te_game_object_info* camera_get_game_object_info();
 
 // Optionally you can set a name of the camera. The string will be copied.
 // Returns NULL if was not set previously.

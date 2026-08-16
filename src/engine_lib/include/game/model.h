@@ -82,8 +82,7 @@ te_model* model_create();
 void model_destroy(te_model* model);
 
 // Returns game object info.
-// Returned pointer is valid while the game object is valid.
-struct te_game_object_info* model_get_game_object_info(te_model* model);
+struct te_game_object_info* model_get_game_object_info();
 
 // Specify path (relative to the `res` directory) to the file that stores mesh geometry.
 // Specify NULL to use default model instead.

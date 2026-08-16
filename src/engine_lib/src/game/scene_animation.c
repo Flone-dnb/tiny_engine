@@ -491,22 +491,22 @@ scene_animation_save(te_scene_animation* scene_animation, const char* relative_p
 }
 
 static void
-find_game_obj_recursive(te_game_object_info* info, te_scene_animation_obj* target) {
-    const char* obj_name = info->get_name(info->game_object);
+find_game_obj_recursive(te_game_object_data* data, te_scene_animation_obj* target) {
+    const char* obj_name = data->info->get_name(data->object);
     if (obj_name != NULL && strcmp(obj_name, target->name) == 0) {
-        target->transient_obj = info->game_object;
-        target->transient_obj_type_info = type_database_get_type_info(info->type_id);
+        target->transient_obj = data->object;
+        target->transient_obj_type_info = type_database_get_type_info(data->info->type_id);
         if (target->transient_obj_type_info == NULL) {
-            log_error_fmt("failed to get type info for type \"%s\"", info->type_id);
+            log_error_fmt("failed to get type info for type \"%s\"", data->info->type_id);
         }
         return;
     }
 
     // Special case for models.
-    if (info->type == TE_GOT_MODEL) {
-        unsigned int child_count = model_get_child_model_count(info->game_object);
+    if (data->info->type == TE_GOT_MODEL) {
+        unsigned int child_count = model_get_child_model_count(data->object);
         for (unsigned int i = 0; i < child_count; i++) {
-            te_model* child = model_get_child_model(info->game_object, i);
+            te_model* child = model_get_child_model(data->object, i);
             if (child != NULL && model_is_serialization_allowed(child)) {
                 obj_name = model_get_name(child);
                 if (obj_name != NULL && strcmp(obj_name, target->name) == 0) {
@@ -518,7 +518,7 @@ find_game_obj_recursive(te_game_object_info* info, te_scene_animation_obj* targe
             }
         }
 
-        te_camera* camera = model_get_attached_camera(info->game_object);
+        te_camera* camera = model_get_attached_camera(data->object);
         if (camera != NULL && camera_is_serialization_allowed(camera)) {
             obj_name = camera_get_name(camera);
             if (obj_name != NULL && strcmp(obj_name, target->name) == 0) {
@@ -538,7 +538,7 @@ cache_obj_and_var(te_scene_animation* anim) {
     }
 
     unsigned int root_game_obj_count;
-    te_game_object_info** root_game_objs =
+    te_game_object_data* root_game_objs =
         world_get_root_game_objects(anim->world, &root_game_obj_count);
 
     anim->transient_duration_sec = 0.0f;
@@ -549,7 +549,7 @@ cache_obj_and_var(te_scene_animation* anim) {
         obj->transient_obj = NULL;
         obj->transient_obj_type_info = NULL;
         for (unsigned int go_idx = 0; go_idx < root_game_obj_count; go_idx++) {
-            find_game_obj_recursive(root_game_objs[go_idx], obj);
+            find_game_obj_recursive(&root_game_objs[go_idx], obj);
             if (obj->transient_obj != NULL) {
                 break;
             }

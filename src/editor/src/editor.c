@@ -157,7 +157,7 @@ editor_create_editor_world(te_editor* editor, struct te_game_manager* game_manag
 
     // Create a dummy camera to display editor's UI.
     te_camera* camera = camera_create();
-    world_spawn_game_object(editor->editor_world, camera_get_game_object_info(camera));
+    world_spawn_game_object(editor->editor_world, camera, camera_get_game_object_info());
     world_set_active_camera(editor->editor_world, camera);
 
     editor_ui_spawn(editor->ui, editor->editor_world);
@@ -193,12 +193,12 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
         model_set_name(floor, "floor");
         model_set_scale(floor, (vec3){4.0f, 1.0f, 4.0f});
         model_set_color(floor, (vec4){1.0f, 0.5f, 0.0f, 1.0f});
-        world_spawn_game_object(editor->game_world, model_get_game_object_info(floor));
+        world_spawn_game_object(editor->game_world, floor, model_get_game_object_info());
 
         te_model* box = model_create();
         model_set_name(box, "box");
         model_set_position(box, (vec3){0.0f, 1.0f, -1.0f});
-        world_spawn_game_object(editor->game_world, model_get_game_object_info(box));
+        world_spawn_game_object(editor->game_world, box, model_get_game_object_info());
     } else {
         world_add_from_file(editor->game_world, relative_path_to_world, true);
 
@@ -309,7 +309,7 @@ editor_show_file_dialog(
     // Create a new world for dialog widget to be displayed on top of both the editor and the game worlds.
     editor->dialog_world = game_manager_create_world(editor->game_manager, "dialog");
     te_camera* camera = camera_create();
-    world_spawn_game_object(editor->dialog_world, camera_get_game_object_info(camera));
+    world_spawn_game_object(editor->dialog_world, camera, camera_get_game_object_info());
     world_set_active_camera(editor->dialog_world, camera);
 
     file_dialog_custom = custom;
@@ -334,11 +334,11 @@ set_camera_editor_shape_visibility(te_world* world, bool is_visible) {
         found_camera = false;
 
         unsigned int count;
-        te_game_object_info** infos = world_get_root_game_objects(world, &count);
+        te_game_object_data* game_obj_data = world_get_root_game_objects(world, &count);
 
         for (unsigned int i = 0; i < count; i++) {
-            if (infos[i]->type == TE_GOT_CAMERA) {
-                te_camera* camera = (te_camera*)infos[i]->game_object;
+            if (game_obj_data[i].info->type == TE_GOT_CAMERA) {
+                te_camera* camera = (te_camera*)game_obj_data[i].object;
                 if (world_get_active_camera(world) == camera) {
                     continue;
                 }
@@ -347,8 +347,8 @@ set_camera_editor_shape_visibility(te_world* world, bool is_visible) {
                     found_camera = true;
                     break; // editor shape was despawned and world root objects array changed
                 }
-            } else if (infos[i]->type == TE_GOT_MODEL) {
-                te_model* model = (te_model*)infos[i]->game_object;
+            } else if (game_obj_data[i].info->type == TE_GOT_MODEL) {
+                te_model* model = (te_model*)game_obj_data[i].object;
                 te_camera* attached_camera = model_get_attached_camera(model);
                 if (attached_camera != NULL) {
                     if (world_get_active_camera(world) == attached_camera) {
@@ -362,7 +362,7 @@ set_camera_editor_shape_visibility(te_world* world, bool is_visible) {
                 }
             }
         }
-        free(infos);
+        free(game_obj_data);
     } while (found_camera);
 }
 
@@ -436,9 +436,10 @@ editor_pilot_camera(te_editor* editor, te_camera* camera) {
 }
 
 void
-editor_on_before_game_obj_deleted(te_editor* editor, te_game_object_info* info) {
+editor_on_before_game_obj_deleted(
+    te_editor* editor, void* game_object, te_game_object_info* info) {
     te_scene_animation* anim = world_get_scene_animation(editor->game_world);
-    const char* go_name = info->get_name(info->game_object);
+    const char* go_name = info->get_name(game_object);
     if (go_name != NULL && anim != NULL && scene_animation_is_playing(anim)) {
         // Is animated?
         unsigned int obj_count;
@@ -455,7 +456,7 @@ editor_on_before_game_obj_deleted(te_editor* editor, te_game_object_info* info) 
 
     if (editor->gizmo != NULL) {
         // Is selected with gizmo?
-        if (gizmo_get_target(editor->gizmo) == info->game_object) {
+        if (gizmo_get_target(editor->gizmo) == game_object) {
             gizmo_destroy_in_world_now(editor->gizmo, editor->game_world);
             editor->gizmo = NULL;
         }
@@ -761,23 +762,27 @@ editor_on_mouse_button_pressed(
         return;
     }
     if (button == TE_MB_LEFT && !editor_camera_is_fullscreen(editor->editor_camera)) {
-        te_game_object_info* obj_info = obj_picking_find_obj_under_cursor(
-            window_cursor_pos, game_camera, editor->game_world, editor->gizmo);
+        void* game_obj = NULL;
+        te_game_object_info* game_obj_info = NULL;
+        obj_picking_find_obj_under_cursor(
+            window_cursor_pos, game_camera, editor->game_world, editor->gizmo, &game_obj,
+            &game_obj_info);
 
-        if (editor->gizmo != NULL && obj_info != NULL) {
-            if (obj_info->game_object == gizmo_get_model_x(editor->gizmo)) {
+        if (editor->gizmo != NULL && game_obj != NULL) {
+            if (game_obj == gizmo_get_model_x(editor->gizmo)) {
                 gizmo_start_grab_x(editor->gizmo);
                 return;
-            } else if (obj_info->game_object == gizmo_get_model_y(editor->gizmo)) {
+            } else if (game_obj == gizmo_get_model_y(editor->gizmo)) {
                 gizmo_start_grab_y(editor->gizmo);
                 return;
-            } else if (obj_info->game_object == gizmo_get_model_z(editor->gizmo)) {
+            } else if (game_obj == gizmo_get_model_z(editor->gizmo)) {
                 gizmo_start_grab_z(editor->gizmo);
                 return;
             }
         }
 
-        world_inspector_select_obj(editor_ui_get_world_inspector(editor->ui), obj_info);
+        world_inspector_select_obj(
+            editor_ui_get_world_inspector(editor->ui), game_obj, game_obj_info);
     }
 }
 

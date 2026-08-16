@@ -46,7 +46,7 @@ struct te_world {
     // will be shifted to keep the array valid without any "holes". This array does not shrink
     // but the number of used (valid) elements may decrease.
     // Just like @ref spawned_widgets stores only root game objects.
-    te_game_object_info** spawned_root_game_objects;
+    te_game_object_data* spawned_root_game_objects;
 
     // NULL if nothing spawned, size of this array is @ref spawned_widget_count.
     // Each widget here can have child widgets, this array only stores root widgets.
@@ -131,7 +131,7 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
     world->spawned_root_game_object_count = 0;
     world->spawned_root_game_object_array_size = 128;
     world->spawned_root_game_objects =
-        malloc(sizeof(te_game_object_info*) * world->spawned_root_game_object_array_size);
+        malloc(sizeof(te_game_object_data) * world->spawned_root_game_object_array_size);
 
     world->opaque_model_renderer = model_renderer_create(128, 128);
     world->transparent_model_renderer = model_renderer_create(4, 4);
@@ -183,9 +183,9 @@ prv_world_destroy(te_world* world) {
     {
         // Game objects.
         for (unsigned int i = 0; i < world->spawned_root_game_object_count; i++) {
-            te_game_object_info* info = world->spawned_root_game_objects[i];
-            info->on_despawned(info->game_object);
-            info->destroy(info->game_object);
+            te_game_object_data* data = &world->spawned_root_game_objects[i];
+            data->info->on_despawned(data->object);
+            data->info->destroy(data->object);
         }
         free(world->spawned_root_game_objects);
 
@@ -266,10 +266,11 @@ prv_world_on_window_size_changed(te_world* world) {
 
 void
 prv_world_add_root_game_object_no_notify(
-    te_world* world, struct te_game_object_info* info, bool ignore_if_already_added) {
+    te_world* world, void* game_object, struct te_game_object_info* info,
+    bool ignore_if_already_added) {
     if (ignore_if_already_added) {
         for (unsigned int i = 0; i < world->spawned_root_game_object_count; i++) {
-            if (world->spawned_root_game_objects[i] == info) {
+            if (world->spawned_root_game_objects[i].object == game_object) {
                 return;
             }
         }
@@ -278,30 +279,32 @@ prv_world_add_root_game_object_no_notify(
     if (world->spawned_root_game_object_count == world->spawned_root_game_object_array_size) {
         // Expand array.
         const unsigned int grow_size = 128;
-        te_game_object_info** new_items = malloc(
-            sizeof(te_game_object_info*)
+        te_game_object_data* new_items = malloc(
+            sizeof(te_game_object_data)
             * (world->spawned_root_game_object_array_size + grow_size));
         memcpy(
             new_items, world->spawned_root_game_objects,
-            sizeof(te_game_object_info*) * world->spawned_root_game_object_count);
+            sizeof(te_game_object_data) * world->spawned_root_game_object_count);
 
         free(world->spawned_root_game_objects);
         world->spawned_root_game_objects = new_items;
         world->spawned_root_game_object_array_size += grow_size;
     }
 
-    world->spawned_root_game_objects[world->spawned_root_game_object_count] = info;
+    world->spawned_root_game_objects[world->spawned_root_game_object_count].object =
+        game_object;
+    world->spawned_root_game_objects[world->spawned_root_game_object_count].info = info;
     world->spawned_root_game_object_count += 1;
 }
 
 void
 prv_world_remove_root_game_object_no_notify(
-    te_world* world, struct te_game_object_info* info, bool must_exist_in_array) {
+    te_world* world, void* game_object, bool must_exist_in_array) {
     // Find model.
     unsigned int idx = 0;
     bool found = false;
     for (unsigned int i = 0; i < world->spawned_root_game_object_count; i++) {
-        if (world->spawned_root_game_objects[i] != info) {
+        if (world->spawned_root_game_objects[i].object != game_object) {
             continue;
         }
 
@@ -327,7 +330,7 @@ prv_world_remove_root_game_object_no_notify(
         memmove(
             world->spawned_root_game_objects + idx,
             world->spawned_root_game_objects + (idx + 1),
-            sizeof(te_game_object_info*) * (world->spawned_root_game_object_count - idx - 1));
+            sizeof(te_game_object_data) * (world->spawned_root_game_object_count - idx - 1));
     }
     world->spawned_root_game_object_count -= 1;
 }
@@ -614,23 +617,23 @@ world_save_to_file(te_world* world, const char* relative_path, bool write_light_
     // Save game objects.
     if (world->spawned_root_game_object_count > 0) {
         for (unsigned int idx = 0; idx < world->spawned_root_game_object_count; idx++) {
-            te_game_object_info* info = world->spawned_root_game_objects[idx];
+            te_game_object_data* data = &world->spawned_root_game_objects[idx];
 
-            const te_type_info* type_info = type_database_get_type_info(info->type_id);
+            const te_type_info* type_info = type_database_get_type_info(data->info->type_id);
             if (type_info == NULL) {
                 continue;
             }
 
-            if (!type_info->is_serialization_allowed(info->game_object)) {
+            if (!type_info->is_serialization_allowed(data->object)) {
                 continue;
             }
 
             const unsigned int section_idx =
-                type_info_save_to_config(type_info, config, info->game_object);
+                type_info_save_to_config(type_info, config, data->object);
 
-            if (info->type == TE_GOT_MODEL) {
+            if (data->info->type == TE_GOT_MODEL) {
                 // Special case for models.
-                te_model* model = info->game_object;
+                te_model* model = data->object;
 
                 const unsigned int child_model_count = model_get_child_model_count(model);
                 config_section_set_uint(
@@ -793,8 +796,8 @@ world_add_from_file_with_offset(
         section_idx += 1;
 
         // Apply offset (only apply to root objects, child/attached objects will be affected).
-        if (type_info->get_game_object_info != NULL) {
-            te_game_object_info* game_obj_info = type_info->get_game_object_info(obj);
+        if (type_info->game_object_info != NULL) {
+            te_game_object_info* game_obj_info = type_info->game_object_info;
             switch (game_obj_info->type) {
                 case (TE_GOT_MODEL): {
                     te_model* model = obj;
@@ -828,8 +831,8 @@ world_add_from_file_with_offset(
             }
         }
 
-        if (type_info->get_game_object_info != NULL
-            && type_info->get_game_object_info(obj)->type == TE_GOT_MODEL) {
+        if (type_info->game_object_info != NULL
+            && type_info->game_object_info->type == TE_GOT_MODEL) {
             te_model* model = obj;
 
             if (has_attached_camera) {
@@ -916,11 +919,11 @@ world_get_cursor_relative_pos(te_world* world, vec2 cursor_pos) {
     return true;
 }
 
-te_game_object_info**
+te_game_object_data*
 world_get_root_game_objects(te_world* world, unsigned int* count) {
     (*count) = world->spawned_root_game_object_count;
-    te_game_object_info** out = malloc(sizeof(te_game_object_info*) * (*count));
-    memcpy(out, world->spawned_root_game_objects, sizeof(te_game_object_info*) * (*count));
+    te_game_object_data* out = malloc(sizeof(te_game_object_data) * (*count));
+    memcpy(out, world->spawned_root_game_objects, sizeof(te_game_object_data) * (*count));
     return out;
 }
 
@@ -958,12 +961,12 @@ world_get_game_manager(te_world* world) {
 }
 
 void
-world_spawn_game_object(te_world* world, te_game_object_info* info) {
+world_spawn_game_object(te_world* world, void* game_object, te_game_object_info* info) {
     if (world->is_being_destroyed) {
         return;
     }
 
-    te_world* old_obj_world = info->get_world(info->game_object);
+    te_world* old_obj_world = info->get_world(game_object);
     if (old_obj_world != NULL) {
         if (old_obj_world == world) {
             log_error("the game object is already spawned in this world");
@@ -977,26 +980,26 @@ world_spawn_game_object(te_world* world, te_game_object_info* info) {
     }
 
 #if defined(DEBUG)
-    prv_world_add_root_game_object_no_notify(world, info, true);
+    prv_world_add_root_game_object_no_notify(world, game_object, info, true);
 #else
-    prv_world_add_root_game_object_no_notify(world, info, false);
+    prv_world_add_root_game_object_no_notify(world, game_object, info, false);
 #endif
 
-    info->on_spawned(info->game_object, world);
+    info->on_spawned(game_object, world);
 }
 
 void
-world_despawn_game_object(te_world* world, te_game_object_info* info) {
-    te_world* obj_world = info->get_world(info->game_object);
+world_despawn_game_object(te_world* world, void* game_object, te_game_object_info* info) {
+    te_world* obj_world = info->get_world(game_object);
     if (obj_world != world) {
         log_error("the specified model cannot be despawned from this world as it's not "
                   "spawned in this world");
         abort();
     }
 
-    prv_world_remove_root_game_object_no_notify(world, info, true);
+    prv_world_remove_root_game_object_no_notify(world, game_object, true);
 
-    info->on_despawned(info->game_object);
+    info->on_despawned(game_object);
 }
 
 void

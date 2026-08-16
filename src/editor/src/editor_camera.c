@@ -70,7 +70,7 @@ editor_camera_spawn(te_editor_camera* editor_camera, struct te_world* world) {
 
     // Spawn.
     world_spawn_game_object(
-        world, camera_get_game_object_info(editor_camera->viewport_camera));
+        world, editor_camera->viewport_camera, camera_get_game_object_info());
     world_set_active_camera(world, editor_camera->viewport_camera);
 
     // Set viewport.
@@ -80,10 +80,11 @@ editor_camera_spawn(te_editor_camera* editor_camera, struct te_world* world) {
 void
 editor_camera_despawn(te_editor_camera* editor_camera, struct te_world* world) {
     world_despawn_game_object(
-        world, camera_get_game_object_info(editor_camera->viewport_camera));
+        world, editor_camera->viewport_camera, camera_get_game_object_info());
 }
 
-void editor_camera_set_is_fullscreen(te_editor_camera* editor_camera, bool is_fullscreen) {
+void
+editor_camera_set_is_fullscreen(te_editor_camera* editor_camera, bool is_fullscreen) {
     vec4 viewport;
 
     if (is_fullscreen) {
@@ -115,7 +116,8 @@ editor_camera_enable_input(te_editor_camera* editor_camera, bool enable) {
 
 void
 editor_camera_pilot_custom_camera(te_editor_camera* editor_camera, te_camera* camera) {
-    editor_camera->controlled_camera_ref = camera == NULL ? editor_camera->viewport_camera : camera;
+    editor_camera->controlled_camera_ref =
+        camera == NULL ? editor_camera->viewport_camera : camera;
     editor_camera->is_piloting_custom_camera =
         editor_camera->controlled_camera_ref != editor_camera->viewport_camera;
 
@@ -132,7 +134,8 @@ editor_camera_get_camera(te_editor_camera* editor_camera) {
     return editor_camera->viewport_camera;
 }
 
-bool editor_camera_is_piloting_custom_camera(te_editor_camera* editor_camera) {
+bool
+editor_camera_is_piloting_custom_camera(te_editor_camera* editor_camera) {
     return editor_camera->is_piloting_custom_camera;
 }
 

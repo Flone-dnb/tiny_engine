@@ -69,9 +69,8 @@ typedef struct te_type_info {
     // Do not free returned pointer, valid while the `obj` exists.
     struct te_widget* (*get_widget)(void* obj);
 
-    // Function pointer is NULL if not a game object, otherwise returns a valid game object info.
-    // Do not free returned pointer, valid while the `obj` exists.
-    struct te_game_object_info* (*get_game_object_info)(void* obj);
+    // NULL if not a game object.
+    struct te_game_object_info* game_object_info;
 
     // Returns `false` if this object should not be serialized.
     bool (*is_serialization_allowed)(void* obj);
@@ -115,16 +114,14 @@ typedef struct te_type_info {
 } te_type_info;
 
 // Creates a new type info to be registered using @ref type_database_register_type.
-// Specify NULL to get_widget if not a widget, otherwise return base widget type.
+// Specify NULL as get_widget if not a widget, otherwise return base widget type.
+// Specify NULL as game_object_info if not a game object, otherwise moves the ownership
+// of the pointer to the type database.
 te_type_info* type_info_create(
-    const char* id,
-    void* (*create)(void),
-    void (*destroy)(void* obj),
+    const char* id, void* (*create)(void), void (*destroy)(void* obj),
     void (*spawn)(struct te_world* world, void* obj),
-    void (*despawn)(struct te_world* world, void* obj),
-    struct te_widget* (*get_widget)(void*),
-    struct te_game_object_info* (*get_game_object_info)(void* obj),
-    bool (*is_serialization_allowed)(void* obj));
+    void (*despawn)(struct te_world* world, void* obj), struct te_widget* (*get_widget)(void*),
+    struct te_game_object_info* game_object_info, bool (*is_serialization_allowed)(void* obj));
 void type_info_add_bool_variable(
     te_type_info* info, const char* name, te_bool_setter setter, te_bool_getter getter);
 void type_info_add_uint_variable(

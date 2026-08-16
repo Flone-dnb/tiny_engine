@@ -11,9 +11,6 @@ typedef struct te_game_object_info {
     // Points to a static string.
     const char* type_id;
 
-    // Always valid, pointer to the actual game object (camera, model, etc.).
-    void* game_object;
-
     // Returns NULL if not spawned.
     struct te_world* (*get_world)(void* game_object);
 
@@ -29,3 +26,8 @@ typedef struct te_game_object_info {
 
     enum te_game_object_type type;
 } te_game_object_info;
+
+typedef struct te_game_object_data {
+    void* object;
+    te_game_object_info* info;
+} te_game_object_data;

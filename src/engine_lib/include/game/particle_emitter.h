@@ -13,9 +13,7 @@ te_particle_emitter* particle_emitter_create(void);
 void particle_emitter_destroy(te_particle_emitter* emitter);
 
 // Returns game object info.
-// Returned pointer is valid while the game object is valid.
-struct te_game_object_info*
-particle_emitter_get_game_object_info(te_particle_emitter* emitter);
+struct te_game_object_info* particle_emitter_get_game_object_info();
 
 // Optionally you can set a name of the emitter. The string will be copied.
 // Returns NULL if was not set previously.

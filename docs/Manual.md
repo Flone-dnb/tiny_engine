@@ -79,7 +79,7 @@ The camera is a game object that's needed to view the world, here's an example o
 
 ```C
 te_camera* camera = camera_create();
-world_spawn_game_object(game_world, camera_get_game_object_info(camera)); // spawn first
+world_spawn_game_object(game_world, camera, camera_get_game_object_info()); // spawn first
 world_set_active_camera(game_world, camera); // then set active
 ```
 

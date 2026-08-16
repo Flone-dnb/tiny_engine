@@ -22,7 +22,8 @@ void world_inspector_reset(te_world_inspector* inspector);
 // Looks for the specified game object and selects it if it exists in the world inspector.
 // Specify NULL to clear selection.
 void world_inspector_select_obj(
-    te_world_inspector* inspector, struct te_game_object_info* target_info);
+    te_world_inspector* inspector, void* target_game_object,
+    struct te_game_object_info* target_info);
 
 // In case some game object's name was changed call this function to make sure world inspector displays the updated name.
 void world_inspector_refresh_names(te_world_inspector* inspector);

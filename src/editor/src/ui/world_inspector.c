@@ -41,6 +41,7 @@ enum te_world_inspector_state {
 typedef struct te_world_item_info {
     // NULL if @ref widget is valid.
     te_game_object_info* game_object_info;
+    void* game_obj;
 
     // NULL if @ref game_object_info is valid.
     te_widget* widget;
@@ -197,7 +198,7 @@ refresh_button_highlight(te_world_inspector* inspector) {
                 continue;
             }
         } else {
-            if (info->game_object_info->game_object != inspected_object) {
+            if (info->game_obj != inspected_object) {
                 continue;
             }
         }
@@ -247,8 +248,7 @@ refresh_item_names(te_world_inspector* inspector) {
                     &((te_world_item_info*)inspector->item_list)[item_idx];
                 indent = info->indent;
                 if (info->game_object_info != NULL) {
-                    text_to_display =
-                        info->game_object_info->get_name(info->game_object_info->game_object);
+                    text_to_display = info->game_object_info->get_name(info->game_obj);
                     if (text_to_display == NULL) {
                         text_to_display = info->game_object_info->type_id;
                     }
@@ -354,6 +354,7 @@ save_widgets_to_list_recurive(
     te_world_item_info* info = &items[(*item_idx)];
     info->widget = widget;
     info->game_object_info = NULL;
+    info->game_obj = NULL;
     info->indent = (*indent);
 
     (*item_idx) += 1;
@@ -418,24 +419,26 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
 
     if (inspector->is_3dobj_mode_selected) {
         unsigned int root_game_objects = 0;
-        te_game_object_info** infos = world_get_root_game_objects(world, &root_game_objects);
+        te_game_object_data* root_game_objs =
+            world_get_root_game_objects(world, &root_game_objects);
 
         // Count items.
         inspector->item_list_count = 0;
         for (unsigned int i = 0; i < root_game_objects; i++) {
-            te_game_object_info* info = infos[i];
+            te_game_object_data* obj_data = &root_game_objs[i];
 
-            const te_type_info* type_info = type_database_get_type_info(info->type_id);
-            if (info->type_id == NULL) {
+            const te_type_info* type_info =
+                type_database_get_type_info(obj_data->info->type_id);
+            if (obj_data->info->type_id == NULL) {
                 continue;
             }
-            if (!type_info->is_serialization_allowed(info->game_object)) {
+            if (!type_info->is_serialization_allowed(obj_data->object)) {
                 continue;
             }
 
-            if (info->type == TE_GOT_MODEL) {
+            if (obj_data->info->type == TE_GOT_MODEL) {
                 // Models are special because they can have child models or attached camera.
-                te_model* model = info->game_object;
+                te_model* model = obj_data->object;
 
                 te_camera* attached_camera = model_get_attached_camera(model);
                 if (attached_camera != NULL
@@ -466,35 +469,36 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
             unsigned int item_idx = 0;
 
             for (unsigned int i = 0; i < root_game_objects; i++) {
-                te_game_object_info* game_object_info = infos[i];
+                te_game_object_data* obj_data = &root_game_objs[i];
 
                 const te_type_info* type_info =
-                    type_database_get_type_info(game_object_info->type_id);
-                if (game_object_info->type_id == NULL) {
+                    type_database_get_type_info(obj_data->info->type_id);
+                if (obj_data->info->type_id == NULL) {
                     continue;
                 }
-                if (!type_info->is_serialization_allowed(game_object_info->game_object)) {
+                if (!type_info->is_serialization_allowed(obj_data->object)) {
                     continue;
                 }
 
                 te_world_item_info* item_info = &world_items[item_idx];
                 item_info->indent = 0;
-                item_info->game_object_info = game_object_info;
+                item_info->game_object_info = obj_data->info;
+                item_info->game_obj = obj_data->object;
                 item_info->widget = NULL;
 
                 item_idx += 1;
 
-                if (game_object_info->type == TE_GOT_MODEL) {
+                if (obj_data->info->type == TE_GOT_MODEL) {
                     // Models are special because they can have child model or attached camera.
-                    te_model* model = game_object_info->game_object;
+                    te_model* model = obj_data->object;
 
                     te_camera* attached_camera = model_get_attached_camera(model);
                     if (attached_camera != NULL
                         && camera_is_serialization_allowed(attached_camera)) {
                         te_world_item_info* item_info = &world_items[item_idx];
                         item_info->indent = 1;
-                        item_info->game_object_info =
-                            camera_get_game_object_info(attached_camera);
+                        item_info->game_object_info = camera_get_game_object_info();
+                        item_info->game_obj = attached_camera;
                         item_info->widget = NULL;
 
                         item_idx += 1;
@@ -510,8 +514,8 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
                         if (model_is_serialization_allowed(child_model)) {
                             te_world_item_info* item_info = &world_items[item_idx];
                             item_info->indent = 1;
-                            item_info->game_object_info =
-                                model_get_game_object_info(child_model);
+                            item_info->game_object_info = model_get_game_object_info();
+                            item_info->game_obj = child_model;
                             item_info->widget = NULL;
 
                             item_idx += 1;
@@ -522,7 +526,7 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
             }
         }
 
-        free(infos);
+        free(root_game_objs);
     } else {
         unsigned int root_count = 0;
         te_widget** root_widgets = world_get_widgets(world, &root_count);
@@ -591,7 +595,9 @@ world_inspector_rebuild_list(te_world_inspector* inspector, te_world* game_world
 }
 
 void
-world_inspector_select_obj(te_world_inspector* inspector, te_game_object_info* target_info) {
+world_inspector_select_obj(
+    te_world_inspector* inspector, void* target_game_object,
+    te_game_object_info* target_info) {
     if (inspector->state != TE_WIS_SHOW_WORLD_OBJECTS) {
         return;
     }
@@ -607,10 +613,14 @@ world_inspector_select_obj(te_world_inspector* inspector, te_game_object_info* t
     bool found = false;
     for (unsigned int page_idx = 0; page_idx < inspector->page_count; page_idx++) {
         for (unsigned int i = 0; i < inspector->item_buttons_count; i++) {
+            unsigned int list_item_idx = page_idx * inspector->item_buttons_count + i;
+            if (list_item_idx >= inspector->item_list_count) {
+                break;
+            }
             te_world_item_info* info =
                 &((te_world_item_info*)
                       inspector->item_list)[page_idx * inspector->item_buttons_count + i];
-            if (info->game_object_info != target_info) {
+            if (info->game_obj != target_game_object) {
                 continue;
             }
 
@@ -630,7 +640,7 @@ world_inspector_select_obj(te_world_inspector* inspector, te_game_object_info* t
         if (target_info->type != TE_GOT_MODEL) {
             return;
         }
-        void* custom_ptr = model_get_custom_ptr(target_info->game_object);
+        void* custom_ptr = model_get_custom_ptr(target_game_object);
         if (custom_ptr == NULL) {
             return;
         }
@@ -641,9 +651,10 @@ world_inspector_select_obj(te_world_inspector* inspector, te_game_object_info* t
                 te_world_item_info* info =
                     &((te_world_item_info*)
                           inspector->item_list)[page_idx * inspector->item_buttons_count + i];
-                if (info->game_object_info->game_object == custom_ptr) {
+                if (info->game_obj == custom_ptr) {
                     // Selected camera visualization model, display camera properties.
                     target_info = info->game_object_info;
+                    target_game_object = info->game_obj;
                     found = true;
                     break;
                 }
@@ -659,12 +670,12 @@ world_inspector_select_obj(te_world_inspector* inspector, te_game_object_info* t
     }
 
     if (target_info->type == TE_GOT_MODEL) {
-        editor_set_gizmo(inspector->editor, target_info->game_object);
+        editor_set_gizmo(inspector->editor, target_game_object);
     }
 
     if (!is_special) {
         property_inspector_show(
-            inspector->property_inspector, target_info->game_object, target_info->type_id);
+            inspector->property_inspector, target_game_object, target_info->type_id);
         refresh_item_names(inspector);
         refresh_page_text(inspector);
     }
@@ -802,11 +813,10 @@ on_button_list_item_clicked(te_button_widget* button) {
             const char* target_type_id = NULL;
 
             if (selected_info->game_object_info != NULL) {
-                target_object = selected_info->game_object_info->game_object;
+                target_object = selected_info->game_obj;
                 target_type_id = selected_info->game_object_info->type_id;
                 if (selected_info->game_object_info->type == TE_GOT_MODEL) {
-                    editor_set_gizmo(
-                        inspector->editor, selected_info->game_object_info->game_object);
+                    editor_set_gizmo(inspector->editor, selected_info->game_obj);
                 }
             } else {
                 if (selected_info->widget == NULL) {
@@ -883,7 +893,8 @@ on_button_list_item_clicked(te_button_widget* button) {
 
                     // Also check if we have gizmo on the object we are about to delete.
                     editor_on_before_game_obj_deleted(
-                        inspector->editor, inspector->selected_item->game_object_info);
+                        inspector->editor, inspector->selected_item->game_obj,
+                        inspector->selected_item->game_object_info);
                 } else {
                     if (inspector->selected_item->widget == NULL) {
                         log_error("expected widget pointer to be valid");
@@ -899,8 +910,7 @@ on_button_list_item_clicked(te_button_widget* button) {
                     type_info->despawn(inspector->game_world, widget_owner);
                     type_info->destroy(widget_owner);
                 } else {
-                    void* game_object =
-                        inspector->selected_item->game_object_info->game_object;
+                    void* game_object = inspector->selected_item->game_obj;
                     type_info->despawn(inspector->game_world, game_object);
                     type_info->destroy(game_object);
                 }
@@ -910,11 +920,11 @@ on_button_list_item_clicked(te_button_widget* button) {
 
                 on_top_button_clicked(inspector->top_button);
             } else if (option_index == TE_OMO_REMOVE_ATTACHMENT) {
-                if (inspector->selected_item->game_object_info != NULL) {
+                if (inspector->selected_item->game_obj != NULL) {
                     switch (inspector->selected_item->game_object_info->type) {
                         case (TE_GOT_CAMERA): {
-                            te_model* parent = camera_get_parent_model(
-                                inspector->selected_item->game_object_info->game_object);
+                            te_model* parent =
+                                camera_get_parent_model(inspector->selected_item->game_obj);
                             if (parent != NULL) {
                                 model_attach_camera(parent, NULL);
                             }
@@ -922,8 +932,7 @@ on_button_list_item_clicked(te_button_widget* button) {
                         }
                         case (TE_GOT_MODEL): {
                             model_set_parent(
-                                inspector->selected_item->game_object_info->game_object, NULL,
-                                0xFFFFFFFF);
+                                inspector->selected_item->game_obj, NULL, 0xFFFFFFFF);
                             break;
                         }
                         default: {
@@ -957,10 +966,10 @@ on_button_list_item_clicked(te_button_widget* button) {
                 &((te_world_item_info*)inspector->item_list)
                     [inspector->current_page * inspector->item_buttons_count + button_index];
 
-            if (inspector->selected_item->game_object_info != NULL) {
+            if (inspector->selected_item->game_obj != NULL) {
                 switch (inspector->selected_item->game_object_info->type) {
                     case (TE_GOT_CAMERA): {
-                        if (target_info->game_object_info == NULL) {
+                        if (target_info->game_obj == NULL) {
                             log_error("can't attach camera to a non game object");
                             abort();
                         }
@@ -969,12 +978,11 @@ on_button_list_item_clicked(te_button_widget* button) {
                             abort();
                         }
                         model_attach_camera(
-                            target_info->game_object_info->game_object,
-                            inspector->selected_item->game_object_info->game_object);
+                            target_info->game_obj, inspector->selected_item->game_obj);
                         break;
                     }
                     case (TE_GOT_MODEL): {
-                        if (target_info->game_object_info == NULL) {
+                        if (target_info->game_obj == NULL) {
                             log_error("can't attach model to a non game object");
                             abort();
                         }
@@ -983,8 +991,8 @@ on_button_list_item_clicked(te_button_widget* button) {
                             abort();
                         }
                         model_set_parent(
-                            inspector->selected_item->game_object_info->game_object,
-                            target_info->game_object_info->game_object, 0xFFFFFFFF);
+                            inspector->selected_item->game_obj, target_info->game_obj,
+                            0xFFFFFFFF);
                         break;
                     }
                     default: {

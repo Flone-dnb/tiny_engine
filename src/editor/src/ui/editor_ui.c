@@ -96,7 +96,7 @@ editor_ui_set_visibility(te_editor_ui* ui, bool is_visible) {
         widget_set_relative_position(left_widget, (vec2){0.0f, 1.0f});
         widget_set_relative_position(right_widget, (vec2){1.0f, 1.0f});
 
-        world_inspector_select_obj(ui->world_inspector, NULL);
+        world_inspector_select_obj(ui->world_inspector, NULL, NULL);
         property_inspector_hide(ui->property_inspector);
     }
 }

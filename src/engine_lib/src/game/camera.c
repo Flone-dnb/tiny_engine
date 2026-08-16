@@ -25,9 +25,6 @@ struct te_camera {
     // NULL if not set.
     char* name;
 
-    // Always valid.
-    te_game_object_info* game_object_info;
-
     // NULL if not set. Custom callback.
     void (*custom_on_before_destroyed)(te_camera*);
     void* custom_ptr;
@@ -123,16 +120,6 @@ camera_create() {
     camera->custom_on_before_destroyed = NULL;
     camera->custom_ptr = NULL;
 
-    camera->game_object_info = malloc(sizeof(te_game_object_info));
-    camera->game_object_info->type_id = camera_get_type_id();
-    camera->game_object_info->type = TE_GOT_CAMERA;
-    camera->game_object_info->game_object = camera;
-    camera->game_object_info->get_world = camera_get_world;
-    camera->game_object_info->get_name = camera_get_name;
-    camera->game_object_info->on_spawned = on_spawned;
-    camera->game_object_info->on_despawned = on_despawned;
-    camera->game_object_info->destroy = camera_destroy;
-
     return camera;
 }
 
@@ -143,7 +130,6 @@ camera_destroy(te_camera* camera) {
     }
 
     free(camera->name);
-    free(camera->game_object_info);
 
     free(camera);
 }
@@ -173,7 +159,7 @@ create_editor_model(te_camera* camera) {
     model_set_custom_geometry_provider(camera->editor_model, get_editor_camera_model_geometry);
     model_set_custom_ptr(camera->editor_model, camera);
 
-    world_spawn_game_object(camera->world, model_get_game_object_info(camera->editor_model));
+    world_spawn_game_object(camera->world, camera->editor_model, model_get_game_object_info());
 
     vec3 pos;
     camera_get_world_position(camera, pos);
@@ -186,7 +172,8 @@ destroy_editor_model(te_camera* camera) {
         return;
     }
 
-    world_despawn_game_object(camera->world, model_get_game_object_info(camera->editor_model));
+    world_despawn_game_object(
+        camera->world, camera->editor_model, model_get_game_object_info());
     model_destroy(camera->editor_model);
     camera->editor_model = NULL;
 }
@@ -216,7 +203,7 @@ on_despawned(te_camera* camera) {
     if (camera->world != NULL && camera->editor_model != NULL) {
         if (!prv_world_is_being_destroyed(camera->world)) {
             world_despawn_game_object(
-                camera->world, model_get_game_object_info(camera->editor_model));
+                camera->world, camera->editor_model, model_get_game_object_info());
             model_destroy(camera->editor_model);
         }
         camera->editor_model = NULL;
@@ -227,8 +214,8 @@ on_despawned(te_camera* camera) {
 }
 
 te_game_object_info*
-camera_get_game_object_info(te_camera* camera) {
-    return camera->game_object_info;
+camera_get_game_object_info() {
+    return type_database_get_type_info(camera_get_type_id())->game_object_info;
 }
 
 const char*
@@ -261,7 +248,7 @@ type_spawn(te_world* world, te_camera* camera) {
         abort();
     }
 
-    world_spawn_game_object(world, camera->game_object_info);
+    world_spawn_game_object(world, camera, camera_get_game_object_info());
 }
 
 static void
@@ -277,14 +264,24 @@ type_despawn(te_world* world, te_camera* camera) {
             NULL); // make camera to be in the array of root world objects
     }
     world_despawn_game_object(
-        camera->world, camera->game_object_info); // despawn root world object
+        camera->world, camera, camera_get_game_object_info()); // despawn root world object
 }
 
 void
 camera_register_type(void) {
+    te_game_object_info* game_object_info = malloc(sizeof(te_game_object_info));
+    game_object_info->type_id = camera_get_type_id();
+    game_object_info->type = TE_GOT_CAMERA;
+    game_object_info->get_world = camera_get_world;
+    game_object_info->get_name = camera_get_name;
+    game_object_info->on_spawned = on_spawned;
+    game_object_info->on_despawned = on_despawned;
+    game_object_info->destroy = camera_destroy;
+
     te_type_info* info = type_info_create(
         camera_get_type_id(), camera_create, camera_destroy, type_spawn, type_despawn, NULL,
-        camera_get_game_object_info, camera_is_serialization_allowed);
+        game_object_info, camera_is_serialization_allowed);
+
     type_info_add_vec3_variable(info, "position", camera_set_position, camera_get_position);
     type_info_add_vec3_variable(info, "rotation", camera_set_rotation, camera_get_rotation);
     type_info_add_uint_variable(

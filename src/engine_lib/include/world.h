@@ -23,8 +23,10 @@ const char* world_get_name(te_world* world);
 
 // The game object will be automatically despawned and destroyed when the world is being destroyed
 // but you can despawn the game object earlier to manually manage its destruction.
-void world_spawn_game_object(te_world* world, struct te_game_object_info* info);
-void world_despawn_game_object(te_world* world, struct te_game_object_info* info);
+void
+world_spawn_game_object(te_world* world, void* game_object, struct te_game_object_info* info);
+void world_despawn_game_object(
+    te_world* world, void* game_object, struct te_game_object_info* info);
 
 // The widget will be automatically despawned and destroyed when the world is being destroyed
 // but you can despawn the widget earlier to manually manage its destruction.
@@ -83,7 +85,7 @@ bool world_get_cursor_relative_pos(te_world* world, vec2 cursor_pos);
 // Returns NULL if no objects are spawned, otherwise all spawned objects.
 // You must free returned array (but not the items in the array).
 // Note: returned array only contains "root" game objects (does not include attached/child game objects).
-struct te_game_object_info** world_get_root_game_objects(te_world* world, unsigned int* count);
+struct te_game_object_data* world_get_root_game_objects(te_world* world, unsigned int* count);
 struct te_widget** world_get_widgets(te_world* world, unsigned int* count);
 
 // Do not free/destroy returned pointer, valid while the world exists.
@@ -120,9 +122,10 @@ void prv_world_on_window_size_changed(te_world* world);
 // Adds/removes the specified item to/from the array of spawned root game objects
 // (does nothing if already added/removed). Does not notify the item being removed.
 void prv_world_add_root_game_object_no_notify(
-    te_world* world, struct te_game_object_info* info, bool ignore_if_already_added);
+    te_world* world, void* game_object, struct te_game_object_info* info,
+    bool ignore_if_already_added);
 void prv_world_remove_root_game_object_no_notify(
-    te_world* world, struct te_game_object_info* info, bool must_exist_in_array);
+    te_world* world, void* game_object, bool must_exist_in_array);
 void prv_world_add_root_widget_no_notify(
     te_world* world, struct te_widget* widget, bool check_if_already_added);
 void prv_world_remove_root_widget_no_notify(

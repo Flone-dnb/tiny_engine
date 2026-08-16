@@ -56,7 +56,7 @@ game_on_game_started(void* game_instance, te_game_manager* game_manager) {
 
     // Spawn active camera.
     te_camera* camera = camera_create();
-    world_spawn_game_object(world, camera_get_game_object_info(camera));
+    world_spawn_game_object(world, camera, camera_get_game_object_info());
     world_set_active_camera(world, camera);
 
     camera_controller_set_camera(game->camera_controller, camera);
@@ -78,12 +78,12 @@ game_on_game_started(void* game_instance, te_game_manager* game_manager) {
     model_set_name(floor, "floor");
     model_set_scale(floor, (vec3){4.0f, 1.0f, 4.0f});
     model_set_color(floor, (vec4){1.0f, 0.5f, 0.0f, 1.0f});
-    world_spawn_game_object(world, model_get_game_object_info(floor));
+    world_spawn_game_object(world, floor, model_get_game_object_info());
 
     te_model* box = model_create();
     model_set_name(box, "box");
     model_set_position(box, (vec3){0.0f, 1.0f, -1.0f});
-    world_spawn_game_object(world, model_get_game_object_info(box));
+    world_spawn_game_object(world, box, model_get_game_object_info());
 }
 
 void

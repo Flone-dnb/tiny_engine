@@ -1,6 +1,7 @@
 #include "obj_picking.h"
 
 #include <world.h>
+#include <game/game_object_info.h>
 #include <game/camera.h>
 #include <game/model.h>
 #include <game/game_object_info.h>
@@ -8,7 +9,7 @@
 #include <shape/frustum_shape.h>
 #include <gizmo.h>
 
-typedef struct{
+typedef struct {
     te_model* model;
     te_aabb_shape aabb_world;
     float bb_size;
@@ -76,34 +77,38 @@ test_model_hit(
     return false;
 }
 
-te_game_object_info*
+void
 obj_picking_find_obj_under_cursor(
-    vec2 cursor_pos_rel, te_camera* camera, te_world* world, te_gizmo* gizmo) {
+    vec2 cursor_pos_rel, te_camera* camera, te_world* world, te_gizmo* gizmo,
+    void** out_game_obj, struct te_game_object_info** out_game_obj_info) {
+    (*out_game_obj) = NULL;
+    (*out_game_obj_info) = NULL;
+
     te_frustum_shape* frustum = camera_get_frustum(camera);
 
     vec3 camera_world_ray;
     if (!camera_calc_cursor_world_dir(camera, cursor_pos_rel, camera_world_ray)) {
-        return NULL;
+        return;
     }
 
     vec3 camera_world_pos;
     camera_get_world_position(camera, camera_world_pos);
 
     unsigned int count;
-    te_game_object_info** root_game_objects = world_get_root_game_objects(world, &count);
+    te_game_object_data* root_game_objects = world_get_root_game_objects(world, &count);
     if (count == 0) {
-        return NULL;
+        return;
     }
 
     closest_model_info info;
     info.model = NULL;
 
     for (unsigned int i = 0; i < count; i++) {
-        te_game_object_info* root_game_object = root_game_objects[i];
-        if (root_game_object->type != TE_GOT_MODEL) {
+        te_game_object_data* root_game_object = &root_game_objects[i];
+        if (root_game_object->info->type != TE_GOT_MODEL) {
             continue;
         }
-        te_model* model = root_game_object->game_object;
+        te_model* model = root_game_object->object;
 
         if (test_model_hit(&info, frustum, gizmo, camera_world_pos, camera_world_ray, model)) {
             break;
@@ -127,11 +132,11 @@ obj_picking_find_obj_under_cursor(
 
     if (info.model == NULL) {
         free(root_game_objects);
-        return NULL;
+        return;
     }
 
-    te_game_object_info* picked_game_object = model_get_game_object_info(info.model);
+    (*out_game_obj) = info.model;
+    (*out_game_obj_info) = model_get_game_object_info();
 
     free(root_game_objects);
-    return picked_game_object;
 }
