@@ -11,7 +11,7 @@ te_render_data_array* render_data_array_create(
 void render_data_array_destroy(te_render_data_array* array);
 
 // Returns a handle which will never change and will always be valid until the item is removed.
-// Use the handle to modify render data using @ref render_data_array_get_item_data.
+// Use the handle to modify render data using @ref render_data_array_get_item_data_tmp.
 unsigned int render_data_array_add_item(te_render_data_array* array);
 void render_data_array_remove_item(te_render_data_array* array, unsigned int handle);
 
