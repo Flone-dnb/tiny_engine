@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cglm/vec3.h>
+
 enum te_game_object_type { TE_GOT_CAMERA, TE_GOT_MODEL, TE_GOT_PARTICLE_EMITTER };
 
 struct te_world;
@@ -16,6 +18,10 @@ typedef struct te_game_object_info {
 
     // Returns NULL if has no name, otherwise name of the game object (used for logging, debugging purposes).
     const char* (*get_name)(void* game_object);
+
+    // NULL if not applicable.
+    void (*get_position)(void* game_object, vec3 out);
+    void (*set_position)(void* game_object, vec3 pos);
 
     // Called by world to notify game object.
     void (*on_spawned)(void* game_object, struct te_world* world);

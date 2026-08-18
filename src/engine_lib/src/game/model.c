@@ -1426,6 +1426,8 @@ model_register_type(void) {
     te_game_object_info* game_object_info = malloc(sizeof(te_game_object_info));
     game_object_info->type_id = model_get_type_id();
     game_object_info->type = TE_GOT_MODEL;
+    game_object_info->get_position = model_get_position;
+    game_object_info->set_position = model_set_position;
     game_object_info->get_world = model_get_world;
     game_object_info->get_name = model_get_name;
     game_object_info->on_spawned = on_spawned;

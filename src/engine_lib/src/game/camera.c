@@ -272,6 +272,8 @@ camera_register_type(void) {
     te_game_object_info* game_object_info = malloc(sizeof(te_game_object_info));
     game_object_info->type_id = camera_get_type_id();
     game_object_info->type = TE_GOT_CAMERA;
+    game_object_info->set_position = camera_set_position;
+    game_object_info->get_position = camera_get_position;
     game_object_info->get_world = camera_get_world;
     game_object_info->get_name = camera_get_name;
     game_object_info->on_spawned = on_spawned;

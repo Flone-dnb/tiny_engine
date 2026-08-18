@@ -486,6 +486,8 @@ particle_emitter_register_type(void) {
     te_game_object_info* game_object_info = malloc(sizeof(te_game_object_info));
     game_object_info->type_id = particle_emitter_get_type_id();
     game_object_info->type = TE_GOT_PARTICLE_EMITTER;
+    game_object_info->set_position = particle_emitter_set_position;
+    game_object_info->get_position = particle_emitter_get_position;
     game_object_info->get_world = particle_emitter_get_world;
     game_object_info->get_name = particle_emitter_get_name;
     game_object_info->on_spawned = on_spawned;

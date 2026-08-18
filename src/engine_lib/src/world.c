@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <game/model.h>
 #include <game/camera.h>
-#include <game/particle_emitter.h>
 #include <game/game_object_info.h>
 #include <game/scene_animation.h>
 #include <game_manager.h>
@@ -798,36 +797,11 @@ world_add_from_file_with_offset(
         // Apply offset (only apply to root objects, child/attached objects will be affected).
         if (type_info->game_object_info != NULL) {
             te_game_object_info* game_obj_info = type_info->game_object_info;
-            switch (game_obj_info->type) {
-                case (TE_GOT_MODEL): {
-                    te_model* model = obj;
-
-                    // TODO: move position to game object and remove includes for final game object types
-
-                    vec3 pos;
-                    model_get_position(model, pos);
-                    glm_vec3_add(pos, location_offset, pos);
-                    model_set_position(model, pos);
-                    break;
-                }
-                case (TE_GOT_CAMERA): {
-                    te_camera* camera = obj;
-
-                    vec3 pos;
-                    camera_get_position(camera, pos);
-                    glm_vec3_add(pos, location_offset, pos);
-                    camera_set_position(camera, pos);
-                    break;
-                }
-                case (TE_GOT_PARTICLE_EMITTER): {
-                    te_particle_emitter* emitter = obj;
-
-                    vec3 pos;
-                    particle_emitter_get_position(emitter, pos);
-                    glm_vec3_add(pos, location_offset, pos);
-                    particle_emitter_set_position(emitter, pos);
-                    break;
-                }
+            if (game_obj_info->set_position != NULL && game_obj_info->get_position != NULL) {
+                vec3 pos;
+                game_obj_info->get_position(obj, pos);
+                glm_vec3_add(pos, location_offset, pos);
+                game_obj_info->set_position(obj, pos);
             }
         }
 
