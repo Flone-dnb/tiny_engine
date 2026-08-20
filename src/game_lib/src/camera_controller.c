@@ -166,10 +166,6 @@ camera_controller_on_keyboard_button_released(
         controller->movement_input[1] = 0.0f;
     } else if (button == TE_KB_A && controller->movement_input[1] < 0.0f) {
         controller->movement_input[1] = 0.0f;
-    } else if (button == TE_KB_E && controller->movement_input[2] > 0.0f) {
-        controller->movement_input[2] = 0.0f;
-    } else if (button == TE_KB_Q && controller->movement_input[2] < 0.0f) {
-        controller->movement_input[2] = 0.0f;
     }
 }
 
