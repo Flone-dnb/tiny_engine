@@ -320,6 +320,11 @@ window_get_cursor_position(te_window* window, float* x, float* y) {
     SDL_GetMouseState(x, y);
 }
 
+void
+window_set_cursor_position(te_window* window, float x, float y) {
+    SDL_WarpMouseInWindow(window->sdl_window, x, y);
+}
+
 unsigned int
 window_get_display_refresh_rate(te_window* window) {
     return window->display_refresh_rate;

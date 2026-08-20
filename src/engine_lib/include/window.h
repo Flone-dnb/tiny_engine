@@ -95,8 +95,9 @@ void window_close(te_window* window);
 // Returns the current size of the window (in pixels).
 void window_get_size(te_window* window, unsigned int* width, unsigned int* height);
 
-// Returns position of the cursor in pixels.
+// Sets/gets position of the cursor in pixels.
 void window_get_cursor_position(te_window* window, float* x, float* y);
+void window_set_cursor_position(te_window* window, float x, float y);
 
 unsigned int window_get_display_refresh_rate(te_window* window);
 
