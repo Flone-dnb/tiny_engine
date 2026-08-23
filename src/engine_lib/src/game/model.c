@@ -201,6 +201,8 @@ struct te_model {
     // Custom user-specified data.
     void* custom_ptr;
     void (*custom_on_before_destroyed)(te_model*);
+    void (*custom_on_after_spawned)(te_model*);
+    void (*custom_on_before_despawned)(te_model*);
     void (*custom_get_geometry)(
         te_model* model, te_vertex_pack** vertices, unsigned short** indices,
         unsigned int* vertex_count, bool* free_custom_geometry);
@@ -279,6 +281,8 @@ model_create() {
     model->custom_ptr = NULL;
     model->custom_value = 0;
     model->custom_on_before_destroyed = NULL;
+    model->custom_on_after_spawned = NULL;
+    model->custom_on_before_despawned = NULL;
     model->custom_get_geometry = NULL;
     model->is_opaque = true;
     model->is_serialization_allowed = true;
@@ -950,6 +954,18 @@ model_get_custom_value(te_model* model) {
 }
 
 void
+model_set_custom_on_after_spawned(
+    te_model* model, void (*custom_on_after_spawned)(te_model*)) {
+    model->custom_on_after_spawned = custom_on_after_spawned;
+}
+
+void
+model_set_custom_on_before_despawned(
+    te_model* model, void (*custom_on_before_despawned)(te_model*)) {
+    model->custom_on_before_despawned = custom_on_before_despawned;
+}
+
+void
 model_set_custom_on_before_destroyed(
     te_model* model, void (*custom_on_before_destroyed)(te_model*)) {
     model->custom_on_before_destroyed = custom_on_before_destroyed;
@@ -1349,10 +1365,18 @@ on_spawned(te_model* model, te_world* world) {
         model->tick_callback_id = game_manager_add_tick_callback(
             world_get_game_manager(model->world), model, model_tick);
     }
+
+    if (model->custom_on_after_spawned != NULL) {
+        model->custom_on_after_spawned(model);
+    }
 }
 
 static void
 on_despawned(te_model* model) {
+    if (model->custom_on_before_despawned != NULL) {
+        model->custom_on_before_despawned(model);
+    }
+
     if (model->tick_callback_id != 0xFFFFFFFF) {
         game_manager_remove_tick_callback(
             world_get_game_manager(model->world), model->tick_callback_id);

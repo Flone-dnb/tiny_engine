@@ -178,6 +178,13 @@ void* model_get_custom_ptr(te_model* model);
 void model_set_custom_value(te_model* model, unsigned int value);
 unsigned int model_get_custom_value(te_model* model);
 
+// Optionally you can set a custom callback that will be called after the model was spawned
+// or before it was despawned.
+void
+model_set_custom_on_after_spawned(te_model* model, void (*custom_on_after_spawned)(te_model*));
+void model_set_custom_on_before_despawned(
+    te_model* model, void (*custom_on_before_despawned)(te_model*));
+
 // Optionally you can set a custom callback that will be called before the model
 // is destroyed.
 void model_set_custom_on_before_destroyed(
