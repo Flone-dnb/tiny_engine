@@ -59,7 +59,7 @@ math_convert_norm_dir_to_rot(vec3 dir, vec3 out) {
     }
 #endif
 
-    out[0] = glm_deg(asinf(dir[1]));
+    out[0] = glm_deg(-asinf(dir[1]));
     out[1] = glm_deg(atan2f(dir[0], dir[2]));
     out[2] = 0.0f;
 
