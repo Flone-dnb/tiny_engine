@@ -4,7 +4,50 @@
 #include <string.h>
 #include "game/model.h"
 
-void mesh_generator_cube(
+void
+mesh_generator_plane(
+    te_vertex_pack** vertices, unsigned short** indices, unsigned int* index_count) {
+    const float half = 0.5f;
+
+    (*vertices) = vertex_pack_create(4, false);
+
+    const unsigned int vert_size = (*vertices)->vertex_sizeof;
+    unsigned char offset = (*vertices)->attribute_offsets[TE_VA_UV];
+
+    glm_vec2_make((vec2){0.0f, 0.0f}, (float*)((*vertices)->data + (vert_size * 0 + offset)));
+    glm_vec2_make((vec2){1.0f, 0.0f}, (float*)((*vertices)->data + (vert_size * 1 + offset)));
+    glm_vec2_make((vec2){0.0f, 1.0f}, (float*)((*vertices)->data + (vert_size * 2 + offset)));
+    glm_vec2_make((vec2){1.0f, 1.0f}, (float*)((*vertices)->data + (vert_size * 3 + offset)));
+
+    offset = (*vertices)->attribute_offsets[TE_VA_NORMAL];
+    for (unsigned int i = 0; i < 4; i++) {
+        glm_vec3_make(
+            (vec3){0.0f, 0.0f, 1.0f}, (float*)((*vertices)->data + (vert_size * i + offset)));
+    }
+
+    offset = (*vertices)->attribute_offsets[TE_VA_POSITION];
+
+    glm_vec3_make(
+        (vec3){-half, half, -half}, (float*)((*vertices)->data + (vert_size * 0 + offset)));
+    glm_vec3_make(
+        (vec3){half, half, -half}, (float*)((*vertices)->data + (vert_size * 1 + offset)));
+    glm_vec3_make(
+        (vec3){-half, -half, -half}, (float*)((*vertices)->data + (vert_size * 2 + offset)));
+    glm_vec3_make(
+        (vec3){half, -half, -half}, (float*)((*vertices)->data + (vert_size * 3 + offset)));
+
+    (*index_count) = 6;
+    (*indices) = malloc(sizeof(unsigned short) * (*index_count));
+    (*indices)[0] = 0;
+    (*indices)[1] = 2;
+    (*indices)[2] = 1;
+    (*indices)[3] = 3;
+    (*indices)[4] = 1;
+    (*indices)[5] = 2;
+}
+
+void
+mesh_generator_cube(
     struct te_vertex_pack** vertices, unsigned short** indices, unsigned int* index_count) {
     const float half = 0.5f;
 
@@ -202,20 +245,21 @@ void mesh_generator_cube(
     (*indices)[35] = 21;
 }
 
-void mesh_generator_icosphere(
+void
+mesh_generator_icosphere(
     struct te_vertex_pack** vertices, unsigned short** indices, unsigned int* index_count) {
     const float X = 0.525731112119133606f;
     const float Z = 0.850650808352039932f;
     const float N = 0.0f;
 
-    vec3 positions[] = {
-        {-X, N, Z}, {X, N, Z},   {-X, N, -Z}, {X, N, -Z}, {N, Z, X},  {N, Z, -X},
-        {N, -Z, X}, {N, -Z, -X}, {Z, X, N},   {-Z, X, N}, {Z, -X, N}, {-Z, -X, N}};
+    vec3 positions[] = {{-X, N, Z}, {X, N, Z},  {-X, N, -Z}, {X, N, -Z},
+                        {N, Z, X},  {N, Z, -X}, {N, -Z, X},  {N, -Z, -X},
+                        {Z, X, N},  {-Z, X, N}, {Z, -X, N},  {-Z, -X, N}};
 
-    unsigned short triangle_indices[] = {
-        0, 4, 1, 0, 9, 4,  9, 5, 4,  4, 5, 8,  4, 8, 1,  8, 10, 1, 8, 3, 10,
-        5, 3, 8, 5, 2, 3,  2, 7, 3,  7, 10, 3, 7, 6, 10, 7, 11, 6, 11, 0, 6,
-        0, 1, 6, 6, 1, 10, 9, 0, 11, 9, 11, 2, 9, 2, 5,  7, 2, 11};
+    unsigned short triangle_indices[] = {0, 4,  1,  0, 9, 4,  9, 5,  4, 4,  5, 8, 4, 8, 1,
+                                         8, 10, 1,  8, 3, 10, 5, 3,  8, 5,  2, 3, 2, 7, 3,
+                                         7, 10, 3,  7, 6, 10, 7, 11, 6, 11, 0, 6, 0, 1, 6,
+                                         6, 1,  10, 9, 0, 11, 9, 11, 2, 9,  2, 5, 7, 2, 11};
 
     (*index_count) = 60;
     (*indices) = malloc(sizeof(unsigned short) * (*index_count));

@@ -2,6 +2,10 @@
 
 struct te_vertex_pack;
 
+// Generates a plane mesh, creates (allocates) vertices and indices, and returns pointers to allocated data.
+void mesh_generator_plane(
+    struct te_vertex_pack** vertices, unsigned short** indices, unsigned int* index_count);
+
 // Generates a cube mesh, creates (allocates) vertices and indices, and returns pointers to allocated data.
 void mesh_generator_cube(
     struct te_vertex_pack** vertices, unsigned short** indices, unsigned int* index_count);
