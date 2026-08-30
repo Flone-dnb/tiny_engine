@@ -79,6 +79,9 @@ typedef struct te_model_vertex_skinned {
 // ------------------------------------------------------------------------------------------------
 
 te_model* model_create();
+// Creates a new model by loading the first model from the specified file.
+// Retuns NULL if no model found.
+te_model* model_create_from_file(const char* relative_path);
 void model_destroy(te_model* model);
 
 // Returns game object info.

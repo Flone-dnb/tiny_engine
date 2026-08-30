@@ -67,9 +67,11 @@ te_world* game_world = game_manager_create_world(game_manager, "game");
 game_manager_destroy_world(game_manager, game_world);
 ```
 
-Game world is a container for game objects (described in the next section).
+Game world is a container for game objects (game object are described in the next section).
 
 In order to save the world use `world_save_to_file` and in order to add game objects from a file to a world use `world_add_from_file`. Using these functions you can implement sublevels and prefabs (sort of): create a small scene in the editor (or in the code) then save it, then add this world (sublevel) to some other world (main level) using the "add from file" function.
+
+If you only need to load a single game object from a file (for example a model) you can use `model_create_from_file` and for any custom game objects you can implement a similar function.
 
 # Game objects
 

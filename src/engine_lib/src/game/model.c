@@ -9,6 +9,7 @@
 #include <game/game_object_info.h>
 #include <game_manager.h>
 #include <io/log.h>
+#include <io/config.h>
 #include <io/filesystem.h>
 #include <math_funcs.h>
 #include <render/model_renderer.h>
@@ -297,6 +298,49 @@ model_create() {
     glm_vec3_one(model->scale);
 
     return model;
+}
+
+te_model*
+model_create_from_file(const char* relative_path) {
+    te_config* config = config_create(relative_path);
+
+    const unsigned int section_count = config_get_section_count(config);
+    unsigned int section_idx = 0;
+
+    while (section_idx < section_count) {
+        if (strcmp(config_section_get_name(config, section_idx), model_get_type_id()) != 0) {
+            section_idx += 1;
+            continue;
+        }
+
+        const te_type_info* type_info = type_database_get_type_info(model_get_type_id());
+        te_model* model = model_create();
+        type_info_load_from_config(type_info, config, section_idx, model);
+
+        const unsigned int child_model_count =
+            config_section_get_uint(config, section_idx, "child_model_count", 0);
+        section_idx += 1;
+
+        for (unsigned int child_idx = 0; child_idx < child_model_count; child_idx++) {
+            if (section_idx >= section_count) {
+                log_error_fmt(
+                    "unexpected end of file \"%s\", have %u sections while expected to "
+                    "have more",
+                    relative_path, section_count);
+                abort();
+            }
+            te_model* child_model = model_create();
+            type_info_load_from_config(type_info, config, section_idx, child_model);
+            model_set_parent(child_model, model, model_get_parent_bone_idx(child_model));
+            section_idx += 1;
+        }
+
+        config_destroy(config);
+        return model;
+    }
+
+    config_destroy(config);
+    return NULL;
 }
 
 void
