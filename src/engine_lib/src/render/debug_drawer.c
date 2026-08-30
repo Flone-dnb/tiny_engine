@@ -409,6 +409,10 @@ prv_debug_drawer_deinit(struct te_renderer* renderer) {
 
 void
 debug_drawer_draw_aabb(te_aabb_shape* aabb, float time_sec) {
+    if (drawer.renderer == NULL) {
+        return;
+    }
+
     te_debug_drawer_aabb* aabbs =
         malloc(sizeof(te_debug_drawer_aabb) * (drawer.aabb_count + 1));
     memcpy(aabbs, drawer.aabbs, sizeof(te_debug_drawer_aabb) * drawer.aabb_count);
@@ -425,6 +429,10 @@ debug_drawer_draw_aabb(te_aabb_shape* aabb, float time_sec) {
 
 void
 debug_drawer_draw_line(vec3 from, vec3 to, float time_sec) {
+    if (drawer.renderer == NULL) {
+        return;
+    }
+
     te_debug_drawer_line* lines =
         malloc(sizeof(te_debug_drawer_line) * (drawer.line_count + 1));
     memcpy(lines, drawer.lines, sizeof(te_debug_drawer_line) * drawer.line_count);
@@ -473,6 +481,10 @@ debug_drawer_draw_text_color(const char* text, float time_sec, vec3 color) {
 
 void
 debug_drawer_draw_text_color_pos(const char* text, float time_sec, vec3 color, vec2 pos) {
+    if (drawer.renderer == NULL) {
+        return;
+    }
+
     te_debug_drawer_text* new_texts =
         malloc(sizeof(te_debug_drawer_text) * (drawer.text_count + 1));
     memcpy(new_texts, drawer.texts, sizeof(te_debug_drawer_text) * drawer.text_count);
