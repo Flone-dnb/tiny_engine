@@ -21,7 +21,7 @@ void debug_drawer_draw_text_color(const char* text, float time_sec, vec3 color);
 void debug_drawer_draw_text_color_pos(const char* text, float time_sec, vec3 color, vec2 pos);
 
 // Specify 0 as time to draw for just 1 frame.
-void debug_drawer_draw_aabb(struct te_aabb_shape* aabb, float time_sec);
+void debug_drawer_draw_aabb(struct te_aabb_shape* aabb, float time_sec, vec3 color);
 
 // Specify 0 as time to draw for just 1 frame.
 void debug_drawer_draw_line(vec3 from, vec3 to, float time_sec);

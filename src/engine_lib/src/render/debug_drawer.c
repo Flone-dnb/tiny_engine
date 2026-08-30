@@ -53,6 +53,8 @@ typedef struct te_debug_drawer_text {
 typedef struct te_debug_drawer_aabb {
     te_aabb_shape aabb;
 
+    vec3 color;
+
     // If less than zero then item should be destroyed.
     float time_left_sec;
 } te_debug_drawer_aabb;
@@ -83,6 +85,7 @@ typedef struct te_debug_drawer_aabb_shader {
 
     int uniform_pos_offset;
     int uniform_extents;
+    int uniform_color;
     int uniform_view_proj_mat;
 } te_debug_drawer_aabb_shader;
 
@@ -205,6 +208,8 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
             get_uniform_location(drawer.aabb_shader.prog_id, "pos_offset");
         drawer.aabb_shader.uniform_extents =
             get_uniform_location(drawer.aabb_shader.prog_id, "extents");
+        drawer.aabb_shader.uniform_color =
+            get_uniform_location(drawer.aabb_shader.prog_id, "color");
         drawer.aabb_shader.uniform_view_proj_mat =
             get_uniform_location(drawer.aabb_shader.prog_id, "view_proj_mat");
     }
@@ -408,7 +413,7 @@ prv_debug_drawer_deinit(struct te_renderer* renderer) {
 }
 
 void
-debug_drawer_draw_aabb(te_aabb_shape* aabb, float time_sec) {
+debug_drawer_draw_aabb(te_aabb_shape* aabb, float time_sec, vec3 color) {
     if (drawer.renderer == NULL) {
         return;
     }
@@ -423,6 +428,7 @@ debug_drawer_draw_aabb(te_aabb_shape* aabb, float time_sec) {
     te_debug_drawer_aabb* new_item = &drawer.aabbs[drawer.aabb_count];
     new_item->aabb = *aabb;
     new_item->time_left_sec = time_sec;
+    glm_vec3_copy(color, new_item->color);
 
     drawer.aabb_count += 1;
 }
@@ -614,17 +620,18 @@ prv_debug_drawer_draw(
             drawer.aabb_shader.uniform_view_proj_mat, 1, GL_FALSE, (*view_proj_mat)[0]);
 
         for (unsigned int i = 0; i < drawer.aabb_count;) {
-            te_debug_drawer_aabb* wireframe = &drawer.aabbs[i];
+            te_debug_drawer_aabb* data = &drawer.aabbs[i];
 
-            glUniform3fv(drawer.aabb_shader.uniform_pos_offset, 1, wireframe->aabb.center);
-            glUniform3fv(drawer.aabb_shader.uniform_extents, 1, wireframe->aabb.extents);
+            glUniform3fv(drawer.aabb_shader.uniform_pos_offset, 1, data->aabb.center);
+            glUniform3fv(drawer.aabb_shader.uniform_extents, 1, data->aabb.extents);
+            glUniform3fv(drawer.aabb_shader.uniform_color, 1, data->color);
 
             glDrawElements(
                 GL_LINES, TE_DEBUG_DRAWER_AABB_INDEX_COUNT, GL_UNSIGNED_SHORT, NULL);
 
             // Update state.
-            wireframe->time_left_sec -= delta_time_sec;
-            if (wireframe->time_left_sec < 0.0f) {
+            data->time_left_sec -= delta_time_sec;
+            if (data->time_left_sec < 0.0f) {
                 // No longer render this item.
                 // Note: nothing to free inside of the AABB item.
                 if (drawer.aabb_count == 1) {
