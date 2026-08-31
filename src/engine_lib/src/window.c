@@ -234,6 +234,8 @@ window_process_events(
             (double)((current_time_counter - prev_time_counter) * 1000)
             / (double)(SDL_GetPerformanceFrequency());
         delta_time_sec = (float)(delta_time_ms * 0.001);
+        // avoid huge dt as it can cause exceptional situations
+        delta_time_sec = glm_clamp(delta_time_sec, 0.0f, 1.0f);
 
         // Tick.
         {
