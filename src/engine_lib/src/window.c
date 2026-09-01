@@ -8,6 +8,7 @@
 #include <io/filesystem.h>
 #include <io/log.h>
 #include <io/paths.h>
+#include <cglm/util.h>
 #if defined(ENGINE_DEBUG_TOOLS)
 #include <render/renderer.h>
 #endif
