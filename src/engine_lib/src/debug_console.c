@@ -65,6 +65,7 @@ struct te_debug_console {
 
     // For @ref stats. Can be drawn even if the console is hidden.
     bool show_stats;
+    bool show_fps;
 };
 
 // Static to allow using debug console easily from various places.
@@ -85,6 +86,20 @@ prv_debug_console_hide_stats(struct te_game_manager* game_manager) {
 }
 
 void
+prv_debug_console_show_fps(struct te_game_manager* game_manager) {
+    (void)game_manager;
+    console.show_fps = true;
+    console.displayed_stats = console.stats;
+    console.time_sec_to_update_stats = 0.0f;
+}
+
+void
+prv_debug_console_hide_fps(struct te_game_manager* game_manager) {
+    (void)game_manager;
+    console.show_fps = false;
+}
+
+void
 prv_debug_console_init(te_game_manager* game_manager) {
     console.game_manager = game_manager;
     console.commands = hashmap_new(
@@ -95,6 +110,7 @@ prv_debug_console_init(te_game_manager* game_manager) {
     console.input_valid_len = 0;
     console.is_shown = false;
     console.show_stats = false;
+    console.show_fps = false;
     console.message = NULL;
     console.message_sec_left = 0.0f;
     console.time_sec_to_update_stats = 0.0f;
@@ -113,6 +129,19 @@ prv_debug_console_init(te_game_manager* game_manager) {
         te_debug_console_command command = {0};
         command.name = "hide_stats";
         command.no_args = prv_debug_console_hide_stats;
+        debug_console_register_command(command);
+    }
+
+    {
+        te_debug_console_command command = {0};
+        command.name = "show_fps";
+        command.no_args = prv_debug_console_show_fps;
+        debug_console_register_command(command);
+    }
+    {
+        te_debug_console_command command = {0};
+        command.name = "hide_fps";
+        command.no_args = prv_debug_console_hide_fps;
         debug_console_register_command(command);
     }
 }
@@ -281,7 +310,7 @@ prv_debug_console_draw(float delta_time_sec) {
         stats->total_mem = (unsigned int)(memory_usage_get_total_memory() / 1024 / 1024);
     }
 
-    if (console.show_stats && update_stats) {
+    if ((console.show_stats || console.show_fps) && update_stats) {
         te_debug_stats* stats = &console.displayed_stats;
         vec2 screen_pos;
         glm_vec2_copy((vec2){0.01f, 0.45f}, screen_pos);
@@ -289,71 +318,81 @@ prv_debug_console_draw(float delta_time_sec) {
         // FPS.
         const unsigned int fps_limit =
             renderer_get_fps_limit(game_manager_get_renderer(console.game_manager));
-        prv_debug_console_draw_stat(screen_pos, "FPS: %u (limit: %u)", stats->fps, fps_limit);
-
-        // RAM.
-        const char* ram_fmt = "RAM used (MB): %u (%u/%u)";
-#if defined(ENGINE_ASAN_ENABLED)
-        ram_fmt = "RAM used (MB): %u (%u/%u) (ASan enabled)";
-#endif
-        prv_debug_console_draw_stat(
-            screen_pos, ram_fmt, stats->process_mem, stats->total_used_mem, stats->total_mem);
-
-        prv_debug_console_draw_stat(
-            screen_pos, "tick callbacks: %u",
-            game_manager_get_tick_callback_count(console.game_manager));
-        prv_debug_console_draw_stat(
-            screen_pos, "%s: %.2f", "CPU time on tick callbacks (ms)",
-            stats->cpu_time_tick_callbacks_ms);
-
-        // Rendered model count.
-        prv_debug_console_draw_stat(
-            screen_pos, "rendered opaque model count: %u", stats->rendered_opaque_model_count);
-        prv_debug_console_draw_stat(
-            screen_pos, "rendered transparent model count: %u",
-            stats->rendered_transparent_model_count);
-
-        // CPU stats.
-        prv_debug_console_draw_stat(
-            screen_pos, "%s: %.2f", "CPU time to submit a frame (ms)",
-            stats->cpu_time_frame_ms);
-        prv_debug_console_draw_stat(
-            screen_pos, "- %s: %.2f", "models", stats->cpu_time_submit_models_ms);
-        prv_debug_console_draw_stat(
-            screen_pos, "- %s: %.2f", "particles", stats->cpu_time_submit_particles_ms);
-        prv_debug_console_draw_stat(
-            screen_pos, "- %s: %.2f", "widgets", stats->cpu_time_submit_widgets_ms);
-        prv_debug_console_draw_stat(
-            screen_pos, "- %s: %.2f", "debug", stats->cpu_time_submit_debug_ms);
-        prv_debug_console_draw_stat(screen_pos, "- %s: %.2f", "swap", stats->cpu_time_swap_ms);
-
-#if defined(ENGINE_GLES)
-        if (GLAD_GL_EXT_disjoint_timer_query != 1) {
-            prv_debug_console_draw_stat(
-                screen_pos, "%s", "GL_EXT_disjoint_timer_query not supported");
+        if (console.show_fps) {
+            prv_debug_console_draw_stat(screen_pos, "FPS: %u", stats->fps);
         } else {
-#endif
-            // GPU stats.
             prv_debug_console_draw_stat(
-                screen_pos, "CPU is ahead of the GPU on %u frame(s)",
-                stats->cpu_ahead_gpu_frame_count);
-            prv_debug_console_draw_stat(
-                screen_pos, "%s: %.2f", "GPU time to draw a frame (ms)",
-                stats->gpu_time_frame_ms);
-            prv_debug_console_draw_stat(
-                screen_pos, "- %s: %.2f", "models", stats->gpu_time_draw_models_ms);
-            prv_debug_console_draw_stat(
-                screen_pos, "- %s: %.2f", "particles", stats->gpu_time_draw_particles_ms);
-            prv_debug_console_draw_stat(
-                screen_pos, "- %s: %.2f", "widgets", stats->gpu_time_draw_widgets_ms);
-            prv_debug_console_draw_stat(
-                screen_pos, "- %s: %.2f", "debug", stats->gpu_time_draw_debug_ms);
-#if defined(ENGINE_GLES)
+                screen_pos, "FPS: %u (limit: %u)", stats->fps, fps_limit);
         }
+
+        if (console.show_stats) {
+            // RAM.
+            const char* ram_fmt = "RAM used (MB): %u (%u/%u)";
+#if defined(ENGINE_ASAN_ENABLED)
+            ram_fmt = "RAM used (MB): %u (%u/%u) (ASan enabled)";
+#endif
+            prv_debug_console_draw_stat(
+                screen_pos, ram_fmt, stats->process_mem, stats->total_used_mem,
+                stats->total_mem);
+
+            prv_debug_console_draw_stat(
+                screen_pos, "tick callbacks: %u",
+                game_manager_get_tick_callback_count(console.game_manager));
+            prv_debug_console_draw_stat(
+                screen_pos, "%s: %.2f", "CPU time on tick callbacks (ms)",
+                stats->cpu_time_tick_callbacks_ms);
+
+            // Rendered model count.
+            prv_debug_console_draw_stat(
+                screen_pos, "rendered opaque model count: %u",
+                stats->rendered_opaque_model_count);
+            prv_debug_console_draw_stat(
+                screen_pos, "rendered transparent model count: %u",
+                stats->rendered_transparent_model_count);
+
+            // CPU stats.
+            prv_debug_console_draw_stat(
+                screen_pos, "%s: %.2f", "CPU time to submit a frame (ms)",
+                stats->cpu_time_frame_ms);
+            prv_debug_console_draw_stat(
+                screen_pos, "- %s: %.2f", "models", stats->cpu_time_submit_models_ms);
+            prv_debug_console_draw_stat(
+                screen_pos, "- %s: %.2f", "particles", stats->cpu_time_submit_particles_ms);
+            prv_debug_console_draw_stat(
+                screen_pos, "- %s: %.2f", "widgets", stats->cpu_time_submit_widgets_ms);
+            prv_debug_console_draw_stat(
+                screen_pos, "- %s: %.2f", "debug", stats->cpu_time_submit_debug_ms);
+            prv_debug_console_draw_stat(
+                screen_pos, "- %s: %.2f", "swap", stats->cpu_time_swap_ms);
+
+#if defined(ENGINE_GLES)
+            if (GLAD_GL_EXT_disjoint_timer_query != 1) {
+                prv_debug_console_draw_stat(
+                    screen_pos, "%s", "GL_EXT_disjoint_timer_query not supported");
+            } else {
+#endif
+                // GPU stats.
+                prv_debug_console_draw_stat(
+                    screen_pos, "CPU is ahead of the GPU on %u frame(s)",
+                    stats->cpu_ahead_gpu_frame_count);
+                prv_debug_console_draw_stat(
+                    screen_pos, "%s: %.2f", "GPU time to draw a frame (ms)",
+                    stats->gpu_time_frame_ms);
+                prv_debug_console_draw_stat(
+                    screen_pos, "- %s: %.2f", "models", stats->gpu_time_draw_models_ms);
+                prv_debug_console_draw_stat(
+                    screen_pos, "- %s: %.2f", "particles", stats->gpu_time_draw_particles_ms);
+                prv_debug_console_draw_stat(
+                    screen_pos, "- %s: %.2f", "widgets", stats->gpu_time_draw_widgets_ms);
+                prv_debug_console_draw_stat(
+                    screen_pos, "- %s: %.2f", "debug", stats->gpu_time_draw_debug_ms);
+#if defined(ENGINE_GLES)
+            }
 #endif
 
-        if (fps_limit > 0) {
-            prv_debug_console_draw_stat(screen_pos, "%s", "! FPS LIMIT AFFECTS STATS !");
+            if (fps_limit > 0) {
+                prv_debug_console_draw_stat(screen_pos, "%s", "! FPS LIMIT AFFECTS STATS !");
+            }
         }
     }
 
