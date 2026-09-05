@@ -41,7 +41,7 @@ typedef struct te_model_group {
 struct te_model_renderer {
     // This array stores render data sorted by shader program so first N elements use the same
     // shader program, then next M elements use another shader program and so on. Information
-    // about which render data belongs to which shader is stored in @ref shader_groups.
+    // about which render data belongs to which shader is stored in @ref model_groups.
     //
     // Size of this array is @ref render_handle_arrays_size but the actual number of valid
     // (used) elements might be different. When some model's render data is removed all next
@@ -51,7 +51,7 @@ struct te_model_renderer {
 
     // Groups models into batches.
     // First item in this array points to the first item in @ref render_data.
-    // Size of this array is @ref shader_group_count.
+    // Size of this array is @ref model_group_count.
     te_model_group* model_groups;
 
     // Index into this array using a model's handle to get index into @ref render_data.
