@@ -55,8 +55,8 @@ bool model_renderer_has_models(te_model_renderer* renderer);
 // Returns handle to update model's render data using @ref model_renderer_get_render_data_tmp.
 //
 // Later you would need to remove the model from rendering using @ref model_renderer_remove_model.
-unsigned int
-model_renderer_add_model(te_model_renderer* renderer, unsigned int shader_prog_id);
+unsigned int model_renderer_add_model(
+    te_model_renderer* renderer, unsigned int shader_prog_id, bool disable_backface_culling);
 
 // Removes a model from rendering.
 void model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle);
@@ -74,5 +74,5 @@ model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int han
 // Draws models to the currently set framebuffer.
 // Returns the number of models drawn.
 unsigned int model_renderer_draw(
-    te_model_renderer* renderer, struct te_light_params* light_params,
-    mat4* view_mat, mat4* view_proj_mat, struct te_frustum_shape* camera_frustum);
+    te_model_renderer* renderer, struct te_light_params* light_params, mat4* view_mat,
+    mat4* view_proj_mat, struct te_frustum_shape* camera_frustum);

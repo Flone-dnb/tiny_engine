@@ -11,6 +11,7 @@
 #include <io/log.h>
 #include <io/config.h>
 #include <io/filesystem.h>
+#include <io/config.h>
 #include <math_funcs.h>
 #include <render/model_renderer.h>
 #include <render/renderer.h>
@@ -249,6 +250,7 @@ struct te_model {
     te_skeleton* skeleton;
 
     bool is_opaque;
+    bool disable_backface_culling;
     bool is_serialization_allowed;
 };
 
@@ -286,6 +288,7 @@ model_create() {
     model->custom_on_before_despawned = NULL;
     model->custom_get_geometry = NULL;
     model->is_opaque = true;
+    model->disable_backface_culling = false;
     model->is_serialization_allowed = true;
 
     glm_vec2_one(model->tex_tiling);
@@ -766,6 +769,22 @@ model_get_uv_offset(te_model* model, vec2 uv_offset) {
 }
 
 void
+model_set_disable_backface_culling(te_model* model, bool disable_backface_culling) {
+    if (model->world == NULL) {
+        model->disable_backface_culling = disable_backface_culling;
+    } else {
+        prv_model_remove_from_model_renderer(model);
+        model->disable_backface_culling = disable_backface_culling;
+        prv_model_add_to_model_renderer(model);
+    }
+}
+
+bool
+model_get_disable_backface_culling(te_model* model) {
+    return model->disable_backface_culling;
+}
+
+void
 model_set_parent(te_model* model, te_model* new_parent, unsigned int parent_bone_idx) {
     if (model->parent_model == new_parent) {
         return;
@@ -1114,8 +1133,8 @@ prv_model_add_to_model_renderer(te_model* model) {
 
     // Add to rendering.
     te_model_renderer* model_renderer = prv_model_get_renderer(model);
-    model->render_data_handle =
-        model_renderer_add_model(model_renderer, model->shader_prog_id);
+    model->render_data_handle = model_renderer_add_model(
+        model_renderer, model->shader_prog_id, model->disable_backface_culling);
 
     // Init render data.
     {
@@ -1517,6 +1536,9 @@ model_register_type(void) {
     type_info_add_vec2_variable(info, "uv_offset", model_set_uv_offset, model_get_uv_offset);
     type_info_add_uint_variable(
         info, "custom_value", model_set_custom_value, model_get_custom_value);
+    type_info_add_bool_variable(
+        info, "disable_backface_culling", model_set_disable_backface_culling,
+        model_get_disable_backface_culling);
     type_info_add_bool_variable(
         info, "transparent", model_enable_transparency, model_is_transparency_enabled);
     type_info_add_uint_variable(

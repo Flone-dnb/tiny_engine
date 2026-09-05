@@ -147,6 +147,10 @@ void model_get_texture_tiling(te_model* model, vec2 tex_tiling);
 void model_set_uv_offset(te_model* model, vec2 uv_offset);
 void model_get_uv_offset(te_model* model, vec2 uv_offset);
 
+// Disables backface culling.
+void model_set_disable_backface_culling(te_model* model, bool disable_backface_culling);
+bool model_get_disable_backface_culling(te_model* model);
+
 // Child model's location/rotation/scale will then be treated as relative to the parents location/rotation/scale.
 // If you want to attach to parent model's skeleton bone specify skeleton bone index or 0xFFFFFFFF to just attach to model.
 // If the child model is not spawned but the parent is spawned will make the child model spawned.

@@ -11,13 +11,14 @@
 
 #define INVALID_DATA_INDEX 0xffffffff
 
-// Stores information about models that use the same shader program.
-typedef struct te_shader_group {
+// Stores information about models that use the same render data (mostly shader).
+typedef struct te_model_group {
     // OpenGL ID of the shader program.
     unsigned int prog_id;
 
     // Number of elements that use the same shader program.
-    unsigned int count;
+    unsigned short count;
+    bool disable_backface_culling;
 
     // uniform locations -----------------------
     int uniform_view_mat;
@@ -35,7 +36,7 @@ typedef struct te_shader_group {
     int uniform_point_light_pos_and_dist;
     int uniform_distance_fog_color;
     int uniform_distance_fog_range;
-} te_shader_group;
+} te_model_group;
 
 struct te_model_renderer {
     // This array stores render data sorted by shader program so first N elements use the same
@@ -48,10 +49,10 @@ struct te_model_renderer {
     // This array does not shrink but the number of used (valid) elements may decrease.
     te_model_render_data* render_data;
 
-    // Stores information about which models use which shaders in @ref render_data.
+    // Groups models into batches.
     // First item in this array points to the first item in @ref render_data.
     // Size of this array is @ref shader_group_count.
-    te_shader_group* shader_groups;
+    te_model_group* model_groups;
 
     // Index into this array using a model's handle to get index into @ref render_data.
     //
@@ -60,8 +61,8 @@ struct te_model_renderer {
     // This array does not shrink. Size of this array is @ref render_handle_arrays_size.
     unsigned int* handle_to_data;
 
-    // Number of elements in @ref shader_groups.
-    unsigned int shader_group_count;
+    // Number of elements in @ref model_groups.
+    unsigned int model_group_count;
 
     // Total number of elements that @ref render_data and @ref handle_to_data can store.
     unsigned int render_handle_arrays_size;
@@ -85,15 +86,15 @@ model_renderer_create(unsigned int capacity, unsigned int expand_size) {
         renderer->handle_to_data[i] = INVALID_DATA_INDEX;
     }
 
-    renderer->shader_groups = NULL;
-    renderer->shader_group_count = 0;
+    renderer->model_groups = NULL;
+    renderer->model_group_count = 0;
 
     return renderer;
 }
 
 void
 model_renderer_destroy(te_model_renderer* renderer) {
-    if (renderer->shader_group_count > 0) {
+    if (renderer->model_group_count > 0) {
         log_error("model renderer is being destroyed but there are still some models/handles "
                   "active (not removed)");
         abort();
@@ -106,11 +107,11 @@ model_renderer_destroy(te_model_renderer* renderer) {
 
 bool
 model_renderer_has_models(te_model_renderer* renderer) {
-    return renderer->shader_group_count > 0;
+    return renderer->model_group_count > 0;
 }
 
 void
-model_renderer_init_uniforms(te_shader_group* group) {
+model_renderer_init_uniforms(te_model_group* group) {
     group->uniform_view_mat = get_uniform_location(group->prog_id, "view_mat");
     group->uniform_view_proj_mat = get_uniform_location(group->prog_id, "view_proj_mat");
     group->uniform_world_mat = get_uniform_location(group->prog_id, "world_mat");
@@ -140,7 +141,8 @@ model_renderer_init_uniforms(te_shader_group* group) {
 }
 
 unsigned int
-model_renderer_add_model(te_model_renderer* renderer, unsigned int prog_id) {
+model_renderer_add_model(
+    te_model_renderer* renderer, unsigned int prog_id, bool disable_backface_culling) {
     // Find unused handle.
     unsigned int handle = 0;
     bool found = false;
@@ -186,55 +188,59 @@ model_renderer_add_model(te_model_renderer* renderer, unsigned int prog_id) {
 
     // Find shader group.
     found = false;
-    unsigned int shader_group_index = 0;
-    for (unsigned int i = 0; i < renderer->shader_group_count; i++) {
-        if (renderer->shader_groups[i].prog_id != prog_id) {
+    unsigned int group_idx = 0;
+    for (unsigned int i = 0; i < renderer->model_group_count; i++) {
+        if (renderer->model_groups[i].prog_id != prog_id) {
+            continue;
+        }
+        if (renderer->model_groups[i].disable_backface_culling != disable_backface_culling) {
             continue;
         }
 
         found = true;
-        shader_group_index = i;
+        group_idx = i;
         break;
     }
     unsigned int data_index = 0;
     if (!found) {
         unsigned int render_data_count_before = 0;
-        for (unsigned int i = 0; i < renderer->shader_group_count; i++) {
-            render_data_count_before += renderer->shader_groups[i].count;
+        for (unsigned int i = 0; i < renderer->model_group_count; i++) {
+            render_data_count_before += renderer->model_groups[i].count;
         }
 
         // Create a new group.
-        te_shader_group* new_groups =
-            malloc(sizeof(te_shader_group) * (renderer->shader_group_count + 1));
+        te_model_group* new_groups =
+            malloc(sizeof(te_model_group) * (renderer->model_group_count + 1));
         memcpy(
-            new_groups, renderer->shader_groups,
-            sizeof(te_shader_group) * renderer->shader_group_count);
+            new_groups, renderer->model_groups,
+            sizeof(te_model_group) * renderer->model_group_count);
 
-        free(renderer->shader_groups);
-        renderer->shader_groups = new_groups;
+        free(renderer->model_groups);
+        renderer->model_groups = new_groups;
         // don't increment group count yet
 
-        shader_group_index = renderer->shader_group_count;
-        te_shader_group* group = &renderer->shader_groups[shader_group_index];
+        group_idx = renderer->model_group_count;
+        te_model_group* group = &renderer->model_groups[group_idx];
 
-        renderer->shader_group_count += 1;
+        renderer->model_group_count += 1;
 
         // Init group.
         group->prog_id = prog_id;
+        group->disable_backface_culling = disable_backface_culling;
         group->count = 1;
         model_renderer_init_uniforms(group);
 
         data_index = render_data_count_before;
     } else {
-        for (unsigned int i = 0; i < shader_group_index + 1; i++) {
-            data_index += renderer->shader_groups[i].count;
+        for (unsigned int i = 0; i < group_idx + 1; i++) {
+            data_index += renderer->model_groups[i].count;
         }
 
         // Shift some render data to the right to prepare space for new item.
         // We already made sure that the render data array will be able to fit a new item (see above).
         unsigned int shift_to_right_count = 0;
-        for (unsigned int i = shader_group_index + 1; i < renderer->shader_group_count; i++) {
-            shift_to_right_count += renderer->shader_groups[i].count;
+        for (unsigned int i = group_idx + 1; i < renderer->model_group_count; i++) {
+            shift_to_right_count += renderer->model_groups[i].count;
         }
 
         // We already made sure that the render data array will be able to fit a new item (see above).
@@ -252,7 +258,7 @@ model_renderer_add_model(te_model_renderer* renderer, unsigned int prog_id) {
         }
 
         // Update group.
-        renderer->shader_groups[shader_group_index].count += 1;
+        renderer->model_groups[group_idx].count += 1;
     }
 
     renderer->handle_to_data[handle] = data_index;
@@ -269,8 +275,8 @@ model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
     const unsigned int data_index = renderer->handle_to_data[handle];
 
     unsigned int render_data_count_before = 0;
-    for (unsigned int i = 0; i < renderer->shader_group_count; i++) {
-        render_data_count_before += renderer->shader_groups[i].count;
+    for (unsigned int i = 0; i < renderer->model_group_count; i++) {
+        render_data_count_before += renderer->model_groups[i].count;
     }
 
     // Find shader group.
@@ -278,14 +284,14 @@ model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
     {
         unsigned int start_index = 0;
         bool found = false;
-        for (unsigned int i = 0; i < renderer->shader_group_count; i++) {
+        for (unsigned int i = 0; i < renderer->model_group_count; i++) {
             if (data_index >= start_index
-                && data_index < start_index + renderer->shader_groups[i].count) {
+                && data_index < start_index + renderer->model_groups[i].count) {
                 group_index = i;
                 found = true;
                 break;
             }
-            start_index += renderer->shader_groups[i].count;
+            start_index += renderer->model_groups[i].count;
         }
         if (!found) {
             log_error("unable to find shader group from the specified handle");
@@ -294,26 +300,26 @@ model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
     }
 
     // Update group.
-    if (renderer->shader_groups[group_index].count == 1) {
+    if (renderer->model_groups[group_index].count == 1) {
         // Delete group.
-        if (renderer->shader_group_count == 1) {
-            renderer->shader_group_count = 0;
-            free(renderer->shader_groups);
-            renderer->shader_groups = NULL;
+        if (renderer->model_group_count == 1) {
+            renderer->model_group_count = 0;
+            free(renderer->model_groups);
+            renderer->model_groups = NULL;
         } else {
-            te_shader_group* new_groups =
-                malloc(sizeof(te_shader_group) * (renderer->shader_group_count - 1));
-            memcpy(new_groups, renderer->shader_groups, sizeof(te_shader_group) * group_index);
+            te_model_group* new_groups =
+                malloc(sizeof(te_model_group) * (renderer->model_group_count - 1));
+            memcpy(new_groups, renderer->model_groups, sizeof(te_model_group) * group_index);
             memcpy(
-                new_groups + group_index, renderer->shader_groups + (group_index + 1),
-                sizeof(te_shader_group) * (renderer->shader_group_count - group_index - 1));
+                new_groups + group_index, renderer->model_groups + (group_index + 1),
+                sizeof(te_model_group) * (renderer->model_group_count - group_index - 1));
 
-            free(renderer->shader_groups);
-            renderer->shader_groups = new_groups;
-            renderer->shader_group_count -= 1;
+            free(renderer->model_groups);
+            renderer->model_groups = new_groups;
+            renderer->model_group_count -= 1;
         }
     } else {
-        renderer->shader_groups[group_index].count -= 1;
+        renderer->model_groups[group_index].count -= 1;
     }
 
     // Update render data.
@@ -351,8 +357,12 @@ model_renderer_draw(
     unsigned int model_count = 0;
     unsigned int render_data_idx = 0;
 
-    for (unsigned int group_idx = 0; group_idx < renderer->shader_group_count; group_idx++) {
-        te_shader_group* group = &renderer->shader_groups[group_idx];
+    for (unsigned int group_idx = 0; group_idx < renderer->model_group_count; group_idx++) {
+        te_model_group* group = &renderer->model_groups[group_idx];
+
+        if (group->disable_backface_culling) {
+            glDisable(GL_CULL_FACE);
+        }
 
 #if defined(ENGINE_GLES)
         void (*set_vertex_attribute_pointers)(void) =
@@ -417,6 +427,10 @@ model_renderer_draw(
 
             glDrawElements(GL_TRIANGLES, data->index_count, GL_UNSIGNED_SHORT, NULL);
             model_count += 1;
+        }
+
+        if (group->disable_backface_culling) {
+            glEnable(GL_CULL_FACE);
         }
     }
 
