@@ -11,6 +11,7 @@ struct te_model_renderer;
 struct te_game_object_info;
 struct te_skeleton;
 struct te_sound;
+struct te_aabb_shape;
 
 // ------------------------------------------------------------------------------------------------
 //                                       VERTEX API
@@ -238,6 +239,9 @@ void model_register_type(void);
 
 // Returns model's world matrix (includes parent if has any).
 mat4* prv_model_get_world_mat_tmp(te_model* model);
+
+// Returns NULL if not spawned.
+struct te_aabb_shape* prv_model_get_world_aabb(te_model* model);
 
 void prv_model_on_after_skeleton_updated(te_model* model);
 

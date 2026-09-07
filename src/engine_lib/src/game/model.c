@@ -1235,6 +1235,17 @@ prv_model_get_world_mat_tmp(te_model* model) {
     return &data->world_mat;
 }
 
+te_aabb_shape*
+prv_model_get_world_aabb(te_model* model) {
+    if (model->render_data_handle == 0xffffffff) {
+        return NULL;
+    }
+
+    te_model_render_data* data = model_renderer_get_render_data_tmp(
+        prv_model_get_renderer(model), model->render_data_handle);
+    return &data->aabb_world;
+}
+
 void
 model_enable_transparency(te_model* model, bool enable) {
     if (model->world == NULL) {
@@ -1384,9 +1395,12 @@ prv_model_calc_aabb(te_vertex_pack* vertices) {
     aabb.center[1] = (min[1] + max[1]) * 0.5f;
     aabb.center[2] = (min[2] + max[2]) * 0.5f;
 
-    aabb.extents[0] = max[0] - aabb.center[0];
-    aabb.extents[1] = max[1] - aabb.center[1];
-    aabb.extents[2] = max[2] - aabb.center[2];
+    // to avoid thin sides
+    const float delta = 0.001f;
+
+    aabb.extents[0] = glm_max(max[0] - aabb.center[0], delta);
+    aabb.extents[1] = glm_max(max[1] - aabb.center[1], delta);
+    aabb.extents[2] = glm_max(max[2] - aabb.center[2], delta);
 
     return aabb;
 }
