@@ -391,8 +391,7 @@ model_renderer_draw(
             light_params->point_light_pos_and_dist);
 
         // Fog.
-        glUniform3fv(
-            group->uniform_distance_fog_color, 1, light_params->directional_light_color);
+        glUniform3fv(group->uniform_distance_fog_color, 1, light_params->distance_fog_color);
         glUniform2fv(group->uniform_distance_fog_range, 1, light_params->distance_fog_range);
 
         for (unsigned int unused = 0; unused < group->count; unused++, render_data_idx++) {
