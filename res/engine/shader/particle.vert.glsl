@@ -2,6 +2,7 @@ ATTRIBUTE_IN vec2 in_quad_uv;
 
 ATTRIBUTE_OUT vec4 particle_color;
 ATTRIBUTE_OUT vec2 particle_uv;
+ATTRIBUTE_OUT vec3 view_space_pos;
 
 uniform mat4 view_mat;
 uniform mat4 proj_mat;
@@ -22,4 +23,6 @@ void main() {
     vert_view_pos += vert_offset.y * up;
 
     gl_Position = proj_mat * vec4(vert_view_pos, particle_view_pos.w);
+
+    view_space_pos = particle_view_pos.xyz;
 }

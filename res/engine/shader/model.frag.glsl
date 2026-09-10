@@ -41,7 +41,7 @@ void main(void) {
     // Get color.
     vec4 color = model_color;
     if (tiling.x > 0.0) {
-        color *= texture2D(model_texture, (frag_uv + uv_offset) * tiling);
+        color *= texture(model_texture, (frag_uv + uv_offset) * tiling);
     }
     if (color.a < 0.1) {
         discard;

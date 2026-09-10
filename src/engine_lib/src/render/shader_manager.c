@@ -68,6 +68,7 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
                  "#define ENGINE_GLES\n"
                  "#define ATTRIBUTE_IN varying\n"
                  "#define out_color gl_FragColor\n"
+                 "#define texture texture2D\n"
                  "\n";
     } else {
         prefix = "#version 100\n"
@@ -76,6 +77,7 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
                  "#define ENGINE_GLES\n"
                  "#define ATTRIBUTE_IN attribute\n"
                  "#define ATTRIBUTE_OUT varying\n"
+                 "#define texture texture2D\n"
                  "\n";
     }
 #else

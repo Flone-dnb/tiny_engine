@@ -647,7 +647,8 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
             }
 #endif
 
-            particle_renderer_draw(particle_renderer, view_mat, proj_mat);
+            particle_renderer_draw(
+                particle_renderer, renderer->light_params, view_mat, proj_mat);
 
 #if defined(ENGINE_DEBUG_TOOLS)
             if (record_new_queries) {

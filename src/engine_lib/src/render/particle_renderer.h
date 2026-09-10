@@ -4,6 +4,7 @@
 
 typedef struct te_particle_renderer te_particle_renderer;
 struct te_renderer;
+struct te_light_params;
 
 // Data needed to render a single particle.
 typedef struct te_particle_render_data {
@@ -31,4 +32,6 @@ te_particle_emitter_render_data* particle_renderer_get_emitter_render_data_tmp(
     te_particle_renderer* renderer, unsigned int handle);
 
 // Draws particles on the currently set framebuffer.
-void particle_renderer_draw(te_particle_renderer* renderer, mat4* view_mat, mat4* proj_mat);
+void particle_renderer_draw(
+    te_particle_renderer* renderer, struct te_light_params* light_params, mat4* view_mat,
+    mat4* proj_mat);

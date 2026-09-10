@@ -7,6 +7,6 @@ uniform sampler2D quad_tex;
 void main() {
     out_color = quad_color;
     if (is_using_tex) {
-        out_color *= texture2D(quad_tex, fragment_uv);
+        out_color *= texture(quad_tex, fragment_uv);
     }
 }

@@ -17,6 +17,8 @@ typedef struct te_particle_shader_data {
     int uniform_particle_color;
     int uniform_in_world_pos_size;
     int uniform_is_using_tex;
+    int uniform_distance_fog_color;
+    int uniform_distance_fog_range;
 } te_particle_shader_data;
 
 struct te_particle_renderer {
@@ -57,6 +59,10 @@ particle_renderer_create(te_renderer* renderer) {
         shader->uniform_in_world_pos_size =
             get_uniform_location(shader->prog_id, "in_world_pos_size");
         shader->uniform_is_using_tex = get_uniform_location(shader->prog_id, "is_using_tex");
+        shader->uniform_distance_fog_color =
+            get_uniform_location(shader->prog_id, "distance_fog_color");
+        shader->uniform_distance_fog_range =
+            get_uniform_location(shader->prog_id, "distance_fog_range");
     }
 
     // Create quad geometry.
@@ -130,7 +136,9 @@ particle_renderer_get_emitter_render_data_tmp(
 }
 
 void
-particle_renderer_draw(te_particle_renderer* renderer, mat4* view_mat, mat4* proj_mat) {
+particle_renderer_draw(
+    te_particle_renderer* renderer, te_light_params* light_params, mat4* view_mat,
+    mat4* proj_mat) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -153,6 +161,10 @@ particle_renderer_draw(te_particle_renderer* renderer, mat4* view_mat, mat4* pro
 
         glUniformMatrix4fv(shader->uniform_view_mat, 1, GL_FALSE, (*view_mat)[0]);
         glUniformMatrix4fv(shader->uniform_proj_mat, 1, GL_FALSE, (*proj_mat)[0]);
+
+        // Fog.
+        glUniform3fv(shader->uniform_distance_fog_color, 1, light_params->distance_fog_color);
+        glUniform2fv(shader->uniform_distance_fog_range, 1, light_params->distance_fog_range);
 
         te_particle_emitter_render_data* data =
             render_data_array_get_internal_array(renderer->emitter_data_array);
