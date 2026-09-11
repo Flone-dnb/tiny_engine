@@ -1470,6 +1470,19 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
 void
 scene_animation_editor_show_tracks(
     te_scene_animation_editor* editor, void* obj, const te_type_info* type_info) {
+    if (obj != NULL) {
+        te_game_object_info* go_info = type_info->game_object_info;
+        if (go_info == NULL) {
+            log_error("currently only game objects are supported");
+            return;
+        }
+        const char* obj_name = go_info->get_name(obj);
+        if (obj_name == NULL) {
+            log_error("the object must have a unique name");
+            return;
+        }
+    }
+
     editor->selected_obj = obj;
     editor->selected_obj_type_info = type_info;
 
