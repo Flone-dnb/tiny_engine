@@ -11,18 +11,8 @@
 #include <memcheck.h>
 #endif
 
-#if defined(WIN32)
-#include <Windows.h>
-#include <crtdbg.h>
-#endif
-
 int
 main(void) {
-    // Enable run-time memory checks for debug builds (on Windows).
-#if defined(WIN32) && defined(DEBUG)
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-#endif
-
 #if defined(ENGINE_MEMCHECK_ENABLED)
     memcheck_init();
 #endif

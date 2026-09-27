@@ -43,6 +43,10 @@
 #define glGetQueryObjecti64v glGetQueryObjecti64vEXT
 #endif
 
+#if defined(WIN32)
+#pragma comment(lib, "Winmm.lib") // for timeBeginPeriod and timeEndPeriod
+#endif
+
 // Stuff needed to calculate FPS and keep frame limit.
 typedef struct te_renderer_frame_stats {
     // Stats collected for the last second.

@@ -24,14 +24,18 @@ set(DEPENDENCY_BUILD_DIR_NAME dep)
 set(RELATIVE_EXT_PATH "../../ext") # relative to a subdirectory target (from the src directory)
 
 # Enable memcheck.
-if(NOT IS_RELEASE_BUILD AND NOT MSVC AND NOT ENGINE_DISABLE_MEMCHECK_IN_DEBUG)
+if(NOT IS_RELEASE_BUILD AND NOT ENGINE_DISABLE_MEMCHECK_IN_DEBUG)
     # Memcheck is our silly little memory leak checker. It can be used in cases where ASan is not available or if it uses too much RAM.
     set(ENGINE_MEMCHECK_ENABLED ON CACHE BOOL "" FORCE)
     message(STATUS "Memcheck enabled.")
-    add_link_options(LINKER:--wrap=malloc,--wrap=realloc,--wrap=calloc,--wrap=free,--wrap=strdup,--wrap=wcsdup,--wrap=scandir,--wrap=getline,--wrap=realpath)
+    if(NOT MSVC)
+        add_link_options(LINKER:--wrap=malloc,--wrap=realloc,--wrap=calloc,--wrap=free,--wrap=strdup,--wrap=wcsdup,--wrap=scandir,--wrap=getline,--wrap=realpath)
+    endif()
     add_subdirectory(ext/memcheck ${DEPENDENCY_BUILD_DIR_NAME}/memcheck EXCLUDE_FROM_ALL)
     link_libraries(memcheck)
-    link_libraries(m)
+    if(NOT MSVC)
+        link_libraries(m)
+    endif()
 else()
     set(ENGINE_MEMCHECK_ENABLED OFF CACHE BOOL "" FORCE)
 endif()
@@ -110,7 +114,7 @@ function(tiny_engine_configure_target TARGET_NAME)
 
     # Memcheck macro.
     if(ENGINE_MEMCHECK_ENABLED)
-	target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_MEMCHECK_ENABLED)
+	    target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_MEMCHECK_ENABLED)
     endif()
 endfunction()
 
