@@ -101,7 +101,7 @@ globals_convert_string_to_float(const char* text, char** end) {
     bool after_dot = false;
 
     if (*curr == 0) {
-        (*end) = curr - 1;
+        (*end) = curr;
         return out;
     }
 

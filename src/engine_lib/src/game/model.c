@@ -967,7 +967,7 @@ model_tick(te_model* model, float delta_time_sec) {
 void
 model_attach_sound(te_model* model, te_sound* sound) {
     te_sound** sounds = malloc(sizeof(te_sound*) * (model->attached_sound_count + 1));
-    memcpy(sound, model->attached_sounds, sizeof(te_sound*) * model->attached_sound_count);
+    memcpy(sounds, model->attached_sounds, sizeof(te_sound*) * model->attached_sound_count);
 
     free(model->attached_sounds);
     model->attached_sounds = sounds;
