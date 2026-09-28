@@ -5,6 +5,7 @@
 #include <cglm/vec2.h>
 #include <debug_console.h>
 #include <io/log.h>
+#include <io/filesystem.h>
 #include <render/debug_drawer.h>
 #include <render/renderer.h>
 #include <game/camera.h>
@@ -56,9 +57,14 @@ te_game_manager*
 prv_game_manager_create(struct te_window* window) {
     srand((unsigned int)time(NULL));
 
+    // make sure "res" directory exists
+    if (!filesystem_does_path_exists("res")) {
+        log_error("expected to have \"res\" directory next to the executable");
+        abort();
+    }
+
     te_game_manager* game_manager = malloc(sizeof(te_game_manager));
 
-    game_manager->sound_manager = sound_manager_create();
     game_manager->window = window;
     game_manager->worlds = NULL;
     game_manager->world_count = 0;
@@ -71,9 +77,11 @@ prv_game_manager_create(struct te_window* window) {
     prv_type_database_init();
 
 #if defined(ENGINE_DEBUG_TOOLS)
+    // init before other stuff to be able to register debug commands in subsystems
     prv_debug_console_init(game_manager);
 #endif
 
+    game_manager->sound_manager = sound_manager_create();
     game_manager->renderer = renderer_create(window);
 
 #if defined(ENGINE_DEBUG_TOOLS)

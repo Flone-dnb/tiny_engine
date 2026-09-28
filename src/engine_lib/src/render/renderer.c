@@ -9,13 +9,11 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
-#include <SDL3/SDL_error.h>
-#include <SDL3/SDL_timer.h>
-#include <SDL3/SDL_video.h>
 #include <debug_console.h>
 #include <game/camera.h>
 #include <game_manager.h>
 #include <io/log.h>
+#include <misc/high_freq_timer.h>
 #include <render/debug_drawer.h>
 #include <render/font_manager.h>
 #include <render/gpu_section.h>
@@ -29,7 +27,6 @@
 #include <window.h>
 #include <world.h>
 #include <glad/glad.h>
-#include <SDL3/SDL_messagebox.h>
 
 #if defined(ENGINE_GLES)
 #define glGenQueries glGenQueriesEXT
@@ -59,8 +56,6 @@ typedef struct te_renderer_frame_stats {
 struct te_renderer {
     // Always valid pointer, window that owns the renderer. This pointer should not be freed.
     struct te_window* window;
-
-    struct SDL_GLContextState* gl_context;
 
     // Created by the renderer.
     te_shader_manager* shader_manager;
@@ -180,30 +175,6 @@ renderer_create(struct te_window* window) {
     clock_gettime(CLOCK_MONOTONIC, &renderer->frame_end_time);
 #endif
 
-    // Create GL context.
-    renderer->gl_context = SDL_GL_CreateContext(prv_window_get_sdl_window(window));
-    if (renderer->gl_context == NULL) {
-#if defined(WIN32)
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", SDL_GetError(), NULL);
-#endif
-        log_error(SDL_GetError());
-        abort();
-    }
-
-    // Initialize GLAD.
-#if defined(ENGINE_GLES)
-    if (gladLoadGLES2Loader((GLADloadproc)SDL_GL_GetProcAddress) == 0) {
-#else
-    if (gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress) == 0) {
-#endif
-#if defined(WIN32)
-        SDL_ShowSimpleMessageBox(
-            SDL_MESSAGEBOX_ERROR, "Error", "failed to initialize OpenGL", NULL);
-#endif
-        log_error("failed to initialize OpenGL");
-        abort();
-    }
-
 #if defined(ENGINE_DEBUG_TOOLS)
 #if defined(ENGINE_GLES)
     if (GLAD_GL_EXT_disjoint_timer_query != 1) {
@@ -252,12 +223,6 @@ renderer_create(struct te_window* window) {
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
-
-    // Disable VSync.
-    if (!SDL_GL_SetSwapInterval(0)) {
-        log_error(SDL_GetError());
-        abort();
-    }
 
     // Set FPS limit.
     const unsigned int refresh_rate = window_get_display_refresh_rate(window);
@@ -325,11 +290,6 @@ renderer_destroy(te_renderer* renderer) {
     }
 #endif
 #endif
-
-    if (!SDL_GL_DestroyContext(renderer->gl_context)) {
-        log_error(SDL_GetError());
-        abort();
-    }
 
     free(renderer);
 }
@@ -527,7 +487,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     debug_stats->cpu_time_submit_particles_ms = 0.0f;
     debug_stats->cpu_time_submit_widgets_ms = 0.0f;
 
-    const Uint64 cpu_frame_start_counter = SDL_GetPerformanceCounter();
+    const uint64_t cpu_frame_start_counter = high_freq_timer_now();
 #endif
 
     // Get window size (for later).
@@ -596,7 +556,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         // Draw models.
         {
 #if defined(ENGINE_DEBUG_TOOLS)
-            const Uint64 cpu_start_counter = SDL_GetPerformanceCounter();
+            const uint64_t cpu_start_counter = high_freq_timer_now();
             if (record_new_queries) {
                 GPU_TIME_SECTION_BEGIN(prv_world_get_gl_query_draw_models(worlds[i]));
             }
@@ -636,8 +596,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
                 GPU_TIME_SECTION_END;
             }
             debug_stats->cpu_time_submit_models_ms +=
-                (float)(SDL_GetPerformanceCounter() - cpu_start_counter) * 1000.0f
-                / (float)(SDL_GetPerformanceFrequency());
+                high_freq_timer_get_elapsed_ms(cpu_start_counter);
 #endif
         }
 
@@ -645,7 +604,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         {
 #if defined(ENGINE_DEBUG_TOOLS)
             GPU_SECTION_BEGIN("particles");
-            const Uint64 cpu_start_counter = SDL_GetPerformanceCounter();
+            const uint64_t cpu_start_counter = high_freq_timer_now();
             if (record_new_queries) {
                 GPU_TIME_SECTION_BEGIN(prv_world_get_gl_query_draw_particles(worlds[i]));
             }
@@ -659,8 +618,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
                 GPU_TIME_SECTION_END;
             }
             debug_stats->cpu_time_submit_particles_ms +=
-                (float)(SDL_GetPerformanceCounter() - cpu_start_counter) * 1000.0f
-                / (float)(SDL_GetPerformanceFrequency());
+                high_freq_timer_get_elapsed_ms(cpu_start_counter);
             GPU_SECTION_END;
 #endif
         }
@@ -669,7 +627,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         {
 #if defined(ENGINE_DEBUG_TOOLS)
             GPU_SECTION_BEGIN("widgets");
-            const Uint64 cpu_start_counter = SDL_GetPerformanceCounter();
+            const uint64_t cpu_start_counter = high_freq_timer_now();
             if (record_new_queries) {
                 GPU_TIME_SECTION_BEGIN(prv_world_get_gl_query_draw_widgets(worlds[i]));
             }
@@ -682,8 +640,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
                 GPU_TIME_SECTION_END;
             }
             debug_stats->cpu_time_submit_widgets_ms +=
-                (float)(SDL_GetPerformanceCounter() - cpu_start_counter) * 1000.0f
-                / (float)(SDL_GetPerformanceFrequency());
+                high_freq_timer_get_elapsed_ms(cpu_start_counter);
             GPU_SECTION_END;
 #endif
         }
@@ -717,15 +674,14 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
             GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_debug);
         }
         {
-            const Uint64 cpu_start_counter = SDL_GetPerformanceCounter();
+            const Uint64 cpu_start_counter = high_freq_timer_now();
 
             prv_debug_console_draw(delta_time_sec);
             prv_debug_drawer_draw(
                 renderer, delta_time_sec, camera_get_view_proj_mat(debug_camera));
 
             debug_stats->cpu_time_submit_debug_ms =
-                (float)(SDL_GetPerformanceCounter() - cpu_start_counter) * 1000.0f
-                / (float)(SDL_GetPerformanceFrequency());
+                high_freq_timer_get_elapsed_ms(cpu_start_counter);
         }
         if (record_new_queries) {
             GPU_TIME_SECTION_END;
@@ -738,19 +694,15 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     }
 
     // Get CPU time before swap as it might block the current thread.
-    debug_stats->cpu_time_frame_ms =
-        (float)(SDL_GetPerformanceCounter() - cpu_frame_start_counter) * 1000.0f
-        / (float)(SDL_GetPerformanceFrequency());
+    debug_stats->cpu_time_frame_ms = high_freq_timer_get_elapsed_ms(cpu_frame_start_counter);
 
-    const Uint64 cpu_swap_start_counter = SDL_GetPerformanceCounter();
+    const uint64_t cpu_swap_start_counter = high_freq_timer_now();
 #endif
 
-    SDL_GL_SwapWindow(prv_window_get_sdl_window(renderer->window));
+    prv_window_swap_buffers(renderer->window);
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    debug_stats->cpu_time_swap_ms =
-        (float)(SDL_GetPerformanceCounter() - cpu_swap_start_counter) * 1000.0f
-        / (float)(SDL_GetPerformanceFrequency());
+    debug_stats->cpu_time_swap_ms = high_freq_timer_get_elapsed_ms(cpu_swap_start_counter);
 #endif
 
     prv_renderer_calc_frame_stats(renderer, delta_time_sec);

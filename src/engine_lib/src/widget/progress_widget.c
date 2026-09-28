@@ -1,5 +1,6 @@
 #include <widget/progress_widget.h>
 
+#include <string.h>
 #include <io/log.h>
 #include <type_database.h>
 #include <widget/rect_widget.h>

@@ -11,6 +11,7 @@
 #include <io/filesystem.h>
 #include <io/log.h>
 #include <time.h>
+#include <string.h>
 
 #define PARTICLE_EMITTER_TEX_LOAD_OPTION TE_TLO_GENERATE_MIPMAPS
 

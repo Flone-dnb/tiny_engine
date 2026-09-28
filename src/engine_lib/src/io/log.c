@@ -64,7 +64,8 @@ prv_log(enum te_log_category category, const char* message, char* filepath, int 
 #endif
         log_file = fopen("log.txt", "a");
         if (log_file == NULL) {
-            abort();
+            printf("can't even create a log.txt file, logging is disabled, good luck");
+            return;
         }
         fprintf(
             log_file, "ERROR: failed to create log file at path \"%s\"\n", path_to_log_file);

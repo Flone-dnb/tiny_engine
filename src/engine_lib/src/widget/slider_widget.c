@@ -5,6 +5,7 @@
 #include <widget/rect_widget.h>
 #include <widget/widget.h>
 #include <world.h>
+#include <string.h>
 
 #define TE_SLIDER_HANDLE_WIDTH 0.1f
 

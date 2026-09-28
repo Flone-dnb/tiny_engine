@@ -163,9 +163,7 @@ prv_text_edit_widget_despawn_destroy_cursor(te_text_edit_widget* text_edit_widge
     }
 
     if (prv_world_is_being_destroyed(world)) {
-        // Just disable input, child widgets will be destroyed anyway.
-        te_window* window = game_manager_get_window(world_get_game_manager(world));
-        SDL_StopTextInput(prv_window_get_sdl_window(window));
+        // Child widgets will be destroyed anyway.
         return;
     }
 
@@ -177,10 +175,6 @@ prv_text_edit_widget_despawn_destroy_cursor(te_text_edit_widget* text_edit_widge
     text_edit_widget->rect_cursor_widget = NULL;
 
     text_edit_widget->text_cursor_index = TE_INVALID_TEXT_CURSOR_INDEX;
-
-    // Disable text input events.
-    te_window* window = game_manager_get_window(world_get_game_manager(world));
-    SDL_StopTextInput(prv_window_get_sdl_window(window));
 }
 
 void
@@ -304,9 +298,6 @@ prv_text_edit_widget_on_mouse_button_pressed(
 
         // Attach and spawn.
         widget_set_parent(rect, text_edit_widget->widget);
-
-        // Enable text input events.
-        SDL_StartTextInput(prv_window_get_sdl_window(window));
     }
 
     // Calculate rect pos/size to be relative to parent.

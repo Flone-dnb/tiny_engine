@@ -1,13 +1,11 @@
 #pragma once
 
-#include <SDL3/SDL_mouse.h>
-
 enum te_mouse_button {
-    TE_MB_LEFT = SDL_BUTTON_LEFT,
-    TE_MB_RIGHT = SDL_BUTTON_RIGHT,
-    TE_MB_MIDDLE = SDL_BUTTON_MIDDLE,
-    TE_MB_X1 = SDL_BUTTON_X1,
-    TE_MB_X2 = SDL_BUTTON_X2,
+    TE_MB_LEFT,
+    TE_MB_RIGHT,
+    TE_MB_MIDDLE,
+    TE_MB_X1,
+    TE_MB_X2,
 };
 
 // Converts mouse button enum value to a string.

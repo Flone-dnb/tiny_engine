@@ -16,11 +16,16 @@ set(PROJECT_SOURCES
     src/misc/memory_usage.c
     src/misc/wchar_funcs.c
     src/misc/mesh_generator.c
+    src/misc/high_freq_timer.c
     src/game_manager.c
     src/sound_manager.c
     src/world.c
     src/debug_console.c
     src/type_database.c
+    src/window_system/os_window.h
+    src/window_system/os_window.c
+    src/window_system/win32_window.c
+    src/window_system/win32_window.h
     src/render/renderer.c
     src/render/model_renderer.c
     src/render/shader_manager.c
@@ -70,6 +75,7 @@ set(PROJECT_SOURCES
     include/misc/memory_usage.h
     include/misc/wchar_funcs.h
     include/misc/mesh_generator.h
+    include/misc/high_freq_timer.h
     include/game_manager.h
     include/sound_manager.h
     include/render/renderer.h

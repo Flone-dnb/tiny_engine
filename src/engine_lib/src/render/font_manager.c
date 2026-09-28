@@ -174,6 +174,10 @@ font_manager_cache_glyphs(
         log_error("the specified character code range is invalid");
         abort();
     }
+    if (manager->ft_face == NULL) {
+        log_error("font face was not loaded yet");
+        abort();
+    }
 
     // Set byte-alignment to 1 because we will create single-channel textures.
     int prev_unpack_alignment = 0;

@@ -110,10 +110,7 @@ void window_process_events(
 //                                       PRIVATE API
 // ------------------------------------------------------------------------------------------------
 
-union SDL_Event;
-
-bool prv_window_process_event(te_window* window, union SDL_Event event, float delta_time_sec);
-struct SDL_Window* prv_window_get_sdl_window(te_window* window);
-
 // Returns user's main game system.
 void* prv_window_get_game_instance(te_window* window);
+
+void prv_window_swap_buffers(te_window* window);
