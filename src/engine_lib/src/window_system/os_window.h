@@ -20,6 +20,7 @@ static int TE_OS_WINDOW_MSAA = 1;             // no MSAA under GLES
 #endif
 static int TE_OS_WINDOW_DEPTH_BITS = 24;
 static int TE_OS_WINDOW_STENCIL_BITS = 8;
+static float TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE = 0.05f;
 
 // all callbacks must be valid (specified as non-NULL value)
 typedef struct te_os_window_callbacks {

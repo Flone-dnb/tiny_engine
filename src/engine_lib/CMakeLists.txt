@@ -26,6 +26,8 @@ set(PROJECT_SOURCES
     src/window_system/os_window.c
     src/window_system/win32_window.c
     src/window_system/win32_window.h
+    src/window_system/x11_window.c
+    src/window_system/x11_window.h
     src/render/renderer.c
     src/render/model_renderer.c
     src/render/shader_manager.c
@@ -131,6 +133,18 @@ endif()
 # one for the editor (with some editor macros) and one for the game.
 set(ENGINE_LIB_DEPS_TARGET engine_lib_deps)
 add_library(${ENGINE_LIB_DEPS_TARGET} INTERFACE)
+
+if(NOT WIN32)
+    # for our custom windowing system
+    find_package(X11 REQUIRED COMPONENTS Xrandr Xfixes)
+    find_package(OpenGL REQUIRED)
+    target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE
+	X11::X11
+	X11::Xrandr
+	X11::Xfixes
+	OpenGL::GL
+    )
+endif()
 
 # Add GLAD.
 message(STATUS "${PROJECT_NAME}: adding dependency \"GLAD\"...")

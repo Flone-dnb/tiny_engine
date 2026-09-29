@@ -524,18 +524,18 @@ static void
 check_thumbstick_changes(
     te_os_window* os_window, te_os_window_callbacks* callbacks, XINPUT_GAMEPAD* prev_state,
     XINPUT_GAMEPAD* new_state) {
-    static float deadzone = 0.05f;
-
 #define CHECK_GAMEPAD_AXIS(xaxis, engine_axis, sign)                                          \
     if (prev_state->xaxis != new_state->xaxis) {                                              \
         float prev_abs_norm = fabsf(fmaxf(-1, (float)prev_state->xaxis / 32767));             \
         float norm = fmaxf(-1, (float)new_state->xaxis / 32767);                              \
         float abs_norm = fabsf(norm);                                                         \
-        if (prev_abs_norm > deadzone || abs_norm > deadzone) {                                \
-            float pos = abs_norm < deadzone                                                   \
+        if (prev_abs_norm > TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE                                \
+            || abs_norm > TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE) {                               \
+            float pos = abs_norm < TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE                         \
                             ? 0.0f                                                            \
-                            : (abs_norm - deadzone) * (norm < 0.0f ? -1.0f : 1.0f);           \
-            pos /= 1.0f - deadzone;                                                           \
+                            : (abs_norm - TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE)                 \
+                                  * (norm < 0.0f ? -1.0f : 1.0f);                             \
+            pos /= 1.0f - TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE;                                 \
             callbacks->on_gamepad_axis_moved(os_window, engine_axis, pos* sign);              \
         }                                                                                     \
     }

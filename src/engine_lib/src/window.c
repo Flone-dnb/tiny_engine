@@ -244,8 +244,7 @@ window_is_mouse_captured(te_window* window) {
 
 bool
 window_is_gamepad_connected(te_window* window) {
-    log_warn("TODO: not implemented");
-    return false;
+    return os_window_is_gamepad_connected(window->os_window);
 }
 
 void
@@ -487,6 +486,9 @@ on_lost_focus(te_os_window* os_window) {
 
 static void
 on_resized(te_os_window* os_window, unsigned int width, unsigned int height) {
+    (void)width;
+    (void)height;
+
     te_window* window = os_window_get_user_data(os_window);
 
     prv_game_manager_on_window_size_changed(window->game_manager);

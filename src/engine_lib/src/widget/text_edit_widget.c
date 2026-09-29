@@ -1,5 +1,6 @@
 #include <widget/text_edit_widget.h>
 
+#include <string.h>
 #include <game_manager.h>
 #include <io/log.h>
 #include <misc/wchar_funcs.h>

@@ -5,6 +5,8 @@
 #include <string.h>
 #if defined(WIN32)
 #include <window_system/win32_window.h>
+#elif defined(__linux__)
+#include <window_system/x11_window.h>
 #endif
 
 struct te_os_window {
@@ -36,10 +38,8 @@ os_window_create(const char* title, te_os_window_callbacks* callbacks, void* use
 
 #if defined(WIN32)
     win32_window_create(os_window, title);
-#else
-    // TODO: not implemented yet
-    assert(false);
-    abort();
+#elif defined(__linux__)
+    x11_window_create(os_window, title);
 #endif
 
     return os_window;
@@ -49,10 +49,8 @@ void
 os_window_destroy(te_os_window* os_window) {
 #if defined(WIN32)
     win32_window_destroy(os_window);
-#else
-    // TODO: not implemented yet
-    assert(false);
-    abort();
+#elif defined(__linux__)
+    x11_window_destroy(os_window);
 #endif
 
     free(os_window->callbacks);
@@ -89,10 +87,8 @@ void
 os_window_capture_mouse_cursor(te_os_window* os_window, bool capture) {
 #if defined(WIN32)
     win32_window_capture_mouse_cursor(os_window, capture);
-#else
-    // TODO: not implemented yet
-    assert(false);
-    abort();
+#elif defined(__linux__)
+    x11_window_capture_mouse_cursor(os_window, capture);
 #endif
 }
 
@@ -100,10 +96,8 @@ bool
 os_window_is_gamepad_connected(te_os_window* os_window) {
 #if defined(WIN32)
     return win32_window_is_gamepad_connected(os_window);
-#else
-    // TODO: not implemented yet
-    assert(false);
-    abort();
+#elif defined(__linux__)
+    return x11_window_is_gamepad_connected(os_window);
 #endif
 }
 
@@ -111,10 +105,8 @@ void
 os_window_poll_event(te_os_window* os_window) {
 #if defined(WIN32)
     win32_window_poll_event(os_window);
-#else
-    // TODO: not implemented yet
-    assert(false);
-    abort();
+#elif defined(__linux__)
+    x11_window_poll_event(os_window);
 #endif
 }
 
@@ -122,10 +114,8 @@ void
 os_window_swap_buffers(te_os_window* os_window) {
 #if defined(WIN32)
     win32_window_swap_buffers(os_window);
-#else
-    // TODO: not implemented yet
-    assert(false);
-    abort();
+#elif defined(__linux__)
+    x11_window_swap_buffers(os_window);
 #endif
 }
 
@@ -133,10 +123,8 @@ void
 os_window_set_cursor_position(te_os_window* os_window, float x, float y) {
 #if defined(WIN32)
     win32_window_set_cursor_position(os_window, x, y);
-#else
-    // TODO: not implemented yet
-    assert(false);
-    abort();
+#elif defined(__linux__)
+    x11_window_set_cursor_position(os_window, x, y);
 #endif
 }
 
@@ -144,10 +132,8 @@ void
 os_window_get_cursor_position(te_os_window* os_window, float* x, float* y) {
 #if defined(WIN32)
     win32_window_get_cursor_position(os_window, x, y);
-#else
-    // TODO: not implemented yet
-    assert(false);
-    abort();
+#elif defined(__linux__)
+    x11_window_get_cursor_position(os_window, x, y);
 #endif
 }
 
@@ -161,10 +147,8 @@ unsigned int
 os_window_get_refresh_rate(te_os_window* os_window) {
 #if defined(WIN32)
     return win32_window_get_refresh_rate(os_window);
-#else
-    // TODO: not implemented yet
-    assert(false);
-    abort();
+#elif defined(__linux__)
+    return x11_window_get_refresh_rate(os_window);
 #endif
 }
 
