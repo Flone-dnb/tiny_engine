@@ -144,6 +144,9 @@ if(NOT WIN32)
 	X11::Xfixes
 	OpenGL::GL
     )
+
+    # for math
+    target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE m)
 endif()
 
 # Add GLAD.
