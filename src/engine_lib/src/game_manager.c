@@ -14,7 +14,7 @@
 #include <world.h>
 #include <sound_manager.h>
 #include <time.h>
-#include <SDL3/SDL_timer.h>
+#include <misc/high_freq_timer.h>
 
 typedef struct te_game_tick_callback {
     void* custom;
@@ -355,7 +355,7 @@ prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
 #if defined(ENGINE_DEBUG_TOOLS)
         te_debug_stats* debug_stats = prv_debug_console_get_stats();
         debug_stats->cpu_time_tick_callbacks_ms = 0.0f;
-        const Uint64 cpu_start_counter = SDL_GetPerformanceCounter();
+        const uint64_t cpu_start_counter = high_freq_timer_now();
 #endif
 
         game_manager->is_processing_tick_callbacks = true;
@@ -422,8 +422,7 @@ prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
 
 #if defined(ENGINE_DEBUG_TOOLS)
         debug_stats->cpu_time_tick_callbacks_ms +=
-            (float)(SDL_GetPerformanceCounter() - cpu_start_counter) * 1000.0f
-            / (float)(SDL_GetPerformanceFrequency());
+            high_freq_timer_get_elapsed_ms(cpu_start_counter);
 #endif
     }
 }
