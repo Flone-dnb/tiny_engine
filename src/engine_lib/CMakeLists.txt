@@ -150,16 +150,27 @@ endif()
 message(STATUS "${PROJECT_NAME}: adding dependency \"GLAD\"...")
 set(GLAD_TARGET_NAME glad)
 if (ENGINE_GLES)
-    set(GLAD_DIR_NAME glad_gles20)
+    set(GLAD_PATH ${RELATIVE_EXT_PATH}/glad_gles20)
+    add_library(${GLAD_TARGET_NAME} STATIC
+	${GLAD_PATH}/src/gl.c
+	${GLAD_PATH}/src/egl.c
+	${GLAD_PATH}/src/glx.c
+	${GLAD_PATH}/include/KHR/khrplatform.h
+	${GLAD_PATH}/include/glad/gl.h
+	${GLAD_PATH}/include/glad/egl.h
+	${GLAD_PATH}/include/glad/glx.h
+    )
 else()
-    set(GLAD_DIR_NAME glad_gl45)
+    set(GLAD_PATH ${RELATIVE_EXT_PATH}/glad_gl45)
+    add_library(${GLAD_TARGET_NAME} STATIC
+	${GLAD_PATH}/src/gl.c
+	${GLAD_PATH}/src/glx.c
+	${GLAD_PATH}/include/KHR/khrplatform.h
+	${GLAD_PATH}/include/glad/gl.h
+	${GLAD_PATH}/include/glad/glx.h
+    )
 endif()
-add_library(${GLAD_TARGET_NAME} STATIC
-    ${RELATIVE_EXT_PATH}/${GLAD_DIR_NAME}/src/glad.c
-    ${RELATIVE_EXT_PATH}/${GLAD_DIR_NAME}/include/KHR/khrplatform.h
-    ${RELATIVE_EXT_PATH}/${GLAD_DIR_NAME}/include/glad/glad.h
-)
-target_include_directories(${GLAD_TARGET_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH}/${GLAD_DIR_NAME}/include)
+target_include_directories(${GLAD_TARGET_NAME} SYSTEM PUBLIC ${GLAD_PATH}/include)
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE ${GLAD_TARGET_NAME})
 add_dependencies(${ENGINE_LIB_DEPS_TARGET} ${GLAD_TARGET_NAME})
 

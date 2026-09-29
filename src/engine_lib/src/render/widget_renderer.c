@@ -7,7 +7,7 @@
 #include <render/shader_manager.h>
 #include <render/render_data_array.h>
 #include <window.h>
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 #define WIDGET_QUAD_GL_VERT_ATTRIB_PTR                                                        \
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(vec4), NULL);

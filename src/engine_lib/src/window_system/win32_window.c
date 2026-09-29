@@ -9,7 +9,7 @@
 #define NOMINMAX
 #include <Windows.h>
 #include <windowsx.h>
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <Xinput.h>
 #include "wglext.h"
 
@@ -399,6 +399,10 @@ win32_window_create(te_os_window* os_window, const char* title) {
 #else
         WGL_CONTEXT_ES2_PROFILE_BIT_EXT,
 #endif
+#if defined(DEBUG)
+        WGL_CONTEXT_FLAGS_ARB,
+        WGL_CONTEXT_DEBUG_BIT_ARB,
+#endif
         0};
 
     win32_window->hglrc = wglCreateContextAttribsARB(win32_window->hdc, NULL, context_attribs);
@@ -413,9 +417,9 @@ win32_window_create(te_os_window* os_window, const char* title) {
     wglMakeCurrent(win32_window->hdc, win32_window->hglrc);
 
 #if defined(ENGINE_GLES)
-    if (gladLoadGLES2Loader((GLADloadproc)gladloadproc) == 0) {
+    if (gladLoadGLES2(gladloadproc) == 0) {
 #else
-    if (gladLoadGLLoader((GLADloadproc)gladloadproc) == 0) {
+    if (gladLoadGL(gladloadproc) == 0) {
 #endif
 #if defined(WIN32)
         MessageBoxA(NULL, "Error", "failed to initialize OpenGL", MB_OK);

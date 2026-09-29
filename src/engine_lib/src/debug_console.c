@@ -10,7 +10,7 @@
 #include <io/log.h>
 #include <misc/memory_usage.h>
 #include <render/debug_drawer.h>
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 // Command hash for hashmap.
 uint64_t

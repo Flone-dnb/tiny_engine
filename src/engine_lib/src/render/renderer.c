@@ -27,7 +27,7 @@
 #include <type_database.h>
 #include <window.h>
 #include <world.h>
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 #if defined(ENGINE_GLES)
 #define glGenQueries glGenQueriesEXT
@@ -39,6 +39,13 @@
 #define glGetQueryObjectuiv glGetQueryObjectuivEXT
 #define GL_QUERY_RESULT_AVAILABLE GL_QUERY_RESULT_AVAILABLE_EXT
 #define glGetQueryObjecti64v glGetQueryObjecti64vEXT
+#define GL_DEBUG_SOURCE_SHADER_COMPILER GL_DEBUG_SOURCE_SHADER_COMPILER_KHR
+#define GL_DEBUG_TYPE_ERROR GL_DEBUG_TYPE_ERROR_KHR
+#define GL_DEBUG_SEVERITY_NOTIFICATION GL_DEBUG_SEVERITY_NOTIFICATION_KHR
+#define GL_DEBUG_OUTPUT GL_DEBUG_OUTPUT_KHR
+#define GL_DEBUG_OUTPUT_SYNCHRONOUS GL_DEBUG_OUTPUT_SYNCHRONOUS_KHR
+#define glDebugMessageCallback glDebugMessageCallbackKHR
+#define glDebugMessageControl glDebugMessageControlKHR
 #endif
 
 #if defined(WIN32)

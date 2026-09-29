@@ -2,7 +2,7 @@
 
 // Macros to measure GPU time.
 #if defined(ENGINE_DEBUG_TOOLS)
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 #if defined(ENGINE_GLES)
 #define GPU_TIME_SECTION_BEGIN(gl_query_id)                                                   \

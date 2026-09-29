@@ -23,9 +23,8 @@
 #include <X11/extensions/Xrandr.h>
 #include <X11/extensions/Xfixes.h>
 #include <sys/inotify.h>
-#include <glad/glad.h>
-#include <GL/gl.h>
-#include <GL/glx.h>
+#include <glad/gl.h>
+#include <glad/glx.h>
 
 // GLX extension function pointers
 typedef GLXContext (*PFNGLXCREATECONTEXTATTRIBSARBPROC)(
@@ -103,6 +102,11 @@ x11_error_handler(Display* display, XErrorEvent* event) {
 
 static void
 x11_load_glx_extensions(Display* display, int screen) {
+    if (gladLoaderLoadGLX(display, screen) == 0) {
+        log_error("failed to initialize GLX loader");
+        abort();
+    }
+
     const char* glx_extensions = glXQueryExtensionsString(display, screen);
     if (glx_extensions == NULL) {
         log_error("failed to query GLX extensions");
@@ -110,14 +114,13 @@ x11_load_glx_extensions(Display* display, int screen) {
     }
 
     if (strstr(glx_extensions, "GLX_ARB_create_context") != NULL) {
-        glXCreateContextAttribsARB_ptr =
-            (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddressARB(
-                (const GLubyte*)"glXCreateContextAttribsARB");
+        glXCreateContextAttribsARB_ptr = (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddress(
+            (const GLubyte*)"glXCreateContextAttribsARB");
     }
 
     if (strstr(glx_extensions, "GLX_EXT_swap_control") != NULL) {
-        glXSwapIntervalEXT_ptr = (PFNGLXSWAPINTERVALEXTPROC)glXGetProcAddressARB(
-            (const GLubyte*)"glXSwapIntervalEXT");
+        glXSwapIntervalEXT_ptr =
+            (PFNGLXSWAPINTERVALEXTPROC)glXGetProcAddress((const GLubyte*)"glXSwapIntervalEXT");
     }
 
     if (strstr(glx_extensions, "GLX_ARB_create_context_profile") == NULL) {
@@ -129,14 +132,14 @@ x11_load_glx_extensions(Display* display, int screen) {
     }
 
     glXChooseFBConfig_ptr =
-        (PFNGLXCHOOSEFBCONFIGPROC)glXGetProcAddressARB((const GLubyte*)"glXChooseFBConfig");
-    glXGetFBConfigAttrib_ptr = (PFNGLXGETFBCONFIGATTRIBPROC)glXGetProcAddressARB(
-        (const GLubyte*)"glXGetFBConfigAttrib");
+        (PFNGLXCHOOSEFBCONFIGPROC)glXGetProcAddress((const GLubyte*)"glXChooseFBConfig");
+    glXGetFBConfigAttrib_ptr =
+        (PFNGLXGETFBCONFIGATTRIBPROC)glXGetProcAddress((const GLubyte*)"glXGetFBConfigAttrib");
 }
 
 static void*
 glad_load_proc(const char* name) {
-    void* func = (void*)glXGetProcAddressARB((const GLubyte*)name);
+    void* func = (void*)glXGetProcAddress((const GLubyte*)name);
     if (func == NULL) {
         // try dlsym as fallback
         func = (void*)glXGetProcAddress((const GLubyte*)name);
@@ -778,6 +781,10 @@ x11_window_create(te_os_window* os_window, const char* title) {
 #else
         GLX_CONTEXT_ES2_PROFILE_BIT_EXT,
 #endif
+#if defined(DEBUG)
+        GLX_CONTEXT_FLAGS_ARB,
+        GLX_CONTEXT_DEBUG_BIT_ARB,
+#endif
         None};
 
     if (glXCreateContextAttribsARB_ptr != NULL) {
@@ -801,9 +808,9 @@ x11_window_create(te_os_window* os_window, const char* title) {
 
     // init GLAD
 #if defined(ENGINE_GLES)
-    if (gladLoadGLES2Loader((GLADloadproc)glad_load_proc) == 0) {
+    if (gladLoadGLES2(glad_load_proc) == 0) {
 #else
-    if (gladLoadGLLoader((GLADloadproc)glad_load_proc) == 0) {
+    if (gladLoadGL(glad_load_proc) == 0) {
 #endif
         log_error("failed to initialize OpenGL");
         abort();

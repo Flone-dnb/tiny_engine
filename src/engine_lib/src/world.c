@@ -19,7 +19,7 @@
 #include <widget/widget.h>
 #include <window.h>
 #if defined(ENGINE_DEBUG_TOOLS)
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <render/gpu_time_section.h>
 #endif
 

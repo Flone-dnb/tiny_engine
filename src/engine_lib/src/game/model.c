@@ -22,7 +22,7 @@
 #include <type_database.h>
 #include <misc/mesh_generator.h>
 #include <world.h>
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 #define MODEL_TEX_LOAD_OPTION TE_TLO_GENERATE_MIPMAPS
 

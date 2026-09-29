@@ -10,7 +10,7 @@
 #include <render/shader_manager.h>
 #include <shape/aabb_shape.h>
 #include <window.h>
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <io/log.h>
 
 #define TE_DEBUG_DRAWER_AABB_INDEX_COUNT 24

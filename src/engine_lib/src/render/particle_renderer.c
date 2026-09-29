@@ -3,7 +3,7 @@
 #include <render/renderer.h>
 #include <render/render_data_array.h>
 #include <render/shader_manager.h>
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <cglm/vec2.h>
 
 #define PARTICLE_QUAD_GL_VERT_ATTRIB_PTR                                                      \

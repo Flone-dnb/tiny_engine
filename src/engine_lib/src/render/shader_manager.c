@@ -6,7 +6,7 @@
 #include <string.h>
 #include <io/log.h>
 #include <io/filesystem.h>
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 // Groups information about a shader program.
 typedef struct te_shader_program {

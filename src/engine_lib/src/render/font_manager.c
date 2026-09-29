@@ -8,7 +8,7 @@
 #include <io/paths.h>
 #include <render/renderer.h>
 #include <window.h>
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 // Value in range [0.0; 1.0]. Font height (relative to screen height, width is determines automatically).
 // This value will be used as the base size but will be scaled when drawing text according to the size of each text widget.

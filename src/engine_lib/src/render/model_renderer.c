@@ -7,7 +7,7 @@
 #include <render/shader_manager.h>
 #include <render/renderer.h>
 #include <shape/frustum_shape.h>
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 #define INVALID_DATA_INDEX 0xffffffff
 

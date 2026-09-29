@@ -6,7 +6,7 @@
 #include <string.h>
 #include <io/log.h>
 #include <io/filesystem.h>
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_NO_SIMD
