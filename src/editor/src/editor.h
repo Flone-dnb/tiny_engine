@@ -71,8 +71,7 @@ void editor_on_mouse_moved(
     void* game_instance, struct te_game_manager* game_manager, float x_offset, float y_offset);
 void editor_on_mouse_scroll_moved(
     void* game_instance, struct te_game_manager* game_manager, float offset);
-void editor_on_gamepad_connected(
-    void* game_instance, struct te_game_manager* game_manager, const char* gamepad_name);
+void editor_on_gamepad_connected(void* game_instance, struct te_game_manager* game_manager);
 void editor_on_gamepad_disconnected(void* game_instance, struct te_game_manager* game_manager);
 void editor_on_input_source_changed(
     void* game_instance, struct te_game_manager* game_manager, bool is_gamepad_current);

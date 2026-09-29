@@ -1,8 +1,9 @@
 #include <ui/scene_animation_editor.h>
 
-#include <io/log.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <io/log.h>
 #include <world.h>
 #include <widget/widget.h>
 #include <widget/button_widget.h>

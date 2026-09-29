@@ -1,5 +1,6 @@
 #include <editor.h>
 
+#include <string.h>
 #include <stdio.h>
 #include <editor_camera.h>
 #include <game/model.h>
@@ -699,7 +700,7 @@ editor_on_gamepad_button_released(
     void* game_instance, struct te_game_manager* game_manager, enum te_gamepad_button button) {
     (void)game_instance;
 
-    if (button == TE_GB_BUTTON_RIGHT) {
+    if (button == TE_GB_RIGHT) {
         window_close(game_manager_get_window(game_manager));
     }
 }
@@ -876,10 +877,8 @@ editor_on_mouse_scroll_moved(
 }
 
 void
-editor_on_gamepad_connected(
-    void* game_instance, struct te_game_manager* game_manager, const char* gamepad_name) {
+editor_on_gamepad_connected(void* game_instance, struct te_game_manager* game_manager) {
     (void)game_manager;
-    (void)gamepad_name;
 
     te_editor* editor = game_instance;
     editor_camera_on_gamepad_connected(editor->editor_camera);

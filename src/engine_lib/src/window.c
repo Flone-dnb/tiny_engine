@@ -59,6 +59,12 @@ static void on_keyboard_button_pressed(
 static void on_keyboard_button_released(
     te_os_window* os_window, enum te_keyboard_button button, te_keyboard_modifiers modifiers);
 static void on_text_input(te_os_window* os_window, const char* text);
+static void on_gamepad_connected(te_os_window* os_window);
+static void on_gamepad_disconnected(te_os_window* os_window);
+static void on_gamepad_button_pressed(te_os_window* os_window, enum te_gamepad_button button);
+static void on_gamepad_button_released(te_os_window* os_window, enum te_gamepad_button button);
+static void
+on_gamepad_axis_moved(te_os_window* os_window, enum te_gamepad_axis axis, float new_pos);
 static void on_received_focus(te_os_window* os_window);
 static void on_lost_focus(te_os_window* os_window);
 static void on_resized(te_os_window* os_window, unsigned int width, unsigned int height);
@@ -74,7 +80,7 @@ window_create(const char* window_title) {
     filesystem_remove_file(paths_get_log_file());
     filesystem_ensure_dirs_exist(paths_get_log_file());
 
-    if (sizeof(te_os_window_callbacks) != sizeof(void*) * 10) {
+    if (sizeof(te_os_window_callbacks) != sizeof(void*) * 15) {
         log_error("add new callbacks here");
         abort();
     }
@@ -86,6 +92,11 @@ window_create(const char* window_title) {
     callbacks.on_keyboard_button_pressed = on_keyboard_button_pressed;
     callbacks.on_keyboard_button_released = on_keyboard_button_released;
     callbacks.on_text_input = on_text_input;
+    callbacks.on_gamepad_connected = on_gamepad_connected;
+    callbacks.on_gamepad_disconnected = on_gamepad_disconnected;
+    callbacks.on_gamepad_button_pressed = on_gamepad_button_pressed;
+    callbacks.on_gamepad_button_released = on_gamepad_button_released;
+    callbacks.on_gamepad_axis_moved = on_gamepad_axis_moved;
     callbacks.on_received_focus = on_received_focus;
     callbacks.on_lost_focus = on_lost_focus;
     callbacks.on_resized = on_resized;
@@ -133,33 +144,15 @@ window_process_events(
     window->game_instance = game_instance;
     window->game_manager = prv_game_manager_create(window);
 
-    // See if we have a gamepad connected.
-    /*log_warn("TODO: not implemented");
-    {
-        int count = 0;
-        SDL_JoystickID* ids = SDL_GetGamepads(&count);
-
-        for (int i = 0; i < count; i++) {
-            if (SDL_IsGamepad(ids[i])) {
-                window->connected_gamepad = SDL_OpenGamepad(ids[i]);
-                break;
-            }
-        }
-
-        SDL_free(ids);
-    }*/
-
-    // Notify the user.
+    // notify the user of game start
     window->user_callbacks->on_game_started(window->game_instance, window->game_manager);
-    log_warn("TODO: not implemented");
-    /*
-    if (window->connected_gamepad != NULL) {
+    // and if gamepad is already connected
+    if (os_window_is_gamepad_connected(window->os_window)) {
         window->had_gamepad_input_curr_frame = true;
         window->had_gamepad_input_prev_frame = true;
         window->user_callbacks->on_gamepad_connected(
-            window->game_instance, window->game_manager,
-            SDL_GetGamepadName(window->connected_gamepad));
-    }*/
+            window->game_instance, window->game_manager);
+    }
 
     // Used to calculate delta time.
     uint64_t current_time_counter = high_freq_timer_now();
@@ -171,15 +164,10 @@ window_process_events(
         os_window_poll_event(window->os_window);
 
 #if defined(ENGINE_DEBUG_TOOLS)
-        static bool notified = false;
-        if (!notified) {
-            log_warn("TODO: not implemented");
-            notified = true;
-        }
-        /*if (window->connected_gamepad != NULL) {
+        if (os_window_is_gamepad_connected(window->os_window)) {
             window->debug_stats_time_since_menu += delta_time_sec;
             window->debug_stats_time_since_start += delta_time_sec;
-        }*/
+        }
 #endif
 
         // Calculate delta time.
@@ -329,9 +317,9 @@ on_keyboard_button_pressed(
     te_window* window = os_window_get_user_data(os_window);
 
 #if defined(IS_ARM64)
-    if (window->connected_gamepad != NULL) {
+    if (os_window_is_gamepad_connected(window->os_window)) {
         // In some cases while using retro-handhelds (which have built in gamepad) gamepad buttons trigger
-        // keyboard input before the actual gamepad button input which messes up the input.
+        // keyboard input before the actual gamepad button which messes up the whole game input.
         break;
     }
 #endif
@@ -362,8 +350,8 @@ on_keyboard_button_released(
     te_window* window = os_window_get_user_data(os_window);
 
 #if defined(IS_ARM64)
-    if (window->connected_gamepad != NULL) {
-        // Same as in "pressed" event.
+    if (os_window_is_gamepad_connected(window->os_window)) {
+        // Same as in the "pressed" event.
         break;
     }
 #endif
@@ -391,8 +379,8 @@ on_text_input(te_os_window* os_window, const char* text) {
     te_window* window = os_window_get_user_data(os_window);
 
 #if defined(IS_ARM64)
-    if (window->connected_gamepad != NULL) {
-        // Same as in "pressed" event.
+    if (os_window_is_gamepad_connected(window->os_window)) {
+        // Same as in the "pressed" event.
         break;
     }
 #endif
@@ -410,6 +398,76 @@ on_text_input(te_os_window* os_window, const char* text) {
     prv_game_manager_on_keyboard_input_text(window->game_manager, text);
     window->user_callbacks->on_keyboard_input_text(
         window->game_instance, window->game_manager, text);
+}
+
+static void
+on_gamepad_connected(te_os_window* os_window) {
+    te_window* window = os_window_get_user_data(os_window);
+
+    window->user_callbacks->on_gamepad_connected(window->game_instance, window->game_manager);
+}
+
+static void
+on_gamepad_disconnected(te_os_window* os_window) {
+    te_window* window = os_window_get_user_data(os_window);
+
+    window->user_callbacks->on_gamepad_disconnected(
+        window->game_instance, window->game_manager);
+
+#if defined(ENGINE_DEBUG_TOOLS)
+    window->debug_stats_time_since_menu = 10.0f;
+    window->debug_stats_time_since_start = 10.0f;
+#endif
+}
+
+static void
+on_gamepad_button_pressed(te_os_window* os_window, enum te_gamepad_button button) {
+    te_window* window = os_window_get_user_data(os_window);
+
+    window->had_gamepad_input_curr_frame = true;
+    window->user_callbacks->on_gamepad_button_pressed(
+        window->game_instance, window->game_manager, button);
+}
+
+static void
+on_gamepad_button_released(te_os_window* os_window, enum te_gamepad_button button) {
+    te_window* window = os_window_get_user_data(os_window);
+
+#if defined(ENGINE_DEBUG_TOOLS)
+    if (button == TE_GB_BACK) {
+        window->debug_stats_time_since_menu = 0.0f;
+    } else if (button == TE_GB_START) {
+        window->debug_stats_time_since_start = 0.0f;
+    }
+    if (window->debug_stats_time_since_menu < 0.25f
+        && window->debug_stats_time_since_start < 0.25f) {
+        if (!debug_console_is_stats_shown()) {
+            renderer_set_fps_limit(game_manager_get_renderer(window->game_manager), 0);
+            debug_console_show_stats();
+        } else {
+            renderer_set_fps_limit(
+                game_manager_get_renderer(window->game_manager),
+                window_get_display_refresh_rate(window));
+            debug_console_hide_stats();
+        }
+        window->debug_stats_time_since_menu = 10.0f;
+        window->debug_stats_time_since_start = 10.0f;
+    }
+#endif
+
+    window->had_gamepad_input_curr_frame = true;
+    window->user_callbacks->on_gamepad_button_released(
+        window->game_instance, window->game_manager, button);
+}
+
+static void
+on_gamepad_axis_moved(te_os_window* os_window, enum te_gamepad_axis axis, float new_pos) {
+    te_window* window = os_window_get_user_data(os_window);
+
+    window->had_gamepad_input_curr_frame = true;
+
+    window->user_callbacks->on_gamepad_axis_moved(
+        window->game_instance, window->game_manager, axis, new_pos);
 }
 
 static void

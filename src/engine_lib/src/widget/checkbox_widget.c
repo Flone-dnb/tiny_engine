@@ -1,5 +1,6 @@
 #include <widget/checkbox_widget.h>
 
+#include <string.h>
 #include <game_manager.h>
 #include <io/log.h>
 #include <type_database.h>

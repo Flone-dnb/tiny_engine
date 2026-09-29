@@ -1,5 +1,6 @@
 #include "ui/world_inspector.h"
 
+#include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <world.h>

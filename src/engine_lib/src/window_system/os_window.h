@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <input/mouse_button.h>
 #include <input/keyboard_button.h>
+#include <input/gamepad_button.h>
 
 // os-specific window wrapper
 typedef struct te_os_window te_os_window;
@@ -34,6 +35,13 @@ typedef struct te_os_window_callbacks {
         te_keyboard_modifiers modifiers);
     void (*on_text_input)(
         te_os_window* os_window, const char* text); // utf-8, do not free the string
+    void (*on_gamepad_connected)( // not called if gamepad is already connected when
+        te_os_window* os_window); // window is being created (use getter to check if connected)
+    void (*on_gamepad_disconnected)(te_os_window* os_window);
+    void (*on_gamepad_button_pressed)(te_os_window* os_window, enum te_gamepad_button button);
+    void (*on_gamepad_button_released)(te_os_window* os_window, enum te_gamepad_button button);
+    void (*on_gamepad_axis_moved)(
+        te_os_window* os_window, enum te_gamepad_axis axis, float new_pos);
     void (*on_received_focus)(te_os_window* os_window);
     void (*on_lost_focus)(te_os_window* os_window);
     void (*on_resized)(te_os_window* os_window, unsigned int width, unsigned int height);
@@ -58,6 +66,8 @@ void* os_window_get_user_data(te_os_window* os_window);
 void os_window_get_size(te_os_window* os_window, unsigned int* width, unsigned int* height);
 
 unsigned int os_window_get_refresh_rate(te_os_window* os_window);
+
+bool os_window_is_gamepad_connected(te_os_window* os_window);
 
 // Sets/gets position of the cursor in pixels.
 void os_window_set_cursor_position(te_os_window* os_window, float x, float y);

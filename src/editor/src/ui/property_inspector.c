@@ -1,5 +1,6 @@
 #include <ui/property_inspector.h>
 
+#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <type_database.h>

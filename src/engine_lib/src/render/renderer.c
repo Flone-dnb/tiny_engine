@@ -674,7 +674,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
             GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_debug);
         }
         {
-            const Uint64 cpu_start_counter = high_freq_timer_now();
+            const uint64_t cpu_start_counter = high_freq_timer_now();
 
             prv_debug_console_draw(delta_time_sec);
             prv_debug_drawer_draw(

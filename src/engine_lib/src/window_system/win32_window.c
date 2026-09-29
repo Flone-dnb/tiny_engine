@@ -2,6 +2,7 @@
 #if defined(WIN32)
 #include <stdlib.h>
 #include <stdbool.h>
+#include <math.h>
 #include <io/log.h>
 #include <misc/wchar_funcs.h>
 #include <window_system/os_window.h>
@@ -9,9 +10,11 @@
 #include <Windows.h>
 #include <windowsx.h>
 #include <glad/glad.h>
+#include <Xinput.h>
 #include "wglext.h"
 
 #pragma comment(lib, "opengl32.lib") // for wgl functions
+#pragma comment(lib, "XInput.lib")
 
 typedef struct te_win32_window {
     HWND hwnd;
@@ -22,6 +25,10 @@ typedef struct te_win32_window {
     float cached_cursor_y;
 
     te_keyboard_modifiers keyboard_mods;
+
+    XINPUT_STATE xinput_state;
+
+    unsigned char controller_id; // 255 if not connected
     bool capture_mouse;
     bool is_cached_cursor_pos_valid;
 } te_win32_window;
@@ -49,16 +56,8 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
     if (os_window != NULL) {
         switch (msg) {
             case WM_INPUT: {
-                UINT size = 0;
-                GetRawInputData(
-                    (HRAWINPUT)lparam, RID_INPUT, NULL, &size, sizeof(RAWINPUTHEADER));
-                if (size == 0) {
-                    return 0;
-                }
                 static BYTE buffer[sizeof(RAWINPUT)];
-                if (size > sizeof(buffer)) {
-                    return 0;
-                }
+                UINT size = sizeof(buffer);
                 if (GetRawInputData(
                         (HRAWINPUT)lparam, RID_INPUT, buffer, &size, sizeof(RAWINPUTHEADER))
                     != size) {
@@ -181,6 +180,35 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                 prv_os_window_get_callbacks(os_window)->on_resized(os_window, width, height);
                 break;
             }
+            case WM_DEVICECHANGE: {
+                te_win32_window* win32_window =
+                    (te_win32_window*)prv_os_window_get_impl(os_window);
+                if (win32_window->controller_id == 255) {
+                    // check if newly connected
+                    for (DWORD i = 0; i < XUSER_MAX_COUNT; i++) {
+                        memset(&win32_window->xinput_state, 0, sizeof(XINPUT_STATE));
+                        if (XInputGetState(i, &win32_window->xinput_state) == ERROR_SUCCESS) {
+                            win32_window->controller_id = (unsigned char)i;
+                            log_info("gamepad connected");
+                            prv_os_window_get_callbacks(os_window)->on_gamepad_connected(
+                                os_window);
+                            break;
+                        }
+                    }
+                } else {
+                    // check if disconnected
+                    memset(&win32_window->xinput_state, 0, sizeof(XINPUT_STATE));
+                    if (XInputGetState(
+                            win32_window->controller_id, &win32_window->xinput_state)
+                        != ERROR_SUCCESS) {
+                        win32_window->controller_id = 255;
+                        log_info("gamepad disconnected");
+                        prv_os_window_get_callbacks(os_window)->on_gamepad_disconnected(
+                            os_window);
+                    }
+                }
+                break;
+            }
             case WM_CLOSE: {
                 os_window_close(os_window);
                 PostQuitMessage(0);
@@ -263,12 +291,13 @@ gladloadproc(const char* name) {
         || (func == (void*)-1)) {
         if (opengl32dll == NULL) {
             opengl32dll = LoadLibraryA("opengl32.dll");
+            if (opengl32dll == NULL) {
+                log_error("failed to load opengl32.dll");
+                abort();
+            }
         }
         func = (void*)GetProcAddress(opengl32dll, name);
-        if (func == NULL) {
-            log_error_fmt("failed to find GL function %s", name);
-            abort();
-        }
+        // note: don't check if this one is NULL
     }
 
     return func;
@@ -400,10 +429,13 @@ win32_window_create(te_os_window* os_window, const char* title) {
         wglSwapIntervalEXT(0);
     }
 
+    // NOTE: RIDEV_NOLEGACY should only be used for fullscreen apps
+    // because it disables lots of window events that are needed for windowed apps
     RAWINPUTDEVICE rid = {0};
     rid.usUsagePage = 0x01;
-    rid.usUsage = 0x02;           // mouse
-    rid.dwFlags = RIDEV_NOLEGACY; // suppress WM_MOUSEMOVE etc.
+    rid.usUsage = 0x02; // mouse
+    rid.dwFlags =
+        RIDEV_NOLEGACY; // (see note from above) disable events like MOUSEMOVE for perf
     rid.hwndTarget = win32_window->hwnd;
     RegisterRawInputDevices(&rid, 1, sizeof(rid));
 
@@ -421,6 +453,18 @@ win32_window_create(te_os_window* os_window, const char* title) {
     prv_os_window_on_size_changed(os_window, (unsigned int)width, (unsigned int)height);
 
     SetCursor(LoadCursor(NULL, IDC_ARROW));
+
+    // check controller
+    win32_window->controller_id = 255;
+    for (DWORD i = 0; i < XUSER_MAX_COUNT; i++) {
+        memset(&win32_window->xinput_state, 0, sizeof(XINPUT_STATE));
+        if (XInputGetState(i, &win32_window->xinput_state) == ERROR_SUCCESS) {
+            win32_window->controller_id = (unsigned char)i;
+            log_info("gamepad connected");
+            // note: don't trigger gamepad_connected callback here
+            break;
+        }
+    }
 }
 
 void
@@ -445,6 +489,63 @@ win32_window_destroy(te_os_window* os_window) {
     }
 }
 
+static void
+trigger_gamepad_button_events(
+    te_os_window* os_window, te_os_window_callbacks* callbacks, DWORD prev_state,
+    DWORD new_state) {
+    bool was_pressed, now_pressed;
+
+#define CHECK_GAMEPAD_BUTTON(xbutton, engine_button)                                          \
+    was_pressed = prev_state & xbutton;                                                       \
+    now_pressed = new_state & xbutton;                                                        \
+    if (!was_pressed && now_pressed) {                                                        \
+        callbacks->on_gamepad_button_pressed(os_window, engine_button);                       \
+    } else if (was_pressed && !now_pressed) {                                                 \
+        callbacks->on_gamepad_button_released(os_window, engine_button);                      \
+    }
+
+    CHECK_GAMEPAD_BUTTON(XINPUT_GAMEPAD_X, TE_GB_LEFT);
+    CHECK_GAMEPAD_BUTTON(XINPUT_GAMEPAD_Y, TE_GB_UP);
+    CHECK_GAMEPAD_BUTTON(XINPUT_GAMEPAD_B, TE_GB_RIGHT);
+    CHECK_GAMEPAD_BUTTON(XINPUT_GAMEPAD_A, TE_GB_DOWN);
+    CHECK_GAMEPAD_BUTTON(XINPUT_GAMEPAD_START, TE_GB_START);
+    CHECK_GAMEPAD_BUTTON(XINPUT_GAMEPAD_BACK, TE_GB_BACK);
+    CHECK_GAMEPAD_BUTTON(XINPUT_GAMEPAD_DPAD_LEFT, TE_GB_DPAD_LEFT);
+    CHECK_GAMEPAD_BUTTON(XINPUT_GAMEPAD_DPAD_UP, TE_GB_DPAD_UP);
+    CHECK_GAMEPAD_BUTTON(XINPUT_GAMEPAD_DPAD_RIGHT, TE_GB_DPAD_RIGHT);
+    CHECK_GAMEPAD_BUTTON(XINPUT_GAMEPAD_DPAD_DOWN, TE_GB_DPAD_DOWN);
+    CHECK_GAMEPAD_BUTTON(XINPUT_GAMEPAD_LEFT_THUMB, TE_GB_LEFT_STICK);
+    CHECK_GAMEPAD_BUTTON(XINPUT_GAMEPAD_RIGHT_THUMB, TE_GB_RIGHT_STICK);
+    CHECK_GAMEPAD_BUTTON(XINPUT_GAMEPAD_LEFT_SHOULDER, TE_GB_LEFT_SHOULDER);
+    CHECK_GAMEPAD_BUTTON(XINPUT_GAMEPAD_RIGHT_SHOULDER, TE_GB_RIGHT_SHOULDER);
+}
+
+static void
+check_thumbstick_changes(
+    te_os_window* os_window, te_os_window_callbacks* callbacks, XINPUT_GAMEPAD* prev_state,
+    XINPUT_GAMEPAD* new_state) {
+    static float deadzone = 0.05f;
+
+#define CHECK_GAMEPAD_AXIS(xaxis, engine_axis, sign)                                          \
+    if (prev_state->xaxis != new_state->xaxis) {                                              \
+        float prev_abs_norm = fabsf(fmaxf(-1, (float)prev_state->xaxis / 32767));             \
+        float norm = fmaxf(-1, (float)new_state->xaxis / 32767);                              \
+        float abs_norm = fabsf(norm);                                                         \
+        if (prev_abs_norm > deadzone || abs_norm > deadzone) {                                \
+            float pos = abs_norm < deadzone                                                   \
+                            ? 0.0f                                                            \
+                            : (abs_norm - deadzone) * (norm < 0.0f ? -1.0f : 1.0f);           \
+            pos /= 1.0f - deadzone;                                                           \
+            callbacks->on_gamepad_axis_moved(os_window, engine_axis, pos* sign);              \
+        }                                                                                     \
+    }
+
+    CHECK_GAMEPAD_AXIS(sThumbLX, TE_GA_LEFT_STICK_X, 1);
+    CHECK_GAMEPAD_AXIS(sThumbLY, TE_GA_LEFT_STICK_Y, -1);
+    CHECK_GAMEPAD_AXIS(sThumbRX, TE_GA_RIGHT_STICK_X, 1);
+    CHECK_GAMEPAD_AXIS(sThumbRY, TE_GA_RIGHT_STICK_Y, -1);
+}
+
 void
 win32_window_poll_event(te_os_window* os_window) {
     te_win32_window* win32_window = prv_os_window_get_impl(os_window);
@@ -458,6 +559,35 @@ win32_window_poll_event(te_os_window* os_window) {
         }
         TranslateMessage(&msg);
         DispatchMessageA(&msg);
+    }
+
+    // check gamepad input changes
+    if (win32_window->controller_id != 255) {
+        XINPUT_GAMEPAD prev_state = win32_window->xinput_state.Gamepad;
+        memset(&win32_window->xinput_state, 0, sizeof(XINPUT_STATE));
+        if (XInputGetState(win32_window->controller_id, &win32_window->xinput_state)
+            == ERROR_SUCCESS) {
+            te_os_window_callbacks* callbacks = prv_os_window_get_callbacks(os_window);
+            XINPUT_GAMEPAD* new_state = &win32_window->xinput_state.Gamepad;
+
+            if (prev_state.wButtons != new_state->wButtons) {
+                trigger_gamepad_button_events(
+                    os_window, callbacks, prev_state.wButtons, new_state->wButtons);
+            }
+            if (prev_state.bLeftTrigger != new_state->bLeftTrigger) {
+                callbacks->on_gamepad_axis_moved(
+                    os_window, TE_GA_LEFT_TRIGGER, (float)new_state->bLeftTrigger / 255.0f);
+            }
+            if (prev_state.bRightTrigger != new_state->bRightTrigger) {
+                callbacks->on_gamepad_axis_moved(
+                    os_window, TE_GA_RIGHT_TRIGGER, (float)new_state->bRightTrigger / 255.0f);
+            }
+            check_thumbstick_changes(os_window, callbacks, &prev_state, new_state);
+        } else {
+            win32_window->controller_id = 255;
+            log_info("gamepad disconnected");
+            prv_os_window_get_callbacks(os_window)->on_gamepad_disconnected(os_window);
+        }
     }
 }
 
@@ -485,7 +615,7 @@ win32_window_get_cursor_position(te_os_window* os_window, float* x, float* y) {
         (*y) = (float)p.y;
 
         win32_window->cached_cursor_x = (*x);
-        win32_window->cached_cursor_y = (*x);
+        win32_window->cached_cursor_y = (*y);
         win32_window->is_cached_cursor_pos_valid = true;
     }
 }
@@ -525,6 +655,13 @@ win32_window_capture_mouse_cursor(te_os_window* os_window, bool capture) {
 
         SetCursorPos(pos_before_lock.x, pos_before_lock.y);
     }
+}
+
+bool
+win32_window_is_gamepad_connected(te_os_window* os_window) {
+    te_win32_window* win32_window = prv_os_window_get_impl(os_window);
+
+    return win32_window->controller_id != 255;
 }
 
 void

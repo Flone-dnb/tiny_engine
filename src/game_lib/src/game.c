@@ -196,10 +196,8 @@ game_on_mouse_scroll_moved(
 }
 
 void
-game_on_gamepad_connected(
-    void* game_instance, struct te_game_manager* game_manager, const char* gamepad_name) {
+game_on_gamepad_connected(void* game_instance, struct te_game_manager* game_manager) {
     (void)game_manager;
-    (void)gamepad_name;
 
     te_game* game = game_instance;
     camera_controller_on_gamepad_connected(game->camera_controller);

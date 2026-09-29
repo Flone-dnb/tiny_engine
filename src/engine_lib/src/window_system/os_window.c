@@ -96,6 +96,17 @@ os_window_capture_mouse_cursor(te_os_window* os_window, bool capture) {
 #endif
 }
 
+bool
+os_window_is_gamepad_connected(te_os_window* os_window) {
+#if defined(WIN32)
+    return win32_window_is_gamepad_connected(os_window);
+#else
+    // TODO: not implemented yet
+    assert(false);
+    abort();
+#endif
+}
+
 void
 os_window_poll_event(te_os_window* os_window) {
 #if defined(WIN32)

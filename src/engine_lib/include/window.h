@@ -57,8 +57,7 @@ typedef struct te_window_callbacks {
         void* game_instance, struct te_game_manager* game_manager, float offset);
 
     // Called when a gamepad connects. Gamepad name string must not be freed/destroyed.
-    void (*on_gamepad_connected)(
-        void* game_instance, struct te_game_manager* game_manager, const char* gamepad_name);
+    void (*on_gamepad_connected)(void* game_instance, struct te_game_manager* game_manager);
     void (*on_gamepad_disconnected)(void* game_instance, struct te_game_manager* game_manager);
 
     // Called after the input device changed (keyboard+mouse/gamepad).

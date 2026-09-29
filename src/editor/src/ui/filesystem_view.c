@@ -1,5 +1,6 @@
 #include <ui/filesystem_view.h>
 
+#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <editor.h>
