@@ -134,15 +134,15 @@ endif()
 set(ENGINE_LIB_DEPS_TARGET engine_lib_deps)
 add_library(${ENGINE_LIB_DEPS_TARGET} INTERFACE)
 
-if(NOT WIN32)
+if(NOT MSVC)
     # for our custom windowing system
     find_package(X11 REQUIRED COMPONENTS Xrandr Xfixes)
     find_package(OpenGL REQUIRED)
     target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE
-	X11::X11
-	X11::Xrandr
-	X11::Xfixes
-	OpenGL::GL
+	    X11::X11
+	    X11::Xrandr
+	    X11::Xfixes
+	    OpenGL::GL
     )
 
     # for math
@@ -152,25 +152,26 @@ endif()
 # Add GLAD.
 message(STATUS "${PROJECT_NAME}: adding dependency \"GLAD\"...")
 set(GLAD_TARGET_NAME glad)
-if (ENGINE_GLES)
+if(ENGINE_GLES)
     set(GLAD_PATH ${RELATIVE_EXT_PATH}/glad_gles20)
-    add_library(${GLAD_TARGET_NAME} STATIC
-	${GLAD_PATH}/src/gl.c
-	${GLAD_PATH}/src/egl.c
-	${GLAD_PATH}/src/glx.c
-	${GLAD_PATH}/include/KHR/khrplatform.h
-	${GLAD_PATH}/include/glad/gl.h
-	${GLAD_PATH}/include/glad/egl.h
-	${GLAD_PATH}/include/glad/glx.h
-    )
 else()
     set(GLAD_PATH ${RELATIVE_EXT_PATH}/glad_gl45)
-    add_library(${GLAD_TARGET_NAME} STATIC
-	${GLAD_PATH}/src/gl.c
-	${GLAD_PATH}/src/glx.c
-	${GLAD_PATH}/include/KHR/khrplatform.h
-	${GLAD_PATH}/include/glad/gl.h
-	${GLAD_PATH}/include/glad/glx.h
+endif()
+add_library(${GLAD_TARGET_NAME} STATIC
+    ${GLAD_PATH}/src/gl.c
+    ${GLAD_PATH}/include/KHR/khrplatform.h
+    ${GLAD_PATH}/include/glad/gl.h
+)
+if(ENGINE_GLES)
+    target_sources(${GLAD_TARGET_NAME} PRIVATE
+        ${GLAD_PATH}/src/egl.c
+        ${GLAD_PATH}/include/glad/egl.h
+    )
+endif()
+if(NOT MSVC)
+    target_sources(${GLAD_TARGET_NAME} PRIVATE
+        ${GLAD_PATH}/src/glx.c
+        ${GLAD_PATH}/include/glad/glx.h
     )
 endif()
 target_include_directories(${GLAD_TARGET_NAME} SYSTEM PUBLIC ${GLAD_PATH}/include)

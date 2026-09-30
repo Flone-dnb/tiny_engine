@@ -417,9 +417,9 @@ win32_window_create(te_os_window* os_window, const char* title) {
     wglMakeCurrent(win32_window->hdc, win32_window->hglrc);
 
 #if defined(ENGINE_GLES)
-    if (gladLoadGLES2(gladloadproc) == 0) {
+    if (gladLoadGLES2((GLADloadfunc)gladloadproc) == 0) {
 #else
-    if (gladLoadGL(gladloadproc) == 0) {
+    if (gladLoadGL((GLADloadfunc)gladloadproc) == 0) {
 #endif
 #if defined(WIN32)
         MessageBoxA(NULL, "Error", "failed to initialize OpenGL", MB_OK);
