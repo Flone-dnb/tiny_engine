@@ -137,12 +137,10 @@ add_library(${ENGINE_LIB_DEPS_TARGET} INTERFACE)
 if(NOT MSVC)
     # for our custom windowing system
     find_package(X11 REQUIRED COMPONENTS Xrandr Xfixes)
-    find_package(OpenGL REQUIRED)
     target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE
-	    X11::X11
-	    X11::Xrandr
-	    X11::Xfixes
-	    OpenGL::GL
+        X11::X11
+        X11::Xrandr
+        X11::Xfixes
     )
 
     # for math

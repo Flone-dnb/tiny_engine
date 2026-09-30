@@ -202,9 +202,11 @@ x11_gamepad_find_and_open(te_x11_gamepad* gamepad) {
             continue;
         }
 
-        char path[256];
+        static char path[512];
         snprintf(path, sizeof(path), "/dev/input/%s", entry->d_name);
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-conversion"
         if (x11_gamepad_is_gamepad_device(path)) {
             int fd = open(path, O_RDONLY | O_NONBLOCK);
             if (fd < 0) {
@@ -236,6 +238,7 @@ x11_gamepad_find_and_open(te_x11_gamepad* gamepad) {
             found = true;
             break;
         }
+#pragma GCC diagnostic pop
     }
 
     closedir(dir);
@@ -467,6 +470,8 @@ x11_handle_key_event(
     enum te_keyboard_button button = (enum te_keyboard_button)(key_event->keycode - 8);
 
     // update keyboard modifiers
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-conversion"
     if (button == TE_KB_LEFT_ALT) {
         if (is_press) {
             x11_window->keyboard_mods.bitmask |= 0b1;
@@ -486,6 +491,7 @@ x11_handle_key_event(
             x11_window->keyboard_mods.bitmask &= ~0b100;
         }
     }
+#pragma GCC diagnostic pop
 
     te_os_window_callbacks* callbacks = prv_os_window_get_callbacks(os_window);
 
