@@ -319,7 +319,7 @@ on_keyboard_button_pressed(
     if (os_window_is_gamepad_connected(window->os_window)) {
         // In some cases while using retro-handhelds (which have built in gamepad) gamepad buttons trigger
         // keyboard input before the actual gamepad button which messes up the whole game input.
-        break;
+        return;
     }
 #endif
 
@@ -351,7 +351,7 @@ on_keyboard_button_released(
 #if defined(IS_ARM64)
     if (os_window_is_gamepad_connected(window->os_window)) {
         // Same as in the "pressed" event.
-        break;
+        return;
     }
 #endif
 
@@ -380,7 +380,7 @@ on_text_input(te_os_window* os_window, const char* text) {
 #if defined(IS_ARM64)
     if (os_window_is_gamepad_connected(window->os_window)) {
         // Same as in the "pressed" event.
-        break;
+        return;
     }
 #endif
 
