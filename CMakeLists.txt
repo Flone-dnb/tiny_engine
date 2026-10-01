@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.10)
+﻿cmake_minimum_required(VERSION 3.13)
 
 project(tiny_engine C)
 
@@ -128,11 +128,22 @@ function(create_symlink_to_res DIR_NAME)
     
     if(NOT EXISTS ${RES_SYMLINK_PATH})
         message(STATUS "Creating symlink to `res` directory at ${RES_SYMLINK_PATH}")
-        file(CREATE_LINK
-            ${CMAKE_CURRENT_LIST_DIR}/../../res
-            ${RES_SYMLINK_PATH}
-            SYMBOLIC
-        )
+        set(RES_LINK_FROM ${CMAKE_CURRENT_LIST_DIR}/../../res)
+        SET(RES_LINK_TO ${RES_SYMLINK_PATH})
+        if(WIN32)
+            file(TO_NATIVE_PATH ${RES_LINK_FROM} SRC_DIR)
+            file(TO_NATIVE_PATH ${RES_LINK_TO} DST_DIR)
+    
+            execute_process(
+                COMMAND cmd /c mklink /J "${DST_DIR}" "${SRC_DIR}"
+                RESULT_VARIABLE result
+            )
+        else()
+            execute_process(
+                COMMAND ${CMAKE_COMMAND} -E create_symlink "${RES_LINK_FROM}" "${RES_LINK_TO}"
+                RESULT_VARIABLE result
+            )
+        endif()
     endif()
 endfunction()
 
