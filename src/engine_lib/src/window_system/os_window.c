@@ -1,14 +1,14 @@
 #include <window_system/os_window.h>
 
-// configurable options
+/* configurable options */
 #if !defined(ENGINE_GLES)
-int TE_OS_WINDOW_GL_MAJOR_VERSION = 4; // same as GLAD version
-int TE_OS_WINDOW_GL_MINOR_VERSION = 5; // same as GLAD version
-int TE_OS_WINDOW_MSAA = 1; // set to 2 or 4 to require os to support msaa backbuffers
+int TE_OS_WINDOW_GL_MAJOR_VERSION = 4; /* same as GLAD version */
+int TE_OS_WINDOW_GL_MINOR_VERSION = 5; /* same as GLAD version */
+int TE_OS_WINDOW_MSAA = 1; /* set to 2 or 4 to require os to support msaa backbuffers */
 #else
-int TE_OS_WINDOW_GL_MAJOR_VERSION = 2; // same as GLAD version
-int TE_OS_WINDOW_GL_MINOR_VERSION = 0; // same as GLAD version
-int TE_OS_WINDOW_MSAA = 1;             // no MSAA under GLES
+int TE_OS_WINDOW_GL_MAJOR_VERSION = 2; /* same as GLAD version */
+int TE_OS_WINDOW_GL_MINOR_VERSION = 0; /* same as GLAD version */
+int TE_OS_WINDOW_MSAA = 1;             /* no MSAA under GLES */
 #endif
 int TE_OS_WINDOW_DEPTH_BITS = 24;
 int TE_OS_WINDOW_STENCIL_BITS = 8;
@@ -24,15 +24,15 @@ float TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE = 0.05f;
 #endif
 
 struct te_os_window {
-    // platform-specific implementation data
+    /* platform-specific implementation data */
     void* impl;
 
-    // always valid
+    /* always valid */
     te_os_window_callbacks* callbacks;
 
     void* user_data;
 
-    // current size in pixels
+    /* current size in pixels */
     unsigned int width;
     unsigned int height;
 

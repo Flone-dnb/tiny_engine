@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include <math.h>
 #include <io/log.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -26,7 +25,7 @@
 #include <glad/gl.h>
 #include <glad/glx.h>
 
-// GLX extension function pointers
+/* GLX extension function pointers */
 typedef GLXContext (*PFNGLXCREATECONTEXTATTRIBSARBPROC)(
     Display*, GLXFBConfig, GLXContext, Bool, const int*);
 typedef GLXFBConfig* (*PFNGLXCHOOSEFBCONFIGPROC)(Display*, int, const int*, int*);
@@ -38,9 +37,9 @@ static PFNGLXCHOOSEFBCONFIGPROC glXChooseFBConfig_ptr = NULL;
 static PFNGLXGETFBCONFIGATTRIBPROC glXGetFBConfigAttrib_ptr = NULL;
 static PFNGLXSWAPINTERVALEXTPROC glXSwapIntervalEXT_ptr = NULL;
 
-// evdev gamepad constants
+/* evdev gamepad constants */
 #define MAX_GAMEPAD_AXES 8
-#define MAX_GAMEPAD_BUTTONS 14 // number of te_gamepad_button entries
+#define MAX_GAMEPAD_BUTTONS 14 /* number of te_gamepad_button entries */
 
 typedef struct te_x11_gamepad {
     int fd;
@@ -51,7 +50,7 @@ typedef struct te_x11_gamepad {
     int buttons[MAX_GAMEPAD_BUTTONS];
     unsigned char prev_buttons[MAX_GAMEPAD_BUTTONS];
 
-    // axis ranges (min/max from ioctl)
+    /* axis ranges (min/max from ioctl) */
     struct input_absinfo abs_info[MAX_GAMEPAD_AXES];
 
     bool connected;
@@ -72,7 +71,7 @@ typedef struct te_x11_window {
     int inotify_fd;
     int inotify_wd;
 
-    // cursor state
+    /* cursor state */
     int cursor_x;
     int cursor_y;
     bool capture_mouse;
@@ -80,7 +79,7 @@ typedef struct te_x11_window {
     te_keyboard_modifiers keyboard_mods;
     te_x11_gamepad gamepad;
 
-    // Atoms for fullscreen
+    /* atoms for fullscreen */
     Atom wm_state;
     Atom wm_state_fullscreen;
 } te_x11_window;
@@ -96,20 +95,24 @@ static int
 x11_error_handler(Display* display, XErrorEvent* event) {
     char error_text[256];
     XGetErrorText(display, event->error_code, error_text, sizeof(error_text));
-    log_error_fmt("X11 error: %s (request code: %d)", error_text, event->request_code);
+    log_error_fmt(
+        __FILE__, __LINE__, "X11 error: %s (request code: %d)", error_text,
+        event->request_code);
     return 0;
 }
 
 static void
 x11_load_glx_extensions(Display* display, int screen) {
+    const char* glx_extensions;
+
     if (gladLoaderLoadGLX(display, screen) == 0) {
-        log_error("failed to initialize GLX loader");
+        log_error(__FILE__, __LINE__, "failed to initialize GLX loader");
         abort();
     }
 
-    const char* glx_extensions = glXQueryExtensionsString(display, screen);
+    glx_extensions = glXQueryExtensionsString(display, screen);
     if (glx_extensions == NULL) {
-        log_error("failed to query GLX extensions");
+        log_error(__FILE__, __LINE__, "failed to query GLX extensions");
         abort();
     }
 
@@ -124,11 +127,11 @@ x11_load_glx_extensions(Display* display, int screen) {
     }
 
     if (strstr(glx_extensions, "GLX_ARB_create_context_profile") == NULL) {
-        log_warn("GLX_ARB_create_context_profile not supported");
+        log_warn(__FILE__, __LINE__, "GLX_ARB_create_context_profile not supported");
     }
 
     if (strstr(glx_extensions, "GLX_ARB_create_context_profile") == NULL) {
-        log_warn("GLX_ARB_create_context_profile not supported");
+        log_warn(__FILE__, __LINE__, "GLX_ARB_create_context_profile not supported");
     }
 
     glXChooseFBConfig_ptr =
@@ -141,7 +144,7 @@ static void*
 glad_load_proc(const char* name) {
     void* func = (void*)glXGetProcAddress((const GLubyte*)name);
     if (func == NULL) {
-        // try dlsym as fallback
+        /* try dlsym as fallback */
         func = (void*)glXGetProcAddress((const GLubyte*)name);
     }
     return func;
@@ -149,34 +152,34 @@ glad_load_proc(const char* name) {
 
 static bool
 x11_gamepad_is_gamepad_device(const char* path) {
+    unsigned long evbit[((EV_MAX + 1) / (sizeof(unsigned long) * 8)) + 1] = {0};
+    unsigned long keybit[((KEY_MAX + 1) / (sizeof(unsigned long) * 8)) + 1] = {0};
+    bool has_gamepad_buttons = false;
+
     int fd = open(path, O_RDONLY | O_NONBLOCK);
     if (fd < 0) {
         return false;
     }
 
-    // check if device has gamepad capabilities
-    unsigned long evbit[((EV_MAX + 1) / (sizeof(unsigned long) * 8)) + 1] = {0};
-    unsigned long keybit[((KEY_MAX + 1) / (sizeof(unsigned long) * 8)) + 1] = {0};
-
+    /* check if device has gamepad capabilities */
     if (ioctl(fd, EVIOCGBIT(0, sizeof(evbit)), evbit) < 0) {
         close(fd);
         return false;
     }
 
-    // check for axes
+    /* check for axes */
     if (!(evbit[EV_ABS / (sizeof(unsigned long) * 8)]
           & (1UL << (EV_ABS % (sizeof(unsigned long) * 8))))) {
         close(fd);
         return false;
     }
 
-    // check for buttons
+    /* check for buttons */
     if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(keybit)), keybit) < 0) {
         close(fd);
         return false;
     }
 
-    bool has_gamepad_buttons = false;
     if (keybit[BTN_GAMEPAD / (sizeof(unsigned long) * 8)]
         & (1UL << (BTN_GAMEPAD % (sizeof(unsigned long) * 8)))) {
         has_gamepad_buttons = true;
@@ -188,21 +191,20 @@ x11_gamepad_is_gamepad_device(const char* path) {
 
 static bool
 x11_gamepad_find_and_open(te_x11_gamepad* gamepad) {
-    DIR* dir = opendir("/dev/input");
-    if (dir == NULL) {
-        log_warn("failed to open /dev/input directory");
-        return false;
-    }
-
+    static char path[512];
     struct dirent* entry;
     bool found = false;
+    DIR* dir = opendir("/dev/input");
+    if (dir == NULL) {
+        log_warn(__FILE__, __LINE__, "failed to open /dev/input directory");
+        return false;
+    }
 
     while ((entry = readdir(dir)) != NULL) {
         if (strncmp(entry->d_name, "event", 5) != 0) {
             continue;
         }
 
-        static char path[512];
         snprintf(path, sizeof(path), "/dev/input/%s", entry->d_name);
 
 #pragma GCC diagnostic push
@@ -234,7 +236,7 @@ x11_gamepad_find_and_open(te_x11_gamepad* gamepad) {
                 }
             }
 
-            log_info("gamepad connected");
+            log_info(__FILE__, __LINE__, "gamepad connected");
             found = true;
             break;
         }
@@ -419,7 +421,7 @@ x11_gamepad_poll(te_os_window* os_window, te_x11_window* x11_window) {
     // check if was disconnected
     if (gamepad->connected && gamepad->fd < 0) {
         gamepad->connected = false;
-        log_info("gamepad disconnected");
+        log_info(__FILE__, __LINE__, "gamepad disconnected");
         callbacks->on_gamepad_disconnected(os_window);
         return;
     }
@@ -457,7 +459,7 @@ x11_gamepad_poll(te_os_window* os_window, te_x11_window* x11_window) {
 
     // check if disconnected
     if (read_error) {
-        log_info("gamepad disconnected");
+        log_info(__FILE__, __LINE__, "gamepad disconnected");
         x11_gamepad_close(gamepad);
         callbacks->on_gamepad_disconnected(os_window);
     }
@@ -633,7 +635,7 @@ x11_window_create(te_os_window* os_window, const char* title) {
 
     x11_window->display = XOpenDisplay(NULL);
     if (x11_window->display == NULL) {
-        log_error("failed to open X display");
+        log_error(__FILE__, __LINE__, "failed to open X display");
         abort();
     }
 
@@ -676,7 +678,7 @@ x11_window_create(te_os_window* os_window, const char* title) {
         glXChooseFBConfig(x11_window->display, x11_window->screen, visual_attribs, &fb_count);
 
     if (fb_configs == NULL || fb_count == 0) {
-        log_error("the system failed to meet required pixel format");
+        log_error(__FILE__, __LINE__, "the system failed to meet required pixel format");
         abort();
     }
 
@@ -714,7 +716,7 @@ x11_window_create(te_os_window* os_window, const char* title) {
 
     XVisualInfo* visual_info = glXGetVisualFromFBConfig(x11_window->display, fb_config);
     if (visual_info == NULL) {
-        log_error("failed to get XVisualInfo from FBConfig");
+        log_error(__FILE__, __LINE__, "failed to get XVisualInfo from FBConfig");
         abort();
     }
 
@@ -738,7 +740,7 @@ x11_window_create(te_os_window* os_window, const char* title) {
         visual_info->depth, InputOutput, visual_info->visual,
         CWBorderPixel | CWColormap | CWEventMask, &window_attribs);
     if (x11_window->window == 0) {
-        log_error("failed to create X11 window");
+        log_error(__FILE__, __LINE__, "failed to create X11 window");
         abort();
     }
 
@@ -803,12 +805,12 @@ x11_window_create(te_os_window* os_window, const char* title) {
     }
 
     if (x11_window->gl_context == NULL) {
-        log_error("failed to create OpenGL context");
+        log_error(__FILE__, __LINE__, "failed to create OpenGL context");
         abort();
     }
 
     if (!glXMakeCurrent(x11_window->display, x11_window->window, x11_window->gl_context)) {
-        log_error("failed to make OpenGL context current");
+        log_error(__FILE__, __LINE__, "failed to make OpenGL context current");
         abort();
     }
 
@@ -818,7 +820,7 @@ x11_window_create(te_os_window* os_window, const char* title) {
 #else
     if (gladLoadGL(glad_load_proc) == 0) {
 #endif
-        log_error("failed to initialize OpenGL");
+        log_error(__FILE__, __LINE__, "failed to initialize OpenGL");
         abort();
     }
 

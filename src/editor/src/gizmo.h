@@ -7,11 +7,7 @@ struct te_world;
 struct te_model;
 struct te_camera;
 
-enum te_gizmo_mode {
-	TE_GM_MOVE,
-	TE_GM_ROTATE,
-	TE_GM_SCALE
-};
+enum te_gizmo_mode { TE_GM_MOVE, TE_GM_ROTATE, TE_GM_SCALE };
 
 // Creates and spawns gizmo model in the specified world to control the specified target object.
 // Will be automatically destroyed when the model is despawned and destroyed.

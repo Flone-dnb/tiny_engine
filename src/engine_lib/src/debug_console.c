@@ -277,7 +277,7 @@ prv_debug_console_draw_stat(vec2 screen_pos, const char* fmt, ...) {
 
     int len = vsnprintf(NULL, 0, fmt, args);
     if (len <= 0) {
-        log_error("snprintf error");
+        log_error(__FILE__, __LINE__, "snprintf error");
         abort();
     }
 

@@ -254,7 +254,7 @@ skeleton_bone_interpolate_pos_scale(
 
 #if defined(DEBUG)
     if (keyframe_count == 0) {
-        log_error("expected to have at least 1 keyframe");
+        log_error(__FILE__, __LINE__, "expected to have at least 1 keyframe");
         abort();
     }
 #endif
@@ -308,7 +308,7 @@ skeleton_bone_interpolate_rotation(
 
 #if defined(DEBUG)
     if (keyframe_count == 0) {
-        log_error("expected to have at least 1 keyframe");
+        log_error(__FILE__, __LINE__, "expected to have at least 1 keyframe");
         abort();
     }
 #endif
@@ -547,7 +547,7 @@ load_bone_anim(te_skeleton_animation* skel_anim, unsigned int bone_anim_idx, FIL
             keyframe_count += 1;
         }
         if (keyframe_count == 0) {
-            log_error_fmt(
+            log_error_fmt(__FILE__, __LINE__, 
                 "expected to find at least a single keyframe for a bone with index %u",
                 bone_idx);
             abort();
@@ -557,7 +557,7 @@ load_bone_anim(te_skeleton_animation* skel_anim, unsigned int bone_anim_idx, FIL
         te_skeleton_animation_keyframe* keyframes =
             malloc(sizeof(te_skeleton_animation_keyframe) * keyframe_count);
         if (bone_anim->keyframes[channel_type] != NULL) {
-            log_error_fmt(
+            log_error_fmt(__FILE__, __LINE__, 
                 "found duplicate animation channels on the bone %u, channel %u", bone_idx,
                 channel_type);
             abort();
@@ -610,7 +610,7 @@ prv_skeleton_preload_animation_file(
 
     FILE* fp = fopen(path_to_anim_file, "rb");
     if (fp == NULL) {
-        log_error_fmt("failed to open file %s", path_to_anim_file);
+        log_error_fmt(__FILE__, __LINE__, "failed to open file %s", path_to_anim_file);
         abort();
     }
 
@@ -633,7 +633,7 @@ prv_skeleton_preload_animation_file(
 
     for (unsigned int i = 0; i < anim->bone_anim_count; i++) {
         if (!load_bone_anim(anim, i, fp)) {
-            log_error_fmt(
+            log_error_fmt(__FILE__, __LINE__, 
                 "unable to find a single bone animation info in file %s", path_to_anim_file);
             abort();
         }
@@ -652,7 +652,7 @@ skeleton_load_animations(te_skeleton* skeleton, const char* relative_path) {
     unsigned int path_to_anim_dir_len;
     char* anim_path = filesystem_prepend_res_to_path(relative_path, &path_to_anim_dir_len);
     if (!filesystem_does_path_exists(anim_path)) {
-        log_error_fmt("the specified path does not exist \"%s\"", anim_path);
+        log_error_fmt(__FILE__, __LINE__, "the specified path does not exist \"%s\"", anim_path);
         abort();
     }
 
@@ -684,11 +684,11 @@ skeleton_load_animations(te_skeleton* skeleton, const char* relative_path) {
         unsigned int filename_len;
         const char* filename = filesystem_find_filename(anim_path, true, &filename_len);
         if (filename_len < 6) {
-            log_error_fmt("invalid anim file path specified: %s", anim_path);
+            log_error_fmt(__FILE__, __LINE__, "invalid anim file path specified: %s", anim_path);
             abort();
         }
         if (strncmp(filename + filename_len - 5, ".anim", 5) != 0) {
-            log_error_fmt("expected .anim extension: %s", anim_path);
+            log_error_fmt(__FILE__, __LINE__, "expected .anim extension: %s", anim_path);
             abort();
         }
         prv_skeleton_preload_animation_file(skeleton, anim_path, filename, filename_len);
@@ -705,7 +705,7 @@ skeleton_play_animation(
     te_skeleton_animation* lookup_ptr = &lookup;
     te_skeleton_animation* const* found = hashmap_get(skeleton->preloaded_anims, &lookup_ptr);
     if (found == NULL) {
-        log_error_fmt("unable to find animation %s (was it loaded previously?)", anim_name);
+        log_error_fmt(__FILE__, __LINE__, "unable to find animation %s (was it loaded previously?)", anim_name);
         abort();
     }
 

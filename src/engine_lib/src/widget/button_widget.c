@@ -154,7 +154,7 @@ static void
 prv_button_widget_register_render_data(te_button_widget* button_widget) {
     te_world* world = widget_get_world(button_widget->widget);
     if (world == NULL) {
-        log_error("expected the widget to be spawned");
+        log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
 
@@ -182,7 +182,7 @@ static void
 prv_button_widget_unregister_render_data(te_button_widget* button_widget) {
     te_world* world = widget_get_world(button_widget->widget);
     if (world == NULL) {
-        log_error("expected the widget to be spawned");
+        log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
 

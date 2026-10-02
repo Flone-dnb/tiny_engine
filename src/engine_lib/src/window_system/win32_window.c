@@ -189,7 +189,7 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                         memset(&win32_window->xinput_state, 0, sizeof(XINPUT_STATE));
                         if (XInputGetState(i, &win32_window->xinput_state) == ERROR_SUCCESS) {
                             win32_window->controller_id = (unsigned char)i;
-                            log_info("gamepad connected");
+                            log_info(__FILE__, __LINE__, "gamepad connected");
                             prv_os_window_get_callbacks(os_window)->on_gamepad_connected(
                                 os_window);
                             break;
@@ -202,7 +202,7 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                             win32_window->controller_id, &win32_window->xinput_state)
                         != ERROR_SUCCESS) {
                         win32_window->controller_id = 255;
-                        log_info("gamepad disconnected");
+                        log_info(__FILE__, __LINE__, "gamepad disconnected");
                         prv_os_window_get_callbacks(os_window)->on_gamepad_disconnected(
                             os_window);
                     }
@@ -228,7 +228,7 @@ load_wgl_extensions(void) {
     wc.hInstance = GetModuleHandleA(NULL);
     wc.lpszClassName = L"DummyWindowClass";
     if (!RegisterClassW(&wc)) {
-        log_error("failed to register a dummy window class");
+        log_error(__FILE__, __LINE__, "failed to register a dummy window class");
         abort();
     }
 
@@ -236,7 +236,7 @@ load_wgl_extensions(void) {
         0, L"DummyWindowClass", L"", WS_OVERLAPPEDWINDOW, 0, 0, 1, 1, NULL, NULL, wc.hInstance,
         NULL);
     if (!dummy) {
-        log_error("failed to create a dummy window");
+        log_error(__FILE__, __LINE__, "failed to create a dummy window");
         abort();
     }
     HDC dummy_dc = GetDC(dummy);
@@ -260,20 +260,20 @@ load_wgl_extensions(void) {
     wglChoosePixelFormatARB =
         (PFNWGLCHOOSEPIXELFORMATARBPROC)wglGetProcAddress("wglChoosePixelFormatARB");
     if (wglChoosePixelFormatARB == NULL) {
-        log_error("failed to load wgl extension wglChoosePixelFormatARB");
+        log_error(__FILE__, __LINE__, "failed to load wgl extension wglChoosePixelFormatARB");
         abort();
     }
 
     wglCreateContextAttribsARB =
         (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
     if (wglCreateContextAttribsARB == NULL) {
-        log_error("failed to load wgl extension wglCreateContextAttribsARB");
+        log_error(__FILE__, __LINE__, "failed to load wgl extension wglCreateContextAttribsARB");
         abort();
     }
 
     wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)wglGetProcAddress("wglSwapIntervalEXT");
     if (wglSwapIntervalEXT == NULL) {
-        log_warn("wglSwapIntervalEXT not supported");
+        log_warn(__FILE__, __LINE__, "wglSwapIntervalEXT not supported");
     }
 
     wglMakeCurrent(NULL, NULL);
@@ -292,7 +292,7 @@ gladloadproc(const char* name) {
         if (opengl32dll == NULL) {
             opengl32dll = LoadLibraryA("opengl32.dll");
             if (opengl32dll == NULL) {
-                log_error("failed to load opengl32.dll");
+                log_error(__FILE__, __LINE__, "failed to load opengl32.dll");
                 abort();
             }
         }
@@ -323,7 +323,7 @@ win32_window_create(te_os_window* os_window, const char* title) {
     wc.hCursor = NULL;
     wc.lpszClassName = window_class;
     if (!RegisterClassW(&wc)) {
-        log_error("failed to register window class");
+        log_error(__FILE__, __LINE__, "failed to register window class");
         abort();
     }
 
@@ -337,7 +337,7 @@ win32_window_create(te_os_window* os_window, const char* title) {
         WS_EX_APPWINDOW, window_class, titlew, WS_POPUP | WS_VISIBLE | WS_MAXIMIZE, 0, 0,
         screen_w, screen_h, NULL, NULL, hinstance, NULL);
     if (!win32_window->hwnd) {
-        log_error("failed to create window");
+        log_error(__FILE__, __LINE__, "failed to create window");
         abort();
     }
     free(titlew);
@@ -377,14 +377,14 @@ win32_window_create(te_os_window* os_window, const char* title) {
     if (!wglChoosePixelFormatARB(
             win32_window->hdc, pixel_attribs, NULL, 1, &pixel_format, &num_formats)
         || num_formats == 0) {
-        log_error("the system failed to meet required pixel format");
+        log_error(__FILE__, __LINE__, "the system failed to meet required pixel format");
         abort();
     }
 
     PIXELFORMATDESCRIPTOR pfd;
     DescribePixelFormat(win32_window->hdc, pixel_format, sizeof(pfd), &pfd);
     if (!SetPixelFormat(win32_window->hdc, pixel_format, &pfd)) {
-        log_error("failed to set pixel format");
+        log_error(__FILE__, __LINE__, "failed to set pixel format");
         abort();
     }
 
@@ -410,7 +410,7 @@ win32_window_create(te_os_window* os_window, const char* title) {
 #if defined(WIN32)
         MessageBoxA(NULL, "Error", "failed to create OpenGL context", MB_OK);
 #endif
-        log_error("failed to create OpenGL context");
+        log_error(__FILE__, __LINE__, "failed to create OpenGL context");
         abort();
     }
 
@@ -424,7 +424,7 @@ win32_window_create(te_os_window* os_window, const char* title) {
 #if defined(WIN32)
         MessageBoxA(NULL, "Error", "failed to initialize OpenGL", MB_OK);
 #endif
-        log_error("failed to initialize OpenGL");
+        log_error(__FILE__, __LINE__, "failed to initialize OpenGL");
         abort();
     }
 
@@ -464,7 +464,7 @@ win32_window_create(te_os_window* os_window, const char* title) {
         memset(&win32_window->xinput_state, 0, sizeof(XINPUT_STATE));
         if (XInputGetState(i, &win32_window->xinput_state) == ERROR_SUCCESS) {
             win32_window->controller_id = (unsigned char)i;
-            log_info("gamepad connected");
+            log_info(__FILE__, __LINE__, "gamepad connected");
             // note: don't trigger gamepad_connected callback here
             break;
         }
@@ -589,7 +589,7 @@ win32_window_poll_event(te_os_window* os_window) {
             check_thumbstick_changes(os_window, callbacks, &prev_state, new_state);
         } else {
             win32_window->controller_id = 255;
-            log_info("gamepad disconnected");
+            log_info(__FILE__, __LINE__, "gamepad disconnected");
             prv_os_window_get_callbacks(os_window)->on_gamepad_disconnected(os_window);
         }
     }

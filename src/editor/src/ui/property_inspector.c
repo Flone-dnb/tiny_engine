@@ -63,7 +63,7 @@ on_variable_checkbox_changed(te_checkbox_widget* checkbox, bool is_checked) {
     te_property_inspector* inspector = widget_get_custom_ptr(widget);
 
     if (inspector->obj == NULL || inspector->obj_type_id == NULL) {
-        log_error("expected to have valid object and type ID");
+        log_error(__FILE__, __LINE__, "expected to have valid object and type ID");
         abort();
     }
 
@@ -71,7 +71,7 @@ on_variable_checkbox_changed(te_checkbox_widget* checkbox, bool is_checked) {
 
     const te_type_info* info = type_database_get_type_info(inspector->obj_type_id);
     if (info == NULL) {
-        log_error("unable to find type info");
+        log_error(__FILE__, __LINE__, "unable to find type info");
         abort();
     }
 
@@ -87,7 +87,7 @@ on_variable_text_edit_changed(te_text_edit_widget* text_edit) {
     te_property_inspector* inspector = widget_get_custom_ptr(widget);
 
     if (inspector->obj == NULL || inspector->obj_type_id == NULL) {
-        log_error("expected to have valid object and type ID");
+        log_error(__FILE__, __LINE__, "expected to have valid object and type ID");
         abort();
     }
 
@@ -104,7 +104,7 @@ on_variable_text_edit_changed(te_text_edit_widget* text_edit) {
 
     const te_type_info* info = type_database_get_type_info(inspector->obj_type_id);
     if (info == NULL) {
-        log_error("unable to find type info");
+        log_error(__FILE__, __LINE__, "unable to find type info");
         abort();
     }
 
@@ -113,7 +113,7 @@ on_variable_text_edit_changed(te_text_edit_widget* text_edit) {
     char* endptr;
     switch (info->variables[var_idx].type) {
         case (TE_VT_BOOL): {
-            log_error("unexpected type");
+            log_error(__FILE__, __LINE__, "unexpected type");
             abort();
             break;
         }
@@ -219,7 +219,7 @@ add_float_widget(
 
     int len = snprintf(NULL, 0, "%.2f", value);
     if (len < 0) {
-        log_error("snprintf error");
+        log_error(__FILE__, __LINE__, "snprintf error");
         abort();
     }
     char* src_text = malloc(sizeof(char) * (size_t)(len + 1));
@@ -273,7 +273,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
     }
 
     if (inspector->right_panel == NULL) {
-        log_error("expected the parent widget to be valid");
+        log_error(__FILE__, __LINE__, "expected the parent widget to be valid");
         abort();
     }
 
@@ -285,7 +285,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
     const te_type_info* type_info = type_database_get_type_info(obj_type_id);
     if (type_info == NULL) {
-        log_error("invalid object type ID");
+        log_error(__FILE__, __LINE__, "invalid object type ID");
         abort();
     }
 
@@ -455,7 +455,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
                 int len = snprintf(NULL, 0, "%u", value);
                 if (len < 0) {
-                    log_error("snprintf error");
+                    log_error(__FILE__, __LINE__, "snprintf error");
                     abort();
                 }
                 char* src_text = malloc(sizeof(char) * (size_t)(len + 1));

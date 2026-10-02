@@ -88,7 +88,7 @@ refresh_page_text(te_filesystem_view* explorer) {
     const int len =
         snprintf(NULL, 0, "%u / %u", explorer->current_page + 1, explorer->page_count);
     if (len < 0) {
-        log_error("snprintf error");
+        log_error(__FILE__, __LINE__, "snprintf error");
         abort();
     }
     unsigned int text_len = (unsigned int)len;

@@ -26,7 +26,7 @@ paths_get_config_dir(void) {
             SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &path_tmp);
         if (result != S_OK) {
             CoTaskMemFree(path_tmp);
-            log_error("failed to query config dir path");
+            log_error(__FILE__, __LINE__, "failed to query config dir path");
             abort();
         }
 
@@ -34,7 +34,7 @@ paths_get_config_dir(void) {
         char path_buff[256] = {0};
         const size_t path_len = wcslen(path_tmp);
         if (path_len > 256) {
-            log_error("path to AppData folder is too long");
+            log_error(__FILE__, __LINE__, "path to AppData folder is too long");
             abort();
         }
         for (size_t i = 0; i < path_len; i++) {
@@ -57,7 +57,7 @@ paths_get_config_dir(void) {
 #else
         char* home_path = getenv("HOME");
         if (home_path == NULL) {
-            log_error("unable to query environment variable HOME");
+            log_error(__FILE__, __LINE__, "unable to query environment variable HOME");
             abort();
         }
         sprintf(
@@ -82,7 +82,7 @@ paths_get_log_file(void) {
             SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &path_tmp);
         if (result != S_OK) {
             CoTaskMemFree(path_tmp);
-            log_error("failed to query config dir path");
+            log_error(__FILE__, __LINE__, "failed to query config dir path");
             abort();
         }
 
@@ -90,7 +90,7 @@ paths_get_log_file(void) {
         char path_buff[256] = {0};
         const size_t path_len = wcslen(path_tmp);
         if (path_len > 256) {
-            log_error("path to AppData folder is too long");
+            log_error(__FILE__, __LINE__, "path to AppData folder is too long");
             abort();
         }
         for (size_t i = 0; i < path_len; i++) {
@@ -113,7 +113,7 @@ paths_get_log_file(void) {
 #else
         char* home_path = getenv("HOME");
         if (home_path == NULL) {
-            log_error("unable to query environment variable HOME");
+            log_error(__FILE__, __LINE__, "unable to query environment variable HOME");
             abort();
         }
         sprintf(

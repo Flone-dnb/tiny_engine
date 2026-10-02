@@ -72,7 +72,7 @@ static void on_resized(te_os_window* os_window, unsigned int width, unsigned int
 te_window*
 window_create(const char* window_title) {
     if (window_title == NULL) {
-        log_error("window title text must not be NULL");
+        log_error(__FILE__, __LINE__, "window title text must not be NULL");
         abort();
     }
 
@@ -81,7 +81,7 @@ window_create(const char* window_title) {
     filesystem_ensure_dirs_exist(paths_get_log_file());
 
     if (sizeof(te_os_window_callbacks) != sizeof(void*) * 15) {
-        log_error("add new callbacks here");
+        log_error(__FILE__, __LINE__, "add new callbacks here");
         abort();
     }
     te_os_window_callbacks callbacks;
@@ -117,7 +117,7 @@ window_create(const char* window_title) {
 
     unsigned int width, height;
     os_window_get_size(window->os_window, &width, &height);
-    log_info_fmt("created a window of size %dx%d", width, height);
+    log_info_fmt(__FILE__, __LINE__, "created a window of size %dx%d", width, height);
 
     return window;
 }
@@ -132,8 +132,8 @@ window_destroy(te_window* window) {
     const unsigned int warn_count = log_get_warning_count_logged();
     const unsigned int err_count = log_get_error_count_logged();
     if (warn_count > 0 || err_count > 0) {
-        log_info("");
-        log_info_fmt("WARNINGS logged: %d | ERRORS logged: %d", warn_count, err_count);
+        log_info(__FILE__, __LINE__, "");
+        log_info_fmt(__FILE__, __LINE__, "WARNINGS logged: %d | ERRORS logged: %d", warn_count, err_count);
     }
 }
 
@@ -199,7 +199,7 @@ window_process_events(
         prv_game_manager_draw_frame(window->game_manager, delta_time_sec);
     }
 
-    log_info("window is closing");
+    log_info(__FILE__, __LINE__, "window is closing");
 
     window->user_callbacks->on_window_close(window->game_instance, window->game_manager);
 
@@ -209,14 +209,14 @@ window_process_events(
     window->user_callbacks = NULL;
     window->game_instance = NULL;
 
-    log_info("game manager is destroyed");
+    log_info(__FILE__, __LINE__, "game manager is destroyed");
 }
 
 struct te_game_manager*
 window_get_game_manager(te_window* window) {
 #if defined(DEBUG)
     if (window->game_manager == NULL) {
-        log_error("game manager is not created yet (game not started) or was already "
+        log_error(__FILE__, __LINE__, "game manager is not created yet (game not started) or was already "
                   "destroyed (game ended)");
         abort();
     }

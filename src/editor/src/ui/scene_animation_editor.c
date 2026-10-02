@@ -989,7 +989,7 @@ static char*
 time_to_border_str(unsigned int src) {
     int len = snprintf(NULL, 0, "%u", src);
     if (len <= 0) {
-        log_error("snprintf error");
+        log_error(__FILE__, __LINE__, "snprintf error");
         abort();
     }
     char* dst = malloc(sizeof(char) * (size_t)(len + 1 + 4));
@@ -1023,18 +1023,18 @@ get_button_text(te_button_widget* button) {
 static const char*
 get_selected_obj_name(te_scene_animation_editor* editor) {
     if (editor->selected_obj == NULL || editor->selected_obj_type_info == NULL) {
-        log_error("expected selected object info to be valid");
+        log_error(__FILE__, __LINE__, "expected selected object info to be valid");
         abort();
     }
 
     te_game_object_info* go_info = editor->selected_obj_type_info->game_object_info;
     if (go_info == NULL) {
-        log_error("expected to have game object info to get object name");
+        log_error(__FILE__, __LINE__, "expected to have game object info to get object name");
         abort();
     }
     const char* obj_name = go_info->get_name(editor->selected_obj);
     if (obj_name == NULL) {
-        log_error("expected object to have a name");
+        log_error(__FILE__, __LINE__, "expected object to have a name");
         abort();
     }
 
@@ -1066,7 +1066,7 @@ show_selected_keyframe_menu(te_scene_animation_editor* editor) {
 
         int len = snprintf(NULL, 0, "%.2f", keyframe_data->time_sec);
         if (len < 0) {
-            log_error("snprintf error");
+            log_error(__FILE__, __LINE__, "snprintf error");
             abort();
         }
         char* src_text = malloc(sizeof(char) * (size_t)(len + 1));
@@ -1287,7 +1287,7 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
         // Current time text.
         int len = snprintf(NULL, 0, "%.1f", current_time);
         if (len < 0) {
-            log_error("snprintf failed");
+            log_error(__FILE__, __LINE__, "snprintf failed");
             abort();
         }
         char* time_text = malloc(sizeof(char) * (size_t)(len + 1));
@@ -1474,12 +1474,12 @@ scene_animation_editor_show_tracks(
     if (obj != NULL) {
         te_game_object_info* go_info = type_info->game_object_info;
         if (go_info == NULL) {
-            log_error("currently only game objects are supported");
+            log_error(__FILE__, __LINE__, "currently only game objects are supported");
             return;
         }
         const char* obj_name = go_info->get_name(obj);
         if (obj_name == NULL) {
-            log_error("the object must have a unique name");
+            log_error(__FILE__, __LINE__, "the object must have a unique name");
             return;
         }
     }
@@ -1502,7 +1502,7 @@ create_keyframe_for_selected_obj_variable(
     te_scene_animation_editor* editor, te_variable_info* var_info,
     float keyframe_time_portion) {
     if (editor->selected_obj == NULL || editor->selected_obj_type_info == NULL) {
-        log_error("expected selected object info to be valid");
+        log_error(__FILE__, __LINE__, "expected selected object info to be valid");
         abort();
     }
 
@@ -1640,7 +1640,7 @@ prv_scene_animation_editor_on_mouse_click(
                     break;
                 }
                 if (var_info == NULL) {
-                    log_error_fmt("failed to find variable info for %s", variable_name);
+                    log_error_fmt(__FILE__, __LINE__, "failed to find variable info for %s", variable_name);
                     abort();
                 }
 
@@ -1783,7 +1783,7 @@ prv_scene_animation_editor_on_mouse_scroll_moved(
             break;
         }
         default: {
-            log_error("unhandled case");
+            log_error(__FILE__, __LINE__, "unhandled case");
             abort();
             break;
         }
@@ -1921,7 +1921,7 @@ on_track_right_clicked(te_button_widget* button) {
                 break;
             }
             default: {
-                log_error("unhandled case");
+                log_error(__FILE__, __LINE__, "unhandled case");
                 abort();
                 break;
             }
@@ -2082,7 +2082,7 @@ on_keyframe_time_changed(te_text_edit_widget* text_edit) {
                 break;
             }
             default: {
-                log_error("unhandled case");
+                log_error(__FILE__, __LINE__, "unhandled case");
                 abort();
                 break;
             }
@@ -2135,7 +2135,7 @@ on_keyframe_interpolation_changed(te_button_widget* button) {
     }
 
     if (new_interpolation == TE_SAIT_COUNT) {
-        log_error("unexpected state");
+        log_error(__FILE__, __LINE__, "unexpected state");
         return;
     }
 
@@ -2190,7 +2190,7 @@ on_keyframe_interpolation_changed(te_button_widget* button) {
                 break;
             }
             default: {
-                log_error("unhandled case");
+                log_error(__FILE__, __LINE__, "unhandled case");
                 abort();
                 break;
             }
@@ -2285,7 +2285,7 @@ on_update_keyframe_value_clicked(te_button_widget* button) {
                 break;
             }
             default: {
-                log_error("unhandled case");
+                log_error(__FILE__, __LINE__, "unhandled case");
                 abort();
                 break;
             }

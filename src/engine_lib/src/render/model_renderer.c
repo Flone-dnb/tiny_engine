@@ -95,7 +95,7 @@ model_renderer_create(unsigned int capacity, unsigned int expand_size) {
 void
 model_renderer_destroy(te_model_renderer* renderer) {
     if (renderer->model_group_count > 0) {
-        log_error("model renderer is being destroyed but there are still some models/handles "
+        log_error(__FILE__, __LINE__, "model renderer is being destroyed but there are still some models/handles "
                   "active (not removed)");
         abort();
     }
@@ -268,7 +268,7 @@ model_renderer_add_model(
 void
 model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
     if (handle >= renderer->render_handle_arrays_size) {
-        log_error("the specified model render data handle is invalid");
+        log_error(__FILE__, __LINE__, "the specified model render data handle is invalid");
         abort();
     }
 
@@ -294,7 +294,7 @@ model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
             start_index += renderer->model_groups[i].count;
         }
         if (!found) {
-            log_error("unable to find shader group from the specified handle");
+            log_error(__FILE__, __LINE__, "unable to find shader group from the specified handle");
             abort();
         }
     }
@@ -343,7 +343,7 @@ model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
 te_model_render_data*
 model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int handle) {
     if (CGLM_UNLIKELY(handle >= renderer->render_handle_arrays_size)) {
-        log_error("the specified model render data handle is invalid");
+        log_error(__FILE__, __LINE__, "the specified model render data handle is invalid");
         abort();
     }
 

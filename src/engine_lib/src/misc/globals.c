@@ -1,5 +1,9 @@
 #include <misc/globals.h>
 
+#if defined(__linux__)
+#define _POSIX_C_SOURCE 200112L
+#endif
+
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,7 +12,7 @@
 #if defined(WIN32)
 #define NOMINMAX
 #include <windows.h>
-#elif __linux__
+#elif defined(__linux__)
 #include <unistd.h>
 #else
 #error "unsupported OS"
@@ -19,48 +23,54 @@ static char cached_app_name[64] = {0};
 
 const char*
 globals_get_app_name(void) {
+    size_t i;
+    size_t j;
+    size_t path_len;
+    size_t last_slash_pos;
+
     if (cached_app_name[0] == 0) {
         char buffer[1024] = {0};
 
-        // Get full path.
+        /** get full path */
 #if defined(WIN32)
         if (GetModuleFileNameA(NULL, buffer, 1024) == 1024) {
-            log_error("failed to get path to the application");
+            log_error(__FILE__, __LINE__, "failed to get path to the application");
             abort();
         }
 #elif __linux__
         if (readlink("/proc/self/exe", &buffer[0], 1024) == -1) {
-            log_error("failed to get path to the application");
+            log_error(__FILE__, __LINE__, "failed to get path to the application");
             abort();
         }
 #else
 #error "unsupported OS"
 #endif
 
-        // Find last slash in the path.
-        const size_t path_len = strlen(buffer);
-        size_t last_slash_pos = path_len;
-        for (size_t i = path_len - 1; i > 0; i--) {
+        /** find last slash in the path */
+        path_len = strlen(buffer);
+        last_slash_pos = path_len;
+        for (i = path_len - 1; i > 0; i--) {
             if (buffer[i] == '/' || buffer[i] == '\\') {
                 last_slash_pos = i;
                 break;
             }
         }
         if (last_slash_pos == path_len) {
-            log_error("unable to extract application name from the application path");
+            log_error(
+                __FILE__, __LINE__,
+                "unable to extract application name from the application path");
             abort();
         }
 
-        // Save app name.
-        for (size_t src = last_slash_pos + 1, dst = 0;
-             src < path_len && dst < max_app_name_len; src++, dst++) {
+        /** save app name */
+        for (i = last_slash_pos + 1, j = 0; i < path_len && j < max_app_name_len; i++, j++) {
 #if defined(WIN32)
             if (buffer[src] == '.') {
-                // don't copy ".exe"
+                /** don't copy ".exe" */
                 break;
             }
 #endif
-            cached_app_name[dst] = buffer[src];
+            cached_app_name[j] = buffer[i];
         }
     }
 
@@ -90,15 +100,15 @@ globals_get_world_up(float out[3]) {
 
 float
 globals_convert_string_to_float(const char* text, char** end) {
-    if (text == NULL) {
-        (*end) = (char*)text;
-        return 0.0f;
-    }
-
     char* curr = (char*)text;
     float out = 0.0f;
     float div = 1;
     bool after_dot = false;
+
+    if (text == NULL) {
+        (*end) = (char*)text;
+        return 0.0f;
+    }
 
     if (*curr == 0) {
         (*end) = curr;
@@ -106,7 +116,7 @@ globals_convert_string_to_float(const char* text, char** end) {
     }
 
     if ((*curr) == '-') {
-        // We will negate later.
+        /** will negate later */
         curr++;
     }
 

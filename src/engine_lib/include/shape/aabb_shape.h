@@ -43,7 +43,8 @@ aabb_shape_intersect(te_aabb_shape* a, te_aabb_shape* b) {
 // Returns `true` if the ray intersects AABB.
 // Also (if hit is found) writes distance along the ray until the hit position.
 static inline bool
-aabb_shape_intersect_ray(te_aabb_shape* aabb, vec3 ray_origin, vec3 ray_dir, float* hit_dist_along_ray) {
+aabb_shape_intersect_ray(
+    te_aabb_shape* aabb, vec3 ray_origin, vec3 ray_dir, float* hit_dist_along_ray) {
     vec3 min;
     vec3 max;
     glm_vec3_sub(aabb->center, aabb->extents, min);

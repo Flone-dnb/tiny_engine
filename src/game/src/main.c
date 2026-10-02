@@ -20,7 +20,7 @@ main(void) {
     te_window* window = window_create("game");
 
     if (sizeof(te_window_callbacks) != sizeof(void*) * 18) {
-        log_error("add new callbacks here");
+        log_error(__FILE__, __LINE__, "add new callbacks here");
         abort();
     }
     te_window_callbacks callbacks;

@@ -170,13 +170,13 @@ refresh_button_highlight(te_world_inspector* inspector) {
         const char* game_obj_type_id =
             property_inspector_get_inspected_obj_type_id(inspector->property_inspector);
         if (game_obj_type_id == NULL) {
-            log_error("expected type id to be valid");
+            log_error(__FILE__, __LINE__, "expected type id to be valid");
             abort();
         }
 
         const te_type_info* type_info = type_database_get_type_info(game_obj_type_id);
         if (type_info == NULL) {
-            log_error("expected type info to be valid");
+            log_error(__FILE__, __LINE__, "expected type info to be valid");
             abort();
         }
 
@@ -255,7 +255,7 @@ refresh_item_names(te_world_inspector* inspector) {
                     }
                 } else {
                     if (info->widget == NULL) {
-                        log_error("expected widget pointer to be valid");
+                        log_error(__FILE__, __LINE__, "expected widget pointer to be valid");
                         abort();
                     }
                     text_to_display = widget_get_name(info->widget);
@@ -329,7 +329,7 @@ refresh_page_text(te_world_inspector* inspector) {
     const int len =
         snprintf(NULL, 0, "%u / %u", inspector->current_page + 1, inspector->page_count);
     if (len < 0) {
-        log_error("snprintf error");
+        log_error(__FILE__, __LINE__, "snprintf error");
         abort();
     }
     unsigned int text_len = (unsigned int)len;
@@ -392,13 +392,13 @@ static void
 rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
     if (inspector->state != TE_WIS_SHOW_WORLD_OBJECTS
         && inspector->state != TE_WIS_SHOW_ATTACH_TO) {
-        log_error("unexpected state");
+        log_error(__FILE__, __LINE__, "unexpected state");
         abort();
     }
 
     if (inspector->state == TE_WIS_SHOW_ATTACH_TO) {
         if (inspector->selected_item == NULL) {
-            log_error("expected selected object to be valid");
+            log_error(__FILE__, __LINE__, "expected selected object to be valid");
             abort();
         }
     }
@@ -414,7 +414,7 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
 
     te_world* world = inspector->game_world;
     if (world == NULL) {
-        log_error("expected a valid game world");
+        log_error(__FILE__, __LINE__, "expected a valid game world");
         abort();
     }
 
@@ -821,7 +821,7 @@ on_button_list_item_clicked(te_button_widget* button) {
                 }
             } else {
                 if (selected_info->widget == NULL) {
-                    log_error("expected widget pointer to be valid");
+                    log_error(__FILE__, __LINE__, "expected widget pointer to be valid");
                     abort();
                 }
                 target_object = widget_get_owner(selected_info->widget);
@@ -858,7 +858,7 @@ on_button_list_item_clicked(te_button_widget* button) {
 
             const te_type_info* info = type_database_get_type_info(type_id);
             if (info == NULL) {
-                log_error_fmt("expected to get a valid type info for type ID \"%s\"", type_id);
+                log_error_fmt(__FILE__, __LINE__, "expected to get a valid type info for type ID \"%s\"", type_id);
                 abort();
             }
             free(type_id);
@@ -875,7 +875,7 @@ on_button_list_item_clicked(te_button_widget* button) {
         }
         case (TE_WIS_OBJECT_MENU): {
             if (inspector->selected_item == NULL) {
-                log_error("expected selected object to be valid");
+                log_error(__FILE__, __LINE__, "expected selected object to be valid");
                 abort();
             }
 
@@ -898,7 +898,7 @@ on_button_list_item_clicked(te_button_widget* button) {
                         inspector->selected_item->game_object_info);
                 } else {
                     if (inspector->selected_item->widget == NULL) {
-                        log_error("expected widget pointer to be valid");
+                        log_error(__FILE__, __LINE__, "expected widget pointer to be valid");
                         abort();
                     }
                     type_info = type_database_get_type_info(
@@ -942,7 +942,7 @@ on_button_list_item_clicked(te_button_widget* button) {
                     }
                 } else {
                     if (inspector->selected_item->widget == NULL) {
-                        log_error("expected widget pointer to be valid");
+                        log_error(__FILE__, __LINE__, "expected widget pointer to be valid");
                         abort();
                     }
                     widget_set_parent(inspector->selected_item->widget, NULL);
@@ -950,14 +950,14 @@ on_button_list_item_clicked(te_button_widget* button) {
 
                 on_top_button_clicked(inspector->top_button);
             } else {
-                log_error_fmt("unexpected option %zu", option_index);
+                log_error_fmt(__FILE__, __LINE__, "unexpected option %zu", option_index);
                 abort();
             }
             break;
         }
         case (TE_WIS_SHOW_ATTACH_TO): {
             if (inspector->selected_item == NULL) {
-                log_error("expected selected object to be valid");
+                log_error(__FILE__, __LINE__, "expected selected object to be valid");
                 abort();
             }
 
@@ -971,11 +971,11 @@ on_button_list_item_clicked(te_button_widget* button) {
                 switch (inspector->selected_item->game_object_info->type) {
                     case (TE_GOT_CAMERA): {
                         if (target_info->game_obj == NULL) {
-                            log_error("can't attach camera to a non game object");
+                            log_error(__FILE__, __LINE__, "can't attach camera to a non game object");
                             abort();
                         }
                         if (target_info->game_object_info->type != TE_GOT_MODEL) {
-                            log_error("can't attach camera to a non-model game object");
+                            log_error(__FILE__, __LINE__, "can't attach camera to a non-model game object");
                             abort();
                         }
                         model_attach_camera(
@@ -984,11 +984,11 @@ on_button_list_item_clicked(te_button_widget* button) {
                     }
                     case (TE_GOT_MODEL): {
                         if (target_info->game_obj == NULL) {
-                            log_error("can't attach model to a non game object");
+                            log_error(__FILE__, __LINE__, "can't attach model to a non game object");
                             abort();
                         }
                         if (target_info->game_object_info->type != TE_GOT_MODEL) {
-                            log_error("can't attach model to a non-model game object");
+                            log_error(__FILE__, __LINE__, "can't attach model to a non-model game object");
                             abort();
                         }
                         model_set_parent(
@@ -1002,11 +1002,11 @@ on_button_list_item_clicked(te_button_widget* button) {
                 }
             } else {
                 if (inspector->selected_item->widget == NULL) {
-                    log_error("expected widget pointer to be valid");
+                    log_error(__FILE__, __LINE__, "expected widget pointer to be valid");
                     abort();
                 }
                 if (target_info->widget == NULL) {
-                    log_error("can't attach widget to a non-widget object");
+                    log_error(__FILE__, __LINE__, "can't attach widget to a non-widget object");
                     abort();
                 }
                 widget_set_parent(inspector->selected_item->widget, target_info->widget);
@@ -1114,7 +1114,7 @@ on_button_scene_animation_clicked(te_button_widget* button) {
         if (obj != NULL && type_id != NULL) {
             const te_type_info* type_info = type_database_get_type_info(type_id);
             if (type_info == NULL) {
-                log_error("expected type info to be valid");
+                log_error(__FILE__, __LINE__, "expected type info to be valid");
                 abort();
             }
             scene_animation_editor_show_tracks(
@@ -1156,7 +1156,7 @@ on_button_add_world_clicked(te_button_widget* button) {
 void
 world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
     if (inspector->left_panel != NULL) {
-        log_error("world inspector is already displayed");
+        log_error(__FILE__, __LINE__, "world inspector is already displayed");
         abort();
     }
 

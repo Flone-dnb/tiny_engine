@@ -72,11 +72,11 @@ widget_create(
     te_widget* widget = malloc(sizeof(te_widget));
 
     if (owner == NULL) {
-        log_error("owner widget must be specified");
+        log_error(__FILE__, __LINE__, "owner widget must be specified");
         abort();
     }
     if (get_type_id == NULL) {
-        log_error("get_type_id function must be specified");
+        log_error(__FILE__, __LINE__, "get_type_id function must be specified");
         abort();
     }
 
@@ -119,7 +119,7 @@ widget_create(
 void
 widget_destroy(te_widget* widget) {
     if (widget->world != NULL) {
-        log_error("can't destroy a spawned widget, despawn it first");
+        log_error(__FILE__, __LINE__, "can't destroy a spawned widget, despawn it first");
         abort();
     }
 
@@ -226,7 +226,7 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
         return;
     }
     if (widget == new_parent) {
-        log_error("can't attach a widget to itself");
+        log_error(__FILE__, __LINE__, "can't attach a widget to itself");
         abort();
     }
 
@@ -244,7 +244,7 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
             break;
         }
         if (!found) {
-            log_error("unable to find widget in parent's array of child widgets");
+            log_error(__FILE__, __LINE__, "unable to find widget in parent's array of child widgets");
             abort();
         }
 
@@ -296,7 +296,7 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
         } else {
             if (new_parent->world != NULL) {
                 if (widget->world != new_parent->world) {
-                    log_error("can't attach a widget to another widget because they are "
+                    log_error(__FILE__, __LINE__, "can't attach a widget to another widget because they are "
                               "spawned in different worlds");
                     abort();
                 } else {
@@ -424,7 +424,7 @@ te_world*
 widget_get_world(te_widget* widget) {
 #if defined(DEBUG)
     if (widget == NULL) {
-        log_error("invalid widget specified");
+        log_error(__FILE__, __LINE__, "invalid widget specified");
         abort();
     }
 #endif

@@ -107,7 +107,7 @@ debugMessageCallback(
     }
 
     if (severity != GL_DEBUG_SEVERITY_NOTIFICATION) {
-        log_error(message);
+        log_error(__FILE__, __LINE__, message);
         abort();
     }
 }
@@ -186,7 +186,7 @@ renderer_create(struct te_window* window) {
 #if defined(ENGINE_DEBUG_TOOLS)
 #if defined(ENGINE_GLES)
     if (GLAD_GL_EXT_disjoint_timer_query != 1) {
-        log_info("the GPU does not support GL_EXT_disjoint_timer_query extension, GPU time "
+        log_info(__FILE__, __LINE__, "the GPU does not support GL_EXT_disjoint_timer_query extension, GPU time "
                  "metrics are disabled");
     } else {
 #endif
@@ -207,7 +207,7 @@ renderer_create(struct te_window* window) {
 
 #if defined(DEBUG)
     if (GLAD_GL_KHR_debug != 1) {
-        log_info("the GPU does not support GL_KHR_DEBUG extension, some debugging features "
+        log_info(__FILE__, __LINE__, "the GPU does not support GL_KHR_DEBUG extension, some debugging features "
                  "are disabled");
     } else {
         glEnable(GL_DEBUG_OUTPUT);
@@ -234,7 +234,7 @@ renderer_create(struct te_window* window) {
 
     // Set FPS limit.
     const unsigned int refresh_rate = window_get_display_refresh_rate(window);
-    log_info_fmt("setting FPS limit to %u (display's refresh rate)", refresh_rate);
+    log_info_fmt(__FILE__, __LINE__, "setting FPS limit to %u (display's refresh rate)", refresh_rate);
     renderer_set_fps_limit(renderer, refresh_rate);
 
 #if defined(ENGINE_DEBUG_TOOLS)
@@ -424,17 +424,17 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     GLenum gl_error = glGetError();
     if (gl_error != GL_NO_ERROR) {
         switch (gl_error) {
-            case GL_INVALID_ENUM: log_error("GL error: INVALID_ENUM"); break;
-            case GL_INVALID_VALUE: log_error("GL error: INVALID_VALUE"); break;
-            case GL_INVALID_OPERATION: log_error("GL error: INVALID_OPERATION"); break;
-            case GL_OUT_OF_MEMORY: log_error("GL error: OUT_OF_MEMORY"); break;
+            case GL_INVALID_ENUM: log_error(__FILE__, __LINE__, "GL error: INVALID_ENUM"); break;
+            case GL_INVALID_VALUE: log_error(__FILE__, __LINE__, "GL error: INVALID_VALUE"); break;
+            case GL_INVALID_OPERATION: log_error(__FILE__, __LINE__, "GL error: INVALID_OPERATION"); break;
+            case GL_OUT_OF_MEMORY: log_error(__FILE__, __LINE__, "GL error: OUT_OF_MEMORY"); break;
             case GL_INVALID_FRAMEBUFFER_OPERATION:
-                log_error("GL error: INVALID_FRAMEBUFFER_OPERATION");
+                log_error(__FILE__, __LINE__, "GL error: INVALID_FRAMEBUFFER_OPERATION");
                 break;
             default: {
                 char error_msg[128] = {0};
                 snprintf(&error_msg[0], 128, "GL error: %u", gl_error);
-                log_error(&error_msg[0]);
+                log_error(__FILE__, __LINE__, &error_msg[0]);
             } break;
         }
 

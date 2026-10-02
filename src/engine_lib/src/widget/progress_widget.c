@@ -194,7 +194,7 @@ prv_progress_widget_on_after_spawned(void* this) {
 
     // Self check:
     if (widget_get_child_widget_count(progress_widget->widget) != 2) {
-        log_error("unexpected child widget count on a widget");
+        log_error(__FILE__, __LINE__, "unexpected child widget count on a widget");
         abort();
     }
 
@@ -220,7 +220,7 @@ prv_progress_widget_on_before_despawned(void* this) {
 
     // Self check:
     if (widget_get_child_widget_count(progress_widget->widget) != 2) {
-        log_error("unexpected child widget count on a widget");
+        log_error(__FILE__, __LINE__, "unexpected child widget count on a widget");
         abort();
     }
 }

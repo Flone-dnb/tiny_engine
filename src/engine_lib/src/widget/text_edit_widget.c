@@ -143,13 +143,13 @@ prv_text_edit_widget_on_after_spawned(void* this) {
 
     // Self check:
     if (widget_get_child_widget_count(text_edit_widget->widget) != 1) {
-        log_error("unexpected child widget count on a widget");
+        log_error(__FILE__, __LINE__, "unexpected child widget count on a widget");
         abort();
     }
 
     te_world* world = widget_get_world(text_edit_widget->widget);
     if (world == NULL) {
-        log_error("expected the widget to be spawned");
+        log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
     prv_world_add_interactable_widget(world, text_edit_widget->widget);
@@ -159,7 +159,7 @@ static void
 prv_text_edit_widget_despawn_destroy_cursor(te_text_edit_widget* text_edit_widget) {
     te_world* world = widget_get_world(text_edit_widget->widget);
     if (world == NULL) {
-        log_error("expected world to be valid");
+        log_error(__FILE__, __LINE__, "expected world to be valid");
         abort();
     }
 
@@ -184,13 +184,13 @@ prv_text_edit_widget_on_before_despawned(void* this) {
 
     // Self check:
     if (widget_get_child_widget_count(text_edit_widget->widget) > 2) {
-        log_error("unexpected child widget count on a widget");
+        log_error(__FILE__, __LINE__, "unexpected child widget count on a widget");
         abort();
     }
 
     te_world* world = widget_get_world(text_edit_widget->widget);
     if (world == NULL) {
-        log_error("expected the widget to be spawned");
+        log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
     prv_world_remove_interactable_widget(world, text_edit_widget->widget);
@@ -213,7 +213,7 @@ prv_text_edit_widget_on_mouse_button_pressed(
 
     te_world* world = widget_get_world(text_edit_widget->widget);
     if (world == NULL) {
-        log_error("expected world to be valid");
+        log_error(__FILE__, __LINE__, "expected world to be valid");
         abort();
     }
     te_game_manager* game_manager = world_get_game_manager(world);
@@ -228,7 +228,7 @@ prv_text_edit_widget_on_mouse_button_pressed(
     const unsigned int text_render_data_handle =
         prv_text_widget_get_render_data_handle(text_edit_widget->text_widget);
     if (text_render_data_handle == 0xffffffff) {
-        log_error("expected text render data handle to be valid");
+        log_error(__FILE__, __LINE__, "expected text render data handle to be valid");
         abort();
     }
     te_text_widget_render_data* data = widget_renderer_get_text_widget_render_data_tmp(
@@ -343,7 +343,7 @@ prv_text_edit_widget_update_cursor(te_text_edit_widget* text_edit_widget) {
 
     te_world* world = widget_get_world(text_edit_widget->widget);
     if (world == NULL) {
-        log_error("expected world to be valid");
+        log_error(__FILE__, __LINE__, "expected world to be valid");
         abort();
     }
     te_game_manager* game_manager = world_get_game_manager(world);
@@ -353,7 +353,7 @@ prv_text_edit_widget_update_cursor(te_text_edit_widget* text_edit_widget) {
     const unsigned int text_render_data_handle =
         prv_text_widget_get_render_data_handle(text_edit_widget->text_widget);
     if (text_render_data_handle == 0xffffffff) {
-        log_error("expected text render data handle to be valid");
+        log_error(__FILE__, __LINE__, "expected text render data handle to be valid");
         abort();
     }
     te_text_widget_render_data* data = widget_renderer_get_text_widget_render_data_tmp(
@@ -428,7 +428,7 @@ prv_text_edit_widget_on_keyboard_input_text(void* this, const char* input_text) 
     unsigned int added_text_len;
     wchar_t* added_text = wchar_from_char(input_text, &added_text_len);
     if (added_text_len == 0) {
-        log_error("unexpected added text len");
+        log_error(__FILE__, __LINE__, "unexpected added text len");
         abort();
     }
 
@@ -436,7 +436,7 @@ prv_text_edit_widget_on_keyboard_input_text(void* this, const char* input_text) 
     wchar_t* old_text = text_widget_get_text(text_edit_widget->text_widget, &old_text_len);
 
     if (text_edit_widget->text_cursor_index > old_text_len) {
-        log_error("expected a valid text cursor index");
+        log_error(__FILE__, __LINE__, "expected a valid text cursor index");
         abort();
     }
 

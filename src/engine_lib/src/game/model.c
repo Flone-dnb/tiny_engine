@@ -326,7 +326,7 @@ model_create_from_file(const char* relative_path) {
 
         for (unsigned int child_idx = 0; child_idx < child_model_count; child_idx++) {
             if (section_idx >= section_count) {
-                log_error_fmt(
+                log_error_fmt(__FILE__, __LINE__, 
                     "unexpected end of file \"%s\", have %u sections while expected to "
                     "have more",
                     relative_path, section_count);
@@ -356,7 +356,7 @@ model_destroy(te_model* model) {
     for (unsigned int i = 0; i < model->child_model_count; i++) {
         if (model->child_models[i]->world != NULL) {
             // We should have despawned it in our despawn callback.
-            log_error("expected the child model to be despawned already");
+            log_error(__FILE__, __LINE__, "expected the child model to be despawned already");
             abort();
         }
         model_destroy(model->child_models[i]);
@@ -368,7 +368,7 @@ model_destroy(te_model* model) {
     // Destroy camera.
     if (model->attached_camera != NULL) {
         if (camera_get_world(model->attached_camera) != NULL) {
-            log_error("expected the attached camera to be despawned already");
+            log_error(__FILE__, __LINE__, "expected the attached camera to be despawned already");
             abort();
         }
         camera_destroy(model->attached_camera);
@@ -449,7 +449,7 @@ static te_model_renderer*
 prv_model_get_renderer(te_model* model) {
 #if defined(DEBUG)
     if (model->world == NULL) {
-        log_error("expected world to be valid");
+        log_error(__FILE__, __LINE__, "expected world to be valid");
         abort();
     }
 #endif
@@ -503,7 +503,7 @@ prv_model_calc_world_normal_matrices(te_model* model, mat4 out_world, mat3 out_n
         if (model->parent_bone_idx != 0xFFFFFFFF) {
             te_skeleton* skeleton = model->parent_model->skeleton;
             if (skeleton == NULL) {
-                log_error("expected parent model to have a skeleton");
+                log_error(__FILE__, __LINE__, "expected parent model to have a skeleton");
                 abort();
             }
             glm_mat4_copy(skeleton_get_skinning_mats(skeleton)[model->parent_bone_idx], mat1);
@@ -848,7 +848,7 @@ model_set_parent(te_model* model, te_model* new_parent, unsigned int parent_bone
         } else {
             if (new_parent->world != NULL) {
                 if (new_parent->world != model->world) {
-                    log_error("can't attach a model from a different world, despawn the child "
+                    log_error(__FILE__, __LINE__, "can't attach a model from a different world, despawn the child "
                               "model first");
                     abort();
                 } else {
@@ -901,12 +901,12 @@ model_attach_camera(te_model* model, te_camera* camera) {
     }
     if (camera != NULL) {
         if (model->attached_camera != NULL) {
-            log_error("only 1 camera can be attached");
+            log_error(__FILE__, __LINE__, "only 1 camera can be attached");
             abort();
         }
         if (model->parent_model != NULL) {
             // Also serialization does not support this.
-            log_error("can't attach camera to a model which has a parent model");
+            log_error(__FILE__, __LINE__, "can't attach camera to a model which has a parent model");
             abort();
         }
     }
@@ -923,7 +923,7 @@ model_attach_camera(te_model* model, te_camera* camera) {
     if (camera != NULL) {
         te_world* camera_world = camera_get_world(camera);
         if (model->world != NULL && camera_world != NULL && model->world != camera_world) {
-            log_error(
+            log_error(__FILE__, __LINE__, 
                 "can't attach a camera from a different world, despawn the camera first");
             abort();
         }
@@ -1049,7 +1049,7 @@ static void
 prv_model_add_to_model_renderer(te_model* model) {
 #if defined(DEBUG)
     if (model->world == NULL) {
-        log_error("expected world to be valid");
+        log_error(__FILE__, __LINE__, "expected world to be valid");
         abort();
     }
 #endif
@@ -1179,7 +1179,7 @@ static void
 prv_model_remove_from_model_renderer(te_model* model) {
 #if defined(DEBUG)
     if (model->world == NULL) {
-        log_error("expected world to be valid");
+        log_error(__FILE__, __LINE__, "expected world to be valid");
         abort();
     }
 #endif
@@ -1226,7 +1226,7 @@ prv_model_remove_from_model_renderer(te_model* model) {
 mat4*
 prv_model_get_world_mat_tmp(te_model* model) {
     if (model->render_data_handle == 0xffffffff) {
-        log_error("expected the model to be spawned and visible");
+        log_error(__FILE__, __LINE__, "expected the model to be spawned and visible");
         abort();
     }
 
@@ -1415,7 +1415,7 @@ on_spawned(te_model* model, te_world* world) {
         te_model* child_model = model->child_models[i];
 
         if (child_model->world != NULL) {
-            log_error("expected the child model to not be spawned yet");
+            log_error(__FILE__, __LINE__, "expected the child model to not be spawned yet");
             abort();
         }
         on_spawned(child_model, world);
@@ -1424,7 +1424,7 @@ on_spawned(te_model* model, te_world* world) {
     // Spawn attached camera.
     if (model->attached_camera != NULL) {
         if (camera_get_world(model->attached_camera) != NULL) {
-            log_error("expected the attached camera to not be spawned yet");
+            log_error(__FILE__, __LINE__, "expected the attached camera to not be spawned yet");
             abort();
         }
         camera_get_game_object_info()->on_spawned(model->attached_camera, world);
@@ -1491,7 +1491,7 @@ model_get_type_id(void) {
 static void
 type_spawn(te_world* world, te_model* model) {
     if (model->world != NULL) {
-        log_error("the model is already spawned in the different world");
+        log_error(__FILE__, __LINE__, "the model is already spawned in the different world");
         abort();
     }
 
@@ -1501,7 +1501,7 @@ type_spawn(te_world* world, te_model* model) {
 static void
 type_despawn(te_world* world, te_model* model) {
     if (model->world != world) {
-        log_error("the model is spawned in the different world");
+        log_error(__FILE__, __LINE__, "the model is spawned in the different world");
         abort();
     }
 
@@ -1577,7 +1577,7 @@ prv_model_load_geo(
 
     FILE* fp = fopen(res_path, "rb");
     if (fp == NULL) {
-        log_error_fmt(
+        log_error_fmt(__FILE__, __LINE__, 
             "failed to load model geometry from file %s: unable to open file", path_to_geo);
         abort();
     }
@@ -1585,7 +1585,7 @@ prv_model_load_geo(
     unsigned char id = 0;
     fread(&id, sizeof(id), 1, fp);
     if (id != 0 && id != 100) { // unskinned vertex format ID || skinned vertex format ID
-        log_error_fmt(
+        log_error_fmt(__FILE__, __LINE__, 
             "failed to load model geometry from file %s: unexpected file type ID %u",
             path_to_geo, (unsigned int)id);
         abort();

@@ -156,7 +156,7 @@ prv_type_database_deinit(void) {
 #define TYPE_INFO_ALLOC_VARIABLE(                                                             \
     info, var_name, var_type, type_var_count, setters, getters, new_setter, new_getter)       \
     if (info->variable_count == 0xffff) {                                                     \
-        log_error("reached variable limit");                                                  \
+        log_error(__FILE__, __LINE__, "reached variable limit");                                                  \
         abort();                                                                              \
     }                                                                                         \
     te_variable_info* new_variables =                                                         \
@@ -371,7 +371,7 @@ type_info_load_from_config(
                 float* val = config_section_get_float_array(
                     config, section_idx, var_info->name, &count);
                 if (count != 2) {
-                    log_warn_fmt(
+                    log_warn_fmt(__FILE__, __LINE__, 
                         "variable \"%s\" of section with index %u has unexpected array size "
                         "in the config, expected 2 got %u, "
                         "ignoring this variable",
@@ -386,7 +386,7 @@ type_info_load_from_config(
                 float* val = config_section_get_float_array(
                     config, section_idx, var_info->name, &count);
                 if (count != 3) {
-                    log_warn_fmt(
+                    log_warn_fmt(__FILE__, __LINE__, 
                         "variable \"%s\" of section with index %u has unexpected array size "
                         "in the config, expected 3 got %u, "
                         "ignoring this variable",
@@ -401,7 +401,7 @@ type_info_load_from_config(
                 float* val = config_section_get_float_array(
                     config, section_idx, var_info->name, &count);
                 if (count != 4) {
-                    log_warn_fmt(
+                    log_warn_fmt(__FILE__, __LINE__, 
                         "variable \"%s\" of section with index %u has unexpected array size "
                         "in the config, expected 4 got %u, "
                         "ignoring this variable",
@@ -418,13 +418,13 @@ type_info_load_from_config(
 void
 type_database_register_type(te_type_info* info) {
     if (type_database.types == NULL) {
-        log_error("type database is not initialized yet or was already deinitialized");
+        log_error(__FILE__, __LINE__, "type database is not initialized yet or was already deinitialized");
         abort();
     }
 
     const te_type_info* const* found = hashmap_get(type_database.types, &info);
     if (found != NULL) {
-        log_error("a type with the specified ID is already registered");
+        log_error(__FILE__, __LINE__, "a type with the specified ID is already registered");
         abort();
     }
 
@@ -438,7 +438,7 @@ type_database_get_type_info(const char* id) {
     }
 
     if (type_database.types == NULL) {
-        log_error("type database is not initialized yet or was already deinitialized");
+        log_error(__FILE__, __LINE__, "type database is not initialized yet or was already deinitialized");
         abort();
     }
 

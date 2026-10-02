@@ -139,14 +139,14 @@ widget_renderer_create(te_renderer* renderer) {
 void
 widget_renderer_destroy(te_widget_renderer* widget_renderer) {
     if (render_data_array_get_item_count(widget_renderer->text_widget_data) > 0) {
-        log_error("widget renderer is being destroyed but there are still some text widgets "
+        log_error(__FILE__, __LINE__, "widget renderer is being destroyed but there are still some text widgets "
                   "rendering");
         abort();
     }
     render_data_array_destroy(widget_renderer->text_widget_data);
 
     if (render_data_array_get_item_count(widget_renderer->rect_widget_data) > 0) {
-        log_error("widget renderer is being destroyed but there are still some rect widgets "
+        log_error(__FILE__, __LINE__, "widget renderer is being destroyed but there are still some rect widgets "
                   "rendering");
         abort();
     }

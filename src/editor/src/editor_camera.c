@@ -123,7 +123,7 @@ editor_camera_pilot_custom_camera(te_editor_camera* editor_camera, te_camera* ca
 
     te_world* world = camera_get_world(editor_camera->controlled_camera_ref);
     if (world == NULL) {
-        log_error("expected the camera to be spawned");
+        log_error(__FILE__, __LINE__, "expected the camera to be spawned");
         abort();
     }
     world_set_active_camera(world, editor_camera->controlled_camera_ref);

@@ -12,32 +12,32 @@
 #define STBI_NO_SIMD
 #include <stb/stb_image.h>
 
-// Groups information about a texture.
+/* Groups information about a texture. */
 typedef struct te_texture {
-    // Non-NULL path (relative to the `res` directory) to the texture.
+    /* Non-NULL path (relative to the `res` directory) to the texture. */
     char* relative_path;
 
-    // strlen of @ref relative_path.
+    /* strlen of @ref relative_path. */
     unsigned int relative_path_len;
 
-    // OpenGL ID of the texture.
+    /* OpenGL ID of the texture. */
     unsigned int id;
 
-    // The number of places this texture is currently used in.
+    /* The number of places this texture is currently used in. */
     unsigned int usage_count;
 } te_texture;
 
-// Loads textures from disk.
+/* Loads textures from disk. */
 struct te_texture_manager {
-    // Loaded textures. Size of this array is @ref texture_count.
+    /* Loaded textures. Size of this array is @ref texture_count. */
     te_texture* textures;
 
-    // Size of @ref textures.
+    /* Size of @ref textures. */
     unsigned int texture_count;
 };
 
 te_texture_manager*
-prv_texture_manager_create() {
+prv_texture_manager_create(void) {
     te_texture_manager* manager = malloc(sizeof(te_texture_manager));
     manager->texture_count = 0;
     manager->textures = NULL;
@@ -49,6 +49,7 @@ void
 prv_texture_manager_destroy(te_texture_manager* manager) {
     if (manager->texture_count > 0) {
         log_error(
+            __FILE__, __LINE__,
             "texture manager is being destroyed but there are still some textures in use");
         abort();
     }
@@ -59,12 +60,17 @@ prv_texture_manager_destroy(te_texture_manager* manager) {
 unsigned int
 texture_manager_request_texture(
     te_texture_manager* manager, const char* relative_path, enum te_texture_load_opt opt) {
-    const size_t relative_path_len = strlen(relative_path);
+    size_t relative_path_len;
+    unsigned int i;
+    unsigned int index;
+    bool found;
 
-    // Check cache.
-    unsigned int index = 0;
-    bool found = false;
-    for (unsigned int i = 0; i < manager->texture_count; i++) {
+    relative_path_len = strlen(relative_path);
+
+    /* check cache */
+    index = 0;
+    found = false;
+    for (i = 0; i < manager->texture_count; i++) {
         if (manager->textures[i].relative_path_len != relative_path_len) {
             continue;
         }
@@ -76,7 +82,10 @@ texture_manager_request_texture(
         break;
     }
     if (!found) {
-        // Load new texture.
+        te_texture* new_textures;
+        te_texture* tex;
+
+        /* load new texture */
         char* tex_path = filesystem_prepend_res_to_path(relative_path, NULL);
         unsigned int tex_id = 0;
 
@@ -84,14 +93,17 @@ texture_manager_request_texture(
             int width = 0;
             int height = 0;
             int channel_count = 0;
+            int gl_format;
+            int gl_internal_format;
+
             stbi_uc* pixels = stbi_load(tex_path, &width, &height, &channel_count, 0);
             if (pixels == NULL) {
-                log_error("failed to load a texture");
+                log_error(__FILE__, __LINE__, "failed to load a texture");
                 abort();
             }
 
-            const int gl_format = channel_count == 4 ? GL_RGBA : GL_RGB;
-            const int gl_internal_format = gl_format;
+            gl_format = channel_count == 4 ? GL_RGBA : GL_RGB;
+            gl_internal_format = gl_format;
 
             glGenTextures(1, &tex_id);
 
@@ -115,12 +127,12 @@ texture_manager_request_texture(
             glBindTexture(GL_TEXTURE_2D, 0);
             stbi_image_free(pixels);
         } else {
-            log_error("not implemented yet");
+            log_error(__FILE__, __LINE__, "not implemented yet");
             abort();
         }
 
-        // Cache results.
-        te_texture* new_textures = malloc(sizeof(te_texture) * (manager->texture_count + 1));
+        /* cache results */
+        new_textures = malloc(sizeof(te_texture) * (manager->texture_count + 1));
         memcpy(new_textures, manager->textures, sizeof(te_texture) * manager->texture_count);
 
         free(manager->textures);
@@ -129,10 +141,10 @@ texture_manager_request_texture(
         index = manager->texture_count;
         manager->texture_count += 1;
 
-        // Init data.
-        te_texture* tex = &manager->textures[index];
+        /* init data */
+        tex = &manager->textures[index];
 
-        tex->usage_count = 0; // will increment below
+        tex->usage_count = 0; /* will increment below */
         tex->id = tex_id;
 
         tex->relative_path = malloc(sizeof(char) * (relative_path_len + 1));
@@ -151,7 +163,9 @@ void
 texture_manager_mark_unused_texture(te_texture_manager* manager, unsigned int tex_id) {
     unsigned int index = 0;
     bool found = false;
-    for (unsigned int i = 0; i < manager->texture_count; i++) {
+    unsigned int i;
+
+    for (i = 0; i < manager->texture_count; i++) {
         if (manager->textures[i].id != tex_id) {
             continue;
         }
@@ -160,12 +174,14 @@ texture_manager_mark_unused_texture(te_texture_manager* manager, unsigned int te
         break;
     }
     if (!found) {
-        log_error("unable to find the specified texture");
+        log_error(__FILE__, __LINE__, "unable to find the specified texture");
         abort();
     }
     if (manager->textures[index].usage_count == 0) {
-        log_error("the specified texture id already has usage count of 0 (this is a texture "
-                  "manager bug)");
+        log_error(
+            __FILE__, __LINE__,
+            "the specified texture id already has usage count of 0 (this is a texture "
+            "manager bug)");
         abort();
     }
 
@@ -174,11 +190,11 @@ texture_manager_mark_unused_texture(te_texture_manager* manager, unsigned int te
         return;
     }
 
-    // Cleanup texture data.
+    /* cleanup texture data */
     glDeleteTextures(1, &manager->textures[index].id);
     free(manager->textures[index].relative_path);
 
-    // Remove from cache.
+    /* remove from cache */
     if (manager->texture_count == 1) {
         free(manager->textures);
         manager->textures = NULL;

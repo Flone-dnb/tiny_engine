@@ -1,5 +1,9 @@
 #include <render/shader_manager.h>
 
+#if defined(__linux__)
+#define _XOPEN_SOURCE 500
+#endif
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,38 +12,38 @@
 #include <io/filesystem.h>
 #include <glad/gl.h>
 
-// Groups information about a shader program.
+/* Groups information about a shader program. */
 typedef struct te_shader_program {
-    // Non-NULL path (relative to the `res` directory) to the vertex shader.
+    /* Non-NULL path (relative to the `res` directory) to the vertex shader. */
     char* vert_relative_path;
 
-    // Non-NULL path (relative to the `res` directory) to the fragment shader.
+    /* Non-NULL path (relative to the `res` directory) to the fragment shader. */
     char* frag_relative_path;
 
-    // strlen of @ref vert_relative_path.
+    /* strlen of @ref vert_relative_path. */
     unsigned int vert_relative_path_len;
 
-    // strlen of @ref frag_relative_path.
+    /* strlen of @ref frag_relative_path. */
     unsigned int frag_relative_path_len;
 
-    // OpenGL ID of the shader program.
+    /* OpenGL ID of the shader program. */
     unsigned int id;
 
-    // The number of places this program is currently used in.
+    /* The number of places this program is currently used in. */
     unsigned int usage_count;
 } te_shader_program;
 
-// Loads, compiles and caches shader programs.
+/* Loads, compiles and caches shader programs. */
 struct te_shader_manager {
-    // Compiled shaders. Size of this array is @ref shader_count.
+    /* Compiled shaders. Size of this array is @ref shader_count. */
     te_shader_program* shaders;
 
-    // Size of @ref shaders.
+    /* Size of @ref shaders. */
     unsigned int shader_count;
 };
 
 te_shader_manager*
-prv_shader_manager_create() {
+prv_shader_manager_create(void) {
     te_shader_manager* manager = malloc(sizeof(te_shader_manager));
     manager->shader_count = 0;
     manager->shaders = NULL;
@@ -50,7 +54,9 @@ prv_shader_manager_create() {
 void
 prv_shader_manager_destroy(te_shader_manager* manager) {
     if (manager->shader_count > 0) {
-        log_error("shader manager is being destroyed but there are still some shaders in use");
+        log_error(
+            __FILE__, __LINE__,
+            "shader manager is being destroyed but there are still some shaders in use");
         abort();
     }
 
@@ -60,6 +66,20 @@ prv_shader_manager_destroy(te_shader_manager* manager) {
 unsigned int
 prv_shader_manager_compile_shader(const char* path, bool is_frag) {
     const char* prefix = NULL;
+    char* file_content;
+    char* shader_code;
+    char* fmt_code;
+    FILE* f;
+    size_t prefix_len;
+    size_t code_len;
+    size_t elem_count_read;
+    size_t src;
+    size_t dst;
+    unsigned long file_size;
+    unsigned int shader_id;
+    unsigned int line_num;
+    int success;
+
 #if defined(ENGINE_GLES)
     if (is_frag) {
         prefix = "#version 100\n"
@@ -97,70 +117,71 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
                  "\n";
     }
 #endif
-    const size_t prefix_len = strlen(prefix);
+    prefix_len = strlen(prefix);
 
-    FILE* f = fopen(path, "rb");
+    f = fopen(path, "rb");
     if (f == NULL) {
-        log_error_fmt("unable to read the shader file \"%s\"", path);
+        log_error_fmt(__FILE__, __LINE__, "unable to read the shader file \"%s\"", path);
         abort();
     }
 
-    // Get file size.
-    unsigned long file_size = 0;
+    /* get file size */
+    file_size = 0;
     fseek(f, 0, SEEK_END);
     {
         long size = ftell(f);
         if (size < 0) {
-            log_error("failed to get shader file size");
+            log_error(__FILE__, __LINE__, "failed to get shader file size");
             abort();
         }
         file_size = (unsigned long)size;
     }
     rewind(f);
 
-    // Read content.
-    char* file_content = malloc(sizeof(char) * (file_size + 1));
-    const size_t elem_count_read = fread(file_content, 1, file_size, f);
+    /* read content */
+    file_content = malloc(sizeof(char) * (file_size + 1));
+    elem_count_read = fread(file_content, 1, file_size, f);
     file_content[file_size] = 0;
     if (elem_count_read != file_size) {
-        log_error_fmt("failed to read the shader file \"%s\"", path);
+        log_error_fmt(__FILE__, __LINE__, "failed to read the shader file \"%s\"", path);
         abort();
     }
     fclose(f);
 
-    // Construct the final code.
-    char* shader_code = malloc(sizeof(char) * (prefix_len + file_size + 1));
+    /* construct the final code */
+    shader_code = malloc(sizeof(char) * (prefix_len + file_size + 1));
     memcpy(shader_code, prefix, sizeof(char) * prefix_len);
     memcpy(shader_code + prefix_len, file_content, file_size);
     shader_code[prefix_len + file_size] = 0;
-    const size_t code_len = prefix_len + file_size;
+    code_len = prefix_len + file_size;
 
-    // Compile shader.
-    const unsigned int shader_id =
-        glCreateShader(is_frag ? GL_FRAGMENT_SHADER : GL_VERTEX_SHADER);
+    /* compile shader */
+    shader_id = glCreateShader(is_frag ? GL_FRAGMENT_SHADER : GL_VERTEX_SHADER);
     glShaderSource(shader_id, 1, (const char**)&shader_code, NULL);
     glCompileShader(shader_id);
 
-    // Check errors.
-    int success = 0;
+    /* check errors */
+    success = 0;
     glGetShaderiv(shader_id, GL_COMPILE_STATUS, &success);
     if (success == 0) {
+        char line_text[16] = {0};
         char comp_error_msg[4096] = {0};
+        size_t fmt_code_len;
+
         glGetShaderInfoLog(shader_id, 4096, NULL, comp_error_msg);
 
-        // Format output (log source code with line numbers).
-        const size_t fmt_code_len = code_len + 4096;
-        char* fmt_code = malloc(sizeof(char) * fmt_code_len);
+        /* format output (log source code with line numbers) */
+        fmt_code_len = code_len + 4096;
+        fmt_code = malloc(sizeof(char) * fmt_code_len);
         memset(fmt_code, 0, sizeof(char) * fmt_code_len);
 
-        char line_text[16] = {0};
-        unsigned int line_num = 2;
+        line_num = 2;
 
         fmt_code[0] = '\n';
         fmt_code[1] = '1';
         fmt_code[2] = '.';
         fmt_code[3] = ' ';
-        for (size_t src = 0, dst = 4; src < code_len; src++) {
+        for (src = 0, dst = 4; src < code_len; src++) {
             fmt_code[dst] = shader_code[src];
             dst += 1;
             if (shader_code[src] == 0) {
@@ -168,7 +189,7 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
             }
 
             if (shader_code[src] == '\n') {
-                // Append line number.
+                /* append line number */
                 unsigned int len = (unsigned int)snprintf(line_text, 16, "%u. ", line_num);
                 memcpy(fmt_code + dst, line_text, len);
                 dst += len;
@@ -178,9 +199,10 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
         }
 
         log_info_fmt(
+            __FILE__, __LINE__,
             "failed to compile shader \"%s\", error: %s, see full source code below:", path,
             comp_error_msg);
-        log_info(fmt_code);
+        log_info(__FILE__, __LINE__, fmt_code);
         free(fmt_code);
 
         abort();
@@ -196,13 +218,19 @@ unsigned int
 shader_manager_request_shader(
     te_shader_manager* manager, const char* vert_relative_path,
     const char* frag_relative_path) {
+    te_shader_program* new_shaders;
+    te_shader_program* prog;
+    char* msg;
+    unsigned int i;
+    int success;
+
     const size_t vert_relative_path_len = strlen(vert_relative_path);
     const size_t frag_relative_path_len = strlen(frag_relative_path);
 
-    // Check cache.
+    /* check cache */
     unsigned int index = 0;
     bool found = false;
-    for (unsigned int i = 0; i < manager->shader_count; i++) {
+    for (i = 0; i < manager->shader_count; i++) {
         if (manager->shaders[i].frag_relative_path_len != frag_relative_path_len
             || manager->shaders[i].vert_relative_path_len != vert_relative_path_len) {
             continue;
@@ -218,7 +246,7 @@ shader_manager_request_shader(
         break;
     }
     if (!found) {
-        // Compile new program.
+        /* compile new program */
         char* vert_path = filesystem_prepend_res_to_path(vert_relative_path, NULL);
         char* frag_path = filesystem_prepend_res_to_path(frag_relative_path, NULL);
 
@@ -229,18 +257,18 @@ shader_manager_request_shader(
         glAttachShader(prog_id, vert_id);
         glAttachShader(prog_id, frag_id);
         glLinkProgram(prog_id);
-        int success = 0;
+        success = 0;
         glGetProgramiv(prog_id, GL_LINK_STATUS, &success);
         if (success == 0) {
             int log_len = 0;
             glGetProgramiv(prog_id, GL_INFO_LOG_LENGTH, &log_len);
 
-            char* msg = malloc(sizeof(char) * (unsigned long)log_len);
+            msg = malloc(sizeof(char) * (unsigned long)log_len);
             glGetProgramInfoLog(prog_id, log_len, NULL, msg);
 
             log_info_fmt(
-                "failed to link shaders \"%s\" and \"%s\", error: %s", vert_path, frag_path,
-                msg);
+                __FILE__, __LINE__, "failed to link shaders \"%s\" and \"%s\", error: %s",
+                vert_path, frag_path, msg);
             free(msg);
 
             abort();
@@ -252,9 +280,8 @@ shader_manager_request_shader(
         glDetachShader(prog_id, frag_id);
         glDeleteShader(frag_id);
 
-        // Cache results.
-        te_shader_program* new_shaders =
-            malloc(sizeof(te_shader_program) * (manager->shader_count + 1));
+        /* cache results */
+        new_shaders = malloc(sizeof(te_shader_program) * (manager->shader_count + 1));
         memcpy(
             new_shaders, manager->shaders, sizeof(te_shader_program) * manager->shader_count);
 
@@ -264,10 +291,10 @@ shader_manager_request_shader(
         index = manager->shader_count;
         manager->shader_count += 1;
 
-        // Init data.
-        te_shader_program* prog = &manager->shaders[index];
+        /* init data */
+        prog = &manager->shaders[index];
 
-        prog->usage_count = 0; // will increment below
+        prog->usage_count = 0; /* will increment below */
         prog->id = prog_id;
 
         prog->vert_relative_path = malloc(sizeof(char) * (vert_relative_path_len + 1));
@@ -296,7 +323,9 @@ void
 shader_manager_mark_unused_shader(te_shader_manager* manager, unsigned int prog_id) {
     unsigned int index = 0;
     bool found = false;
-    for (unsigned int i = 0; i < manager->shader_count; i++) {
+    unsigned int i;
+
+    for (i = 0; i < manager->shader_count; i++) {
         if (manager->shaders[i].id != prog_id) {
             continue;
         }
@@ -305,12 +334,14 @@ shader_manager_mark_unused_shader(te_shader_manager* manager, unsigned int prog_
         break;
     }
     if (!found) {
-        log_error("unable to find the specified shader program");
+        log_error(__FILE__, __LINE__, "unable to find the specified shader program");
         abort();
     }
     if (manager->shaders[index].usage_count == 0) {
-        log_error("the specified shader program id already has usage count of 0 (this is a "
-                  "shader manager bug)");
+        log_error(
+            __FILE__, __LINE__,
+            "the specified shader program id already has usage count of 0 (this is a "
+            "shader manager bug)");
         abort();
     }
 
@@ -321,11 +352,11 @@ shader_manager_mark_unused_shader(te_shader_manager* manager, unsigned int prog_
 
     glDeleteProgram(manager->shaders[index].id);
 
-    // Cleanup shader group.
+    /* cleanup shader group */
     free(manager->shaders[index].frag_relative_path);
     free(manager->shaders[index].vert_relative_path);
 
-    // Remove from cache.
+    /* remove from cache */
     if (manager->shader_count == 1) {
         free(manager->shaders);
         manager->shaders = NULL;
@@ -349,6 +380,7 @@ get_uniform_location(unsigned int prog_id, const char* name) {
     const int location = glGetUniformLocation(prog_id, name);
     if (location < 0) {
         log_info_fmt(
+            __FILE__, __LINE__,
             "missing uniform variable named \"%s\", maybe it was optimized out due to being "
             "unused",
             name);

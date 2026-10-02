@@ -10,7 +10,8 @@ struct te_widget;
 struct te_type_info;
 struct te_editor;
 
-te_scene_animation_editor* scene_animation_editor_create(struct te_world* world, struct te_editor* editor);
+te_scene_animation_editor*
+scene_animation_editor_create(struct te_world* world, struct te_editor* editor);
 void scene_animation_editor_destroy(te_scene_animation_editor* editor);
 
 // Specify NULL as obj to hide.

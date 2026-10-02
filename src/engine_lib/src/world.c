@@ -103,7 +103,7 @@ struct te_world {
 te_world*
 prv_world_create(struct te_game_manager* game_manager, const char* name) {
     if (name == NULL) {
-        log_error("world name must not be NULL");
+        log_error(__FILE__, __LINE__, "world name must not be NULL");
         abort();
     }
 
@@ -197,7 +197,7 @@ prv_world_destroy(te_world* world) {
         }
         free(world->spawned_widgets);
         if (world->interactable_widget_count > 0) {
-            log_error("all widgets of a world were destroyed but there are still some "
+            log_error(__FILE__, __LINE__, "all widgets of a world were destroyed but there are still some "
                       "interactable widgets registered");
             abort();
         }
@@ -313,7 +313,7 @@ prv_world_remove_root_game_object_no_notify(
     }
     if (!found) {
         if (must_exist_in_array) {
-            log_error(
+            log_error(__FILE__, __LINE__, 
                 "unable to despawn the specified game object: the object was not spawned "
                 "previously or is a child object (despawn root "
                 "object to despawn child objects or detach child object from parent first, "
@@ -362,7 +362,7 @@ prv_world_remove_root_widget_no_notify(
     if (world->spawned_widget_count == 1) {
         if (world->spawned_widgets[0] != widget) {
             if (must_exist_in_array) {
-                log_error("expected the widget to be spawned in this world");
+                log_error(__FILE__, __LINE__, "expected the widget to be spawned in this world");
                 abort();
             } else {
                 return;
@@ -384,7 +384,7 @@ prv_world_remove_root_widget_no_notify(
         }
         if (!found) {
             if (must_exist_in_array) {
-                log_error("unable to despawn the specified widget: the widget was not spawned "
+                log_error(__FILE__, __LINE__, "unable to despawn the specified widget: the widget was not spawned "
                           "previously or is a child widget "
                           "(despawn root widget to despawn child widgets or detach child "
                           "widget from parent first, then despawn "
@@ -420,7 +420,7 @@ world_set_active_camera(te_world* world, te_camera* camera) {
     }
 
     if (camera_get_world(camera) != world) {
-        log_error("in order to make a camera active in the world you first need to spawn the "
+        log_error(__FILE__, __LINE__, "in order to make a camera active in the world you first need to spawn the "
                   "camera in the world");
         abort();
     }
@@ -569,7 +569,7 @@ world_save_to_file(te_world* world, const char* relative_path, bool write_light_
         } else {
             int len = snprintf(NULL, 0, "%s.scene_anim.txt", relative_path);
             if (len < 0) {
-                log_error("snprintf error");
+                log_error(__FILE__, __LINE__, "snprintf error");
                 abort();
             }
             char* path = malloc(sizeof(char) * ((size_t)len + 1));
@@ -609,7 +609,7 @@ world_save_to_file(te_world* world, const char* relative_path, bool write_light_
 
     const te_type_info* camera_type_info = type_database_get_type_info(camera_get_type_id());
     if (camera_type_info == NULL) {
-        log_error("expected camera type info to be valid");
+        log_error(__FILE__, __LINE__, "expected camera type info to be valid");
         abort();
     }
 
@@ -672,7 +672,7 @@ prv_load_child_widgets_recursive(
     te_widget* parent_widget, unsigned int parent_child_count, unsigned int* section_idx) {
     for (unsigned int child_idx = 0; child_idx < parent_child_count; child_idx++) {
         if ((*section_idx) >= section_count) {
-            log_error_fmt(
+            log_error_fmt(__FILE__, __LINE__, 
                 "unexpected end of file \"%s\", have %u sections while expected to have "
                 "more",
                 relative_path, section_count);
@@ -685,7 +685,7 @@ prv_load_child_widgets_recursive(
 
         type_info_load_from_config(type_info, config, (*section_idx), widget_owner);
         if (type_info->get_widget == NULL) {
-            log_error("expected a child object to be a widget");
+            log_error(__FILE__, __LINE__, "expected a child object to be a widget");
             abort();
         }
         te_widget* child_widget = type_info->get_widget(widget_owner);
@@ -716,10 +716,10 @@ load_vec_from_config(
     unsigned int count;
     float* array = config_section_get_float_array(config, section_idx, key, &count);
     if (count == 0) {
-        log_error_fmt("expected to find the value \"%s\" in the config", key);
+        log_error_fmt(__FILE__, __LINE__, "expected to find the value \"%s\" in the config", key);
         abort();
     } else if (count != comp_count) {
-        log_error_fmt(
+        log_error_fmt(__FILE__, __LINE__, 
             "unexpected array size found in the config, expected %u but found %u", comp_count,
             count);
         abort();
@@ -742,7 +742,7 @@ world_add_from_file_with_offset(
     unsigned int section_idx = 0;
 
     if (section_count == 0) {
-        log_error("expected world file to have at least 1 section");
+        log_error(__FILE__, __LINE__, "expected world file to have at least 1 section");
         abort();
     }
 
@@ -811,7 +811,7 @@ world_add_from_file_with_offset(
 
             if (has_attached_camera) {
                 if (section_idx >= section_count) {
-                    log_error_fmt(
+                    log_error_fmt(__FILE__, __LINE__, 
                         "unexpected end of file \"%s\", have %u sections while expected to "
                         "have more",
                         relative_path, section_count);
@@ -825,7 +825,7 @@ world_add_from_file_with_offset(
 
             for (unsigned int child_idx = 0; child_idx < child_model_count; child_idx++) {
                 if (section_idx >= section_count) {
-                    log_error_fmt(
+                    log_error_fmt(__FILE__, __LINE__, 
                         "unexpected end of file \"%s\", have %u sections while expected to "
                         "have more",
                         relative_path, section_count);
@@ -838,7 +838,7 @@ world_add_from_file_with_offset(
             }
         } else if (child_widget_count > 0) {
             if (type_info->get_widget == NULL) {
-                log_error("found widget section that specified child count but the type does "
+                log_error(__FILE__, __LINE__, "found widget section that specified child count but the type does "
                           "not have widget conversion function set");
                 abort();
             }
@@ -943,10 +943,10 @@ world_spawn_game_object(te_world* world, void* game_object, te_game_object_info*
     te_world* old_obj_world = info->get_world(game_object);
     if (old_obj_world != NULL) {
         if (old_obj_world == world) {
-            log_error("the game object is already spawned in this world");
+            log_error(__FILE__, __LINE__, "the game object is already spawned in this world");
             abort();
         } else {
-            log_error("the specified game object cannot be spawned in this world because the "
+            log_error(__FILE__, __LINE__, "the specified game object cannot be spawned in this world because the "
                       "game object "
                       "must be first despawned from the world it currently resides in");
             abort();
@@ -966,7 +966,7 @@ void
 world_despawn_game_object(te_world* world, void* game_object, te_game_object_info* info) {
     te_world* obj_world = info->get_world(game_object);
     if (obj_world != world) {
-        log_error("the specified model cannot be despawned from this world as it's not "
+        log_error(__FILE__, __LINE__, "the specified model cannot be despawned from this world as it's not "
                   "spawned in this world");
         abort();
     }
@@ -985,10 +985,10 @@ world_spawn_widget(te_world* world, struct te_widget* widget) {
     te_world* old_widget_world = widget_get_world(widget);
     if (old_widget_world != NULL) {
         if (old_widget_world == world) {
-            log_error("the widget is already spawned in this world");
+            log_error(__FILE__, __LINE__, "the widget is already spawned in this world");
             abort();
         } else {
-            log_error(
+            log_error(__FILE__, __LINE__, 
                 "the specified widget cannot be spawned in this world because the widget "
                 "must be first despawned from the world it currently resides in");
             abort();
@@ -1006,7 +1006,7 @@ world_spawn_widget(te_world* world, struct te_widget* widget) {
 void
 world_despawn_widget(te_world* world, te_widget* widget) {
     if (widget_get_world(widget) != world) {
-        log_error("the specified widget cannot be despawned from this world as it's not "
+        log_error(__FILE__, __LINE__, "the specified widget cannot be despawned from this world as it's not "
                   "spawned in this world");
         abort();
     }
@@ -1052,7 +1052,7 @@ prv_world_remove_interactable_widget(te_world* world, te_widget* widget) {
             break;
         }
         if (!found) {
-            log_error("unable to find the specified widget");
+            log_error(__FILE__, __LINE__, "unable to find the specified widget");
             abort();
         }
 

@@ -186,7 +186,7 @@ on_spawned(te_camera* camera, struct te_world* world) {
     }
 
     if (world == NULL) {
-        log_error("expected world to be valid");
+        log_error(__FILE__, __LINE__, "expected world to be valid");
         abort();
     }
 
@@ -244,7 +244,7 @@ camera_get_name(te_camera* camera) {
 static void
 type_spawn(te_world* world, te_camera* camera) {
     if (camera->world != NULL) {
-        log_error("the camera is already spawned in the different world");
+        log_error(__FILE__, __LINE__, "the camera is already spawned in the different world");
         abort();
     }
 
@@ -254,7 +254,7 @@ type_spawn(te_world* world, te_camera* camera) {
 static void
 type_despawn(te_world* world, te_camera* camera) {
     if (camera->world != world) {
-        log_error("the model is spawned in the different world");
+        log_error(__FILE__, __LINE__, "the model is spawned in the different world");
         abort();
     }
 
@@ -551,7 +551,7 @@ void
 prv_camera_recalc_frustum(te_camera* camera) {
 #if defined(DEBUG)
     if (camera->is_directions_outdated) {
-        log_error("expected directions to be up to date to recalculate camera's frustum");
+        log_error(__FILE__, __LINE__, "expected directions to be up to date to recalculate camera's frustum");
         abort();
     }
 #endif
@@ -586,7 +586,7 @@ make_sure_view_proj_mat_updated(te_camera* camera) {
 
 #if defined(DEBUG)
         if (camera->render_width == 0 || camera->render_height == 0) {
-            log_error("expected render target width/height to be set at this point");
+            log_error(__FILE__, __LINE__, "expected render target width/height to be set at this point");
             abort();
         }
 #endif
@@ -630,7 +630,7 @@ struct te_frustum_shape*
 camera_get_frustum(te_camera* camera) {
 #if defined(DEBUG)
     if (camera->render_width == 0 || camera->render_height == 0) {
-        log_error("expected render target width/height to be set at this point");
+        log_error(__FILE__, __LINE__, "expected render target width/height to be set at this point");
         abort();
     }
 #endif

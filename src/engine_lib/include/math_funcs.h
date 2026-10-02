@@ -54,7 +54,7 @@ math_convert_norm_dir_to_rot(vec3 dir, vec3 out) {
 #if defined(DEBUG)
     // Make sure we are given a normalized direction.
     if (!glm_eq(glm_vec3_norm(dir), 1.0f)) {
-        log_error("the specified direction vector should have been normalized");
+        log_error(__FILE__, __LINE__, "the specified direction vector should have been normalized");
         abort();
     }
 #endif

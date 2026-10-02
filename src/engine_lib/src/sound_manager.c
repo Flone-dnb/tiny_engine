@@ -23,7 +23,7 @@ sound_manager_create(void) {
 
     ma_result result = ma_engine_init(NULL, &manager->ma_engine);
     if (result != MA_SUCCESS) {
-        log_error_fmt("failed to initialize miniaudio, error: %i", result);
+        log_error_fmt(__FILE__, __LINE__, "failed to initialize miniaudio, error: %i", result);
         abort();
     }
 
@@ -55,7 +55,7 @@ sound_create(te_sound_manager* sound_manager, const char* relative_path) {
         &sound_manager->ma_engine, path_to_sound,
         MA_SOUND_FLAG_STREAM | MA_SOUND_FLAG_NO_SPATIALIZATION, NULL, NULL, &sound->ma_sound);
     if (result != MA_SUCCESS) {
-        log_error_fmt(
+        log_error_fmt(__FILE__, __LINE__, 
             "failed to initialize sound from file %s, error: %i", path_to_sound, result);
         abort();
     }
@@ -76,7 +76,7 @@ void
 sound_play(te_sound* sound) {
     ma_result result = ma_sound_start(&sound->ma_sound);
     if (result != MA_SUCCESS) {
-        log_error_fmt("failed to start sound, error: %i", result);
+        log_error_fmt(__FILE__, __LINE__, "failed to start sound, error: %i", result);
         abort();
     }
 }
@@ -85,7 +85,7 @@ void
 sound_stop(te_sound* sound) {
     ma_result result = ma_sound_stop(&sound->ma_sound);
     if (result != MA_SUCCESS) {
-        log_error_fmt("failed to stop sound, error: %i", result);
+        log_error_fmt(__FILE__, __LINE__, "failed to stop sound, error: %i", result);
         abort();
     }
 }
@@ -161,7 +161,7 @@ prv_sound_set_on_finished_callback_audio_thread(
     sound->on_finished = on_finished;
     ma_result result = ma_sound_set_end_callback(&sound->ma_sound, on_sound_end, sound);
     if (result != MA_SUCCESS) {
-        log_error_fmt("failed to set sound end callback, error: %i", result);
+        log_error_fmt(__FILE__, __LINE__, "failed to set sound end callback, error: %i", result);
         abort();
     }
 }

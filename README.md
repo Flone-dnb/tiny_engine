@@ -27,7 +27,7 @@ You can read the manual from `docs/Manual.md`. There are also a lot of comments 
 
 # Prerequisites
 
-- Compiler that supports C99
+- Compiler that supports C89/C90
 - [CMake](https://cmake.org/download/)
 
 Optional (for automatic code formatting):

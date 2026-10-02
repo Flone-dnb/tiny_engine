@@ -24,8 +24,6 @@ set(PROJECT_SOURCES
     src/type_database.c
     src/window_system/os_window.h
     src/window_system/os_window.c
-    src/window_system/win32_window.c
-    src/window_system/win32_window.h
     src/window_system/x11_window.c
     src/window_system/x11_window.h
     src/render/renderer.c
@@ -42,6 +40,8 @@ set(PROJECT_SOURCES
     src/render/render_data_array.h
     src/render/gpu_section.h
     src/render/gpu_time_section.h
+    src/input/mouse_button.c
+    src/input/keyboard_button.c
     src/game/camera.c
     src/game/model.c
     src/game/skeleton.c
@@ -103,6 +103,13 @@ set(PROJECT_SOURCES
     include/widget/progress_widget.h
     include/widget/vbox_widget.h
 )
+set(WIN32_SOURCES
+    src/window_system/win32_window.c
+    src/window_system/win32_window.h
+)
+if (WIN32)
+    list(APPEND PROJECT_SOURCES ${WIN32_SOURCES})
+endif()
 
 # Define targets (one without any specific macros and another for compilation with editor).
 set(ENGINE_LIB_TARGET engine_lib)
@@ -116,6 +123,9 @@ add_library(${ENGINE_LIB_TARGET_FOR_EDITOR} STATIC ${PROJECT_SOURCES})
 
 tiny_engine_configure_target(${ENGINE_LIB_TARGET})
 tiny_engine_configure_target(${ENGINE_LIB_TARGET_FOR_EDITOR})
+
+target_include_directories(${ENGINE_LIB_TARGET} PUBLIC other)
+target_include_directories(${ENGINE_LIB_TARGET_FOR_EDITOR} PUBLIC other)
 
 # Define editor macros for editor's version of the engine_lib.
 target_compile_definitions(${ENGINE_LIB_TARGET_FOR_EDITOR} PUBLIC ENGINE_EDITOR)

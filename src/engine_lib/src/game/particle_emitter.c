@@ -464,7 +464,7 @@ particle_emitter_get_type_id(void) {
 static void
 type_spawn(te_world* world, te_particle_emitter* emitter) {
     if (emitter->world != NULL) {
-        log_error("the particle emitter is already spawned in the different world");
+        log_error(__FILE__, __LINE__, "the particle emitter is already spawned in the different world");
         abort();
     }
 
@@ -474,7 +474,7 @@ type_spawn(te_world* world, te_particle_emitter* emitter) {
 static void
 type_despawn(te_world* world, te_particle_emitter* emitter) {
     if (emitter->world != world) {
-        log_error("the particle emitter is spawned in the different world");
+        log_error(__FILE__, __LINE__, "the particle emitter is spawned in the different world");
         abort();
     }
 

@@ -181,7 +181,7 @@ prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
         scene_animation->animated_object_count =
             config_section_get_uint(config, section_idx, "object_count", 0);
         if (scene_animation->animated_object_count == 0) {
-            log_error_fmt(
+            log_error_fmt(__FILE__, __LINE__, 
                 "failed to load \"%s\", expected to find animated object count",
                 relative_path_to_load);
             abort();
@@ -223,7 +223,7 @@ prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
 
             section_idx += 1;
             if (section_idx >= section_count) {
-                log_error_fmt(
+                log_error_fmt(__FILE__, __LINE__, 
                     "reached unexpected end of file while reading %s", relative_path_to_load);
                 abort();
             }
@@ -241,7 +241,7 @@ prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
         var->keyframe_count =                                                                 \
             config_section_get_uint(config, section_idx, "keyframe_count", 0);                \
         if (var->keyframe_count == 0) {                                                       \
-            log_error_fmt(                                                                    \
+            log_error_fmt(__FILE__, __LINE__,                                                                     \
                 "failed to get keyframe_count for variable %s of object %s while "            \
                 "reading %s",                                                                 \
                 variable_name, obj_name, relative_path_to_load);                              \
@@ -252,7 +252,7 @@ prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
         float* times =                                                                        \
             config_section_get_float_array(config, section_idx, "times", &item_count);        \
         if (item_count == 0) {                                                                \
-            log_error_fmt(                                                                    \
+            log_error_fmt(__FILE__, __LINE__,                                                                     \
                 "failed to read keyframe times of variable %s of object %s while "            \
                 "reading %s",                                                                 \
                 variable_name, obj_name, relative_path_to_load);                              \
@@ -262,7 +262,7 @@ prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
         var_type* values = config_section_get_##var_name##_array(                             \
             config, section_idx, "values", &item_count);                                      \
         if (item_count == 0) {                                                                \
-            log_error_fmt(                                                                    \
+            log_error_fmt(__FILE__, __LINE__,                                                                     \
                 "failed to read keyframe values of variable %s of object %s while "           \
                 "reading %s",                                                                 \
                 variable_name, obj_name, relative_path_to_load);                              \
@@ -272,7 +272,7 @@ prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
         unsigned int* interpolations = config_section_get_uint_array(                         \
             config, section_idx, "interpolations", &item_count);                              \
         if (item_count == 0) {                                                                \
-            log_error_fmt(                                                                    \
+            log_error_fmt(__FILE__, __LINE__,                                                                     \
                 "failed to read keyframe interpolations of variable %s of object %s "         \
                 "while reading %s",                                                           \
                 variable_name, obj_name, relative_path_to_load);                              \
@@ -308,7 +308,7 @@ prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
             var->keyframe_count =                                                             \
                 config_section_get_uint(config, section_idx, "keyframe_count", 0);            \
             if (var->keyframe_count == 0) {                                                   \
-                log_error_fmt(                                                                \
+                log_error_fmt(__FILE__, __LINE__,                                                                 \
                     "failed to get keyframe_count for variable %s of object %s while "        \
                     "reading %s",                                                             \
                     variable_name, obj_name, relative_path_to_load);                          \
@@ -319,7 +319,7 @@ prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
             float* times =                                                                    \
                 config_section_get_float_array(config, section_idx, "times", &item_count);    \
             if (item_count == 0) {                                                            \
-                log_error_fmt(                                                                \
+                log_error_fmt(__FILE__, __LINE__,                                                                 \
                     "failed to read keyframe times of variable %s of object %s while "        \
                     "reading %s",                                                             \
                     variable_name, obj_name, relative_path_to_load);                          \
@@ -329,7 +329,7 @@ prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
             float* values =                                                                   \
                 config_section_get_float_array(config, section_idx, "values", &item_count);   \
             if (item_count == 0) {                                                            \
-                log_error_fmt(                                                                \
+                log_error_fmt(__FILE__, __LINE__,                                                                 \
                     "failed to read keyframe values of variable %s of object %s while "       \
                     "reading %s",                                                             \
                     variable_name, obj_name, relative_path_to_load);                          \
@@ -339,7 +339,7 @@ prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
             unsigned int* interpolations = config_section_get_uint_array(                     \
                 config, section_idx, "interpolations", &item_count);                          \
             if (item_count == 0) {                                                            \
-                log_error_fmt(                                                                \
+                log_error_fmt(__FILE__, __LINE__,                                                                 \
                     "failed to read keyframe interpolations of variable %s of object %s "     \
                     "while reading %s",                                                       \
                     variable_name, obj_name, relative_path_to_load);                          \
@@ -497,7 +497,7 @@ find_game_obj_recursive(te_game_object_data* data, te_scene_animation_obj* targe
         target->transient_obj = data->object;
         target->transient_obj_type_info = type_database_get_type_info(data->info->type_id);
         if (target->transient_obj_type_info == NULL) {
-            log_error_fmt("failed to get type info for type \"%s\"", data->info->type_id);
+            log_error_fmt(__FILE__, __LINE__, "failed to get type info for type \"%s\"", data->info->type_id);
         }
         return;
     }
@@ -555,7 +555,7 @@ cache_obj_and_var(te_scene_animation* anim) {
             }
         }
         if (obj->transient_obj == NULL || obj->transient_obj_type_info == NULL) {
-            log_error_fmt(
+            log_error_fmt(__FILE__, __LINE__, 
                 "failed to find a world object with name \"%s\" to animate", obj->name);
             abort();
         }
@@ -575,7 +575,7 @@ cache_obj_and_var(te_scene_animation* anim) {
             break;                                                                            \
         }                                                                                     \
         if (var->transient_var_info == NULL) {                                                \
-            log_error_fmt(                                                                    \
+            log_error_fmt(__FILE__, __LINE__,                                                                     \
                 "failed to find variable with name \"%s\" of object \"%s\" to animate",       \
                 var->name, obj->name);                                                        \
             abort();                                                                          \

@@ -246,7 +246,7 @@ prv_slider_widget_on_after_spawned(void* this) {
 
     // Self check:
     if (widget_get_child_widget_count(slider_widget->widget) != 2) {
-        log_error("unexpected child widget count on a widget");
+        log_error(__FILE__, __LINE__, "unexpected child widget count on a widget");
         abort();
     }
 
@@ -268,7 +268,7 @@ prv_slider_widget_on_after_spawned(void* this) {
 
     te_world* world = widget_get_world(slider_widget->widget);
     if (world == NULL) {
-        log_error("expected the widget to be spawned");
+        log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
     prv_world_add_interactable_widget(world, slider_widget->widget);
@@ -280,13 +280,13 @@ prv_slider_widget_on_before_despawned(void* this) {
 
     // Self check:
     if (widget_get_child_widget_count(slider_widget->widget) != 2) {
-        log_error("unexpected child widget count on a widget");
+        log_error(__FILE__, __LINE__, "unexpected child widget count on a widget");
         abort();
     }
 
     te_world* world = widget_get_world(slider_widget->widget);
     if (world == NULL) {
-        log_error("expected the widget to be spawned");
+        log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
     prv_world_remove_interactable_widget(world, slider_widget->widget);

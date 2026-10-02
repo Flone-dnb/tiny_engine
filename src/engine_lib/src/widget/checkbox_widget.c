@@ -127,7 +127,7 @@ static void
 prv_checkbox_widget_create_checked_rect(te_checkbox_widget* checkbox_widget) {
 #if defined(DEBUG)
     if (checkbox_widget->checked_rect != NULL) {
-        log_error("expected checked rect widget to be invalid");
+        log_error(__FILE__, __LINE__, "expected checked rect widget to be invalid");
         abort();
     }
 #endif
@@ -404,7 +404,7 @@ prv_checkbox_widget_on_after_spawned(void* this) {
 
     // Self check:
     if (widget_get_child_widget_count(checkbox_widget->widget) != 1) {
-        log_error("unexpected child widget count on a widget");
+        log_error(__FILE__, __LINE__, "unexpected child widget count on a widget");
         abort();
     }
 
@@ -422,7 +422,7 @@ prv_checkbox_widget_on_after_spawned(void* this) {
 
     te_world* world = widget_get_world(checkbox_widget->widget);
     if (world == NULL) {
-        log_error("expected the widget to be spawned");
+        log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
     prv_world_add_interactable_widget(world, checkbox_widget->widget);
@@ -434,13 +434,13 @@ prv_checkbox_widget_on_before_despawned(void* this) {
 
     // Self check:
     if (widget_get_child_widget_count(checkbox_widget->widget) > 2) {
-        log_error("unexpected child widget count on a widget");
+        log_error(__FILE__, __LINE__, "unexpected child widget count on a widget");
         abort();
     }
 
     te_world* world = widget_get_world(checkbox_widget->widget);
     if (world == NULL) {
-        log_error("expected the widget to be spawned");
+        log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
     prv_world_remove_interactable_widget(world, checkbox_widget->widget);

@@ -63,7 +63,7 @@ prv_font_manager_create(te_renderer* renderer) {
 
     const int error_code = FT_Init_FreeType(&manager->ft_library);
     if (error_code != 0) {
-        log_error_fmt("failed to init FreeType library, error: %d", error_code);
+        log_error_fmt(__FILE__, __LINE__, "failed to init FreeType library, error: %d", error_code);
         abort();
     }
 
@@ -77,14 +77,14 @@ prv_font_manager_destroy(te_font_manager* manager) {
     if (manager->ft_face != NULL) {
         error_code = FT_Done_Face(manager->ft_face);
         if (error_code != 0) {
-            log_error_fmt("failed to deinit FreeType face, error: %d", error_code);
+            log_error_fmt(__FILE__, __LINE__, "failed to deinit FreeType face, error: %d", error_code);
             abort();
         }
     }
 
     error_code = FT_Done_FreeType(manager->ft_library);
     if (error_code != 0) {
-        log_error_fmt("failed to deinit FreeType library, error: %d", error_code);
+        log_error_fmt(__FILE__, __LINE__, "failed to deinit FreeType library, error: %d", error_code);
         abort();
     }
 
@@ -131,7 +131,7 @@ font_manager_load_font(te_font_manager* manager, const char* relative_path) {
         // Unload old font.
         error_code = FT_Done_Face(manager->ft_face);
         if (error_code != 0) {
-            log_error_fmt("failed to deinit FreeType face, error: %d", error_code);
+            log_error_fmt(__FILE__, __LINE__, "failed to deinit FreeType face, error: %d", error_code);
             abort();
             ;
         }
@@ -140,13 +140,13 @@ font_manager_load_font(te_font_manager* manager, const char* relative_path) {
 
     char* path_to_font = filesystem_prepend_res_to_path(relative_path, NULL);
     if (!filesystem_does_path_exists(path_to_font)) {
-        log_error_fmt("the path \"%s\" does not exist", path_to_font);
+        log_error_fmt(__FILE__, __LINE__, "the path \"%s\" does not exist", path_to_font);
     }
 
     // Load new font.
     error_code = FT_New_Face(manager->ft_library, path_to_font, 0, &manager->ft_face);
     if (error_code != 0) {
-        log_error_fmt("failed to create FreeType face, error: %d", error_code);
+        log_error_fmt(__FILE__, __LINE__, "failed to create FreeType face, error: %d", error_code);
         abort();
     }
 
@@ -171,11 +171,11 @@ void
 font_manager_cache_glyphs(
     te_font_manager* manager, unsigned long char_code_first, unsigned long char_code_last) {
     if (char_code_first > char_code_last) {
-        log_error("the specified character code range is invalid");
+        log_error(__FILE__, __LINE__, "the specified character code range is invalid");
         abort();
     }
     if (manager->ft_face == NULL) {
-        log_error("font face was not loaded yet");
+        log_error(__FILE__, __LINE__, "font face was not loaded yet");
         abort();
     }
 
@@ -194,7 +194,7 @@ font_manager_cache_glyphs(
         // Load glyph.
         int error_code = FT_Load_Char(manager->ft_face, char_code, FT_LOAD_RENDER);
         if (error_code != 0) {
-            log_error_fmt(
+            log_error_fmt(__FILE__, __LINE__, 
                 "failed to load glyph for character %u, error: %d", char_code, error_code);
             abort();
         }

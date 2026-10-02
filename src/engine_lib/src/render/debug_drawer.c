@@ -32,7 +32,7 @@ typedef struct te_double_array {
 static te_double_array*
 double_array_create(unsigned int item_sizeof, unsigned int capacity) {
     if (capacity == 0) {
-        log_error("expected non zero capacity");
+        log_error(__FILE__, __LINE__, "expected non zero capacity");
         abort();
     }
     te_double_array* array = malloc(sizeof(te_double_array));
@@ -516,7 +516,7 @@ debug_drawer_draw_text_fmt(float time_sec, const char* fmt, ...) {
 
     int test_size = vsnprintf(NULL, 0, fmt, args);
     if (test_size <= 0) {
-        log_error("failed to format last log message");
+        log_error(__FILE__, __LINE__, "failed to format last log message");
         abort();
     }
     size_t size = (size_t)test_size;

@@ -1,5 +1,9 @@
 #include <misc/memory_usage.h>
 
+#if defined(__linux__)
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #if defined(_WIN32)
@@ -21,7 +25,8 @@ memory_usage_get_process_used_memory(void) {
     return (size_t)info.WorkingSetSize;
 #elif defined(__linux__)
     long rss = 0;
-    FILE* fp = fopen("/proc/self/statm", "r");
+    FILE* fp;
+    fp = fopen("/proc/self/statm", "r");
     if (fp == NULL) {
         return (size_t)0;
     }
@@ -47,9 +52,7 @@ memory_usage_get_total_memory(void) {
 #elif defined(__linux__)
     struct sysinfo mem_info;
     sysinfo(&mem_info);
-    unsigned long total_phys_mem = mem_info.totalram;
-    total_phys_mem *= mem_info.mem_unit;
-    return (size_t)total_phys_mem;
+    return (size_t)(mem_info.totalram * mem_info.mem_unit);
 #else
 #error "unsupported OS"
 #endif
@@ -64,31 +67,40 @@ memory_usage_get_total_used_memory(void) {
     return (size_t)(mem_info.ullTotalPhys - mem_info.ullAvailPhys);
 #elif defined(__linux__)
     struct sysinfo mem_info;
+    FILE* fp = NULL;
+    char* line = NULL;
+    const char* key = NULL;
+    size_t key_len;
+    size_t line_len;
+    unsigned long freeram;
+    unsigned int i;
+    unsigned int start_pos;
+    unsigned int char_count;
+
     sysinfo(&mem_info);
 
-    // sysinfo.freeram is not what it means thus we use a different approach here:
+    /** sysinfo.freeram is not what it means thus we use a different approach here: */
 
-    FILE* fp = fopen("/proc/meminfo", "r");
+    fp = fopen("/proc/meminfo", "r");
     if (fp == NULL) {
         return 0;
     }
 
-    char* line = NULL;
-    size_t len = 0;
-    const char* key = "MemAvailable:";
-    const size_t key_len = strlen(key);
-    unsigned long freeram = 0;
-    while (getline(&line, &len, fp) != -1) {
-        if (len < key_len) {
+    line_len = 0;
+    key = "MemAvailable:";
+    key_len = strlen(key);
+    freeram = 0;
+    while (getline(&line, &line_len, fp) != -1) {
+        if (line_len < key_len) {
             continue;
         }
         if (strncmp(line, key, key_len) != 0) {
             continue;
         }
 
-        unsigned int start_pos = 0xffffffff;
-        unsigned int char_count = 0;
-        for (unsigned i = (unsigned int)key_len; i < len; i++) {
+        start_pos = 0xffffffff;
+        char_count = 0;
+        for (i = (unsigned int)key_len; i < line_len; i++) {
             if (line[i] == ' ') {
                 if (start_pos == 0xffffffff) {
                     continue;
@@ -116,9 +128,7 @@ memory_usage_get_total_used_memory(void) {
     free(line);
     fclose(fp);
 
-    unsigned long phys_mem_used = mem_info.totalram - freeram;
-    phys_mem_used *= mem_info.mem_unit;
-    return (size_t)phys_mem_used;
+    return (size_t)((mem_info.totalram - freeram) * mem_info.mem_unit);
 #else
 #error "unsupported OS"
 #endif

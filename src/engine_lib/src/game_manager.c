@@ -59,7 +59,7 @@ prv_game_manager_create(struct te_window* window) {
 
     // make sure "res" directory exists
     if (!filesystem_does_path_exists("res")) {
-        log_error("expected to have \"res\" directory next to the executable");
+        log_error(__FILE__, __LINE__, "expected to have \"res\" directory next to the executable");
         abort();
     }
 
@@ -89,37 +89,37 @@ prv_game_manager_create(struct te_window* window) {
 #endif
 
     // Log some info.
-    log_info("state:");
+    log_info(__FILE__, __LINE__, "state:");
 
 #if defined(ENGINE_ASAN_ENABLED)
-    log_info("- AddressSanitizer (ASan) is enabled, expect increased RAM usage!");
+    log_info(__FILE__, __LINE__, "- AddressSanitizer (ASan) is enabled, expect increased RAM usage!");
 #endif
 
 #if defined(DEBUG)
-    log_info("- DEBUG is defined, running debug build");
+    log_info(__FILE__, __LINE__, "- DEBUG is defined, running debug build");
 #else
-    log_info("- DEBUG is NOT defined, running release build");
+    log_info(__FILE__, __LINE__, "- DEBUG is NOT defined, running release build");
 #endif
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    log_info("- ENGINE_DEBUG_TOOLS is defined, debug tools are enabled");
+    log_info(__FILE__, __LINE__, "- ENGINE_DEBUG_TOOLS is defined, debug tools are enabled");
 #else
-    log_info("- ENGINE_DEBUG_TOOLS is NOT defined");
+    log_info(__FILE__, __LINE__, "- ENGINE_DEBUG_TOOLS is NOT defined");
 #endif
 
 #if defined(ENGINE_MEMCHECK_ENABLED)
 #if !defined(DEBUG)
 #error "memcheck should be disabled in release builds"
 #endif
-    log_info("- ENGINE_MEMCHECK_ENABLED is defined, memcheck enabled");
+    log_info(__FILE__, __LINE__, "- ENGINE_MEMCHECK_ENABLED is defined, memcheck enabled");
 #else
-    log_info("- ENGINE_MEMCHECK_ENABLED is NOT defined");
+    log_info(__FILE__, __LINE__, "- ENGINE_MEMCHECK_ENABLED is NOT defined");
 #endif
 
 #if defined(ENGINE_GLES)
-    log_info("- ENGINE_GLES is defined, using OpenGL ES");
+    log_info(__FILE__, __LINE__, "- ENGINE_GLES is defined, using OpenGL ES");
 #else
-    log_info("- ENGINE_GLES is NOT defined, using regular OpenGL");
+    log_info(__FILE__, __LINE__, "- ENGINE_GLES is NOT defined, using regular OpenGL");
 #endif
 
     return game_manager;
@@ -145,7 +145,7 @@ prv_game_manager_destroy(te_game_manager* game_manager) {
     prv_type_database_deinit();
 
     if (game_manager->tick_callback_count > 0) {
-        log_error_fmt(
+        log_error_fmt(__FILE__, __LINE__, 
             "the game manager is destroyed but there are still %u tick callback(s) registered",
             game_manager->tick_callback_count);
         abort();
@@ -157,7 +157,7 @@ prv_game_manager_destroy(te_game_manager* game_manager) {
 te_world*
 game_manager_create_world(te_game_manager* game_manager, const char* name) {
     if (name == NULL) {
-        log_error("world name must not be NULL");
+        log_error(__FILE__, __LINE__, "world name must not be NULL");
         abort();
     }
 
@@ -195,7 +195,7 @@ game_manager_destroy_world(te_game_manager* game_manager, te_world* world) {
             break;
         }
         if (!found) {
-            log_error("unable to find the specified world to destroy");
+            log_error(__FILE__, __LINE__, "unable to find the specified world to destroy");
             abort();
         }
 
@@ -273,7 +273,7 @@ game_manager_remove_tick_callback(te_game_manager* game_manager, unsigned int ca
         return;
     }
 
-    log_error_fmt("unable to find a registered tick callback with ID %u", callback_id);
+    log_error_fmt(__FILE__, __LINE__, "unable to find a registered tick callback with ID %u", callback_id);
     abort();
 }
 

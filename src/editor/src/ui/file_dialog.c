@@ -184,7 +184,7 @@ refresh_page_text(te_file_dialog* file_dialog) {
     const int len =
         snprintf(NULL, 0, "%u / %u", file_dialog->current_page + 1, file_dialog->page_count);
     if (len < 0) {
-        log_error("snprintf error");
+        log_error(__FILE__, __LINE__, "snprintf error");
         abort();
     }
     unsigned int text_len = (unsigned int)len;
@@ -369,7 +369,7 @@ on_button_select_clicked(te_button_widget* button) {
         }
         case (TE_FDM_SELECT_NEW_FILE): {
             if (file_dialog->filename_text_edit == NULL) {
-                log_error("expected filename text edit to be valid");
+                log_error(__FILE__, __LINE__, "expected filename text edit to be valid");
                 abort();
             }
 
