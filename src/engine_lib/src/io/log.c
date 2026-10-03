@@ -1,5 +1,6 @@
 #include <io/log.h>
 
+#include <snprintf.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>

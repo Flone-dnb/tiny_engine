@@ -224,7 +224,7 @@ x11_gamepad_find_and_open(te_x11_gamepad* gamepad) {
             gamepad->fd = fd;
             gamepad->connected = true;
 
-            // get axis info
+            /* get axis info */
             for (int i = 0; i < MAX_GAMEPAD_AXES; i++) {
                 struct input_absinfo abs_info;
                 if (ioctl(fd, EVIOCGABS(i), &abs_info) == 0) {
@@ -318,10 +318,10 @@ x11_gamepad_axis_in_deadzone(te_x11_gamepad* gamepad, int axis, int value) {
 static enum te_gamepad_button
 x11_gamepad_button_to_engine(int evdev_button) {
     switch (evdev_button) {
-        case BTN_SOUTH: return TE_GB_DOWN; // A / Cross
-        case BTN_EAST: return TE_GB_RIGHT; // B / Circle
-        case BTN_NORTH: return TE_GB_UP;   // Y / Triangle
-        case BTN_WEST: return TE_GB_LEFT;  // X / Square
+        case BTN_SOUTH: return TE_GB_DOWN; /* A / Cross */
+        case BTN_EAST: return TE_GB_RIGHT; /* B / Circle */
+        case BTN_NORTH: return TE_GB_UP;   /* Y / Triangle */
+        case BTN_WEST: return TE_GB_LEFT;  /* X / Square */
         case BTN_START: return TE_GB_START;
         case BTN_SELECT: return TE_GB_BACK;
         case BTN_MODE: return TE_GB_START;
@@ -418,7 +418,7 @@ x11_gamepad_poll(te_os_window* os_window, te_x11_window* x11_window) {
     te_x11_gamepad* gamepad = &x11_window->gamepad;
     te_os_window_callbacks* callbacks = prv_os_window_get_callbacks(os_window);
 
-    // check if was disconnected
+    /* check if was disconnected */
     if (gamepad->connected && gamepad->fd < 0) {
         gamepad->connected = false;
         log_info(__FILE__, __LINE__, "gamepad disconnected");
@@ -426,7 +426,7 @@ x11_gamepad_poll(te_os_window* os_window, te_x11_window* x11_window) {
         return;
     }
 
-    // try to connect
+    /* try to connect */
     if (x11_window->inotify_fd >= 0) {
         static char buf[64];
         ssize_t n = read(x11_window->inotify_fd, buf, sizeof(buf));
@@ -441,7 +441,7 @@ x11_gamepad_poll(te_os_window* os_window, te_x11_window* x11_window) {
         return;
     }
 
-    // read events from gamepad
+    /* read events from gamepad */
     struct input_event ev;
     ssize_t bytes_read;
     bool read_error = false;
@@ -457,7 +457,7 @@ x11_gamepad_poll(te_os_window* os_window, te_x11_window* x11_window) {
         read_error = true;
     }
 
-    // check if disconnected
+    /* check if disconnected */
     if (read_error) {
         log_info(__FILE__, __LINE__, "gamepad disconnected");
         x11_gamepad_close(gamepad);
@@ -471,26 +471,26 @@ x11_handle_key_event(
     bool is_repeat) {
     enum te_keyboard_button button = (enum te_keyboard_button)(key_event->keycode - 8);
 
-    // update keyboard modifiers
+    /* update keyboard modifiers */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-conversion"
     if (button == TE_KB_LEFT_ALT) {
         if (is_press) {
-            x11_window->keyboard_mods.bitmask |= 0b1;
+            x11_window->keyboard_mods.bitmask |= 1;
         } else {
-            x11_window->keyboard_mods.bitmask &= ~0b1;
+            x11_window->keyboard_mods.bitmask &= ~1;
         }
     } else if (button == TE_KB_LEFT_CONTROL) {
         if (is_press) {
-            x11_window->keyboard_mods.bitmask |= 0b10;
+            x11_window->keyboard_mods.bitmask |= 2;
         } else {
-            x11_window->keyboard_mods.bitmask &= ~0b10;
+            x11_window->keyboard_mods.bitmask &= ~2;
         }
     } else if (button == TE_KB_LEFT_SHIFT) {
         if (is_press) {
-            x11_window->keyboard_mods.bitmask |= 0b100;
+            x11_window->keyboard_mods.bitmask |= 4;
         } else {
-            x11_window->keyboard_mods.bitmask &= ~0b100;
+            x11_window->keyboard_mods.bitmask &= ~4;
         }
     }
 #pragma GCC diagnostic pop
@@ -538,7 +538,7 @@ x11_process_event(te_os_window* os_window, te_x11_window* x11_window, XEvent* ev
             break;
         }
         case KeyPress: {
-            // check if this is a repeat by peeking at the next event
+            /* check if this is a repeat by peeking at the next event */
             bool is_repeat = false;
             if (XEventsQueued(x11_window->display, QueuedAfterReading) > 0) {
                 XEvent next_event;
@@ -549,7 +549,7 @@ x11_process_event(te_os_window* os_window, te_x11_window* x11_window, XEvent* ev
                 }
             }
 
-            // send text input
+            /* send text input */
             char buf[8];
             KeySym keysym;
             int len = XLookupString(&event->xkey, buf, sizeof(buf), &keysym, NULL);
@@ -607,7 +607,7 @@ x11_process_event(te_os_window* os_window, te_x11_window* x11_window, XEvent* ev
             if (x11_window->capture_mouse) {
                 callbacks->on_mouse_move(os_window, (float)x_diff, (float)y_diff);
 
-                // teleport cursor back
+                /* teleport cursor back */
                 XWarpPointer(
                     x11_window->display, None, x11_window->window, 0, 0, 0, 0,
                     x11_window->cursor_x, x11_window->cursor_y);
@@ -682,10 +682,10 @@ x11_window_create(te_os_window* os_window, const char* title) {
         abort();
     }
 
-    // pick the best FBConfig
+    /* pick the best FBConfig */
     GLXFBConfig fb_config = fb_configs[0];
     if (TE_OS_WINDOW_MSAA > 1) {
-        // find the FBConfig with exactly required samples (or closest)
+        /* find the FBConfig with exactly required samples (or closest) */
         int best_diff = 0x7FFFFFFF;
         for (int i = 0; i < fb_count; i++) {
             int samples = 0;
@@ -696,12 +696,12 @@ x11_window_create(te_os_window* os_window, const char* title) {
                 best_diff = diff;
                 fb_config = fb_configs[i];
                 if (diff == 0) {
-                    break; // exact match, done
+                    break; /* exact match, done */
                 }
             }
         }
     } else {
-        // MSAA disabled: pick an FBConfig with no multisampling
+        /* MSAA disabled: pick an FBConfig with no multisampling */
         for (int i = 0; i < fb_count; i++) {
             int samples = 0;
             glXGetFBConfigAttrib_ptr(
@@ -726,7 +726,7 @@ x11_window_create(te_os_window* os_window, const char* title) {
     int screen_w = DisplayWidth(x11_window->display, x11_window->screen);
     int screen_h = DisplayHeight(x11_window->display, x11_window->screen);
 
-    // create window
+    /* create window */
     XSetWindowAttributes window_attribs;
     memset(&window_attribs, 0, sizeof(window_attribs));
     window_attribs.colormap = x11_window->colormap;
@@ -746,7 +746,7 @@ x11_window_create(te_os_window* os_window, const char* title) {
 
     XFree(visual_info);
 
-    // set window title
+    /* set window title */
     XStoreName(x11_window->display, x11_window->window, title);
     XClassHint* class_hint = XAllocClassHint();
     if (class_hint != NULL) {
@@ -756,17 +756,17 @@ x11_window_create(te_os_window* os_window, const char* title) {
         XFree(class_hint);
     }
 
-    // set WM protocols for close button
+    /* set WM protocols for close button */
     x11_window->wm_delete_window = XInternAtom(x11_window->display, "WM_DELETE_WINDOW", False);
     x11_window->wm_protocols = XInternAtom(x11_window->display, "WM_PROTOCOLS", False);
     XSetWMProtocols(x11_window->display, x11_window->window, &x11_window->wm_delete_window, 1);
 
-    // set fullscreen atoms
+    /* set fullscreen atoms */
     x11_window->wm_state = XInternAtom(x11_window->display, "_NET_WM_STATE", False);
     x11_window->wm_state_fullscreen =
         XInternAtom(x11_window->display, "_NET_WM_STATE_FULLSCREEN", False);
 
-    // try to set fullscreen via EWMH
+    /* try to set fullscreen via EWMH */
     if (x11_window->wm_state != None && x11_window->wm_state_fullscreen != None) {
         Atom fullscreen_atoms[] = {x11_window->wm_state_fullscreen};
         XChangeProperty(
@@ -777,7 +777,7 @@ x11_window_create(te_os_window* os_window, const char* title) {
     XMapWindow(x11_window->display, x11_window->window);
     XFlush(x11_window->display);
 
-    // create opengl context
+    /* create opengl context */
     const int context_attribs[] = {
         GLX_CONTEXT_MAJOR_VERSION_ARB,
         TE_OS_WINDOW_GL_MAJOR_VERSION,
@@ -799,7 +799,7 @@ x11_window_create(te_os_window* os_window, const char* title) {
         x11_window->gl_context = glXCreateContextAttribsARB_ptr(
             x11_window->display, fb_config, NULL, True, context_attribs);
     } else {
-        // fallback to legacy context creation
+        /* fallback to legacy context creation */
         x11_window->gl_context =
             glXCreateNewContext(x11_window->display, fb_config, GLX_RGBA_TYPE, NULL, 1);
     }
@@ -814,7 +814,7 @@ x11_window_create(te_os_window* os_window, const char* title) {
         abort();
     }
 
-    // init GLAD
+    /* init GLAD */
 #if defined(ENGINE_GLES)
     if (gladLoadGLES2(glad_load_proc) == 0) {
 #else
@@ -824,18 +824,18 @@ x11_window_create(te_os_window* os_window, const char* title) {
         abort();
     }
 
-    // disable vsync
+    /* disable vsync */
     if (glXSwapIntervalEXT_ptr != NULL) {
         glXSwapIntervalEXT_ptr(x11_window->display, x11_window->window, 0);
     }
 
-    // initialize window state
+    /* initialize window state */
     x11_window->width = screen_w;
     x11_window->height = screen_h;
     x11_window->capture_mouse = false;
     x11_window->keyboard_mods.bitmask = 0;
 
-    // Save current cursor pos.
+    /* save current cursor pos */
     {
         Window root_return;
         Window child_return;
@@ -851,10 +851,10 @@ x11_window_create(te_os_window* os_window, const char* title) {
         }
     }
 
-    // set initial size
+    /* set initial size */
     prv_os_window_on_size_changed(os_window, (unsigned int)screen_w, (unsigned int)screen_h);
 
-    // check gamepad
+    /* check gamepad */
     x11_window->inotify_fd = -1;
     x11_window->inotify_wd = -1;
     x11_window->inotify_fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
@@ -976,7 +976,7 @@ x11_window_get_refresh_rate(te_os_window* os_window) {
                     if (mode->hTotal > 0 && v_total > 0) {
                         double rate =
                             (double)mode->dotClock / ((double)mode->hTotal * v_total);
-                        refresh_rate = (unsigned int)(rate + 0.5); // round to nearest
+                        refresh_rate = (unsigned int)(rate + 0.5); /* round to nearest */
                     }
                     break;
                 }

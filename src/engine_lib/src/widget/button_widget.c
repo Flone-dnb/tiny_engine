@@ -19,36 +19,36 @@ struct te_button_widget {
 
     te_widget* widget;
 
-    // Do not free/destroy. Child widget.
+    /* do not free/destroy, child widget */
     te_rect_widget* rect_widget;
 
-    // NULL if not set. Must be freed.
+    /* NULL if not set, must be freed */
     char* tex_relative_path;
     char* tex_hovered_relative_path;
     char* tex_pressed_relative_path;
 
-    // May be NULL if not set.
+    /* may be NULL if not set */
     void (*on_clicked)(te_button_widget*);
     void (*on_right_clicked)(te_button_widget*);
 
-    // Cached textures.
+    /* cached textures */
     unsigned int tex_id;
     unsigned int tex_hovered_id;
     unsigned int tex_pressed_id;
 
-    // `true` if entered the "destroy" function.
+    /* `true` if entered the "destroy" function */
     bool is_button_widget_destroy;
     bool is_cursor_inside_widget;
 };
 
-// Widget callbacks:
+/* widget callbacks */
 static void prv_button_widget_on_pos_changed(void* this);
 static void prv_button_widget_on_size_changed(void* this);
 static void prv_button_widget_on_before_base_destroyed(void* this);
 static void prv_button_widget_on_after_spawned(void* this);
 static void prv_button_widget_on_before_despawned(void* this);
 
-// Interactable callbacks:
+/* interactable callbacks */
 static void prv_button_widget_on_mouse_button_pressed(
     void* this, enum te_mouse_button button, vec2 cursor_pos);
 static void prv_button_widget_on_mouse_button_released(
@@ -108,7 +108,7 @@ void
 button_widget_destroy(te_button_widget* button_widget) {
     button_widget->is_button_widget_destroy = true;
 
-    if (button_widget->widget != NULL) { // may be null if we got here from base destroy
+    if (button_widget->widget != NULL) { /* may be null if we got here from base destroy */
         widget_destroy(button_widget->widget);
     }
 
@@ -126,8 +126,8 @@ prv_button_widget_on_before_base_destroyed(void* this) {
         return;
     }
 
-    // Destroy was called on the base (widget) component, possibly due to
-    // parent being destroyed, cleanup our data.
+    /* destroy was called on the base (widget) component, possibly due to
+     * parent being destroyed, cleanup our data */
     button_widget->widget = NULL;
     button_widget_destroy(button_widget);
 }
@@ -209,22 +209,22 @@ button_widget_get_widget(te_button_widget* button_widget) {
     return button_widget->widget;
 }
 
-static inline void
+static void
 prv_button_widget_set_position(te_button_widget* button_widget, vec2 pos) {
     widget_set_relative_position(button_widget->widget, pos);
 }
 
-static inline void
+static void
 prv_button_widget_get_position(te_button_widget* button_widget, vec2 out) {
     widget_get_relative_position(button_widget->widget, out);
 }
 
-static inline void
+static void
 prv_button_widget_set_size(te_button_widget* button_widget, vec2 size) {
     widget_set_relative_size(button_widget->widget, size);
 }
 
-static inline void
+static void
 prv_button_widget_get_size(te_button_widget* button_widget, vec2 out) {
     widget_get_relative_size(button_widget->widget, out);
 }

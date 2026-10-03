@@ -16,8 +16,8 @@ typedef struct {
     float distance;
 } closest_model_info;
 
-// Updates closest model info if hit.
-// Returns `true` if hit gizmo and need to quit (not check other models).
+/* updates closest model info if hit
+ * returns `true` if hit gizmo and need to quit (not check other models) */
 static bool
 test_model_hit(
     closest_model_info* closest_info, te_frustum_shape* frustum, te_gizmo* gizmo,
@@ -55,8 +55,8 @@ test_model_hit(
     const float bb_size = data->aabb_world.extents[0] * 2.0f * data->aabb_world.extents[1]
                           * 2.0f * data->aabb_world.extents[2] * 2.0f;
 
-    // TODO: for now just do a bunch of simple tests (no ray-triangle intersection
-    // because we don't store the geometry on the CPU).
+    /* TODO: for now just do a bunch of simple tests (no ray-triangle intersection
+     * because we don't store the geometry on the CPU) */
     if (closest_info->model != NULL) {
         if (!aabb_shape_intersect(&data->aabb_world, &closest_info->aabb_world)) {
             if (distance >= closest_info->distance) {
@@ -114,7 +114,7 @@ obj_picking_find_obj_under_cursor(
             break;
         }
 
-        // Test child models.
+        /* test child models */
         unsigned int child_idx = 0;
         while (true) {
             te_model* child = model_get_child_model(model, child_idx);

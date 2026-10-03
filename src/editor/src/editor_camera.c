@@ -3,9 +3,9 @@
 #include <stdbool.h>
 #include <cglm/vec2.h>
 #include <game/camera.h>
-#include <math_funcs.h>
+#include <math/math_funcs.h>
 #include <misc/globals.h>
-#include <ui/theme.h>
+#include <ui/editor_theme.h>
 #include <world.h>
 
 #define DEFAULT_CAMERA_SPEED 4.0f

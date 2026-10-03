@@ -21,31 +21,31 @@
 struct te_window {
     te_os_window* os_window;
 
-    // Game manager that window created.
+    /* game manager that window created */
     struct te_game_manager* game_manager;
 
-    // User-specified callbacks. Do not free/destroy this pointer. The user will free it.
+    /* user-specified callbacks, do not free/destroy this pointer, the user will free it */
     te_window_callbacks* user_callbacks;
 
-    // User's main game system. Do not free this pointer.
+    /* user's main game system. Do not free this pointer */
     void* game_instance;
 
-    // Refresh rate of the used display.
+    /* refresh rate of the used display */
     unsigned int display_refresh_rate;
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    // You can "show_stats" debug command by pressing both "menu" and "start" on gamepad.
+    /* you can "show_stats" debug command by pressing both "menu" and "start" on gamepad. */
     float debug_stats_time_since_menu;
     float debug_stats_time_since_start;
 #endif
 
-    // true` if gamepad input was received on this frame. Used to determine when the input device changes.
+    /* `true` if gamepad input was received on this frame. Used to determine when the input device changes */
     bool had_gamepad_input_curr_frame;
 
-    // `true` if gamepad input was received on the last frame. Used to determine when the input device changes.
+    /* `true` if gamepad input was received on the last frame. Used to determine when the input device changes */
     bool had_gamepad_input_prev_frame;
 
-    // `true` if mouse captured.
+    /* `true` if mouse captured */
     bool is_mouse_captured;
 };
 
@@ -71,12 +71,16 @@ static void on_resized(te_os_window* os_window, unsigned int width, unsigned int
 
 te_window*
 window_create(const char* window_title) {
+    te_window* window;
+    te_os_window_callbacks callbacks;
+    unsigned int width, height;
+
     if (window_title == NULL) {
         log_error(__FILE__, __LINE__, "window title text must not be NULL");
         abort();
     }
 
-    // Destroy old log file.
+    /* destroy old log file */
     filesystem_remove_file(paths_get_log_file());
     filesystem_ensure_dirs_exist(paths_get_log_file());
 
@@ -84,7 +88,7 @@ window_create(const char* window_title) {
         log_error(__FILE__, __LINE__, "add new callbacks here");
         abort();
     }
-    te_os_window_callbacks callbacks;
+
     callbacks.on_mouse_button_pressed = on_mouse_button_pressed;
     callbacks.on_mouse_button_released = on_mouse_button_released;
     callbacks.on_mouse_move = on_mouse_move;
@@ -101,7 +105,7 @@ window_create(const char* window_title) {
     callbacks.on_lost_focus = on_lost_focus;
     callbacks.on_resized = on_resized;
 
-    te_window* window = malloc(sizeof(te_window));
+    window = malloc(sizeof(te_window));
     window->os_window = os_window_create(window_title, &callbacks, window);
     window->game_manager = NULL;
     window->user_callbacks = NULL;
@@ -115,7 +119,6 @@ window_create(const char* window_title) {
     window->had_gamepad_input_prev_frame = false;
     window->is_mouse_captured = false;
 
-    unsigned int width, height;
     os_window_get_size(window->os_window, &width, &height);
     log_info_fmt(__FILE__, __LINE__, "created a window of size %dx%d", width, height);
 
@@ -124,16 +127,20 @@ window_create(const char* window_title) {
 
 void
 window_destroy(te_window* window) {
+    unsigned int warn_count, err_count;
+
     os_window_destroy(window->os_window);
 
     free(window);
 
-    // Log warnings/errors count (if were logged).
-    const unsigned int warn_count = log_get_warning_count_logged();
-    const unsigned int err_count = log_get_error_count_logged();
+    /* log warnings/errors count (if were logged) */
+    warn_count = log_get_warning_count_logged();
+    err_count = log_get_error_count_logged();
     if (warn_count > 0 || err_count > 0) {
         log_info(__FILE__, __LINE__, "");
-        log_info_fmt(__FILE__, __LINE__, "WARNINGS logged: %d | ERRORS logged: %d", warn_count, err_count);
+        log_info_fmt(
+            __FILE__, __LINE__, "WARNINGS logged: %d | ERRORS logged: %d", warn_count,
+            err_count);
     }
 }
 
@@ -144,9 +151,9 @@ window_process_events(
     window->game_instance = game_instance;
     window->game_manager = prv_game_manager_create(window);
 
-    // notify the user of game start
+    /* notify the user of game start */
     window->user_callbacks->on_game_started(window->game_instance, window->game_manager);
-    // and if gamepad is already connected
+    /* and if gamepad is already connected */
     if (os_window_is_gamepad_connected(window->os_window)) {
         window->had_gamepad_input_curr_frame = true;
         window->had_gamepad_input_prev_frame = true;
@@ -154,13 +161,13 @@ window_process_events(
             window->game_instance, window->game_manager);
     }
 
-    // Used to calculate delta time.
-    uint64_t current_time_counter = high_freq_timer_now();
-    uint64_t prev_time_counter = 0;
+    /* used to calculate delta time */
+    te_hft_t current_time_counter = high_freq_timer_now();
+    te_hft_t prev_time_counter = 0;
     float delta_time_sec = 0.0f;
 
     while (!os_window_should_close(window->os_window)) {
-        // Process available window events.
+        /* process available window events */
         os_window_poll_event(window->os_window);
 
 #if defined(ENGINE_DEBUG_TOOLS)
@@ -170,16 +177,16 @@ window_process_events(
         }
 #endif
 
-        // Calculate delta time.
+        /* calculate delta time */
         prev_time_counter = current_time_counter;
         current_time_counter = high_freq_timer_now();
         const float delta_time_ms =
             high_freq_timer_get_elapsed_ms_range(prev_time_counter, current_time_counter);
         delta_time_sec = delta_time_ms * 0.001f;
-        // avoid huge dt as it can cause exceptional situations
+        /* avoid huge dt as it can cause exceptional situations */
         delta_time_sec = glm_min(delta_time_sec, 1.0f);
 
-        // Tick.
+        /* tick */
         {
             prv_game_manager_tick(window->game_manager, delta_time_sec);
             window->user_callbacks->on_game_tick(
@@ -195,7 +202,7 @@ window_process_events(
             }
         }
 
-        // Draw.
+        /* draw */
         prv_game_manager_draw_frame(window->game_manager, delta_time_sec);
     }
 
@@ -203,7 +210,7 @@ window_process_events(
 
     window->user_callbacks->on_window_close(window->game_instance, window->game_manager);
 
-    // Destroy game manager.
+    /* destroy game manager */
     prv_game_manager_destroy(window->game_manager);
     window->game_manager = NULL;
     window->user_callbacks = NULL;
@@ -216,8 +223,10 @@ struct te_game_manager*
 window_get_game_manager(te_window* window) {
 #if defined(DEBUG)
     if (window->game_manager == NULL) {
-        log_error(__FILE__, __LINE__, "game manager is not created yet (game not started) or was already "
-                  "destroyed (game ended)");
+        log_error(
+            __FILE__, __LINE__,
+            "game manager is not created yet (game not started) or was already "
+            "destroyed (game ended)");
         abort();
     }
 #endif
@@ -317,8 +326,8 @@ on_keyboard_button_pressed(
 
 #if defined(IS_ARM64)
     if (os_window_is_gamepad_connected(window->os_window)) {
-        // In some cases while using retro-handhelds (which have built in gamepad) gamepad buttons trigger
-        // keyboard input before the actual gamepad button which messes up the whole game input.
+        /* in some cases while using retro-handhelds (which have built in gamepad) gamepad buttons trigger
+         * keyboard input before the actual gamepad button which messes up the whole game input */
         return;
     }
 #endif
@@ -326,10 +335,10 @@ on_keyboard_button_pressed(
 #if defined(ENGINE_DEBUG_TOOLS)
     if (prv_debug_console_is_shown()) {
         if (button == TE_KB_TILDE) {
-            return; // key up event is used to show/hide console
+            return; /* key up event is used to show/hide console */
         }
         prv_debug_console_on_keyboard_input(window->game_manager, button);
-        return; // don't trigger user callbacks
+        return; /* don't trigger user callbacks */
     }
 #endif
 
@@ -350,7 +359,7 @@ on_keyboard_button_released(
 
 #if defined(IS_ARM64)
     if (os_window_is_gamepad_connected(window->os_window)) {
-        // Same as in the "pressed" event.
+        /* same as in the "pressed" event */
         return;
     }
 #endif
@@ -360,8 +369,8 @@ on_keyboard_button_released(
         if (button == TE_KB_TILDE) {
             prv_debug_console_hide();
         } else {
-            // input is handled in key down event
-            return; // don't trigger user callbacks
+            /* input is handled in key down event */
+            return; /* don't trigger user callbacks */
         }
     } else if (!prv_debug_console_is_shown() && button == TE_KB_TILDE) {
         prv_debug_console_show();
@@ -379,7 +388,7 @@ on_text_input(te_os_window* os_window, const char* text) {
 
 #if defined(IS_ARM64)
     if (os_window_is_gamepad_connected(window->os_window)) {
-        // Same as in the "pressed" event.
+        /* same as in the "pressed" event */
         return;
     }
 #endif
@@ -387,10 +396,10 @@ on_text_input(te_os_window* os_window, const char* text) {
 #if defined(ENGINE_DEBUG_TOOLS)
     if (prv_debug_console_is_shown()) {
         if (text[0] == '`') {
-            return; // "on button released" will handle it
+            return; /* "on button released" will handle it */
         }
         prv_debug_console_on_keyboard_input_text(text);
-        return; // don't trigger user callbacks
+        return; /* don't trigger user callbacks */
     }
 #endif
 

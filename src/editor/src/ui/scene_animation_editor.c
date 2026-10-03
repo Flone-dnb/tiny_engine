@@ -14,7 +14,7 @@
 #include <misc/wchar_funcs.h>
 #include <type_database.h>
 #include <misc/globals.h>
-#include <ui/theme.h>
+#include <ui/editor_theme.h>
 #include <io/filesystem.h>
 #include <game/game_object_info.h>
 #include <game/scene_animation.h>
@@ -45,7 +45,7 @@ typedef struct te_keyframe_button_array {
     te_keyframe_button_data* datas;
     unsigned int count;
     unsigned int capacity;
-    unsigned int selected_idx; // 0xFFFFFFFF if not selected
+    unsigned int selected_idx; /* 0xFFFFFFFF if not selected */
 } te_keyframe_button_array;
 
 static te_keyframe_button_array*
@@ -139,10 +139,14 @@ keyframe_button_array_add(
 
 static void
 keyframe_button_array_clear(te_keyframe_button_array* array) {
-    for (unsigned int i = 0; i < array->count; i++) {
-        te_widget* widget = button_widget_get_widget(array->buttons[i]);
+    te_widget* widget;
+    te_world* world;
+    unsigned int i;
+
+    for (i = 0; i < array->count; i++) {
+        widget = button_widget_get_widget(array->buttons[i]);
         widget_set_parent(widget, NULL); // make root widget to despawn
-        te_world* world = widget_get_world(widget);
+        world = widget_get_world(widget);
         world_despawn_widget(world, widget);
         widget_destroy(widget);
 
@@ -164,7 +168,7 @@ keyframe_button_array_destroy(te_keyframe_button_array* array) {
 }
 
 struct te_scene_animation_editor {
-    // Always valid.
+    /* always valid */
     te_world* world;
     te_widget* root_widget;
     te_editor* engine_editor;
@@ -173,7 +177,7 @@ struct te_scene_animation_editor {
     te_text_widget* right_border_time_text;
     te_text_edit_widget* time_widget;
 
-    // Visible only when keyframe is selected.
+    /* visible only when keyframe is selected */
     te_text_widget* keyframe_time_widget;
     te_text_edit_widget* keyframe_time_edit_widget;
     te_text_widget* keyframe_interpolation_widget;
@@ -188,7 +192,7 @@ struct te_scene_animation_editor {
 
     te_rect_widget* current_time_separator;
 
-    // Not NULL if showing available tracks from an object.
+    /* not NULL if showing available tracks from an object */
     void* selected_obj;
     const te_type_info* selected_obj_type_info;
 
@@ -208,7 +212,7 @@ struct te_scene_animation_editor {
     unsigned int left_border_time;
     unsigned int right_border_time;
 
-    // How much seconds between left and right time border on the timeline.
+    /* how much seconds between left and right time border on the timeline */
     unsigned int displayed_time_interval;
 
     enum te_scene_animation_editor_scroll_mode scroll_mode;
@@ -275,7 +279,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
 
         float y_pos = padding_y;
 
-        // Play/pause button.
+        /* play/pause button */
         {
             te_button_widget* button = button_widget_create();
             editor->play_pause_button = button;
@@ -299,7 +303,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
 
             button_widget_set_on_clicked(button, on_play_pause_clicked);
 
-            // Text.
+            /* text */
             {
                 te_text_widget* text = text_widget_create();
                 {
@@ -318,7 +322,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
         }
         y_pos += button_height + vspacing;
 
-        // Stop button.
+        /* stop button */
         {
             te_button_widget* button = button_widget_create();
             {
@@ -341,7 +345,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
 
             button_widget_set_on_clicked(button, on_stop_clicked);
 
-            // Text.
+            /* text */
             {
                 te_text_widget* text = text_widget_create();
                 {
@@ -360,11 +364,11 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
         }
         y_pos += button_height + vspacing;
 
-        // Current time.
+        /* current time */
         {
             float title_width = button_width * 0.5f;
 
-            // Title
+            /* title */
             {
                 te_text_widget* text = text_widget_create();
                 {
@@ -381,7 +385,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
                 text_widget_set_text_own(text, wtext, text_len);
             }
 
-            // Background.
+            /* background */
             te_rect_widget* rect = rect_widget_create();
             {
                 te_widget* widget = rect_widget_get_widget(rect);
@@ -396,7 +400,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
             theme_get_text_edit_background_color(text_edit_background_color);
             rect_widget_set_color(rect, text_edit_background_color);
 
-            // Text edit.
+            /* text edit */
             te_text_edit_widget* text = text_edit_widget_create();
             editor->time_widget = text;
             {
@@ -417,16 +421,16 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
         }
         y_pos += button_height + vspacing;
 
-        // When keyframe is selected:
+        /* when keyframe is selected: */
         {
             editor->menu_padding_x = padding_x;
 
             float title_width = button_width * 0.65f;
             editor->keyframe_time_edit_x = padding_x + title_width;
 
-            // Keyframe time.
+            /* keyframe time */
             {
-                // Title.
+                /* title */
                 {
                     te_text_widget* text = text_widget_create();
                     editor->keyframe_time_widget = text;
@@ -445,9 +449,9 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
                     text_widget_set_text_own(text, wtext, text_len);
                 }
 
-                // Text edit.
+                /* text edit */
                 {
-                    // Background.
+                    /* background */
                     te_rect_widget* rect = rect_widget_create();
                     {
                         te_widget* widget = rect_widget_get_widget(rect);
@@ -461,7 +465,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
                     theme_get_text_edit_background_color(text_edit_background_color);
                     rect_widget_set_color(rect, text_edit_background_color);
 
-                    // Text edit.
+                    /* text edit */
                     te_text_edit_widget* text_edit = text_edit_widget_create();
                     editor->keyframe_time_edit_widget = text_edit;
                     {
@@ -482,9 +486,9 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
             title_width = button_width * 0.5f;
             editor->keyframe_interpolation_buttons_x = padding_x + title_width;
 
-            // Keyframe interpolation.
+            /* keyframe interpolation */
             {
-                // Title.
+                /* title */
                 {
                     te_text_widget* text = text_widget_create();
                     editor->keyframe_interpolation_widget = text;
@@ -506,7 +510,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
                 float interpolation_button_width = (button_width - title_width) / 3;
                 editor->interpolation_button_width = interpolation_button_width;
 
-                // Step.
+                /* step */
                 {
                     te_button_widget* button = button_widget_create();
                     editor->keyframe_interpolation_button_step = button;
@@ -532,7 +536,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
 
                     button_widget_set_on_clicked(button, on_keyframe_interpolation_changed);
 
-                    // Text.
+                    /* text. */
                     {
                         te_text_widget* text = text_widget_create();
                         {
@@ -550,7 +554,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
                     }
                 }
 
-                // Linear.
+                /* linear */
                 {
                     te_button_widget* button = button_widget_create();
                     editor->keyframe_interpolation_button_linear = button;
@@ -576,7 +580,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
 
                     button_widget_set_on_clicked(button, on_keyframe_interpolation_changed);
 
-                    // Text.
+                    /* text */
                     {
                         te_text_widget* text = text_widget_create();
                         {
@@ -594,7 +598,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
                     }
                 }
 
-                // Cubic spline.
+                /* cubic spline */
                 {
                     te_button_widget* button = button_widget_create();
                     editor->keyframe_interpolation_button_cubic = button;
@@ -620,7 +624,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
 
                     button_widget_set_on_clicked(button, on_keyframe_interpolation_changed);
 
-                    // Text.
+                    /* text */
                     {
                         te_text_widget* text = text_widget_create();
                         {
@@ -640,7 +644,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
             }
             y_pos += button_height + vspacing;
 
-            // Update keyframe value.
+            /* update keyframe value */
             {
                 te_button_widget* button = button_widget_create();
                 editor->keyframe_update_value_button = button;
@@ -664,7 +668,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
 
                 button_widget_set_on_clicked(button, on_update_keyframe_value_clicked);
 
-                // Text.
+                /* text */
                 {
                     te_text_widget* text = text_widget_create();
                     {
@@ -684,10 +688,10 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
             y_pos += button_height + vspacing;
         }
 
-        // Switch to bottom.
+        /* switch to bottom */
         y_pos = 1.0f - padding_y - button_height - padding_y - button_height;
 
-        // Save button.
+        /* save button */
         {
             te_button_widget* button = button_widget_create();
             {
@@ -710,7 +714,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
 
             button_widget_set_on_clicked(button, on_save_as_clicked);
 
-            // Text.
+            /* text */
             {
                 te_text_widget* text = text_widget_create();
                 {
@@ -729,7 +733,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
         }
         y_pos += button_height + vspacing;
 
-        // Load button.
+        /* load button */
         {
             te_button_widget* button = button_widget_create();
             {
@@ -752,7 +756,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
 
             button_widget_set_on_clicked(button, on_load_clicked);
 
-            // Text.
+            /* text */
             {
                 te_text_widget* text = text_widget_create();
                 {
@@ -770,7 +774,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
             }
         }
 
-        // Separator.
+        /* separator */
         {
             te_rect_widget* separator = rect_widget_create();
             {
@@ -788,12 +792,12 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
         editor->timeline_x_pos = timeline_x;
         float timeline_top_height = button_height;
 
-        // Track names.
+        /* track names */
         {
             float x = TE_SCENE_ANIM_MENU_WIDTH + padding_x + padding_x / 2.0f;
             float y = 0.0f;
 
-            // Title.
+            /* title */
             {
                 te_text_widget* text = text_widget_create();
                 {
@@ -812,12 +816,12 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
 
             editor->track_buttons_x = x;
 
-            // Count how much track names will fit.
+            /* count how much track names will fit */
             y = timeline_top_height;
             editor->track_button_count = 0;
             while (y + button_height <= 1.0f) {
                 editor->track_button_count += 1;
-                y += button_height; // no vspacing for tracks
+                y += button_height; /* no vspacing for tracks */
             }
 
             y = timeline_top_height;
@@ -836,7 +840,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
                     widget_set_custom_ptr(widget, editor);
                 }
 
-                // Have different background for even/odd tracks for better visibility.
+                /* have different background for even/odd tracks for better visibility */
                 vec4 back;
                 glm_vec4_copy(separator_color, back);
                 glm_vec3_mul(back, (vec3){0.5f, 0.5f, 0.5f}, back);
@@ -854,7 +858,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
 
                 button_widget_set_on_right_clicked(button, on_track_right_clicked);
 
-                // Text.
+                /* track name */
                 {
                     te_text_widget* text = text_widget_create();
                     {
@@ -871,7 +875,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
                     text_widget_set_text_own(text, wtext, text_len);
                 }
 
-                // Track background.
+                /* track background */
                 te_rect_widget* background = rect_widget_create();
                 {
                     te_widget* widget = rect_widget_get_widget(background);
@@ -885,7 +889,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
             }
         }
 
-        // Timeline top values (left border time, right border time).
+        /* timeline top values (left border time, right border time) */
         {
             te_text_widget* text = text_widget_create();
             editor->left_border_time_text = text;
@@ -910,7 +914,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
             text_widget_set_text_height(text, theme_get_text_height());
         }
 
-        // Split timeline into N sections.
+        /* split timeline into N sections */
         const unsigned int section_count = 16;
         const float section_size = (1.0f - timeline_x) / (float)section_count;
 
@@ -930,7 +934,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
             rect_widget_set_color(separator, separator_color);
         }
 
-        // Current time separator (vertical line).
+        /* current time separator (vertical line) */
         editor->current_time_separator = rect_widget_create();
         {
             te_widget* widget = rect_widget_get_widget(editor->current_time_separator);
@@ -1009,7 +1013,7 @@ get_button_text(te_button_widget* button) {
     te_text_widget* button_text = NULL;
     for (unsigned int i = 0; i < child_count; i++) {
         if (!widget_is_serialization_allowed(child_widgets[i])) {
-            // Internal widget (rect) of the button.
+            /* internal widget (rect) of the button */
             continue;
         }
         button_text = widget_get_owner(child_widgets[i]);
@@ -1046,7 +1050,7 @@ show_selected_keyframe_menu(te_scene_animation_editor* editor) {
     te_keyframe_button_data* keyframe_data =
         &editor->keyframe_button_array->datas[editor->keyframe_button_array->selected_idx];
 
-    // Keyframe time title.
+    /* keyframe time title */
     {
         te_widget* widget = text_widget_get_widget(editor->keyframe_time_widget);
         vec2 pos;
@@ -1055,10 +1059,11 @@ show_selected_keyframe_menu(te_scene_animation_editor* editor) {
         widget_set_relative_position(widget, (vec2){editor->menu_padding_x, pos[1]});
     }
 
-    // Keyframe time edit.
+    /* keyframe time edit */
     {
-        te_widget* rect = widget_get_parent( // taking parent rect (background of text edit)
-            text_edit_widget_get_widget(editor->keyframe_time_edit_widget));
+        te_widget* rect =
+            widget_get_parent(/* taking parent rect (background of text edit) */
+                              text_edit_widget_get_widget(editor->keyframe_time_edit_widget));
         vec2 pos;
         widget_get_relative_position(rect, pos);
 
@@ -1079,9 +1084,9 @@ show_selected_keyframe_menu(te_scene_animation_editor* editor) {
         free(src_text);
     }
 
-    // Interpolation.
+    /* interpolation */
     {
-        // Title.
+        /* title */
         {
             te_widget* widget = text_widget_get_widget(editor->keyframe_interpolation_widget);
             vec2 pos;
@@ -1090,7 +1095,7 @@ show_selected_keyframe_menu(te_scene_animation_editor* editor) {
             widget_set_relative_position(widget, (vec2){editor->menu_padding_x, pos[1]});
         }
 
-        // Step.
+        /* step */
         {
             te_widget* widget =
                 button_widget_get_widget(editor->keyframe_interpolation_button_step);
@@ -1109,7 +1114,7 @@ show_selected_keyframe_menu(te_scene_animation_editor* editor) {
             button_widget_set_color(editor->keyframe_interpolation_button_step, color);
         }
 
-        // Linear.
+        /* linear */
         {
             te_widget* widget =
                 button_widget_get_widget(editor->keyframe_interpolation_button_linear);
@@ -1130,7 +1135,7 @@ show_selected_keyframe_menu(te_scene_animation_editor* editor) {
             button_widget_set_color(editor->keyframe_interpolation_button_linear, color);
         }
 
-        // Cubic.
+        /* cubic */
         {
             te_widget* widget =
                 button_widget_get_widget(editor->keyframe_interpolation_button_cubic);
@@ -1152,7 +1157,7 @@ show_selected_keyframe_menu(te_scene_animation_editor* editor) {
         }
     }
 
-    // Update keyframe value.
+    /* update keyframe value */
     {
         te_widget* widget = button_widget_get_widget(editor->keyframe_update_value_button);
         vec2 pos;
@@ -1164,7 +1169,7 @@ show_selected_keyframe_menu(te_scene_animation_editor* editor) {
 
 static void
 hide_selected_keyframe_menu(te_scene_animation_editor* editor) {
-    // Keyframe time title.
+    /* keyframe time title */
     {
         te_widget* widget = text_widget_get_widget(editor->keyframe_time_widget);
         vec2 pos;
@@ -1173,7 +1178,7 @@ hide_selected_keyframe_menu(te_scene_animation_editor* editor) {
         widget_set_relative_position(widget, (vec2){BUTTON_HIDDEN_X_POS, pos[1]});
     }
 
-    // Keyframe time edit.
+    /* keyframe time edit */
     {
         te_widget* rect = widget_get_parent( // taking parent rect (background of text edit)
             text_edit_widget_get_widget(editor->keyframe_time_edit_widget));
@@ -1183,9 +1188,9 @@ hide_selected_keyframe_menu(te_scene_animation_editor* editor) {
         widget_set_relative_position(rect, (vec2){BUTTON_HIDDEN_X_POS, pos[1]});
     }
 
-    // Interpolation.
+    /* interpolation */
     {
-        // Title.
+        /* title */
         {
             te_widget* widget = text_widget_get_widget(editor->keyframe_interpolation_widget);
             vec2 pos;
@@ -1194,7 +1199,7 @@ hide_selected_keyframe_menu(te_scene_animation_editor* editor) {
             widget_set_relative_position(widget, (vec2){BUTTON_HIDDEN_X_POS, pos[1]});
         }
 
-        // Step.
+        /* step */
         {
             te_widget* widget =
                 button_widget_get_widget(editor->keyframe_interpolation_button_step);
@@ -1208,7 +1213,7 @@ hide_selected_keyframe_menu(te_scene_animation_editor* editor) {
             button_widget_set_color(editor->keyframe_interpolation_button_step, color);
         }
 
-        // Linear.
+        /* linear */
         {
             te_widget* widget =
                 button_widget_get_widget(editor->keyframe_interpolation_button_linear);
@@ -1222,7 +1227,7 @@ hide_selected_keyframe_menu(te_scene_animation_editor* editor) {
             button_widget_set_color(editor->keyframe_interpolation_button_linear, color);
         }
 
-        // Cubic.
+        /* cubic */
         {
             te_widget* widget =
                 button_widget_get_widget(editor->keyframe_interpolation_button_cubic);
@@ -1237,7 +1242,7 @@ hide_selected_keyframe_menu(te_scene_animation_editor* editor) {
         }
     }
 
-    // Update keyframe value.
+    /* update keyframe value */
     {
         te_widget* widget = button_widget_get_widget(editor->keyframe_update_value_button);
         vec2 pos;
@@ -1251,7 +1256,7 @@ static void
 redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
     te_scene_animation* animation = world_get_scene_animation(editor->world);
 
-    // Update current time separator and time text.
+    /* update current time separator and time text */
     {
         float current_time = 0.0f;
         if (animation != NULL) {
@@ -1259,7 +1264,7 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
         }
 
         if (current_time > (float)editor->right_border_time) {
-            // Switch to right (useful when playing the animation).
+            /* switch to right (useful when playing the animation) */
             editor->left_border_time = editor->right_border_time;
             editor->right_border_time =
                 editor->left_border_time + editor->displayed_time_interval;
@@ -1268,7 +1273,7 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
         te_widget* widget = rect_widget_get_widget(editor->current_time_separator);
 
         if (current_time < (float)editor->left_border_time) {
-            // Don't show separator.
+            /* don't show a separator */
             widget_set_relative_position(
                 widget, (vec2){BUTTON_HIDDEN_X_POS, editor->button_height});
         } else {
@@ -1284,7 +1289,7 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
         widget_set_relative_size(widget, (vec2){0.004f, 1.0f - editor->button_height});
         widget_set_parent(widget, editor->root_widget);
 
-        // Current time text.
+        /* current time text */
         int len = snprintf(NULL, 0, "%.1f", current_time);
         if (len < 0) {
             log_error(__FILE__, __LINE__, "snprintf failed");
@@ -1300,14 +1305,14 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
         free(time_text);
     }
 
-    // Update left border time.
+    /* update left border time */
     char* timestr = time_to_border_str(editor->left_border_time);
     unsigned int text_len;
     wchar_t* wtext = wchar_from_char(timestr, &text_len);
     text_widget_set_text_own(editor->left_border_time_text, wtext, text_len);
     free(timestr);
 
-    // Update right border time.
+    /* update right border time */
     timestr = time_to_border_str(editor->right_border_time);
     wtext = wchar_from_char(timestr, &text_len);
     text_widget_set_text_own(editor->right_border_time_text, wtext, text_len);
@@ -1317,7 +1322,7 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
         hide_selected_keyframe_menu(editor);
     }
 
-    // Play / pause button state.
+    /* play / pause button state */
     if (animation != NULL && scene_animation_is_playing(animation)) {
         vec4 color;
         theme_get_accent_color(color);
@@ -1332,10 +1337,10 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
         return;
     }
 
-    // Clear all previously drawn keyframes.
+    /* clear all previously drawn keyframes */
     keyframe_button_array_clear(editor->keyframe_button_array);
 
-    // First hide all tracks.
+    /* first hide all tracks */
     for (unsigned int i = 0; i < editor->track_button_count; i++) {
         te_widget* widget = button_widget_get_widget(editor->track_buttons[i]);
 
@@ -1347,7 +1352,7 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
     }
 
     if (editor->selected_obj == NULL || editor->selected_obj_type_info == NULL) {
-        // Nothing selected - don't show any tracks.
+        /* nothing selected - don't show any tracks */
         return;
     }
 
@@ -1409,7 +1414,7 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
         free(var_names);                                                                      \
     }
 
-    // Show already animated variables.
+    /* show already animated variables */
     unsigned int total_track_count = 0;
     unsigned int track_button_idx = 0;
     if (animation != NULL) {
@@ -1421,10 +1426,10 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
         DISPLAY_ANIMATION_TRACKS(bool)
     }
 
-    // Skip 1 button as a separator between animated tracks and available tracks.
+    /* skip 1 button as a separator between animated tracks and available tracks */
     track_button_idx += 1;
 
-    // Show tracks for all reflected variables.
+    /* show tracks for all reflected variables */
     if (track_button_idx < editor->track_button_count) {
 #define DISPLAY_AVAILABLE_TRACKS(var_type)                                                    \
     for (unsigned int var_idx = 0; var_idx < editor->selected_obj_type_info->variable_count   \
@@ -1518,7 +1523,7 @@ create_keyframe_for_selected_obj_variable(
         + keyframe_time_portion
               * ((float)editor->right_border_time - (float)editor->left_border_time);
 
-    // If previously had 0 keyframes for the variable change the time to 0.
+    /* if previously had 0 keyframes for the variable change the time to 0 */
     unsigned int prev_keyframe_count;
 #define CHECK_KEYFRAMES_COUNT(var_type)                                                       \
     scene_animation_get_keyframes_##var_type(                                                 \
@@ -1595,7 +1600,7 @@ prv_scene_animation_editor_on_mouse_click(
     }
 
     if (button == TE_MB_MIDDLE) {
-        // Want to create keyframe. Find which track was clicked on.
+        /* want to create keyframe, find which track was clicked on */
         keyframe_button_array_select_keyframe(editor->keyframe_button_array, 0xFFFFFFFF);
         for (unsigned int button_idx = 0; button_idx < editor->track_button_count;
              button_idx++) {
@@ -1621,7 +1626,7 @@ prv_scene_animation_editor_on_mouse_click(
 
             size_t var_idx = widget_get_custom_value(widget);
             if (var_idx == 0xFFFFFFFF) {
-                // Add a keyframe for already animated track.
+                /* add a keyframe for already animated track */
                 te_text_widget* text_widget =
                     get_button_text(editor->track_buttons[button_idx]);
                 unsigned int len;
@@ -1640,7 +1645,9 @@ prv_scene_animation_editor_on_mouse_click(
                     break;
                 }
                 if (var_info == NULL) {
-                    log_error_fmt(__FILE__, __LINE__, "failed to find variable info for %s", variable_name);
+                    log_error_fmt(
+                        __FILE__, __LINE__, "failed to find variable info for %s",
+                        variable_name);
                     abort();
                 }
 
@@ -1649,7 +1656,7 @@ prv_scene_animation_editor_on_mouse_click(
 
                 free(variable_name);
             } else {
-                // Add a keyframe for a new track.
+                /* add a keyframe for a new track */
                 create_keyframe_for_selected_obj_variable(
                     editor, &editor->selected_obj_type_info->variables[var_idx],
                     keyframe_time_portion);
@@ -1670,7 +1677,7 @@ prv_scene_animation_editor_on_mouse_click(
             return;
         }
 
-        // Delete keyframe.
+        /* delete keyframe */
         for (unsigned int i = 0; i < editor->keyframe_button_array->count; i++) {
             te_widget* widget =
                 button_widget_get_widget(editor->keyframe_button_array->buttons[i]);
@@ -1691,7 +1698,7 @@ prv_scene_animation_editor_on_mouse_click(
             }
         }
     } else if (button == TE_MB_LEFT) {
-        // Change current time or select a keyframe.
+        /* change current time or select a keyframe */
         te_scene_animation* anim = world_get_scene_animation(editor->world);
         if (anim == NULL) {
             return;
@@ -1708,9 +1715,9 @@ prv_scene_animation_editor_on_mouse_click(
 
             if (cursor_pos[0] > pos[0] && cursor_pos[0] < pos[0] + size[0]
                 && cursor_pos[1] > pos[1] && cursor_pos[1] < pos[1] + size[1]) {
-                // Selected a keyframe.
+                /* selected a keyframe */
                 if (editor->keyframe_button_array->selected_idx == i) {
-                    // Deselect.
+                    /* deselect */
                     keyframe_button_array_select_keyframe(
                         editor->keyframe_button_array, 0xFFFFFFFF);
                 } else {
@@ -1724,7 +1731,7 @@ prv_scene_animation_editor_on_mouse_click(
 
         keyframe_button_array_select_keyframe(editor->keyframe_button_array, 0xFFFFFFFF);
 
-        // Move current time.
+        /* move current time */
         float keyframe_time_portion =
             (cursor_pos[0] - editor->timeline_x_pos) / (1.0f - editor->timeline_x_pos);
         float time_sec =
@@ -1945,7 +1952,7 @@ on_current_time_changed(te_text_edit_widget* text_edit) {
         return;
     }
 
-    // Get text.
+    /* get text */
     unsigned int text_len;
     const wchar_t* src_text = text_edit_widget_get_text(text_edit, &text_len);
     char* text = wchar_to_char(src_text, &text_len);
@@ -1956,7 +1963,7 @@ on_current_time_changed(te_text_edit_widget* text_edit) {
 
     scene_animation_set_current_time(anim, new_time_sec);
 
-    // Update left/right borders.
+    /* update left/right borders */
     unsigned int step = (unsigned int)(new_time_sec / (float)editor->displayed_time_interval);
     editor->left_border_time = step * editor->displayed_time_interval;
     editor->right_border_time = editor->left_border_time + editor->displayed_time_interval;
@@ -1966,7 +1973,7 @@ on_current_time_changed(te_text_edit_widget* text_edit) {
 
 static void
 on_keyframe_time_changed(te_text_edit_widget* text_edit) {
-    // Remove keyframe and re-add with new time.
+    /* remove keyframe and re-add with new time */
 
     te_scene_animation_editor* editor =
         widget_get_custom_ptr(text_edit_widget_get_widget(text_edit));
@@ -1982,7 +1989,7 @@ on_keyframe_time_changed(te_text_edit_widget* text_edit) {
 
     scene_animation_pause(anim);
 
-    // Get text.
+    /* get text */
     unsigned int text_len;
     const wchar_t* src_text = text_edit_widget_get_text(text_edit, &text_len);
     char* text = wchar_to_char(src_text, &text_len);
@@ -1996,13 +2003,13 @@ on_keyframe_time_changed(te_text_edit_widget* text_edit) {
 
     const char* object_name = get_selected_obj_name(editor);
 
-    // Copy variable name because it will be invalid after we redraw after adding new keyframe.
+    /* copy variable name because it will be invalid after we redraw after adding new keyframe */
     size_t var_name_len = strlen(keyframe_data->variable_name);
     char* var_name = malloc(sizeof(char) * (var_name_len + 1));
     memcpy(var_name, keyframe_data->variable_name, sizeof(char) * var_name_len);
     var_name[var_name_len] = 0;
 
-    // Find variable info.
+    /* find variable info */
     for (unsigned int i = 0; i < editor->selected_obj_type_info->variable_count; i++) {
         if (strcmp(var_name, editor->selected_obj_type_info->variables[i].name) != 0) {
             continue;
@@ -2010,7 +2017,7 @@ on_keyframe_time_changed(te_text_edit_widget* text_edit) {
 
         te_variable_info* var_info = &editor->selected_obj_type_info->variables[i];
 
-        // Add keyframe with new time.
+        /* add keyframe with new time */
         switch (var_info->type) {
             case (TE_VT_BOOL): {
                 te_scene_animation_keyframe_bool* keyframe =
@@ -2093,7 +2100,7 @@ on_keyframe_time_changed(te_text_edit_widget* text_edit) {
 
     redraw_timeline(editor, true);
 
-    // Find this keyframe again and reselect it.
+    /* find this keyframe again and reselect it */
     for (unsigned int i = 0; i < editor->keyframe_button_array->count; i++) {
         te_keyframe_button_data* data = &editor->keyframe_button_array->datas[i];
         if (strcmp(data->variable_name, var_name) != 0) {
@@ -2142,7 +2149,7 @@ on_keyframe_interpolation_changed(te_button_widget* button) {
     te_keyframe_button_data* data =
         &editor->keyframe_button_array->datas[editor->keyframe_button_array->selected_idx];
 
-    // Find variable info.
+    /* find variable info */
     for (unsigned int i = 0; i < editor->selected_obj_type_info->variable_count; i++) {
         if (strcmp(data->variable_name, editor->selected_obj_type_info->variables[i].name)
             != 0) {
@@ -2151,7 +2158,7 @@ on_keyframe_interpolation_changed(te_button_widget* button) {
 
         te_variable_info* var_info = &editor->selected_obj_type_info->variables[i];
 
-        // Add keyframe with new time.
+        /* add keyframe with new time */
         switch (var_info->type) {
             case (TE_VT_BOOL): {
                 te_scene_animation_keyframe_bool* keyframe =
@@ -2201,7 +2208,7 @@ on_keyframe_interpolation_changed(te_button_widget* button) {
 
     data->interpolation = new_interpolation;
 
-    // Update highlighted interpolation button.
+    /* update highlighted interpolation button */
     show_selected_keyframe_menu(editor);
 }
 
@@ -2222,7 +2229,7 @@ on_update_keyframe_value_clicked(te_button_widget* button) {
     te_keyframe_button_data* data =
         &editor->keyframe_button_array->datas[editor->keyframe_button_array->selected_idx];
 
-    // Find variable info.
+    /* find variable info */
     for (unsigned int i = 0; i < editor->selected_obj_type_info->variable_count; i++) {
         if (strcmp(data->variable_name, editor->selected_obj_type_info->variables[i].name)
             != 0) {
@@ -2231,7 +2238,7 @@ on_update_keyframe_value_clicked(te_button_widget* button) {
 
         te_variable_info* var_info = &editor->selected_obj_type_info->variables[i];
 
-        // Add keyframe with new time.
+        /* add keyframe with new time */
         switch (var_info->type) {
             case (TE_VT_BOOL): {
                 te_scene_animation_keyframe_bool* keyframe =

@@ -4,34 +4,34 @@
 #include <stdbool.h>
 #include <input/keyboard_button.h>
 
-// Can be displayed in the game using the tilde (~) button.
-// Allows for creating and executing custom commands during the game.
+/* can be displayed in the game using the tilde (~) button
+ * allows for creating and executing custom commands during the game */
 typedef struct te_debug_console te_debug_console;
 
 struct te_game_manager;
 
-// Structure of a registered command in the debug console.
+/* structure of a registered command in the debug console */
 typedef struct te_debug_console_command {
-    // Unique name of the command.
+    /* unique name of the command */
     const char* name;
 
-    // Only 1 of these callbacks is non-NULL depending on how much arguments the command requires.
+    /* only 1 of these callbacks is non-NULL depending on how much arguments the command requires */
     void (*no_args)(struct te_game_manager* game_manager);
     void (*arg_uint)(struct te_game_manager* game_manager, unsigned int arg);
 } te_debug_console_command;
 
 void debug_console_register_command(te_debug_console_command command);
 
-// Function to programmatically toggle "show_stats" command.
+/* function to programmatically toggle "show_stats" command */
 void debug_console_show_stats(void);
 void debug_console_hide_stats(void);
 bool debug_console_is_stats_shown(void);
 
-// ------------------------------------------------------------------------------------------------
-//                                       PRIVATE API
-// ------------------------------------------------------------------------------------------------
+/* ------------------------------------------------------------------------------------------------
+ *                                       PRIVATE API
+ * ------------------------------------------------------------------------------------------------ */
 
-// Must be called before game is started and after game is finished.
+/* must be called before game is started and after game is finished */
 void prv_debug_console_init(struct te_game_manager* game_manager);
 void prv_debug_console_deinit(void);
 
@@ -46,11 +46,11 @@ void prv_debug_console_on_keyboard_input_text(const char* text);
 
 void prv_debug_console_draw(float delta_time_sec);
 
-// Groups various statistics that can be displayed using the debug console's command "show_stats".
+/* groups various statistics that can be displayed using the debug console's command "show_stats" */
 typedef struct te_debug_stats {
     unsigned int fps;
 
-    // in MB
+    /* in MB */
     unsigned int process_mem;
     unsigned int total_mem;
     unsigned int total_used_mem;
@@ -75,7 +75,7 @@ typedef struct te_debug_stats {
     float gpu_time_draw_debug_ms;
 } te_debug_stats;
 
-// Returns always valid pointer to update debug stats.
+/* returns always valid pointer to update debug stats */
 te_debug_stats* prv_debug_console_get_stats(void);
 
 #endif

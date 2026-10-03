@@ -15,7 +15,7 @@
 
 #define PARTICLE_EMITTER_TEX_LOAD_OPTION TE_TLO_GENERATE_MIPMAPS
 
-// Data used to simulate a single particle.
+/* data used to simulate a single particle */
 typedef struct te_particle_data {
     vec4 color;
 
@@ -32,7 +32,7 @@ struct te_particle_emitter {
 
     te_world* world;
 
-    // Used during simulation.
+    /* used during simulation */
     te_particle_data* particle_buf_a;
     te_particle_data* particle_buf_b;
 
@@ -59,22 +59,22 @@ struct te_particle_emitter {
     float fade_in_life_portion;
     float fade_out_life_portion;
 
-    // Used during simulation. Time (in seconds) until delay between spawns finishes.
+    /* used during simulation, time (in seconds) until delay between spawns finishes */
     float transient_time_before_new_spawn;
 
-    // 0 if not bound.
+    /* 0 if not bound */
     unsigned int tex_id;
 
-    // 0xFFFFFFFF if not being rendered.
+    /* 0xFFFFFFFF if not being rendered */
     unsigned int render_data_handle;
 
-    // ID used to unregister tick callback. 0xFFFFFFFF if not registered.
+    /* ID used to unregister tick callback, 0xFFFFFFFF if not registered */
     unsigned int tick_callback_id;
 
-    // Size of render data buffers, calculated after spawned.
+    /* size of render data buffers, calculated after spawned */
     unsigned int transient_max_particle_count;
 
-    // Used during simulation.
+    /* used during simulation */
     unsigned int transient_alive_particle_count;
 
     bool is_paused;
@@ -141,7 +141,7 @@ particle_emitter_destroy(te_particle_emitter* emitter) {
 }
 
 te_game_object_info*
-particle_emitter_get_game_object_info() {
+particle_emitter_get_game_object_info(void) {
     return type_database_get_type_info(particle_emitter_get_type_id())->game_object_info;
 }
 
@@ -181,16 +181,16 @@ check_file_path(const char* relative_path) {
     }
 
     if (relative_path != NULL) {
-        // Check if path exists.
+        /* check if path exists */
         char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
         if (!filesystem_does_path_exists(res_path)) {
-            // Do nothing, probably user typing the path.
+            /* do nothing, probably user typing the path */
             free(res_path);
             return false;
         }
         FILE* fp = fopen(res_path, "rb");
         if (fp == NULL) {
-            // Not a file.
+            /* not a file */
             free(res_path);
             return false;
         }
@@ -214,10 +214,10 @@ particle_emitter_set_texture(te_particle_emitter* emitter, const char* relative_
     emitter->tex_relative_path = NULL;
 
     if (relative_path == NULL || strcmp(relative_path, "") == 0) {
-        // Remove current texture.
+        /* remove current texture */
         emitter->tex_relative_path = NULL;
         if (emitter->world != NULL) {
-            // Update render data.
+            /* update render data */
             te_particle_renderer* particle_renderer =
                 world_get_particle_renderer(emitter->world);
             te_particle_emitter_render_data* data =
@@ -235,7 +235,7 @@ particle_emitter_set_texture(te_particle_emitter* emitter, const char* relative_
             data->tex_id = 0;
         }
     } else {
-        // Set new texture.
+        /* set new texture */
         const size_t len = strlen(relative_path);
         emitter->tex_relative_path = malloc(sizeof(char) * (len + 1));
         memcpy(emitter->tex_relative_path, relative_path, sizeof(char) * len);
@@ -250,7 +250,7 @@ particle_emitter_set_texture(te_particle_emitter* emitter, const char* relative_
             emitter->tex_id = texture_manager_request_texture(
                 texture_manager, relative_path, PARTICLE_EMITTER_TEX_LOAD_OPTION);
 
-            // Update render data.
+            /* update render data */
             te_particle_renderer* particle_renderer =
                 world_get_particle_renderer(emitter->world);
             te_particle_emitter_render_data* data =
@@ -464,7 +464,9 @@ particle_emitter_get_type_id(void) {
 static void
 type_spawn(te_world* world, te_particle_emitter* emitter) {
     if (emitter->world != NULL) {
-        log_error(__FILE__, __LINE__, "the particle emitter is already spawned in the different world");
+        log_error(
+            __FILE__, __LINE__,
+            "the particle emitter is already spawned in the different world");
         abort();
     }
 
@@ -474,7 +476,8 @@ type_spawn(te_world* world, te_particle_emitter* emitter) {
 static void
 type_despawn(te_world* world, te_particle_emitter* emitter) {
     if (emitter->world != world) {
-        log_error(__FILE__, __LINE__, "the particle emitter is spawned in the different world");
+        log_error(
+            __FILE__, __LINE__, "the particle emitter is spawned in the different world");
         abort();
     }
 
@@ -484,6 +487,8 @@ type_despawn(te_world* world, te_particle_emitter* emitter) {
 
 void
 particle_emitter_register_type(void) {
+    te_type_info* info;
+
     te_game_object_info* game_object_info = malloc(sizeof(te_game_object_info));
     game_object_info->type_id = particle_emitter_get_type_id();
     game_object_info->type = TE_GOT_PARTICLE_EMITTER;
@@ -495,7 +500,7 @@ particle_emitter_register_type(void) {
     game_object_info->on_despawned = on_despawned;
     game_object_info->destroy = particle_emitter_destroy;
 
-    te_type_info* info = type_info_create(
+    info = type_info_create(
         particle_emitter_get_type_id(), particle_emitter_create, particle_emitter_destroy,
         type_spawn, type_despawn, NULL, game_object_info,
         particle_emitter_is_serialization_allowed);
@@ -560,7 +565,7 @@ particle_emitter_register_type(void) {
     type_database_register_type(info);
 }
 
-static inline void
+static void
 get_vec3_with_rand(vec3 base, vec3 rnd, vec3 out) {
     float x = ((((float)rand() / (float)(RAND_MAX)) - 0.5f) * 2.0f) * rnd[0];
     float y = ((((float)rand() / (float)(RAND_MAX)) - 0.5f) * 2.0f) * rnd[1];
@@ -570,12 +575,16 @@ get_vec3_with_rand(vec3 base, vec3 rnd, vec3 out) {
 
 static void
 emitter_tick(te_particle_emitter* emitter, float delta_time_sec) {
+    te_particle_data* from = NULL;
+    te_particle_data* to = NULL;
+    vec3 temp3;
+    unsigned int i;
+    unsigned int new_particle_count;
+
     if (emitter->is_paused) {
         return;
     }
 
-    te_particle_data* from = NULL;
-    te_particle_data* to = NULL;
     if (emitter->is_buf_a) {
         from = emitter->particle_buf_a;
         to = emitter->particle_buf_b;
@@ -584,23 +593,22 @@ emitter_tick(te_particle_emitter* emitter, float delta_time_sec) {
         to = emitter->particle_buf_a;
     }
 
-    unsigned int new_particle_count = 0;
-    vec3 temp3;
-    for (unsigned int i = 0; i < emitter->transient_alive_particle_count; i++) {
+    new_particle_count = 0;
+    for (i = 0; i < emitter->transient_alive_particle_count; i++) {
         te_particle_data* data = &from[i];
 
-        // Update TTL.
+        /* update TTL */
         data->left_time_to_live_sec -= delta_time_sec;
         if (data->left_time_to_live_sec <= 0.0f) {
             continue;
         }
 
-        // Update position.
+        /* update position */
         glm_vec3_mul(
             data->velocity, (vec3){delta_time_sec, delta_time_sec, delta_time_sec}, temp3);
         glm_vec3_add(data->pos, temp3, data->pos);
 
-        // Update velocity.
+        /* update velocity */
         glm_vec3_mul(
             emitter->gravity, (vec3){delta_time_sec, delta_time_sec, delta_time_sec}, temp3);
         glm_vec3_add(data->velocity, temp3, data->velocity);
@@ -611,12 +619,12 @@ emitter_tick(te_particle_emitter* emitter, float delta_time_sec) {
         float fade_out_portion =
             glm_smoothstep(emitter->fade_out_life_portion, 1.0f, life_portion);
 
-        // Update color.
+        /* update color */
         glm_vec4_copy(emitter->color, data->color);
         glm_vec4_lerp(data->color, emitter->color_fade_in, fade_in_portion, data->color);
         glm_vec4_lerp(data->color, emitter->color_fade_out, fade_out_portion, data->color);
 
-        // Update size.
+        /* update size */
         data->size = emitter->size;
         data->size = glm_lerp(data->size, emitter->size_fade_in, fade_in_portion);
         data->size = glm_lerp(data->size, emitter->size_fade_out, fade_out_portion);
@@ -628,13 +636,15 @@ emitter_tick(te_particle_emitter* emitter, float delta_time_sec) {
     if (emitter->emit_new_particles) {
         emitter->transient_time_before_new_spawn -= delta_time_sec;
         if (emitter->transient_time_before_new_spawn <= 0.0f) {
+            te_particle_data* data;
+
             emitter->transient_time_before_new_spawn = emitter->delay_between_spawns;
 
-            // Emit a single particle.
-            te_particle_data* data = &to[new_particle_count];
+            /* emit a single particle */
+            data = &to[new_particle_count];
             new_particle_count += 1;
 
-            // Init particle.
+            /* init particle */
             get_vec3_with_rand(emitter->position, emitter->spawn_offset_rand, data->pos);
             get_vec3_with_rand(
                 emitter->spawn_velocity, emitter->spawn_velocity_rand, data->velocity);
@@ -652,13 +662,13 @@ emitter_tick(te_particle_emitter* emitter, float delta_time_sec) {
     emitter->transient_alive_particle_count = new_particle_count;
     emitter->is_buf_a = !emitter->is_buf_a;
 
-    // Update render data.
+    /* update render data */
     te_particle_renderer* particle_renderer = world_get_particle_renderer(emitter->world);
     te_particle_emitter_render_data* data = particle_renderer_get_emitter_render_data_tmp(
         particle_renderer, emitter->render_data_handle);
 
     data->particle_count = emitter->transient_alive_particle_count;
-    for (unsigned int i = 0; i < data->particle_count; i++) {
+    for (i = 0; i < data->particle_count; i++) {
         te_particle_data* src = &to[i];
         te_particle_render_data* dst = &data->particles[i];
 
@@ -687,7 +697,7 @@ add_to_renderer(te_particle_emitter* emitter) {
     data->particle_count = 0;
     data->particles = NULL;
 
-    // Estimate max particle count for GPU data.
+    /* estimate max particle count for GPU data */
     emitter->transient_max_particle_count = (unsigned int)ceilf(
         ceilf(emitter->time_to_live_sec + 0.1f) / emitter->delay_between_spawns);
     data->particles =

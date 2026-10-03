@@ -1,5 +1,6 @@
 #include <ui/property_inspector.h>
 
+#include <snprintf.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -9,7 +10,7 @@
 #include <game/skeleton.h>
 #include <io/log.h>
 #include <io/filesystem.h>
-#include <ui/theme.h>
+#include <ui/editor_theme.h>
 #include <ui/editor_ui.h>
 #include <ui/world_inspector.h>
 #include <ui/scene_animation_editor.h>
@@ -20,18 +21,18 @@
 #include <widget/button_widget.h>
 #include <widget/rect_widget.h>
 #include <misc/wchar_funcs.h>
-#include <math_funcs.h>
+#include <math/math_funcs.h>
 #include <editor.h>
 #include <world.h>
 
 struct te_property_inspector {
-    // Not NULL if inspecting some object.
+    /* not NULL if inspecting some object */
     void* obj;
     const char* obj_type_id;
 
     te_editor_ui* ui;
 
-    // Do not free/destroy, parent widget.
+    /* do not free/destroy, parent widget */
     te_widget* right_panel;
 };
 
@@ -169,7 +170,7 @@ on_variable_text_edit_changed(te_text_edit_widget* text_edit) {
     free(text);
 
     if (strcmp(info->variables[var_idx].name, "name") == 0) {
-        // Object name changed, update world inspector.
+        /* object name changed, update world inspector  */
         te_world_inspector* world_inspector = editor_ui_get_world_inspector(inspector->ui);
         world_inspector_refresh_names(world_inspector);
     }
@@ -277,7 +278,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
         abort();
     }
 
-    // Remove old widgets (if any existed).
+    /* remove old widgets (if any existed) */
     property_inspector_hide(inspector);
 
     inspector->obj = obj;
@@ -307,7 +308,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
     if (type_info->game_object_info != NULL) {
         if (type_info->game_object_info->type == TE_GOT_CAMERA) {
-            // Add a button to pilot the camera.
+            /* add a button to pilot the camera */
             te_button_widget* button = button_widget_create();
             {
                 te_widget* widget = button_widget_get_widget(button);
@@ -329,8 +330,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
             button_widget_set_on_clicked(button, on_button_pilot_camera_clicked);
 
-            // Button text.
-
+            /* button text */
             te_text_widget* text_widget = text_widget_create();
             {
                 te_widget* widget = text_widget_get_widget(text_widget);
@@ -349,7 +349,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
         } else if (
             type_info->game_object_info->type == TE_GOT_MODEL
             && model_get_skeleton(obj) != NULL) {
-            // Add a button to preview skeleton animation.
+            /* add a button to preview skeleton animation */
             te_button_widget* button = button_widget_create();
             {
                 te_widget* widget = button_widget_get_widget(button);
@@ -371,8 +371,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
             button_widget_set_on_clicked(button, on_button_preview_animation_clicked);
 
-            // Button text.
-
+            /* button text */
             te_text_widget* text_widget = text_widget_create();
             {
                 te_widget* widget = text_widget_get_widget(text_widget);
@@ -423,7 +422,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 break;
             }
             case (TE_VT_UINT): {
-                // Text edit background  ----------------------------
+                /* text edit background  ---------------------------- */
 
                 te_rect_widget* rect = rect_widget_create();
                 {
@@ -434,7 +433,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 }
                 rect_widget_set_color(rect, text_edit_background_color);
 
-                // Text edit ----------------------------------------
+                /* text edit ---------------------------------------- */
 
                 const unsigned int value =
                     type_info->uint_getters[var_info->set_get_index](obj);
@@ -469,7 +468,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 break;
             }
             case (TE_VT_FLOAT): {
-                // Text edit background  ----------------------------
+                /* text edit background  ---------------------------- */
 
                 te_rect_widget* rect = rect_widget_create();
                 {
@@ -480,7 +479,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 }
                 rect_widget_set_color(rect, text_edit_background_color);
 
-                // Text edit ----------------------------------------
+                /* text edit ---------------------------------------- */
 
                 const float value = type_info->float_getters[var_info->set_get_index](obj);
 
@@ -493,7 +492,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 vec2 value;
                 type_info->vec2_getters[var_info->set_get_index](obj, value);
 
-                // Text edit background  ----------------------------
+                /* text edit background  ---------------------------- */
 
                 te_rect_widget* rect = rect_widget_create();
 
@@ -504,7 +503,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
                 rect_widget_set_color(rect, text_edit_background_color);
 
-                // Text edit ----------------------------------------
+                /* text edit ---------------------------------------- */
 
                 add_float_widget(
                     inspector, var_idx, 0, widget, value[0], (vec2){hpadding, 0.0f},
@@ -520,7 +519,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 vec3 value;
                 type_info->vec3_getters[var_info->set_get_index](obj, value);
 
-                // Text edit background  ----------------------------
+                /* text edit background  ---------------------------- */
 
                 te_rect_widget* rect = rect_widget_create();
 
@@ -531,7 +530,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
                 rect_widget_set_color(rect, text_edit_background_color);
 
-                // Text edit ----------------------------------------
+                /* text edit ---------------------------------------- */
 
                 add_float_widget(
                     inspector, var_idx, 0, widget, value[0], (vec2){hpadding, 0.0f},
@@ -552,7 +551,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 vec4 value;
                 type_info->vec4_getters[var_info->set_get_index](obj, value);
 
-                // Text edit background  ----------------------------
+                /* text edit background  ---------------------------- */
 
                 te_rect_widget* rect = rect_widget_create();
 
@@ -563,7 +562,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
                 rect_widget_set_color(rect, text_edit_background_color);
 
-                // Text edit ----------------------------------------
+                /* text edit ---------------------------------------- */
 
                 add_float_widget(
                     inspector, var_idx, 0, widget, value[0], (vec2){hpadding, 0.0f},
@@ -589,7 +588,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
             case (TE_VT_STRING): {
                 const char* var_text = type_info->string_getters[var_info->set_get_index](obj);
 
-                // Text edit background  ----------------------------
+                /* text edit background  ---------------------------- */
 
                 te_rect_widget* rect = rect_widget_create();
 
@@ -600,7 +599,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
                 rect_widget_set_color(rect, text_edit_background_color);
 
-                // Text edit ----------------------------------------
+                /* text edit ---------------------------------------- */
 
                 te_text_edit_widget* text_edit = text_edit_widget_create();
                 {
@@ -629,7 +628,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 const wchar_t* var_text =
                     type_info->wstring_getters[var_info->set_get_index](obj);
 
-                // Text edit background  ----------------------------
+                /* text edit background  ---------------------------- */
 
                 te_rect_widget* rect = rect_widget_create();
 
@@ -640,7 +639,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
                 rect_widget_set_color(rect, text_edit_background_color);
 
-                // Text edit ----------------------------------------
+                /* text edit ---------------------------------------- */
 
                 te_text_edit_widget* text_edit = text_edit_widget_create();
                 {
@@ -671,7 +670,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 void
 property_inspector_hide(te_property_inspector* inspector) {
     {
-        // Check if we have a model with skeleton animation preview playing.
+        /* check if we have a model with skeleton animation preview playing */
         const te_type_info* type_info = type_database_get_type_info(inspector->obj_type_id);
         if (type_info != NULL && type_info->game_object_info != NULL
             && type_info->game_object_info->type == TE_GOT_MODEL) {

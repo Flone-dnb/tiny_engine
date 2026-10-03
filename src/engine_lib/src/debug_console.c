@@ -12,63 +12,63 @@
 #include <render/debug_drawer.h>
 #include <glad/gl.h>
 
-// Command hash for hashmap.
+/* command hash for hashmap */
 uint64_t
 debug_console_command_hash(const void* item, uint64_t seed0, uint64_t seed1) {
     const te_debug_console_command* command = item;
     return hashmap_sip(command->name, strlen(command->name), seed0, seed1);
 }
 
-// Command compare for hashmap.
+/* command compare for hashmap */
 int
 debug_console_command_compare(const void* a, const void* b, void* udata) {
-    (void)udata;
     const te_debug_console_command* command1 = a;
     const te_debug_console_command* command2 = b;
+    (void)udata;
     return strcmp(command1->name, command2->name);
 }
 
-// Groups debug console data.
+/* groups debug console data */
 struct te_debug_console {
     te_game_manager* game_manager;
 
     struct hashmap* commands;
 
-    // Current user input. Non-NULL because preallocated.
-    // Actually valid char count is @ref input_valid_len.
-    // Size of this array is @ref input_total_len.
+    /* current user input, non-NULL because preallocated
+     * actually valid char count is @ref input_valid_len
+     * size of this array is @ref input_total_len */
     char* input;
 
-    // Result of the user input, displayed if @ref message_sec_left is > 0.
+    /* result of the user input, displayed if @ref message_sec_left is > 0 */
     const char* message;
 
     te_debug_stats stats;
 
-    // Copy of @ref stats displayed for @ref time_sec_to_update_stats.
+    /* copy of @ref stats displayed for @ref time_sec_to_update_stats */
     te_debug_stats displayed_stats;
 
     vec2 screen_pos;
 
-    // Time (in seconds) left to display @ref message.
+    /* time (in seconds) left to display @ref message */
     float message_sec_left;
 
-    // Time (in seconds) until @ref displayed_stats is updated.
+    /* time (in seconds) until @ref displayed_stats is updated */
     float time_sec_to_update_stats;
 
-    // Number of valid elements in @ref input.
+    /* number of valid elements in @ref input */
     unsigned int input_valid_len;
 
-    // Total len of the array @ref input (excluding the NULL terminated character).
+    /* total len of the array @ref input (excluding the NULL terminated character) */
     unsigned int input_total_len;
 
     bool is_shown;
 
-    // For @ref stats. Can be drawn even if the console is hidden.
+    /* for @ref stats, can be drawn even if the console is hidden */
     bool show_stats;
     bool show_fps;
 };
 
-// Static to allow using debug console easily from various places.
+/* static to allow using debug console easily from various places */
 static te_debug_console console;
 
 void
@@ -205,7 +205,7 @@ prv_debug_console_on_keyboard_input(
     }
 
     if (button == TE_KB_ENTER && console.input_valid_len > 0) {
-        // Check if arguments are specified.
+        /* check if arguments are specified */
         unsigned int arg_pos = 0;
         bool found_arg = false;
         for (unsigned int i = 0; i < console.input_valid_len; i++) {
@@ -315,7 +315,7 @@ prv_debug_console_draw(float delta_time_sec) {
         vec2 screen_pos;
         glm_vec2_copy((vec2){0.01f, 0.45f}, screen_pos);
 
-        // FPS.
+        /* FPS */
         const unsigned int fps_limit =
             renderer_get_fps_limit(game_manager_get_renderer(console.game_manager));
         if (console.show_fps) {
@@ -326,7 +326,7 @@ prv_debug_console_draw(float delta_time_sec) {
         }
 
         if (console.show_stats) {
-            // RAM.
+            /* RAM */
             const char* ram_fmt = "RAM used (MB): %u (%u/%u)";
 #if defined(ENGINE_ASAN_ENABLED)
             ram_fmt = "RAM used (MB): %u (%u/%u) (ASan enabled)";
@@ -342,7 +342,7 @@ prv_debug_console_draw(float delta_time_sec) {
                 screen_pos, "%s: %.2f", "CPU time on tick callbacks (ms)",
                 stats->cpu_time_tick_callbacks_ms);
 
-            // Rendered model count.
+            /* rendered model count */
             prv_debug_console_draw_stat(
                 screen_pos, "rendered opaque model count: %u",
                 stats->rendered_opaque_model_count);
@@ -350,7 +350,7 @@ prv_debug_console_draw(float delta_time_sec) {
                 screen_pos, "rendered transparent model count: %u",
                 stats->rendered_transparent_model_count);
 
-            // CPU stats.
+            /* CPU stats */
             prv_debug_console_draw_stat(
                 screen_pos, "%s: %.2f", "CPU time to submit a frame (ms)",
                 stats->cpu_time_frame_ms);
@@ -371,7 +371,7 @@ prv_debug_console_draw(float delta_time_sec) {
                     screen_pos, "%s", "GL_EXT_disjoint_timer_query not supported");
             } else {
 #endif
-                // GPU stats.
+                /* GPU stats */
                 prv_debug_console_draw_stat(
                     screen_pos, "CPU is ahead of the GPU on %u frame(s)",
                     stats->cpu_ahead_gpu_frame_count);

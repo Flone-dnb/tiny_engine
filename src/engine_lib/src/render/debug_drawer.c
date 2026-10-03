@@ -15,7 +15,7 @@
 
 #define TE_DEBUG_DRAWER_AABB_INDEX_COUNT 24
 
-// Fixed text height for drawing text, in range [0.0; 1.0].
+/* fixed text height for drawing text, in range [0.0; 1.0] */
 static float debug_drawer_default_text_height = 0.0275f;
 
 typedef struct te_double_array {
@@ -31,11 +31,14 @@ typedef struct te_double_array {
 
 static te_double_array*
 double_array_create(unsigned int item_sizeof, unsigned int capacity) {
+    te_double_array* array;
+
     if (capacity == 0) {
         log_error(__FILE__, __LINE__, "expected non zero capacity");
         abort();
     }
-    te_double_array* array = malloc(sizeof(te_double_array));
+
+    array = malloc(sizeof(te_double_array));
     array->item_sizeof = item_sizeof;
     array->size1 = 0;
     array->size2 = 0;
@@ -99,57 +102,57 @@ double_array_switch_to_empty(te_double_array* array) {
     }
 }
 
-// Prepared data to render a glyph.
+/* prepared data to render a glyph */
 typedef struct te_debug_drawer_glyph {
     vec2 pos_offset;
     vec2 size;
 
-    // 0 if " " (space) character
+    /* 0 if " " (space) character */
     unsigned int tex_id;
 
     float distance_to_next_glyph;
 } te_debug_drawer_glyph;
 
-// Data needed to draw a text.
+/* data needed to draw a text */
 typedef struct te_debug_drawer_text {
-    // Must be freed.
+    /* must be freed */
     char* text;
 
-    // Array of prepared glyph data, size of this array is @ref text_len.
+    /* array of prepared glyph data, size of this array is @ref text_len */
     te_debug_drawer_glyph* glyphs;
 
-    // strlen of @ref text.
+    /* strlen of @ref text */
     unsigned int text_len;
 
-    // If less than zero then text should be destroyed.
+    /* if less than zero then text should be destroyed */
     float time_left_sec;
 
     vec4 color;
 
-    // -1 if should be automatically picked.
+    /* -1 if should be automatically picked */
     vec2 pos;
 } te_debug_drawer_text;
 
-// Data needed to draw AABB.
+/* data needed to draw AABB */
 typedef struct te_debug_drawer_aabb {
     te_aabb_shape aabb;
 
     vec3 color;
 
-    // If less than zero then item should be destroyed.
+    /* if less than zero then item should be destroyed */
     float time_left_sec;
 } te_debug_drawer_aabb;
 
-// Data needed to draw a line.
+/* data needed to draw a line */
 typedef struct te_debug_drawer_line {
     vec3 from;
     vec3 to;
 
-    // If less than zero then item should be destroyed.
+    /* if less than zero then item should be destroyed */
     float time_left_sec;
 } te_debug_drawer_line;
 
-// Data for the text shader program.
+/* data for the text shader program */
 typedef struct te_debug_drawer_text_shader {
     unsigned int prog_id;
 
@@ -160,7 +163,7 @@ typedef struct te_debug_drawer_text_shader {
     int uniform_text_color;
 } te_debug_drawer_text_shader;
 
-// Data for the AABB shader program.
+/* data for the AABB shader program */
 typedef struct te_debug_drawer_aabb_shader {
     unsigned int prog_id;
 
@@ -170,7 +173,7 @@ typedef struct te_debug_drawer_aabb_shader {
     int uniform_view_proj_mat;
 } te_debug_drawer_aabb_shader;
 
-// Data for the line shader program.
+/* data for the line shader program */
 typedef struct te_debug_drawer_line_shader {
     unsigned int prog_id;
 
@@ -179,35 +182,35 @@ typedef struct te_debug_drawer_line_shader {
     int uniform_view_proj_mat;
 } te_debug_drawer_line_shader;
 
-// Groups debug drawer data.
+/* groups debug drawer data */
 typedef struct te_debug_drawer {
-    // Do not free this pointer.
+    /* do not free this pointer */
     te_renderer* renderer;
 
-    // Array of text to draw.
+    /* array of text to draw */
     te_double_array* texts;
 
-    // Array of AABBs to draw.
+    /* array of AABBs to draw */
     te_double_array* aabbs;
 
-    // Array of lines to draw.
+    /* array of lines to draw */
     te_double_array* lines;
 
-    // Quad geometry.
+    /* quad geometry */
 #if !defined(ENGINE_GLES)
     unsigned int vao_quad;
 #endif
     unsigned int vbo_quad;
     unsigned int ebo_quad;
 
-    // AABB geometry.
+    /* AABB geometry */
 #if !defined(ENGINE_GLES)
     unsigned int vao_aabb;
 #endif
     unsigned int vbo_aabb;
     unsigned int ebo_aabb;
 
-    // Line geometry.
+    /* line geometry */
 #if !defined(ENGINE_GLES)
     unsigned int vao_line;
 #endif
@@ -219,7 +222,7 @@ typedef struct te_debug_drawer {
     te_debug_drawer_line_shader line_shader;
 } te_debug_drawer;
 
-// Static to allow drawing easily from various places.
+/* static to allow drawing easily from various places */
 static te_debug_drawer drawer;
 
 void
@@ -248,7 +251,7 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
 
     drawer.renderer = renderer;
 
-    // Load text shader.
+    /* load text shader */
     {
         te_shader_manager* shader_manager = renderer_get_shader_manager(renderer);
         drawer.text_shader.prog_id = shader_manager_request_shader(
@@ -266,7 +269,7 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
             get_uniform_location(drawer.text_shader.prog_id, "text_color");
     }
 
-    // Load AABB shader.
+    /* load AABB shader */
     {
         te_shader_manager* shader_manager = renderer_get_shader_manager(renderer);
         drawer.aabb_shader.prog_id = shader_manager_request_shader(
@@ -283,7 +286,7 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
             get_uniform_location(drawer.aabb_shader.prog_id, "view_proj_mat");
     }
 
-    // Load line shader.
+    /* load line shader */
     {
         te_shader_manager* shader_manager = renderer_get_shader_manager(renderer);
         drawer.line_shader.prog_id = shader_manager_request_shader(
@@ -297,9 +300,9 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
             get_uniform_location(drawer.line_shader.prog_id, "view_proj_mat");
     }
 
-    // Create quad geometry.
+    /* create quad geometry */
     {
-        vec4 vertices[4]; // XY pos, ZW uv
+        vec4 vertices[4]; /* XY pos, ZW uv */
         glm_vec4_copy((vec4){0.0f, 0.0f, 0.0f, 0.0f}, &vertices[0][0]);
         glm_vec4_copy((vec4){0.0f, 1.0f, 0.0f, 1.0f}, &vertices[1][0]);
         glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, &vertices[2][0]);
@@ -336,7 +339,7 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 
-    // Create AABB geometry (using lines).
+    /* create AABB geometry (using lines) */
     {
         vec3 extents;
         glm_vec3_copy((vec3){1.0f, 1.0f, 1.0f}, extents);
@@ -389,7 +392,7 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 
-    // Create line geometry.
+    /* create line geometry */
     {
         vec3 vertices[2];
 
@@ -437,7 +440,7 @@ prv_debug_drawer_free_text(te_debug_drawer_text* text) {
 
 void
 prv_debug_drawer_deinit(struct te_renderer* renderer) {
-    // Free debug objects.
+    /* free debug objects */
     te_debug_drawer_text* texts = double_array_get_data(drawer.texts);
     for (unsigned int i = 0; i < double_array_get_size(drawer.texts); i++) {
         prv_debug_drawer_free_text(&texts[i]);
@@ -451,13 +454,13 @@ prv_debug_drawer_deinit(struct te_renderer* renderer) {
     double_array_destroy(drawer.lines);
     drawer.lines = NULL;
 
-    // Free shaders.
+    /* free shaders */
     te_shader_manager* shader_manager = renderer_get_shader_manager(renderer);
     shader_manager_mark_unused_shader(shader_manager, drawer.text_shader.prog_id);
     shader_manager_mark_unused_shader(shader_manager, drawer.aabb_shader.prog_id);
     shader_manager_mark_unused_shader(shader_manager, drawer.line_shader.prog_id);
 
-    // Free geometry.
+    /* free geometry */
 #if !defined(ENGINE_GLES)
     glDeleteVertexArrays(1, &drawer.vao_quad);
 #endif
@@ -544,21 +547,21 @@ debug_drawer_draw_text_color_pos(const char* text, float time_sec, vec3 color, v
         return;
     }
 
-    // Init data.
+    /* init data */
     te_debug_drawer_text new_item;
     glm_vec3_copy(color, new_item.color);
     new_item.color[3] = 1.0f;
     glm_vec2_copy(pos, new_item.pos);
     new_item.time_left_sec = time_sec;
 
-    // Copy text.
+    /* copy text */
     const size_t text_len = strlen(text);
     new_item.text = malloc(sizeof(char) * (text_len + 1));
     memcpy(new_item.text, text, sizeof(char) * text_len);
     new_item.text[text_len] = 0;
     new_item.text_len = (unsigned int)text_len;
 
-    // Cache glyphs.
+    /* cache glyphs */
     te_font_manager* font_manager = renderer_get_font_manager(drawer.renderer);
     const float font_height = prv_font_manager_get_font_height_to_load();
     const float font_scale = debug_drawer_default_text_height / font_height;
@@ -569,7 +572,7 @@ debug_drawer_draw_text_color_pos(const char* text, float time_sec, vec3 color, v
         te_debug_drawer_glyph* dst = &new_item.glyphs[i];
 
         dst->distance_to_next_glyph =
-            (float)(src.advance >> 6) // bitshift by 6 to get value in pixels (2^6 = 64)
+            (float)(src.advance >> 6) /* bitshift by 6 to get value in pixels (2^6 = 64) */
             * font_scale;
 
         if (src.width == 0) {
@@ -589,7 +592,7 @@ debug_drawer_draw_text_color_pos(const char* text, float time_sec, vec3 color, v
 }
 
 float
-debug_drawer_get_default_text_height() {
+debug_drawer_get_default_text_height(void) {
     return debug_drawer_default_text_height;
 }
 
@@ -629,7 +632,7 @@ prv_debug_drawer_draw(
 
             glDrawElements(GL_LINES, 2, GL_UNSIGNED_SHORT, NULL);
 
-            // Update state.
+            /* update state */
             line->time_left_sec -= delta_time_sec;
             if (line->time_left_sec >= 0.0f) {
                 double_array_add_item(drawer.lines, line);
@@ -664,7 +667,7 @@ prv_debug_drawer_draw(
             glDrawElements(
                 GL_LINES, TE_DEBUG_DRAWER_AABB_INDEX_COUNT, GL_UNSIGNED_SHORT, NULL);
 
-            // Update state.
+            /* update state */
             data->time_left_sec -= delta_time_sec;
             if (data->time_left_sec >= 0.0f) {
                 double_array_add_item(drawer.aabbs, data);
@@ -687,7 +690,7 @@ prv_debug_drawer_draw(
         glBindVertexArray(drawer.vao_quad);
 #endif
 
-        glActiveTexture(GL_TEXTURE0); // glyph's bitmap
+        glActiveTexture(GL_TEXTURE0); /* glyph's bitmap */
 
         vec4 clip_rect;
         glm_vec4_copy((vec4){0.0f, 0.0f, 1.0f, 1.0f}, clip_rect);
@@ -695,8 +698,8 @@ prv_debug_drawer_draw(
 
         glUniform2fv(drawer.text_shader.uniform_window_size, 1, window_size);
 
-        // Prepare starting position for the first text (relative to screen's top-left corner).
-        // x will be reset on every text so it's defined below.
+        /* prepare starting position for the first text (relative to screen's top-left corner)
+         * x will be reset on every text so it's defined below */
         vec2 screen_pos;
         screen_pos[1] = (float)window_height * 0.1f;
 
@@ -714,8 +717,8 @@ prv_debug_drawer_draw(
             }
             const float text_height = window_size[1] * font_height * font_scale;
 
-            // Switch to the first row of the text.
-            const float auto_screen_y = screen_pos[1]; // save to restore later
+            /* switch to the first row of the text */
+            const float auto_screen_y = screen_pos[1]; /* save to restore later */
             if (text->pos[1] >= 0.0f) {
                 screen_pos[1] = window_size[1] * text->pos[1];
             }
@@ -723,7 +726,7 @@ prv_debug_drawer_draw(
 
             glUniform4fv(drawer.text_shader.uniform_text_color, 1, text->color);
 
-            // Draw each glyph.
+            /* draw each glyph */
             for (unsigned int i = 0; i < text->text_len; i++) {
                 if (text->glyphs[i].tex_id == 0) {
                     screen_pos[0] += text->glyphs[i].distance_to_next_glyph;
@@ -741,12 +744,12 @@ prv_debug_drawer_draw(
                 screen_pos[0] += text->glyphs[i].distance_to_next_glyph;
             }
 
-            // Restore Y.
+            /* restore Y */
             if (text->pos[1] > 0.0f) {
                 screen_pos[1] = auto_screen_y;
             }
 
-            // Update state.
+            /* update state */
             text->time_left_sec -= delta_time_sec;
             if (text->time_left_sec < 0.0f) {
                 prv_debug_drawer_free_text(text);

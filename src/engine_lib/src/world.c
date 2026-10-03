@@ -1,5 +1,6 @@
 #include <world.h>
 
+#include <snprintf.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -32,30 +33,30 @@
 #define glDeleteQueries glDeleteQueriesEXT
 #endif
 
-// World represents several objects: audio system, cameras, game objects and etc.
+/* world represents several objects: audio system, cameras, game objects and etc. */
 struct te_world {
-    // Always valid pointer. Game manager that owns this world. You should not free/destroy this pointer.
+    /* always valid pointer, game manager that owns this world. You should not free/destroy this pointer */
     te_game_manager* game_manager;
 
-    // NULL if no active camera. Do not free/destroy this pointer. The camera will register/unregister itself.
+    /* NULL if no active camera, do not free/destroy this pointer, the camera will register/unregister itself */
     te_camera* active_camera;
 
-    // Always valid pointer, size of this array is @ref spawned_root_game_object_array_size but the actually
-    // used number of elements is @ref spawned_root_game_object_count. If some game object despawned some pointers
-    // will be shifted to keep the array valid without any "holes". This array does not shrink
-    // but the number of used (valid) elements may decrease.
-    // Just like @ref spawned_widgets stores only root game objects.
+    /* always valid pointer, size of this array is @ref spawned_root_game_object_array_size but the actually
+     * used number of elements is @ref spawned_root_game_object_count, if some game object despawned some pointers
+     * will be shifted to keep the array valid without any "holes", this array does not shrink
+     * but the number of used (valid) elements may decrease,
+     * just like @ref spawned_widgets stores only root game objects */
     te_game_object_data* spawned_root_game_objects;
 
-    // NULL if nothing spawned, size of this array is @ref spawned_widget_count.
-    // Each widget here can have child widgets, this array only stores root widgets.
+    /* NULL if nothing spawned, size of this array is @ref spawned_widget_count
+     * each widget here can have child widgets, this array only stores root widgets */
     te_widget** spawned_widgets;
 
-    // Spawned widgets (from @ref spawned_widgets) that receive input (for example buttons).
-    // Size of this array is @ref interactable_widget_count.
+    /* spawned widgets (from @ref spawned_widgets) that receive input (for example buttons)
+     * size of this array is @ref interactable_widget_count */
     te_widget** interactable_widgets;
 
-    // NULL if nothing spawned, size of this array is @ref spawned_sound_count.
+    /* NULL if nothing spawned, size of this array is @ref spawned_sound_count */
     te_sound** spawned_sounds;
 
     te_model_renderer* opaque_model_renderer;
@@ -64,36 +65,36 @@ struct te_world {
     te_widget_renderer* widget_renderer;
     te_particle_renderer* particle_renderer;
 
-    // NULL if not loaded/created.
+    /* NULL if not loaded/created */
     te_scene_animation* scene_animation;
 
-    // May be NULL. Item from array @ref interactable_widgets that currently hovered.
+    /* may be NULL, item from array @ref interactable_widgets that currently hovered */
     te_widget* hovered_interactable_widget;
 
-    // World name.
+    /* world name, always valid */
     char* name;
 
-    // Number of spawned game objects (valid elements) in @ref spawned_root_game_objects.
+    /* number of spawned game objects (valid elements) in @ref spawned_root_game_objects */
     unsigned int spawned_root_game_object_count;
 
-    // Total number of elements that @ref spawned_root_game_objects can hold.
+    /* total number of elements that @ref spawned_root_game_objects can hold */
     unsigned int spawned_root_game_object_array_size;
 
-    // Size of the array @ref spawned_widgets.
+    /* size of the array @ref spawned_widgets */
     unsigned int spawned_widget_count;
 
-    // Size of the array @ref spawned_sounds.
+    /* size of the array @ref spawned_sounds */
     unsigned int spawned_sound_count;
 
-    // Size of the array @ref interactable_widgets.
+    /* size of the array @ref interactable_widgets */
     unsigned int interactable_widget_count;
 
-    // `true` if the world is currently being destroyed.
+    /* `true` if the world is currently being destroyed */
     bool is_being_destroyed;
     bool some_sounds_finished;
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    // GPU time query IDs.
+    /* GPU time query IDs */
     unsigned int gl_query_draw_models;
     unsigned int gl_query_draw_particles;
     unsigned int gl_query_draw_widgets;
@@ -102,12 +103,14 @@ struct te_world {
 
 te_world*
 prv_world_create(struct te_game_manager* game_manager, const char* name) {
+    te_world* world;
+
     if (name == NULL) {
         log_error(__FILE__, __LINE__, "world name must not be NULL");
         abort();
     }
 
-    te_world* world = malloc(sizeof(te_world));
+    world = malloc(sizeof(te_world));
 
     world->game_manager = game_manager;
 
@@ -139,7 +142,7 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
         particle_renderer_create(game_manager_get_renderer(game_manager));
     world->is_being_destroyed = false;
 
-    // Copy name.
+    /* copy name */
     const size_t name_len = strlen(name);
     world->name = malloc(sizeof(char) * (name_len + 1));
     memcpy(world->name, name, name_len);
@@ -156,7 +159,7 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
     }
 #endif
 
-    // Init timers.
+    /* init timers */
     GPU_TIME_SECTION_BEGIN(world->gl_query_draw_models);
     GPU_TIME_SECTION_END;
     GPU_TIME_SECTION_BEGIN(world->gl_query_draw_particles);
@@ -170,6 +173,8 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
 
 void
 prv_world_destroy(te_world* world) {
+    unsigned int i;
+
     world->is_being_destroyed = true;
 
     if (world->scene_animation != NULL) {
@@ -178,17 +183,17 @@ prv_world_destroy(te_world* world) {
         world->scene_animation = NULL;
     }
 
-    // Despawn and destroy world objects.
+    /* despawn and destroy world objects */
     {
-        // Game objects.
-        for (unsigned int i = 0; i < world->spawned_root_game_object_count; i++) {
+        /* game objects */
+        for (i = 0; i < world->spawned_root_game_object_count; i++) {
             te_game_object_data* data = &world->spawned_root_game_objects[i];
             data->info->on_despawned(data->object);
             data->info->destroy(data->object);
         }
         free(world->spawned_root_game_objects);
 
-        // Widgets.
+        /* widgets */
         while (world->spawned_widget_count > 0) {
             te_widget* widget = world->spawned_widgets[world->spawned_widget_count - 1];
             world->spawned_widget_count -= 1;
@@ -197,14 +202,16 @@ prv_world_destroy(te_world* world) {
         }
         free(world->spawned_widgets);
         if (world->interactable_widget_count > 0) {
-            log_error(__FILE__, __LINE__, "all widgets of a world were destroyed but there are still some "
-                      "interactable widgets registered");
+            log_error(
+                __FILE__, __LINE__,
+                "all widgets of a world were destroyed but there are still some "
+                "interactable widgets registered");
             abort();
         }
         free(world->interactable_widgets);
 
-        // Sounds.
-        for (unsigned int i = 0; i < world->spawned_sound_count; i++) {
+        /* sounds */
+        for (i = 0; i < world->spawned_sound_count; i++) {
             sound_destroy(world->spawned_sounds[i]);
         }
         free(world->spawned_sounds);
@@ -254,11 +261,13 @@ prv_world_is_being_destroyed(te_world* world) {
 
 void
 prv_world_on_window_size_changed(te_world* world) {
+    unsigned int i;
+
     if (world->active_camera == NULL) {
         return;
     }
 
-    for (unsigned int i = 0; i < world->spawned_widget_count; i++) {
+    for (i = 0; i < world->spawned_widget_count; i++) {
         prv_widget_on_window_size_changed(world->spawned_widgets[i]);
     }
 }
@@ -267,8 +276,10 @@ void
 prv_world_add_root_game_object_no_notify(
     te_world* world, void* game_object, struct te_game_object_info* info,
     bool ignore_if_already_added) {
+    unsigned int i;
+
     if (ignore_if_already_added) {
-        for (unsigned int i = 0; i < world->spawned_root_game_object_count; i++) {
+        for (i = 0; i < world->spawned_root_game_object_count; i++) {
             if (world->spawned_root_game_objects[i].object == game_object) {
                 return;
             }
@@ -276,7 +287,7 @@ prv_world_add_root_game_object_no_notify(
     }
 
     if (world->spawned_root_game_object_count == world->spawned_root_game_object_array_size) {
-        // Expand array.
+        /* expand array */
         const unsigned int grow_size = 128;
         te_game_object_data* new_items = malloc(
             sizeof(te_game_object_data)
@@ -299,10 +310,11 @@ prv_world_add_root_game_object_no_notify(
 void
 prv_world_remove_root_game_object_no_notify(
     te_world* world, void* game_object, bool must_exist_in_array) {
-    // Find model.
+    /* find object */
     unsigned int idx = 0;
     bool found = false;
-    for (unsigned int i = 0; i < world->spawned_root_game_object_count; i++) {
+    unsigned int i;
+    for (i = 0; i < world->spawned_root_game_object_count; i++) {
         if (world->spawned_root_game_objects[i].object != game_object) {
             continue;
         }
@@ -313,7 +325,8 @@ prv_world_remove_root_game_object_no_notify(
     }
     if (!found) {
         if (must_exist_in_array) {
-            log_error(__FILE__, __LINE__, 
+            log_error(
+                __FILE__, __LINE__,
                 "unable to despawn the specified game object: the object was not spawned "
                 "previously or is a child object (despawn root "
                 "object to despawn child objects or detach child object from parent first, "
@@ -324,7 +337,7 @@ prv_world_remove_root_game_object_no_notify(
         }
     }
 
-    // Remove from array (shift other elements).
+    /* remove from array (shift other elements) */
     if (world->spawned_root_game_object_count > 1) {
         memmove(
             world->spawned_root_game_objects + idx,
@@ -337,15 +350,18 @@ prv_world_remove_root_game_object_no_notify(
 void
 prv_world_add_root_widget_no_notify(
     te_world* world, struct te_widget* widget, bool check_if_already_added) {
+    te_widget** new_widgets;
+    unsigned int i;
+
     if (check_if_already_added) {
-        for (unsigned int i = 0; i < world->spawned_widget_count; i++) {
+        for (i = 0; i < world->spawned_widget_count; i++) {
             if (world->spawned_widgets[i] == widget) {
                 return;
             }
         }
     }
 
-    te_widget** new_widgets = malloc(sizeof(te_widget*) * (world->spawned_widget_count + 1));
+    new_widgets = malloc(sizeof(te_widget*) * (world->spawned_widget_count + 1));
     memcpy(
         new_widgets, world->spawned_widgets, sizeof(te_widget*) * world->spawned_widget_count);
 
@@ -362,7 +378,8 @@ prv_world_remove_root_widget_no_notify(
     if (world->spawned_widget_count == 1) {
         if (world->spawned_widgets[0] != widget) {
             if (must_exist_in_array) {
-                log_error(__FILE__, __LINE__, "expected the widget to be spawned in this world");
+                log_error(
+                    __FILE__, __LINE__, "expected the widget to be spawned in this world");
                 abort();
             } else {
                 return;
@@ -384,11 +401,13 @@ prv_world_remove_root_widget_no_notify(
         }
         if (!found) {
             if (must_exist_in_array) {
-                log_error(__FILE__, __LINE__, "unable to despawn the specified widget: the widget was not spawned "
-                          "previously or is a child widget "
-                          "(despawn root widget to despawn child widgets or detach child "
-                          "widget from parent first, then despawn "
-                          "the widget)");
+                log_error(
+                    __FILE__, __LINE__,
+                    "unable to despawn the specified widget: the widget was not spawned "
+                    "previously or is a child widget "
+                    "(despawn root widget to despawn child widgets or detach child "
+                    "widget from parent first, then despawn "
+                    "the widget)");
                 abort();
             } else {
                 return;
@@ -420,8 +439,10 @@ world_set_active_camera(te_world* world, te_camera* camera) {
     }
 
     if (camera_get_world(camera) != world) {
-        log_error(__FILE__, __LINE__, "in order to make a camera active in the world you first need to spawn the "
-                  "camera in the world");
+        log_error(
+            __FILE__, __LINE__,
+            "in order to make a camera active in the world you first need to spawn the "
+            "camera in the world");
         abort();
     }
 
@@ -435,8 +456,10 @@ world_set_active_camera(te_world* world, te_camera* camera) {
 
 void
 prv_world_tick(te_world* world) {
-    // World handles "fire and forget" sounds and if they were stopped/paused (not finished) they should be destroyed.
-    for (unsigned int i = 0; i < world->spawned_sound_count; i++) {
+    unsigned int i;
+
+    /* world handles "fire and forget" sounds and if they were stopped/paused (not finished) they should be destroyed */
+    for (i = 0; i < world->spawned_sound_count; i++) {
         if (!sound_is_playing(world->spawned_sounds[i])) {
             world->some_sounds_finished = true;
             break;
@@ -444,8 +467,10 @@ prv_world_tick(te_world* world) {
     }
 
     if (world->some_sounds_finished) {
-        // For now this silly cleanup implementation is enough.
-        for (unsigned int i = 0; i < world->spawned_sound_count;) {
+        te_sound** new_sounds;
+
+        /* for now this silly cleanup implementation is enough */
+        for (i = 0; i < world->spawned_sound_count;) {
             if (!sound_is_finished_playing(world->spawned_sounds[i])
                 && sound_is_playing(world->spawned_sounds[i])) {
                 i += 1;
@@ -459,8 +484,7 @@ prv_world_tick(te_world* world) {
                 break;
             }
 
-            te_sound** new_sounds =
-                malloc(sizeof(te_sound*) * (world->spawned_sound_count - 1));
+            new_sounds = malloc(sizeof(te_sound*) * (world->spawned_sound_count - 1));
             memcpy(new_sounds, world->spawned_sounds, sizeof(te_sound*) * i);
             memcpy(
                 new_sounds + i, world->spawned_sounds + (i + 1),
@@ -472,18 +496,20 @@ prv_world_tick(te_world* world) {
             world->spawned_sound_count -= 1;
         }
 
-        // Even if some sound will end right here (and we will overwrite the flag)
-        // we will recheck all sounds again next time some sound is finished
-        // moreover we will destroy all left sounds in world destroy so it's fine for now.
+        /* even if some sound will end right here (and we will overwrite the flag)
+         * we will recheck all sounds again next time some sound is finished
+         * moreover we will destroy all left sounds in world destroy so it's fine for now */
         world->some_sounds_finished = false;
     }
 }
 
 static void
 on_sound_finished_audio_thread(void* user_data, te_sound* sound) {
+    te_world* world;
+
     (void)sound;
 
-    te_world* world = user_data;
+    world = user_data;
     if (prv_world_is_being_destroyed(world)) {
         return;
     }
@@ -529,6 +555,8 @@ world_play_fire_and_forget_sound_3d(
 
 static void
 prv_save_widget_recursive(te_config* config, te_widget* widget) {
+    unsigned int i;
+
     if (!widget_is_serialization_allowed(widget)) {
         return;
     }
@@ -544,8 +572,8 @@ prv_save_widget_recursive(te_config* config, te_widget* widget) {
         return;
     }
 
-    // Don't count non serializable children.
-    for (unsigned int i = 0; i < count; i++) {
+    /* don't count non serializable children */
+    for (i = 0; i < count; i++) {
         if (!widget_is_serialization_allowed(child_widgets[i])) {
             count -= 1;
         }
@@ -553,7 +581,7 @@ prv_save_widget_recursive(te_config* config, te_widget* widget) {
 
     config_section_set_uint(config, section_idx, CONFIG_VAR_NAME_CHILD_WIDGET_COUNT, count);
 
-    for (unsigned int i = 0; i < count; i++) {
+    for (i = 0; i < count; i++) {
         te_widget* widget = child_widgets[i];
         prv_save_widget_recursive(config, widget);
     }
@@ -613,7 +641,7 @@ world_save_to_file(te_world* world, const char* relative_path, bool write_light_
         abort();
     }
 
-    // Save game objects.
+    /* save game objects */
     if (world->spawned_root_game_object_count > 0) {
         for (unsigned int idx = 0; idx < world->spawned_root_game_object_count; idx++) {
             te_game_object_data* data = &world->spawned_root_game_objects[idx];
@@ -631,7 +659,7 @@ world_save_to_file(te_world* world, const char* relative_path, bool write_light_
                 type_info_save_to_config(type_info, config, data->object);
 
             if (data->info->type == TE_GOT_MODEL) {
-                // Special case for models.
+                /* special case for models */
                 te_model* model = data->object;
 
                 const unsigned int child_model_count = model_get_child_model_count(model);
@@ -653,7 +681,7 @@ world_save_to_file(te_world* world, const char* relative_path, bool write_light_
         }
     }
 
-    // Spawn widgets.
+    /* spawn widgets */
     if (world->spawned_widget_count > 0) {
         for (unsigned int widget_idx = 0; widget_idx < world->spawned_widget_count;
              widget_idx++) {
@@ -672,7 +700,8 @@ prv_load_child_widgets_recursive(
     te_widget* parent_widget, unsigned int parent_child_count, unsigned int* section_idx) {
     for (unsigned int child_idx = 0; child_idx < parent_child_count; child_idx++) {
         if ((*section_idx) >= section_count) {
-            log_error_fmt(__FILE__, __LINE__, 
+            log_error_fmt(
+                __FILE__, __LINE__,
                 "unexpected end of file \"%s\", have %u sections while expected to have "
                 "more",
                 relative_path, section_count);
@@ -716,10 +745,12 @@ load_vec_from_config(
     unsigned int count;
     float* array = config_section_get_float_array(config, section_idx, key, &count);
     if (count == 0) {
-        log_error_fmt(__FILE__, __LINE__, "expected to find the value \"%s\" in the config", key);
+        log_error_fmt(
+            __FILE__, __LINE__, "expected to find the value \"%s\" in the config", key);
         abort();
     } else if (count != comp_count) {
-        log_error_fmt(__FILE__, __LINE__, 
+        log_error_fmt(
+            __FILE__, __LINE__,
             "unexpected array size found in the config, expected %u but found %u", comp_count,
             count);
         abort();
@@ -746,7 +777,7 @@ world_add_from_file_with_offset(
         abort();
     }
 
-    // Load lighting data.
+    /* load lighting data */
     if (strcmp(config_section_get_name(config, section_idx), "light_params") == 0) {
         if (load_light_params) {
             te_light_params* light_params =
@@ -778,7 +809,7 @@ world_add_from_file_with_offset(
         section_idx += 1;
     }
 
-    // Load world objects.
+    /* load world objects */
     for (; section_idx < section_count;) {
         const char* id = config_section_get_name(config, section_idx);
         const te_type_info* type_info = type_database_get_type_info(id);
@@ -794,7 +825,7 @@ world_add_from_file_with_offset(
             config, section_idx, CONFIG_VAR_NAME_CHILD_WIDGET_COUNT, 0);
         section_idx += 1;
 
-        // Apply offset (only apply to root objects, child/attached objects will be affected).
+        /* apply offset (only apply to root objects, child/attached objects will be affected) */
         if (type_info->game_object_info != NULL) {
             te_game_object_info* game_obj_info = type_info->game_object_info;
             if (game_obj_info->set_position != NULL && game_obj_info->get_position != NULL) {
@@ -811,7 +842,8 @@ world_add_from_file_with_offset(
 
             if (has_attached_camera) {
                 if (section_idx >= section_count) {
-                    log_error_fmt(__FILE__, __LINE__, 
+                    log_error_fmt(
+                        __FILE__, __LINE__,
                         "unexpected end of file \"%s\", have %u sections while expected to "
                         "have more",
                         relative_path, section_count);
@@ -825,7 +857,8 @@ world_add_from_file_with_offset(
 
             for (unsigned int child_idx = 0; child_idx < child_model_count; child_idx++) {
                 if (section_idx >= section_count) {
-                    log_error_fmt(__FILE__, __LINE__, 
+                    log_error_fmt(
+                        __FILE__, __LINE__,
                         "unexpected end of file \"%s\", have %u sections while expected to "
                         "have more",
                         relative_path, section_count);
@@ -838,8 +871,10 @@ world_add_from_file_with_offset(
             }
         } else if (child_widget_count > 0) {
             if (type_info->get_widget == NULL) {
-                log_error(__FILE__, __LINE__, "found widget section that specified child count but the type does "
-                          "not have widget conversion function set");
+                log_error(
+                    __FILE__, __LINE__,
+                    "found widget section that specified child count but the type does "
+                    "not have widget conversion function set");
                 abort();
             }
             te_widget* widget = type_info->get_widget(obj);
@@ -882,11 +917,11 @@ world_get_cursor_relative_pos(te_world* world, vec2 cursor_pos) {
     if (cursor_pos[0] < viewport[0] || cursor_pos[1] < viewport[1]
         || cursor_pos[0] > viewport[0] + viewport[2]
         || cursor_pos[1] > viewport[1] + viewport[3]) {
-        // Outside of the game viewport.
+        /* outside of the game viewport */
         return false;
     }
 
-    // Remap to viewport.
+    /* remap to viewport */
     glm_vec2_sub(cursor_pos, viewport, cursor_pos);
     glm_vec2_div(cursor_pos, &viewport[2], cursor_pos);
 
@@ -946,9 +981,11 @@ world_spawn_game_object(te_world* world, void* game_object, te_game_object_info*
             log_error(__FILE__, __LINE__, "the game object is already spawned in this world");
             abort();
         } else {
-            log_error(__FILE__, __LINE__, "the specified game object cannot be spawned in this world because the "
-                      "game object "
-                      "must be first despawned from the world it currently resides in");
+            log_error(
+                __FILE__, __LINE__,
+                "the specified game object cannot be spawned in this world because the "
+                "game object "
+                "must be first despawned from the world it currently resides in");
             abort();
         }
     }
@@ -966,8 +1003,10 @@ void
 world_despawn_game_object(te_world* world, void* game_object, te_game_object_info* info) {
     te_world* obj_world = info->get_world(game_object);
     if (obj_world != world) {
-        log_error(__FILE__, __LINE__, "the specified model cannot be despawned from this world as it's not "
-                  "spawned in this world");
+        log_error(
+            __FILE__, __LINE__,
+            "the specified model cannot be despawned from this world as it's not "
+            "spawned in this world");
         abort();
     }
 
@@ -988,7 +1027,8 @@ world_spawn_widget(te_world* world, struct te_widget* widget) {
             log_error(__FILE__, __LINE__, "the widget is already spawned in this world");
             abort();
         } else {
-            log_error(__FILE__, __LINE__, 
+            log_error(
+                __FILE__, __LINE__,
                 "the specified widget cannot be spawned in this world because the widget "
                 "must be first despawned from the world it currently resides in");
             abort();
@@ -1006,8 +1046,10 @@ world_spawn_widget(te_world* world, struct te_widget* widget) {
 void
 world_despawn_widget(te_world* world, te_widget* widget) {
     if (widget_get_world(widget) != world) {
-        log_error(__FILE__, __LINE__, "the specified widget cannot be despawned from this world as it's not "
-                  "spawned in this world");
+        log_error(
+            __FILE__, __LINE__,
+            "the specified widget cannot be despawned from this world as it's not "
+            "spawned in this world");
         abort();
     }
 
@@ -1093,7 +1135,7 @@ prv_world_on_mouse_cursor_captured(te_world* world, bool captured, float cursor_
 
 void
 prv_world_on_mouse_moved(te_world* world, float cursor_pos[2]) {
-    // Notify widgets.
+    /* notify widgets */
     te_window* window = game_manager_get_window(world->game_manager);
     if (window_is_mouse_captured(window)) {
         return;
@@ -1139,7 +1181,7 @@ prv_world_on_mouse_moved(te_world* world, float cursor_pos[2]) {
 bool
 prv_world_on_mouse_button_pressed(
     te_world* world, enum te_mouse_button button, float cursor_pos[2]) {
-    // Notify widgets.
+    /* notify widgets */
     te_window* window = game_manager_get_window(world->game_manager);
     if (window_is_mouse_captured(window)) {
         return false;
@@ -1168,7 +1210,7 @@ prv_world_on_mouse_button_pressed(
 bool
 prv_world_on_mouse_button_released(
     te_world* world, enum te_mouse_button button, float cursor_pos[2]) {
-    // Notify widgets.
+    /* notify widgets */
     te_window* window = game_manager_get_window(world->game_manager);
     if (window_is_mouse_captured(window)) {
         return false;
@@ -1206,7 +1248,7 @@ prv_world_on_keyboard_input_text(te_world* world, const char* text) {
 
 void
 prv_world_on_keyboard_input(te_world* world, enum te_keyboard_button button, bool is_repeat) {
-    // Don't care if repeat or not for UI.
+    /* don't care if repeat or not for UI */
     (void)is_repeat;
 
     if (world->hovered_interactable_widget == NULL) {

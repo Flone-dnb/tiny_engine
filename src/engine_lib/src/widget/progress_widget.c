@@ -10,24 +10,24 @@
 struct te_progress_widget {
     te_widget* widget;
 
-    // Always valid.
+    /* always valid */
     te_rect_widget* background_rect;
     te_rect_widget* foreground_rect;
 
     vec4 background_color;
     vec4 foreground_color;
 
-    // NULL if was not set.
+    /* NULL if was not set */
     char* background_tex_relative_path;
     char* foreground_tex_relative_path;
 
-    // Current state of the progress widget in range [0.0; 1.0].
+    /* current state of the progress widget in range [0.0; 1.0] */
     float value;
 
     bool is_progress_widget_destroy;
 };
 
-// Widget callbacks:
+/* widget callbacks */
 static void prv_progress_widget_on_before_base_destroyed(void* this);
 static void prv_progress_widget_on_after_spawned(void* this);
 static void prv_progress_widget_on_before_despawned(void* this);
@@ -75,7 +75,7 @@ void
 progress_widget_destroy(te_progress_widget* progress_widget) {
     progress_widget->is_progress_widget_destroy = true;
 
-    if (progress_widget->widget != NULL) { // may be null if we got here from base destroy
+    if (progress_widget->widget != NULL) { /* may be null if we got here from base destroy */
         widget_destroy(progress_widget->widget);
     }
 
@@ -91,8 +91,8 @@ prv_progress_widget_on_before_base_destroyed(void* this) {
         return;
     }
 
-    // Destroy was called on the base (widget) component, possibly due to
-    // parent being destroyed, cleanup our data.
+    /* destroy was called on the base (widget) component, possibly due to
+     * parent being destroyed, cleanup our data */
     progress_widget->widget = NULL;
     progress_widget_destroy(progress_widget);
 }
@@ -192,7 +192,7 @@ static void
 prv_progress_widget_on_after_spawned(void* this) {
     te_progress_widget* progress_widget = this;
 
-    // Self check:
+    /* self check */
     if (widget_get_child_widget_count(progress_widget->widget) != 2) {
         log_error(__FILE__, __LINE__, "unexpected child widget count on a widget");
         abort();
@@ -218,29 +218,29 @@ static void
 prv_progress_widget_on_before_despawned(void* this) {
     te_progress_widget* progress_widget = this;
 
-    // Self check:
+    /* self check */
     if (widget_get_child_widget_count(progress_widget->widget) != 2) {
         log_error(__FILE__, __LINE__, "unexpected child widget count on a widget");
         abort();
     }
 }
 
-static inline void
+static void
 prv_progress_widget_set_position(te_progress_widget* progress_widget, vec2 pos) {
     widget_set_relative_position(progress_widget->widget, pos);
 }
 
-static inline void
+static void
 prv_progress_widget_get_position(te_progress_widget* progress_widget, vec2 out) {
     widget_get_relative_position(progress_widget->widget, out);
 }
 
-static inline void
+static void
 prv_progress_widget_set_size(te_progress_widget* progress_widget, vec2 size) {
     widget_set_relative_size(progress_widget->widget, size);
 }
 
-static inline void
+static void
 prv_progress_widget_get_size(te_progress_widget* progress_widget, vec2 out) {
     widget_get_relative_size(progress_widget->widget, out);
 }

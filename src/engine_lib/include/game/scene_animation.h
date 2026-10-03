@@ -5,9 +5,9 @@
 
 struct te_world;
 
-// Scene animation animates world objects. It's generally created not using the code but using the editor,
-// there's a special scene animation editor which allows creating, editing and playing such animations.
-// Create or load scene animation using the world functions.
+/* scene animation animates world objects, it's generally created not using the code but using the editor,
+ * there's a special scene animation editor which allows creating, editing and playing such animations
+ * create or load scene animation using the world functions */
 typedef struct te_scene_animation te_scene_animation;
 
 enum te_scene_animation_interpolation_type {
@@ -15,10 +15,10 @@ enum te_scene_animation_interpolation_type {
     TE_SAIT_LINEAR,
     TE_SAIT_CUBIC_SPLINE,
 
-    TE_SAIT_COUNT, // <- marks the size of this enum
+    TE_SAIT_COUNT /* marks the size of this enum */
 };
 
-// Supported keyframe types:
+/* supported keyframe types: */
 #define SCENE_ANIM_KEYFRAME_TYPE(type, name)                                                  \
     typedef struct te_scene_animation_keyframe_##name {                                       \
         enum te_scene_animation_interpolation_type interpolation;                             \
@@ -43,17 +43,17 @@ float scene_animation_get_current_time(te_scene_animation* scene_animation);
 
 void scene_animation_save(te_scene_animation* scene_animation, const char* relative_path);
 
-// Returns NULL if not loaded from a file (or was not saved to a file previously).
-// Do not delete returned string.
+/* returns NULL if not loaded from a file (or was not saved to a file previously)
+ * do not delete returned string */
 const char* scene_animation_get_relative_path(te_scene_animation* scene_animation);
 
-// Returns names of all objects animated in this scene animation.
-// You must free the array pointer but not the individual strings.
+/* returns names of all objects animated in this scene animation
+ * you must free the array pointer but not the individual strings */
 char**
 scene_animation_get_object_names(te_scene_animation* scene_animation, unsigned int* out_count);
 
-// Returns names of all variables (of the object) animated in this scene animation.
-// You must free the array pointer but not the individual strings.
+/* returns names of all variables (of the object) animated in this scene animation
+ * you must free the array pointer but not the individual strings */
 char** scene_animation_get_bool_variable_names(
     te_scene_animation* scene_animation, const char* object_name, unsigned int* out_count);
 char** scene_animation_get_uint_variable_names(
@@ -78,10 +78,10 @@ SCENE_ANIM_ADD_KEYFRAME_FUNC(vec2, vec2)
 SCENE_ANIM_ADD_KEYFRAME_FUNC(vec3, vec3)
 SCENE_ANIM_ADD_KEYFRAME_FUNC(vec4, vec4)
 
-// Do not delete returned pointer, valid until keyframes are not added/changed/removed from the animation.
-// Do not modify properties of the returned keyframes (such as time) instead to modify a keyframe's time
-// remove the keyframe and add it again with the new time.
-// Note: if you really want to you can change non-time properties of a keyframe, it should be safe.
+/* do not delete returned pointer, valid until keyframes are not added/changed/removed from the animation
+ * do not modify properties of the returned keyframes (such as time) instead to modify a keyframe's time
+ * remove the keyframe and add it again with the new time
+ * note: if you really want to you can change non-time properties of a keyframe, it should be safe */
 #define SCENE_ANIM_GET_KEYFRAMES(var_type)                                                    \
     const te_scene_animation_keyframe_##var_type* scene_animation_get_keyframes_##var_type(   \
         te_scene_animation* scene_animation, const char* object_name,                         \
@@ -93,7 +93,7 @@ SCENE_ANIM_GET_KEYFRAMES(vec2)
 SCENE_ANIM_GET_KEYFRAMES(vec3)
 SCENE_ANIM_GET_KEYFRAMES(vec4)
 
-// Removes all keyframes (animation) of the specified variable.
+/* removes all keyframes (animation) of the specified variable */
 #define SCENE_ANIM_REMOVE_ALL_KEYFRAMES(var_type)                                             \
     void scene_animation_remove_all_keyframes_##var_type(                                     \
         te_scene_animation* scene_animation, const char* object_name,                         \
@@ -105,12 +105,12 @@ SCENE_ANIM_REMOVE_ALL_KEYFRAMES(vec2)
 SCENE_ANIM_REMOVE_ALL_KEYFRAMES(vec3)
 SCENE_ANIM_REMOVE_ALL_KEYFRAMES(vec4)
 
-// Removes a keyframe (finds the keyframe automatically).
+/* removes a keyframe (finds the keyframe automatically) */
 void scene_animation_remove_keyframe(
     te_scene_animation* scene_animation, const char* object_name, const char* variable_name,
     void* keyframe);
 
-// Removes a keyframe (type is specified explicitly).
+/* removes a keyframe (type is specified explicitly) */
 #define SCENE_ANIM_REMOVE_KEYFRAME(var_type)                                                  \
     void scene_animation_remove_keyframe_##var_type(                                          \
         te_scene_animation* scene_animation, const char* object_name,                         \
@@ -122,12 +122,12 @@ SCENE_ANIM_REMOVE_KEYFRAME(vec2)
 SCENE_ANIM_REMOVE_KEYFRAME(vec3)
 SCENE_ANIM_REMOVE_KEYFRAME(vec4)
 
-// ------------------------------------------------------------------------------------------------
-//                                       PRIVATE API
-// ------------------------------------------------------------------------------------------------
+/* ------------------------------------------------------------------------------------------------
+ *                                       PRIVATE API
+ * ------------------------------------------------------------------------------------------------ */
 
-// World is supposed to create/load scene animations.
-// Path can be NULL to create a new animation instead of loading from disk.
+/* world is supposed to create/load scene animations
+ * path can be NULL to create a new animation instead of loading from disk */
 te_scene_animation*
 prv_scene_animation_create(struct te_world* world, const char* relative_path_to_load);
 void prv_scene_animation_destroy(te_scene_animation* scene_animation);

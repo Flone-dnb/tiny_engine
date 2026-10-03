@@ -10,41 +10,41 @@ struct te_text_widget;
 te_text_edit_widget* text_edit_widget_create(void);
 void text_edit_widget_destroy(te_text_edit_widget* text_edit_widget);
 
-// Returns component used to adjust common widget properties (pos, size)
-// and attach widget to other widgets.
-// You can destroy returned object and it will cause this widget to be destroyed.
+/* returns component used to adjust common widget properties (pos, size)
+ * and attach widget to other widgets
+ * you can destroy returned object and it will cause this widget to be destroyed */
 struct te_widget* text_edit_widget_get_widget(te_text_edit_widget* text_edit_widget);
 
-// Sets a callback that will be triggered after the text was changed by user input.
+/* sets a callback that will be triggered after the text was changed by user input */
 void text_edit_widget_set_on_text_changed(
     te_text_edit_widget* text_edit_widget,
     void (*on_text_changed)(
         te_text_edit_widget* text_edit_widget, wchar_t* new_text, unsigned int strlen));
 
-// Sets a callback that will be triggered after the Enter key was pressed.
+/* sets a callback that will be triggered after the Enter key was pressed */
 void text_edit_widget_set_on_text_accepted(
     te_text_edit_widget* text_edit_widget,
     void (*on_text_accepted)(te_text_edit_widget* text_edit_widget));
 
-// Text will be copied to the widget's data.
+/* text will be copied to the widget's data */
 void text_edit_widget_set_text(te_text_edit_widget* text_edit_widget, const wchar_t* text);
-// Do not free returned string pointer, valid while the text is not changed and the widget is not destroyed.
+/* do not free returned string pointer, valid while the text is not changed and the widget is not destroyed */
 const wchar_t*
 text_edit_widget_get_text(te_text_edit_widget* text_edit_widget, unsigned int* text_len);
 
-// Moves the ownership of the text to the widget.
+/* moves the ownership of the text to the widget */
 void text_edit_widget_set_text_own(
     te_text_edit_widget* text_edit_widget, wchar_t* text, unsigned int strlen);
 
-// Sets height of the text in range [0.0; 1.0] relative to window height.
+/* sets height of the text in range [0.0; 1.0] relative to window height */
 void text_edit_widget_set_text_height(te_text_edit_widget* text_edit_widget, float height);
 float text_edit_widget_get_text_height(te_text_edit_widget* text_edit_widget);
 
-// Sets RGBA color of the text.
+/* sets RGBA color of the text */
 void text_edit_widget_set_color(te_text_edit_widget* text_edit_widget, vec4 color);
 void text_edit_widget_get_color(te_text_edit_widget* text_edit_widget, vec4 out);
 
-// Returns unique ID of this type in the type database.
+/* returns unique ID of this type in the type database */
 const char* text_edit_widget_get_type_id(void);
-// Registers the type in the type database.
+/* registers the type in the type database */
 void text_edit_widget_register_type(void);

@@ -22,22 +22,22 @@ typedef struct te_type_database {
     struct hashmap* types;
 } te_type_database;
 
-// Static for ease of access.
+/* static for ease of access */
 static te_type_database type_database;
 
-// Command hash for hashmap.
+/* command hash for hashmap */
 static uint64_t
 prv_type_info_hash(const void* item, uint64_t seed0, uint64_t seed1) {
     const te_type_info* const* info = item;
     return hashmap_sip((*info)->id, strlen((*info)->id), seed0, seed1);
 }
 
-// Command compare for hashmap.
+/* command compare for hashmap */
 static int
 prv_type_info_compare(const void* a, const void* b, void* udata) {
-    (void)udata;
     const te_type_info* const* info1 = a;
     const te_type_info* const* info2 = b;
+    (void)udata;
     return strcmp((*info1)->id, (*info2)->id);
 }
 
@@ -46,7 +46,7 @@ prv_type_database_init(void) {
     type_database.types = hashmap_new(
         sizeof(te_type_info*), 4, 0, 0, prv_type_info_hash, prv_type_info_compare, NULL, NULL);
 
-    // Register engine types.
+    /* register engine types */
     model_register_type();
     camera_register_type();
     particle_emitter_register_type();
@@ -82,6 +82,8 @@ type_info_create(
     info->variables = NULL;
     info->variable_count = 0;
 
+    /* NOTE: add new variables to type_info_save_to_config and type_info_load_from_config */
+
     info->bool_setters = NULL;
     info->bool_getters = NULL;
     info->bool_count = 0;
@@ -114,7 +116,7 @@ type_info_create(
     info->wstring_getters = NULL;
     info->wstring_count = 0;
 
-    // NOTE: add new variables to type_info_save_to_config and type_info_load_from_config
+    /* NOTE: add new variables to type_info_save_to_config and type_info_load_from_config */
 
     return info;
 }
@@ -156,7 +158,7 @@ prv_type_database_deinit(void) {
 #define TYPE_INFO_ALLOC_VARIABLE(                                                             \
     info, var_name, var_type, type_var_count, setters, getters, new_setter, new_getter)       \
     if (info->variable_count == 0xffff) {                                                     \
-        log_error(__FILE__, __LINE__, "reached variable limit");                                                  \
+        log_error(__FILE__, __LINE__, "reached variable limit");                              \
         abort();                                                                              \
     }                                                                                         \
     te_variable_info* new_variables =                                                         \
@@ -371,7 +373,8 @@ type_info_load_from_config(
                 float* val = config_section_get_float_array(
                     config, section_idx, var_info->name, &count);
                 if (count != 2) {
-                    log_warn_fmt(__FILE__, __LINE__, 
+                    log_warn_fmt(
+                        __FILE__, __LINE__,
                         "variable \"%s\" of section with index %u has unexpected array size "
                         "in the config, expected 2 got %u, "
                         "ignoring this variable",
@@ -386,7 +389,8 @@ type_info_load_from_config(
                 float* val = config_section_get_float_array(
                     config, section_idx, var_info->name, &count);
                 if (count != 3) {
-                    log_warn_fmt(__FILE__, __LINE__, 
+                    log_warn_fmt(
+                        __FILE__, __LINE__,
                         "variable \"%s\" of section with index %u has unexpected array size "
                         "in the config, expected 3 got %u, "
                         "ignoring this variable",
@@ -401,7 +405,8 @@ type_info_load_from_config(
                 float* val = config_section_get_float_array(
                     config, section_idx, var_info->name, &count);
                 if (count != 4) {
-                    log_warn_fmt(__FILE__, __LINE__, 
+                    log_warn_fmt(
+                        __FILE__, __LINE__,
                         "variable \"%s\" of section with index %u has unexpected array size "
                         "in the config, expected 4 got %u, "
                         "ignoring this variable",
@@ -418,7 +423,9 @@ type_info_load_from_config(
 void
 type_database_register_type(te_type_info* info) {
     if (type_database.types == NULL) {
-        log_error(__FILE__, __LINE__, "type database is not initialized yet or was already deinitialized");
+        log_error(
+            __FILE__, __LINE__,
+            "type database is not initialized yet or was already deinitialized");
         abort();
     }
 
@@ -438,7 +445,9 @@ type_database_get_type_info(const char* id) {
     }
 
     if (type_database.types == NULL) {
-        log_error(__FILE__, __LINE__, "type database is not initialized yet or was already deinitialized");
+        log_error(
+            __FILE__, __LINE__,
+            "type database is not initialized yet or was already deinitialized");
         abort();
     }
 

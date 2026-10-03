@@ -7,7 +7,7 @@
 #include <game/skeleton.h>
 #include <io/log.h>
 #include <io/filesystem.h>
-#include <math_funcs.h>
+#include <math/math_funcs.h>
 #define CGLTF_IMPLEMENTATION
 #include <cgltf/cgltf.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION

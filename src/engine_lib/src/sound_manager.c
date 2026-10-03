@@ -10,7 +10,7 @@ struct te_sound_manager {
 };
 
 struct te_sound {
-    // NULL if not set.
+    /* NULL if not set */
     void (*on_finished)(void* user_data, te_sound* sound);
     void* user_data;
 
@@ -55,8 +55,9 @@ sound_create(te_sound_manager* sound_manager, const char* relative_path) {
         &sound_manager->ma_engine, path_to_sound,
         MA_SOUND_FLAG_STREAM | MA_SOUND_FLAG_NO_SPATIALIZATION, NULL, NULL, &sound->ma_sound);
     if (result != MA_SUCCESS) {
-        log_error_fmt(__FILE__, __LINE__, 
-            "failed to initialize sound from file %s, error: %i", path_to_sound, result);
+        log_error_fmt(
+            __FILE__, __LINE__, "failed to initialize sound from file %s, error: %i",
+            path_to_sound, result);
         abort();
     }
 
@@ -117,13 +118,13 @@ sound_set_pitch(te_sound* sound, float pitch) {
 
 bool
 sound_is_finished_playing(te_sound* sound) {
-    return ma_sound_at_end(&sound->ma_sound);
+    return (bool)ma_sound_at_end(&sound->ma_sound);
 }
 
 void
 sound_set_3d_position(te_sound* sound, vec3 pos) {
     ma_sound_set_spatialization_enabled(
-        &sound->ma_sound, 1); // because we disable it by default
+        &sound->ma_sound, 1); /* because we disable it by default */
 
     ma_sound_set_position(&sound->ma_sound, pos[0], pos[1], pos[2]);
 }
@@ -131,7 +132,7 @@ sound_set_3d_position(te_sound* sound, vec3 pos) {
 void
 sound_set_distance(te_sound* sound, float min, float max) {
     ma_sound_set_spatialization_enabled(
-        &sound->ma_sound, 1); // because we disable it by default
+        &sound->ma_sound, 1); /* because we disable it by default */
 
     ma_sound_set_min_distance(&sound->ma_sound, min);
     ma_sound_set_max_distance(&sound->ma_sound, max);
@@ -161,7 +162,8 @@ prv_sound_set_on_finished_callback_audio_thread(
     sound->on_finished = on_finished;
     ma_result result = ma_sound_set_end_callback(&sound->ma_sound, on_sound_end, sound);
     if (result != MA_SUCCESS) {
-        log_error_fmt(__FILE__, __LINE__, "failed to set sound end callback, error: %i", result);
+        log_error_fmt(
+            __FILE__, __LINE__, "failed to set sound end callback, error: %i", result);
         abort();
     }
 }

@@ -5,7 +5,8 @@
 #include <string.h>
 #include <game/model.h>
 #include <game/game_object_info.h>
-#include <math_funcs.h>
+#include <math/math_funcs.h>
+#include <io/log.h>
 #include <misc/globals.h>
 #include <shape/frustum_shape.h>
 #include <type_database.h>
@@ -13,72 +14,57 @@
 #include <world.h>
 
 struct te_camera {
-    // May be outdated, see @ref is_view_mat_outdated and @ref is_proj_mat_outdated.
+    /* may be outdated, see @ref is_view_mat_outdated and @ref is_proj_mat_outdated */
     te_frustum_shape frustum;
 
-    // Not NULL if spawned. Do not free/destroy this pointer.
+    /* NULL if despawned, do not free/destroy this pointer */
     struct te_world* world;
 
-    // NULL if not attached.
+    /* NULL if not attached */
     te_model* parent_model;
 
-    // NULL if not set.
+    /* NULL if not set */
     char* name;
 
-    // NULL if not set. Custom callback.
+    /* NULL if not set, user callback */
     void (*custom_on_before_destroyed)(te_camera*);
     void* custom_ptr;
     unsigned int custom_value;
 
 #if defined(ENGINE_EDITOR)
-    // Model to visualize the camera in the editor.
+    /* model to visualize the camera in the editor */
     te_model* editor_model;
     bool is_editor_model_visible;
 #endif
 
-    // View matrix. May be outdated, see @ref is_view_mat_outdated.
+    /* may be outdated, see @ref is_view_mat_outdated and @ref is_proj_mat_outdated */
     mat4 view_mat;
-
-    // Projection matrix. May be outdated, see @ref is_proj_mat_outdated.
     mat4 proj_mat;
-
-    // @ref view_mat and @ref proj_mat multiplied. May be outdated.
     mat4 view_proj_mat;
 
-    // Position of the top-left corner of the viewport rectangle in XY and size in ZW (in range [0; 1]).
+    /* position of the top-left corner of the viewport rectangle in XY and size in ZW (in range [0; 1]) */
     vec4 viewport;
 
     vec3 position;
+    vec3 rotation; /* in degrees */
 
-    // Rotation in degrees.
-    vec3 rotation;
-
-    // Camera's forward direction. May be outdated, see @ref is_directions_outdated.
+    /* camera's direction, may be outdated, see @ref is_directions_outdated */
     vec3 forward;
-
-    // Camera's right direction. May be outdated, see @ref is_directions_outdated.
     vec3 right;
-
-    // Camera's up direction. May be outdated, see @ref is_directions_outdated.
     vec3 up;
 
     float near_clip;
     float far_clip;
 
-    // Render target size (in pixels).
+    /* render target size (in pixels) */
     unsigned int render_width;
     unsigned int render_height;
 
-    // Vertical FOV in degrees.
+    /* vertical FOV in degrees */
     unsigned char vertical_fov;
 
-    // `true` @ref view_mat contains outdated value and needs to be recalculated.
     bool is_view_mat_outdated;
-
-    // `true` if forward, right and up directions are outdated and need to be recalculated.
     bool is_directions_outdated;
-
-    // `true` if @ref proj_mat contains outdated value and needs to be recalculated.
     bool is_proj_mat_outdated;
 
     bool is_serialization_allowed;
@@ -88,7 +74,7 @@ static void on_spawned(te_camera* camera, struct te_world* world);
 static void on_despawned(te_camera* camera);
 
 te_camera*
-camera_create() {
+camera_create(void) {
     te_camera* camera = malloc(sizeof(te_camera));
 
     camera->world = NULL;
@@ -214,7 +200,7 @@ on_despawned(te_camera* camera) {
 }
 
 te_game_object_info*
-camera_get_game_object_info() {
+camera_get_game_object_info(void) {
     return type_database_get_type_info(camera_get_type_id())->game_object_info;
 }
 
@@ -261,14 +247,16 @@ type_despawn(te_world* world, te_camera* camera) {
     if (camera->parent_model != NULL) {
         model_attach_camera(
             camera->parent_model,
-            NULL); // make camera to be in the array of root world objects
+            NULL); /* make camera to be in the array of root world objects */
     }
     world_despawn_game_object(
-        camera->world, camera, camera_get_game_object_info()); // despawn root world object
+        camera->world, camera, camera_get_game_object_info()); /* despawn root world object */
 }
 
 void
 camera_register_type(void) {
+    te_type_info* info;
+
     te_game_object_info* game_object_info = malloc(sizeof(te_game_object_info));
     game_object_info->type_id = camera_get_type_id();
     game_object_info->type = TE_GOT_CAMERA;
@@ -280,7 +268,7 @@ camera_register_type(void) {
     game_object_info->on_despawned = on_despawned;
     game_object_info->destroy = camera_destroy;
 
-    te_type_info* info = type_info_create(
+    info = type_info_create(
         camera_get_type_id(), camera_create, camera_destroy, type_spawn, type_despawn, NULL,
         game_object_info, camera_is_serialization_allowed);
 
@@ -350,14 +338,14 @@ camera_get_position(te_camera* camera, vec3 out) {
 
 void
 camera_get_world_position(te_camera* camera, vec3 out) {
-    // Get camera world pos.
+    /* get camera world pos */
     vec4 camera_pos;
     camera_pos[3] = 1.0f;
     glm_vec3_copy(camera->position, camera_pos);
     if (camera->parent_model != NULL) {
         mat4* world_mat = prv_model_get_world_mat_tmp(camera->parent_model);
 
-        // Ignore scale.
+        /* ignore scale */
         mat4 world;
         glm_mat4_copy(*world_mat, world);
         math_normalize_safely(world[0]);
@@ -403,7 +391,7 @@ recalculate_directions(te_camera* camera) {
     if (camera->parent_model != NULL) {
         mat4* world_mat = prv_model_get_world_mat_tmp(camera->parent_model);
 
-        // Ignore scale.
+        /* ignore scale */
         mat4 world;
         glm_mat4_copy(*world_mat, world);
         math_normalize_safely(world[0]);
@@ -496,29 +484,29 @@ camera_calc_cursor_world_dir(te_camera* camera, vec2 cursor_relative_pos, vec3 o
         || cursor_relative_pos[1] < camera->viewport[1]
         || cursor_relative_pos[0] > camera->viewport[0] + camera->viewport[2]
         || cursor_relative_pos[1] > camera->viewport[1] + camera->viewport[3]) {
-        // Outside of the game viewport.
+        /* outside of the game's viewport */
         glm_vec3_zero(out);
         return false;
     }
 
-    // Remap to viewport.
+    /* remap to viewport */
     glm_vec2_sub(cursor_relative_pos, camera->viewport, cursor_relative_pos);
     glm_vec2_div(cursor_relative_pos, &camera->viewport[2], cursor_relative_pos);
 
-    // Convert mouse pos to NDC [-1; 1] space.
+    /* convert mouse pos to NDC [-1; 1] space */
     vec2 ndc;
     glm_vec2_mul(cursor_relative_pos, (vec2){2.0f, 2.0f}, ndc);
-    ndc[1] = 2.0f - ndc[1]; // flip Y
+    ndc[1] = 2.0f - ndc[1]; /* flip Y */
     glm_vec2_sub(ndc, (vec2){1.0f, 1.0f}, ndc);
 
-    // Construct a point in clip space.
+    /* construct a point in clip space */
     vec4 camera_ray;
     camera_ray[0] = ndc[0];
     camera_ray[1] = ndc[1];
-    camera_ray[2] = -1.0f; // forward axis in clip space
+    camera_ray[2] = -1.0f; /* forward axis in clip space */
     camera_ray[3] = 1.0f;
 
-    // Apply inverse view/proj matrix.
+    /* apply inverse view/proj matrix */
     mat4* view_proj_mat = camera_get_view_proj_mat(camera);
     mat4 inv_view_proj_mat;
     glm_mat4_inv(*view_proj_mat, inv_view_proj_mat);
@@ -528,7 +516,7 @@ camera_calc_cursor_world_dir(te_camera* camera, vec2 cursor_relative_pos, vec3 o
     vec3 camera_pos;
     camera_get_world_position(camera, camera_pos);
 
-    // Get direction from camera pos.
+    /* get direction from camera pos */
     glm_vec3_sub(camera_ray, camera_pos, camera_ray);
     glm_vec3_normalize(camera_ray);
 
@@ -551,7 +539,9 @@ void
 prv_camera_recalc_frustum(te_camera* camera) {
 #if defined(DEBUG)
     if (camera->is_directions_outdated) {
-        log_error(__FILE__, __LINE__, "expected directions to be up to date to recalculate camera's frustum");
+        log_error(
+            __FILE__, __LINE__,
+            "expected directions to be up to date to recalculate camera's frustum");
         abort();
     }
 #endif
@@ -586,7 +576,9 @@ make_sure_view_proj_mat_updated(te_camera* camera) {
 
 #if defined(DEBUG)
         if (camera->render_width == 0 || camera->render_height == 0) {
-            log_error(__FILE__, __LINE__, "expected render target width/height to be set at this point");
+            log_error(
+                __FILE__, __LINE__,
+                "expected render target width/height to be set at this point");
             abort();
         }
 #endif
@@ -630,12 +622,13 @@ struct te_frustum_shape*
 camera_get_frustum(te_camera* camera) {
 #if defined(DEBUG)
     if (camera->render_width == 0 || camera->render_height == 0) {
-        log_error(__FILE__, __LINE__, "expected render target width/height to be set at this point");
+        log_error(
+            __FILE__, __LINE__, "expected render target width/height to be set at this point");
         abort();
     }
 #endif
 
-    // This makes sure the frustum is recalculated if needed.
+    /* this makes sure the frustum is recalculated if needed */
     (void)camera_get_view_proj_mat(camera);
 
     return &camera->frustum;

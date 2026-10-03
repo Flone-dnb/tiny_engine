@@ -12,11 +12,11 @@
 struct te_slider_widget {
     te_widget* widget;
 
-    // Slider elements.
+    /* slider elements */
     te_rect_widget* background_rect;
     te_rect_widget* handle_rect;
 
-    // May be NULL if not set.
+    /* may be NULL if not set */
     void (*on_value_changed)(te_slider_widget* slider_widget, float new_value);
 
     vec4 background_color;
@@ -25,22 +25,22 @@ struct te_slider_widget {
     char* background_tex_relative_path;
     char* handle_tex_relative_path;
 
-    // Slider value in range [0.0; 1.0].
+    /* slider value in range [0.0; 1.0] */
     float value;
     float step_size;
 
-    // `true` if entered the "destroy" function.
+    /* `true` if entered the "destroy" function */
     bool is_slider_widget_destroy;
 
     bool is_handle_grabbed;
 };
 
-// Widget callbacks:
+/* widget callbacks */
 static void prv_slider_widget_on_before_base_destroyed(void* this);
 static void prv_slider_widget_on_after_spawned(void* this);
 static void prv_slider_widget_on_before_despawned(void* this);
 
-// Interactable callbacks:
+/* interactable callbacks */
 static void prv_slider_widget_on_mouse_button_pressed(
     void* this, enum te_mouse_button button, vec2 cursor_pos);
 static void prv_slider_widget_on_mouse_button_released(
@@ -102,7 +102,7 @@ void
 slider_widget_destroy(te_slider_widget* slider_widget) {
     slider_widget->is_slider_widget_destroy = true;
 
-    if (slider_widget->widget != NULL) { // may be null if we got here from base destroy
+    if (slider_widget->widget != NULL) { /* may be null if we got here from base destroy */
         widget_destroy(slider_widget->widget);
     }
 
@@ -118,8 +118,8 @@ prv_slider_widget_on_before_base_destroyed(void* this) {
         return;
     }
 
-    // Destroy was called on the base (widget) component, possibly due to
-    // parent being destroyed, cleanup our data.
+    /* destroy was called on the base (widget) component, possibly due to
+     * parent being destroyed, cleanup our data */
     slider_widget->widget = NULL;
     slider_widget_destroy(slider_widget);
 }
@@ -143,7 +143,7 @@ slider_widget_set_on_value_changed(
 
 void
 slider_widget_set_value(te_slider_widget* slider_widget, float value) {
-    slider_widget->value = value; // ignore step size here
+    slider_widget->value = value; /* ignore step size here */
 
     if (widget_get_world(slider_widget->widget) != NULL) {
         widget_set_relative_position(
@@ -160,7 +160,7 @@ slider_widget_get_value(te_slider_widget* slider_widget) {
 void
 slider_widget_set_step_size(te_slider_widget* slider_widget, float step_size) {
     slider_widget->step_size = step_size;
-    // don't update value here
+    /* don't update value here */
 }
 
 float
@@ -244,7 +244,7 @@ static void
 prv_slider_widget_on_after_spawned(void* this) {
     te_slider_widget* slider_widget = this;
 
-    // Self check:
+    /* self check */
     if (widget_get_child_widget_count(slider_widget->widget) != 2) {
         log_error(__FILE__, __LINE__, "unexpected child widget count on a widget");
         abort();
@@ -278,7 +278,7 @@ static void
 prv_slider_widget_on_before_despawned(void* this) {
     te_slider_widget* slider_widget = this;
 
-    // Self check:
+    /* self check */
     if (widget_get_child_widget_count(slider_widget->widget) != 2) {
         log_error(__FILE__, __LINE__, "unexpected child widget count on a widget");
         abort();
@@ -367,22 +367,22 @@ prv_slider_widget_on_cursor_left(void* this, vec2 cursor_pos) {
     slider_widget->is_handle_grabbed = false;
 }
 
-static inline void
+static void
 prv_slider_widget_set_position(te_slider_widget* slider_widget, vec2 pos) {
     widget_set_relative_position(slider_widget->widget, pos);
 }
 
-static inline void
+static void
 prv_slider_widget_get_position(te_slider_widget* slider_widget, vec2 out) {
     widget_get_relative_position(slider_widget->widget, out);
 }
 
-static inline void
+static void
 prv_slider_widget_set_size(te_slider_widget* slider_widget, vec2 size) {
     widget_set_relative_size(slider_widget->widget, size);
 }
 
-static inline void
+static void
 prv_slider_widget_get_size(te_slider_widget* slider_widget, vec2 out) {
     widget_get_relative_size(slider_widget->widget, out);
 }

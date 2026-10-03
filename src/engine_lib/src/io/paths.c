@@ -30,7 +30,7 @@ paths_get_config_dir(void) {
             abort();
         }
 
-        // Copy path and replace slashes.
+        /* copy path and replace slashes */
         char path_buff[256] = {0};
         const size_t path_len = wcslen(path_tmp);
         if (path_len > 256) {
@@ -52,7 +52,7 @@ paths_get_config_dir(void) {
 #elif __linux__
 
 #if defined(__aarch64__)
-        // On ARM64 linux devices I've decided to store configs near the binary so that it will be easier to find them.
+        /* on ARM64 linux devices I've decided to store configs near the binary so that it will be easier to find them */
         sprintf(cached_path_to_config_dir, "config/");
 #else
         char* home_path = getenv("HOME");
@@ -86,7 +86,7 @@ paths_get_log_file(void) {
             abort();
         }
 
-        // Copy path and replace slashes.
+        /* copy path and replace slashes */
         char path_buff[256] = {0};
         const size_t path_len = wcslen(path_tmp);
         if (path_len > 256) {
@@ -108,7 +108,7 @@ paths_get_log_file(void) {
 #elif __linux__
 
 #if defined(__aarch64__)
-        // On ARM64 linux devices I've decided to store logs near the binary so that it will be easier to find them.
+        /* on ARM64 linux devices I've decided to store logs near the binary so that it will be easier to find them */
         sprintf(cached_path_to_log_file, "log.txt");
 #else
         char* home_path = getenv("HOME");

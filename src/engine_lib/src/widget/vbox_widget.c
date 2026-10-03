@@ -8,13 +8,13 @@
 struct te_vbox_widget {
     te_widget* widget;
 
-    // Spacing between child widgets in range [0.0; 1.0] relative to window's height.
+    /* spacing between child widgets in range [0.0; 1.0] relative to window's height */
     float child_spacing;
 
     bool is_vbox_widget_destroy;
 };
 
-// Widget callbacks:
+/* widget callbacks */
 static void prv_vbox_widget_on_size_changed(void* this);
 static void prv_vbox_widget_on_children_changed(void* this);
 static void prv_vbox_widget_on_window_size_changed(void* this);
@@ -40,7 +40,7 @@ void
 vbox_widget_destroy(te_vbox_widget* vbox_widget) {
     vbox_widget->is_vbox_widget_destroy = true;
 
-    if (vbox_widget->widget != NULL) { // may be null if we got here from base destroy
+    if (vbox_widget->widget != NULL) { /* may be null if we got here from base destroy */
         widget_destroy(vbox_widget->widget);
     }
 
@@ -54,15 +54,15 @@ prv_vbox_widget_on_before_base_destroyed(void* this) {
         return;
     }
 
-    // Destroy was called on the base (widget) component, possibly due to
-    // parent being destroyed, cleanup our data.
+    /* destroy was called on the base (widget) component, possibly due to
+     * parent being destroyed, cleanup our data */
     vbox_widget->widget = NULL;
     vbox_widget_destroy(vbox_widget);
 }
 
-// Returns component used to adjust common widget properties (pos, size)
-// and attach widget to other widgets.
-// You can destroy returned object and it will cause this widget to be destroyed.
+/* returns component used to adjust common widget properties (pos, size)
+ * and attach widget to other widgets
+ * you can destroy returned object and it will cause this widget to be destroyed */
 te_widget*
 vbox_widget_get_widget(te_vbox_widget* vbox_widget) {
     return vbox_widget->widget;
@@ -82,7 +82,7 @@ prv_vbox_widget_update_children(te_vbox_widget* vbox_widget) {
         return;
     }
 
-    // Recalculate child spacing to relative spacing.
+    /* recalculate child spacing to relative spacing */
     vec2 screen_size;
     widget_get_screen_size(vbox_widget->widget, screen_size);
     const float relative_spacing = vbox_widget->child_spacing / screen_size[1];
@@ -129,22 +129,22 @@ prv_vbox_widget_on_after_spawned(void* this) {
     prv_vbox_widget_update_children(this);
 }
 
-static inline void
+static void
 prv_vbox_widget_set_position(te_vbox_widget* vbox_widget, vec2 pos) {
     widget_set_relative_position(vbox_widget->widget, pos);
 }
 
-static inline void
+static void
 prv_vbox_widget_get_position(te_vbox_widget* vbox_widget, vec2 out) {
     widget_get_relative_position(vbox_widget->widget, out);
 }
 
-static inline void
+static void
 prv_vbox_widget_set_size(te_vbox_widget* vbox_widget, vec2 size) {
     widget_set_relative_size(vbox_widget->widget, size);
 }
 
-static inline void
+static void
 prv_vbox_widget_get_size(te_vbox_widget* vbox_widget, vec2 out) {
     widget_get_relative_size(vbox_widget->widget, out);
 }

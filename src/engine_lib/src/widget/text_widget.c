@@ -17,31 +17,31 @@
 struct te_text_widget {
     te_widget* widget;
 
-    // Always non-NULL.
+    /* always non-NULL */
     wchar_t* text;
 
-    // RGBA color of the text.
+    /* RGBA color of the text */
     vec4 color;
 
-    // strlen of @ref text.
+    /* strlen of @ref text */
     unsigned int text_len;
 
-    // Height of the text in range [0.0; 1.0] relative to window height.
+    /* height of the text in range [0.0; 1.0] relative to window height */
     float text_height;
 
-    // Vertical space between lines of text, in range [0.0f; +inf] relative to the height of the text.
+    /* vertical space between lines of text, in range [0.0f; +inf] relative to the height of the text */
     float line_spacing;
 
-    // Stores invalid value if not being rendered.
+    /* stores invalid value if not being rendered */
     unsigned int render_data_handle;
 
-    // `true` if entered the "destroy" function.
+    /* `true` if entered the "destroy" function */
     bool is_text_widget_destroy;
 
     bool is_multiline;
 };
 
-// Widget callbacks:
+/* widget callbacks */
 static void prv_text_widget_on_pos_changed(void* this);
 static void prv_text_widget_on_size_changed(void* this);
 static void prv_text_widget_on_after_spawned(void* this);
@@ -70,7 +70,7 @@ text_widget_create(void) {
     text_widget->is_text_widget_destroy = false;
     text_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
 
-    // Setup some placeholder text.
+    /* setup some placeholder text */
     text_widget->text = wchar_from_char("hello", &text_widget->text_len);
     text_widget->text[text_widget->text_len] = 0;
 
@@ -81,7 +81,7 @@ void
 text_widget_destroy(te_text_widget* text_widget) {
     text_widget->is_text_widget_destroy = true;
 
-    if (text_widget->widget != NULL) { // may be null if we got here from base destroy
+    if (text_widget->widget != NULL) { /* may be null if we got here from base destroy */
         widget_destroy(text_widget->widget);
     }
 
@@ -96,8 +96,8 @@ prv_text_widget_on_before_base_destroyed(void* this) {
         return;
     }
 
-    // Destroy was called on the base (widget) component, possibly due to
-    // parent being destroyed, cleanup our data.
+    /* destroy was called on the base (widget) component, possibly due to
+     * parent being destroyed, cleanup our data */
     text_widget->widget = NULL;
     text_widget_destroy(text_widget);
 }
@@ -338,13 +338,13 @@ prv_text_widget_on_window_size_changed(void* this) {
     prv_text_widget_update_all_render_data(text_widget);
 }
 
-// Returns visible glyph count.
-// Specify NULL as `glyphs` to just count visible glyphs.
+/* returns visible glyph count
+ * specify NULL as `glyphs` to just count visible glyphs */
 static unsigned int
 collect_glyphs(
     te_text_widget* text_widget, unsigned int window_width, unsigned int window_height,
     te_font_manager* font_manager, te_text_widget_glyph* glyphs) {
-    // in pixels
+    /* in pixels */
     const float glyph_scale =
         text_widget->text_height / prv_font_manager_get_font_height_to_load();
     const float glyph_height = text_widget->text_height * (float)window_height;
@@ -354,11 +354,11 @@ collect_glyphs(
     widget_get_screen_size(text_widget->widget, size);
     glm_vec2_mul(size, (vec2){(float)window_width, (float)window_height}, size);
 
-    // Offset from the widget's pivot.
+    /* offset from the widget's pivot */
     vec2 offset;
     glm_vec2_copy((vec2){0.0f, 0.0f}, offset);
 
-    // Switch to the first row of the text.
+    /* switch to the first row of the text */
     offset[1] += glyph_height;
 
     unsigned int glyph_count = 0;
@@ -372,29 +372,29 @@ collect_glyphs(
             offset[0] = 0.0f;
 
             if (offset[1] > size[1]) {
-                // Reached vertical limit.
+                /* reached vertical limit */
                 glyph_count -= 1;
                 break;
             }
 
-            continue; // don't render \n
+            continue; /* don't render \n */
         }
 
         const float distance_to_next_glyph = (float)(src_glyph.advance >> 6) * glyph_scale;
 
         if (offset[0] + distance_to_next_glyph > size[0]) {
             if (text_widget->is_multiline) {
-                // Handle word wrap.
+                /* handle word wrap */
                 offset[1] += glyph_height + line_spacing;
                 offset[0] = 0.0f;
 
                 if (offset[1] > size[1]) {
-                    // Reached vertical limit.
+                    /* reached vertical limit */
                     glyph_count -= 1;
                     break;
                 }
             } else {
-                // Reached horizontal limit.
+                /* reached horizontal limit */
                 glyph_count -= 1;
                 break;
             }
@@ -418,7 +418,7 @@ collect_glyphs(
                 dst_glyph->offset_pix);
         }
 
-        // Switch to the next glyph.
+        /* switch to the next glyph */
         offset[0] += distance_to_next_glyph;
     }
 
@@ -468,27 +468,27 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
     }
 }
 
-static inline void
+static void
 prv_text_widget_set_position(te_text_widget* text_widget, vec2 pos) {
     widget_set_relative_position(text_widget->widget, pos);
 }
 
-static inline void
+static void
 prv_text_widget_get_position(te_text_widget* text_widget, vec2 out) {
     widget_get_relative_position(text_widget->widget, out);
 }
 
-static inline void
+static void
 prv_text_widget_set_size(te_text_widget* text_widget, vec2 size) {
     widget_set_relative_size(text_widget->widget, size);
 }
 
-static inline void
+static void
 prv_text_widget_get_size(te_text_widget* text_widget, vec2 out) {
     widget_get_relative_size(text_widget->widget, out);
 }
 
-static inline const wchar_t*
+static const wchar_t*
 prv_text_widget_get_text(te_text_widget* text_widget) {
     unsigned int text_len;
     return text_widget_get_text(text_widget, &text_len);

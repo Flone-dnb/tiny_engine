@@ -1,10 +1,11 @@
 #include "ui/world_inspector.h"
 
+#include <snprintf.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <world.h>
-#include <ui/theme.h>
+#include <ui/editor_theme.h>
 #include <ui/property_inspector.h>
 #include <ui/scene_animation_editor.h>
 #include <game/game_object_info.h>
@@ -29,73 +30,73 @@ enum te_object_menu_options {
     TE_OMO_REMOVE_ATTACHMENT,
     TE_OMO_DELETE_OBJ,
 
-    TE_OMO_COUNT, //< Marks the total number of options.
+    TE_OMO_COUNT /* marks the total number of options */
 };
 
 enum te_world_inspector_state {
-    TE_WIS_SHOW_WORLD_OBJECTS, //< Default state where game objects of the world are shown.
-    TE_WIS_CREATE_NEW_OBJECT,  //< When clicked the button to create a new game object.
-    TE_WIS_OBJECT_MENU, //< When right clicked on a game object and possible options to manage the object are shown.
-    TE_WIS_SHOW_ATTACH_TO, //< When choosing to attach a selected object.
+    TE_WIS_SHOW_WORLD_OBJECTS, /* default state where game objects of the world are shown */
+    TE_WIS_CREATE_NEW_OBJECT,  /* when clicked the button to create a new game object */
+    TE_WIS_OBJECT_MENU, /* when right clicked on a game object and possible options to manage the object are shown */
+    TE_WIS_SHOW_ATTACH_TO /* when choosing to attach a selected object */
 };
 
 typedef struct te_world_item_info {
-    // NULL if @ref widget is valid.
+    /* NULL if @ref widget is valid */
     te_game_object_info* game_object_info;
     void* game_obj;
 
-    // NULL if @ref game_object_info is valid.
+    /* NULL if @ref game_object_info is valid */
     te_widget* widget;
 
-    // More than 0 for attached/child objects.
+    /* more than 0 for attached/child objects */
     unsigned int indent;
 } te_world_item_info;
 
 struct te_world_inspector {
-    // Do not free/destroy, parent widget.
+    /* do not free/destroy, parent widget */
     te_widget* left_panel;
 
     te_editor* editor;
 
-    // Do not free/destroy.
+    /* do not free/destroy */
     te_property_inspector* property_inspector;
 
-    // NULL if not set yet.
+    /* NULL if not set yet */
     te_world* game_world;
 
-    // NULL if not opened.
+    /* NULL if not opened */
     te_scene_animation_editor* scene_animation_editor;
 
-    // Widgets for changing @ref is_3dobj_mode_selected.
+    /* widgets for changing @ref is_3dobj_mode_selected */
     te_button_widget* button_3dobj;
     te_button_widget* button_2dobj;
 
-    // Always valid.
+    /* always valid */
     te_button_widget* scene_animation_button;
 
-    // "Create new game object" by default.
+    /* "Create new game object" by default */
     te_button_widget* top_button;
     te_text_widget* top_button_text;
 
-    // Valid while spawned, buttons that fill all available space (moved outside of the viewport if should not be visible).
-    // Number of items in this array is @ref item_buttons_count.
+    /* valid while spawned, buttons that fill all available space (moved outside of the viewport if should not be visible)
+    /* number of items in this array is @ref item_buttons_count */
     te_button_widget** item_buttons;
 
-    // Number of items in this array is @ref item_list_count.
-    // Stores different values depending on the current @ref state.
+    /* number of items in this array is @ref item_list_count
+     * stores different values depending on the current @ref state */
     void* item_list;
 
-    // Spawned widget that displays page number of the list.
+    /* spawned widget that displays page number of the list */
     te_text_widget* page_text;
 
-    // If not NULL stores a copy from @ref item_list that was selected for object menu/operations (delete, attach, etc.).
-    // For widgets stores pointer to te_widget object while type_id stores the owner's type ID.
+    /* if not NULL stores a copy from @ref item_list that was selected for object menu/operations (delete, attach, etc.)
+     * for widgets stores pointer to te_widget object while type_id stores the owner's type ID */
     te_world_item_info* selected_item;
 
-    // Number of items in @ref item_buttons.
+    /* number of items in @ref item_buttons */
     unsigned int item_buttons_count;
 
-    // Number of items in @ref item_list.
+    /* number of items in @ref item_list */
     unsigned int item_list_count;
 
     unsigned int current_page;
@@ -103,7 +104,7 @@ struct te_world_inspector {
 
     enum te_world_inspector_state state;
 
-    // `true` if should display world's "3D objects", `false` if "2D objects".
+    /* `true` if should display world's "3D objects", `false` if "2D objects" */
     bool is_3dobj_mode_selected;
 };
 
@@ -145,10 +146,12 @@ world_inspector_destroy(te_world_inspector* inspector) {
 
 static void
 refresh_button_highlight(te_world_inspector* inspector) {
-    // Clear highlight.
+    unsigned int i;
+
+    /* clear highlight */
     vec4 color;
     theme_get_button_color(color);
-    for (unsigned int i = 0; i < inspector->item_buttons_count; i++) {
+    for (i = 0; i < inspector->item_buttons_count; i++) {
         button_widget_set_color(inspector->item_buttons[i], color);
     }
 
@@ -156,7 +159,7 @@ refresh_button_highlight(te_world_inspector* inspector) {
         return;
     }
 
-    // Might be a model, camera, widget or something else.
+    /* might be a model, camera, widget or something else */
     void* inspected_object =
         property_inspector_get_inspected_obj(inspector->property_inspector);
     if (inspected_object == NULL) {
@@ -165,8 +168,10 @@ refresh_button_highlight(te_world_inspector* inspector) {
 
     bool is_widget = false;
     {
-        // For widgets, property inspector stores the final type (not the base type te_widget) but
-        // world inspector expects the base type (te_widget), check if this is the case:
+        const te_type_info* type_info;
+
+        /* for widgets, property inspector stores the final type (not the base type te_widget) but
+         * world inspector expects the base type (te_widget), check if this is the case: */
         const char* game_obj_type_id =
             property_inspector_get_inspected_obj_type_id(inspector->property_inspector);
         if (game_obj_type_id == NULL) {
@@ -174,7 +179,7 @@ refresh_button_highlight(te_world_inspector* inspector) {
             abort();
         }
 
-        const te_type_info* type_info = type_database_get_type_info(game_obj_type_id);
+        type_info = type_database_get_type_info(game_obj_type_id);
         if (type_info == NULL) {
             log_error(__FILE__, __LINE__, "expected type info to be valid");
             abort();
@@ -186,14 +191,16 @@ refresh_button_highlight(te_world_inspector* inspector) {
         }
     }
 
-    for (unsigned int i = 0; i < inspector->item_buttons_count; i++) {
+    for (i = 0; i < inspector->item_buttons_count; i++) {
+        te_world_item_info* info;
+
         const unsigned int item_idx =
             inspector->current_page * inspector->item_buttons_count + i;
         if (item_idx >= inspector->item_list_count) {
             break;
         }
 
-        te_world_item_info* info = &((te_world_item_info*)inspector->item_list)[item_idx];
+        info = &((te_world_item_info*)inspector->item_list)[item_idx];
         if (is_widget) {
             if (info->widget != inspected_object) {
                 continue;
@@ -210,7 +217,7 @@ refresh_button_highlight(te_world_inspector* inspector) {
     }
 }
 
-// Uses item_list and updates text on the buttons depending on the current world inspector state.
+/* uses item_list and updates text on the buttons depending on the current world inspector state */
 static void
 refresh_item_names(te_world_inspector* inspector) {
     const float hpadding = theme_get_horizontal_padding() / theme_get_left_panel_width();
@@ -223,14 +230,14 @@ refresh_item_names(te_world_inspector* inspector) {
          button_idx++, item_idx++) {
         te_button_widget* button = inspector->item_buttons[button_idx];
 
-        // Get button text widget.
+        /* get button text widget */
         unsigned int child_count;
         te_widget** child_widgets =
             widget_get_child_widgets(button_widget_get_widget(button), &child_count);
         te_text_widget* button_text = NULL;
         for (unsigned int i = 0; i < child_count; i++) {
             if (!widget_is_serialization_allowed(child_widgets[i])) {
-                // Internal widget (rect) of the button.
+                /* internal widget (rect) of the button */
                 continue;
             }
             button_text = widget_get_owner(child_widgets[i]);
@@ -240,7 +247,7 @@ refresh_item_names(te_world_inspector* inspector) {
 
         unsigned int indent = 0;
 
-        // Prepare new text.
+        /* prepare new text */
         const char* text_to_display = "";
         switch (inspector->state) {
             case (TE_WIS_SHOW_WORLD_OBJECTS):
@@ -277,7 +284,7 @@ refresh_item_names(te_world_inspector* inspector) {
             }
         }
 
-        // Fix pos of the button (in case it was hidden previously or had other indentation).
+        /* fix pos of the button (in case it was hidden previously or had other indentation) */
         {
             te_widget* widget = button_widget_get_widget(button);
 
@@ -293,13 +300,13 @@ refresh_item_names(te_world_inspector* inspector) {
             widget_set_relative_size(widget, size);
         }
 
-        // Display new text.
+        /* display new text */
         unsigned int text_len;
         wchar_t* wtext = wchar_from_char(text_to_display, &text_len);
         text_widget_set_text_own(button_text, wtext, text_len);
     }
 
-    // Hide remaining buttons.
+    /* hide remaining buttons */
     for (; button_idx < inspector->item_buttons_count; button_idx++) {
         te_widget* widget = button_widget_get_widget(inspector->item_buttons[button_idx]);
 
@@ -316,7 +323,7 @@ refresh_item_names(te_world_inspector* inspector) {
 
 static void
 refresh_page_text(te_world_inspector* inspector) {
-    // Update page count (in case list changed).
+    /* update page count (in case list changed) */
     unsigned int page_count = inspector->item_list_count / inspector->item_buttons_count;
     if (inspector->item_list_count % inspector->item_buttons_count > 0) {
         page_count += 1;
@@ -423,7 +430,7 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
         te_game_object_data* root_game_objs =
             world_get_root_game_objects(world, &root_game_objects);
 
-        // Count items.
+        /* count items */
         inspector->item_list_count = 0;
         for (unsigned int i = 0; i < root_game_objects; i++) {
             te_game_object_data* obj_data = &root_game_objs[i];
@@ -438,7 +445,7 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
             }
 
             if (obj_data->info->type == TE_GOT_MODEL) {
-                // Models are special because they can have child models or attached camera.
+                /* models are special because they can have child models or attached camera */
                 te_model* model = obj_data->object;
 
                 te_camera* attached_camera = model_get_attached_camera(model);
@@ -464,7 +471,7 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
             inspector->item_list_count += 1;
         }
 
-        // Add counted items to list.
+        /* add counted items to list */
         if (inspector->item_list_count > 0) {
             world_items = malloc(sizeof(te_world_item_info) * inspector->item_list_count);
             unsigned int item_idx = 0;
@@ -490,7 +497,7 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
                 item_idx += 1;
 
                 if (obj_data->info->type == TE_GOT_MODEL) {
-                    // Models are special because they can have child model or attached camera.
+                    /* models are special because they can have child model or attached camera */
                     te_model* model = obj_data->object;
 
                     te_camera* attached_camera = model_get_attached_camera(model);
@@ -532,13 +539,13 @@ rebuild_item_list_to_display_world_objects(te_world_inspector* inspector) {
         unsigned int root_count = 0;
         te_widget** root_widgets = world_get_widgets(world, &root_count);
 
-        // Count how much items we have in total.
+        /* count how much items we have in total */
         inspector->item_list_count = 0;
         for (unsigned int i = 0; i < root_count; i++) {
             count_widgets_recursive(root_widgets[i], &inspector->item_list_count);
         }
 
-        // Save items.
+        /* save items */
         if (inspector->item_list_count > 0) {
             world_items = malloc(sizeof(te_world_item_info) * inspector->item_list_count);
             unsigned int indent = 0;
@@ -581,7 +588,7 @@ world_inspector_rebuild_list(te_world_inspector* inspector, te_world* game_world
     if (inspector->state != TE_WIS_SHOW_WORLD_OBJECTS) {
         inspector->state = TE_WIS_SHOW_WORLD_OBJECTS;
 
-        // Restore the original button state.
+        /* restore the original button state */
         unsigned int text_len;
         wchar_t* wtext = wchar_from_char(CREATE_NEW_OBJ_TEXT, &text_len);
         text_widget_set_text_own(inspector->top_button_text, wtext, text_len);
@@ -610,7 +617,7 @@ world_inspector_select_obj(
         return;
     }
 
-    // Switch the current page to show the selected item.
+    /* switch the current page to show the selected item */
     bool found = false;
     for (unsigned int page_idx = 0; page_idx < inspector->page_count; page_idx++) {
         for (unsigned int i = 0; i < inspector->item_buttons_count; i++) {
@@ -636,8 +643,8 @@ world_inspector_select_obj(
 
     bool is_special = false;
     if (!found) {
-        // Some objects (such as not serializable) are not displayed in the world inspector so it's fine.
-        // Check if the specified object is a special case (for example it's a camera's visualization model).
+        /* some objects (such as not serializable) are not displayed in the world inspector so it's fine
+         * check if the specified object is a special case (for example it's a camera's visualization model) */
         if (target_info->type != TE_GOT_MODEL) {
             return;
         }
@@ -646,14 +653,14 @@ world_inspector_select_obj(
             return;
         }
 
-        // Check custom_ptr.
+        /* check custom_ptr */
         for (unsigned int page_idx = 0; page_idx < inspector->page_count; page_idx++) {
             for (unsigned int i = 0; i < inspector->item_buttons_count; i++) {
                 te_world_item_info* info =
                     &((te_world_item_info*)
                           inspector->item_list)[page_idx * inspector->item_buttons_count + i];
                 if (info->game_obj == custom_ptr) {
-                    // Selected camera visualization model, display camera properties.
+                    /* selected camera visualization model, display camera properties */
                     target_info = info->game_object_info;
                     target_game_object = info->game_obj;
                     found = true;
@@ -751,7 +758,7 @@ on_top_button_clicked(te_button_widget* button) {
     }
 
     if (inspector->state == TE_WIS_SHOW_WORLD_OBJECTS) {
-        // Restore the original button state.
+        /* restore the original button state */
         unsigned int text_len;
         wchar_t* wtext = wchar_from_char(CREATE_NEW_OBJ_TEXT, &text_len);
         text_widget_set_text_own(inspector->top_button_text, wtext, text_len);
@@ -765,8 +772,8 @@ on_top_button_clicked(te_button_widget* button) {
         return;
     }
 
-    // Entered new game object creation.
-    // Turn this button into a "cancel" button.
+    /* entered new game object creation
+     * turn this button into a "cancel" button */
     unsigned int text_len;
     wchar_t* wtext = wchar_from_char("Cancel object creation", &text_len);
     text_widget_set_text_own(inspector->top_button_text, wtext, text_len);
@@ -774,13 +781,13 @@ on_top_button_clicked(te_button_widget* button) {
     unsigned int type_count;
     const char** types = type_database_get_all_type_ids(&type_count);
 
-    // Rebuild item list.
+    /* rebuild item list */
     free(inspector->item_list);
     inspector->item_list_count = (type_count - 1);
     const char** type_ids = malloc(sizeof(const char*) * inspector->item_list_count);
     for (unsigned int i = 0, idx = 0; i < type_count; i++) {
         if (strcmp(types[i], "light_params") == 0) {
-            // light params is a world-global data, don't show it here
+            /* light params is a world-global data, don't show it here */
             continue;
         }
         type_ids[idx] = (void*)(types[i]);
@@ -809,7 +816,7 @@ on_button_list_item_clicked(te_button_widget* button) {
                 &((te_world_item_info*)inspector->item_list)
                     [inspector->current_page * inspector->item_buttons_count + button_index];
 
-            // Prepare variables for property inspector.
+            /* prepare variables for property inspector */
             void* target_object = NULL;
             const char* target_type_id = NULL;
 
@@ -834,17 +841,17 @@ on_button_list_item_clicked(te_button_widget* button) {
             break;
         }
         case (TE_WIS_CREATE_NEW_OBJECT): {
-            // Selected type of a new game object.
-            // Button name stores type ID from type database.
+            /* selected type of a new game object
+             * button name stores type ID from type database */
 
-            // Get button text.
+            /* get button text */
             unsigned int child_count;
             te_widget** child_widgets =
                 widget_get_child_widgets(button_widget_get_widget(button), &child_count);
             te_text_widget* button_text = NULL;
             for (unsigned int i = 0; i < child_count; i++) {
                 if (!widget_is_serialization_allowed(child_widgets[i])) {
-                    // Internal widget (rect) of the button.
+                    /* internal widget (rect) of the button */
                     continue;
                 }
                 button_text = widget_get_owner(child_widgets[i]);
@@ -858,7 +865,9 @@ on_button_list_item_clicked(te_button_widget* button) {
 
             const te_type_info* info = type_database_get_type_info(type_id);
             if (info == NULL) {
-                log_error_fmt(__FILE__, __LINE__, "expected to get a valid type info for type ID \"%s\"", type_id);
+                log_error_fmt(
+                    __FILE__, __LINE__, "expected to get a valid type info for type ID \"%s\"",
+                    type_id);
                 abort();
             }
             free(type_id);
@@ -886,13 +895,13 @@ on_button_list_item_clicked(te_button_widget* button) {
                 rebuild_item_list_to_display_world_objects(inspector);
                 refresh_page_text(inspector);
             } else if (option_index == TE_OMO_DELETE_OBJ) {
-                // Get type info.
+                /* get type info */
                 const te_type_info* type_info = NULL;
                 if (inspector->selected_item->game_object_info != NULL) {
                     type_info = type_database_get_type_info(
                         inspector->selected_item->game_object_info->type_id);
 
-                    // Also check if we have gizmo on the object we are about to delete.
+                    /* also check if we have gizmo on the object we are about to delete */
                     editor_on_before_game_obj_deleted(
                         inspector->editor, inspector->selected_item->game_obj,
                         inspector->selected_item->game_object_info);
@@ -905,7 +914,7 @@ on_button_list_item_clicked(te_button_widget* button) {
                         widget_get_owner_type_id(inspector->selected_item->widget));
                 }
 
-                // Despawn and destroy.
+                /* despawn and destroy */
                 if (inspector->selected_item->widget != NULL) {
                     void* widget_owner = widget_get_owner(inspector->selected_item->widget);
                     type_info->despawn(inspector->game_world, widget_owner);
@@ -971,11 +980,15 @@ on_button_list_item_clicked(te_button_widget* button) {
                 switch (inspector->selected_item->game_object_info->type) {
                     case (TE_GOT_CAMERA): {
                         if (target_info->game_obj == NULL) {
-                            log_error(__FILE__, __LINE__, "can't attach camera to a non game object");
+                            log_error(
+                                __FILE__, __LINE__,
+                                "can't attach camera to a non game object");
                             abort();
                         }
                         if (target_info->game_object_info->type != TE_GOT_MODEL) {
-                            log_error(__FILE__, __LINE__, "can't attach camera to a non-model game object");
+                            log_error(
+                                __FILE__, __LINE__,
+                                "can't attach camera to a non-model game object");
                             abort();
                         }
                         model_attach_camera(
@@ -984,11 +997,14 @@ on_button_list_item_clicked(te_button_widget* button) {
                     }
                     case (TE_GOT_MODEL): {
                         if (target_info->game_obj == NULL) {
-                            log_error(__FILE__, __LINE__, "can't attach model to a non game object");
+                            log_error(
+                                __FILE__, __LINE__, "can't attach model to a non game object");
                             abort();
                         }
                         if (target_info->game_object_info->type != TE_GOT_MODEL) {
-                            log_error(__FILE__, __LINE__, "can't attach model to a non-model game object");
+                            log_error(
+                                __FILE__, __LINE__,
+                                "can't attach model to a non-model game object");
                             abort();
                         }
                         model_set_parent(
@@ -1006,7 +1022,8 @@ on_button_list_item_clicked(te_button_widget* button) {
                     abort();
                 }
                 if (target_info->widget == NULL) {
-                    log_error(__FILE__, __LINE__, "can't attach widget to a non-widget object");
+                    log_error(
+                        __FILE__, __LINE__, "can't attach widget to a non-widget object");
                     abort();
                 }
                 widget_set_parent(inspector->selected_item->widget, target_info->widget);
@@ -1047,7 +1064,7 @@ on_button_list_item_right_clicked(te_button_widget* button) {
         free(inspector->item_list);
         inspector->item_list = option_names;
 
-        // Make top button a "cancel" button.
+        /* make top button a "cancel" button */
         unsigned int text_len;
         wchar_t* wtext = wchar_from_char("Cancel object options", &text_len);
         text_widget_set_text_own(inspector->top_button_text, wtext, text_len);
@@ -1107,7 +1124,7 @@ on_button_scene_animation_clicked(te_button_widget* button) {
         theme_get_accent_color(color);
         button_widget_set_color(inspector->scene_animation_button, color);
 
-        // Show tracks of selected object.
+        /* show tracks of selected object */
         void* obj = property_inspector_get_inspected_obj(inspector->property_inspector);
         const char* type_id =
             property_inspector_get_inspected_obj_type_id(inspector->property_inspector);
@@ -1162,7 +1179,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
 
     inspector->left_panel = left_panel;
 
-    // Relative to the left panel.
+    /* relative to the left panel */
     const float hspacing = theme_get_horizontal_spacing() / theme_get_left_panel_width();
     const float vspacing = theme_get_vertical_spacing();
     const float hpadding = theme_get_horizontal_padding() / theme_get_left_panel_width();
@@ -1170,10 +1187,9 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
     const float vpadding_in_button = 0.0f;
     const float total_width = 1.0f - hpadding * 2.0f;
 
-    // Title text.
     float y_pos = vspacing;
 
-    // World settings.
+    /* world settings button */
     {
         te_button_widget* button = button_widget_create();
         {
@@ -1196,7 +1212,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
 
         button_widget_set_on_clicked(button, on_button_world_settings_clicked);
 
-        // Button text.
+        /* button text */
 
         te_text_widget* text_widget = text_widget_create();
         {
@@ -1216,7 +1232,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
     }
     y_pos += theme_get_button_height() + vspacing;
 
-    // Scene animation.
+    /* scene animation button */
     {
         te_button_widget* button = button_widget_create();
         {
@@ -1240,7 +1256,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
 
         button_widget_set_on_clicked(button, on_button_scene_animation_clicked);
 
-        // Button text.
+        /* button text */
 
         te_text_widget* text_widget = text_widget_create();
         {
@@ -1260,7 +1276,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
     }
     y_pos += theme_get_button_height() + vspacing;
 
-    // Add world.
+    /* add world button */
     {
         te_button_widget* button = button_widget_create();
         {
@@ -1283,7 +1299,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
 
         button_widget_set_on_clicked(button, on_button_add_world_clicked);
 
-        // Button text.
+        /* button text */
 
         te_text_widget* text_widget = text_widget_create();
         {
@@ -1303,11 +1319,11 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
     }
     y_pos += theme_get_button_height() + vspacing;
 
-    // World object type buttons: 3D objects or 2D objects.
+    /* world object type buttons: 3D objects or 2D objects */
     {
         const float button_width = (total_width - hspacing) / 2.0f;
 
-        // "3D objects" button ------------------
+        /* "3D objects" button ------------------ */
 
         te_button_widget* button_3dobj = button_widget_create();
         inspector->button_3dobj = button_3dobj;
@@ -1335,7 +1351,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
 
         button_widget_set_on_clicked(button_3dobj, on_button_3dobj_clicked);
 
-        // "2D objects" button ------------------
+        /* "2D objects" button ------------------ */
 
         te_button_widget* button_2dobj = button_widget_create();
         inspector->button_2dobj = button_2dobj;
@@ -1363,7 +1379,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
 
         button_widget_set_on_clicked(button_2dobj, on_button_2dobj_clicked);
 
-        // "3D objects" text --------------------------
+        /* "3D objects" text -------------------------- */
 
         te_text_widget* text_3dobj = text_widget_create();
         {
@@ -1381,7 +1397,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
         wchar_t* text = wchar_from_char("3D objects", &text_len);
         text_widget_set_text_own(text_3dobj, text, text_len);
 
-        // "2D objects" text --------------------------
+        /* "2D objects" text -------------------------- */
 
         te_text_widget* text_2dobj = text_widget_create();
         {
@@ -1400,7 +1416,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
     }
     y_pos += theme_get_button_height() + vspacing;
 
-    // Button to create new game objects.
+    /* button to create new game objects */
     {
         te_button_widget* button = button_widget_create();
         inspector->top_button = button;
@@ -1424,7 +1440,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
 
         button_widget_set_on_clicked(button, on_top_button_clicked);
 
-        // Button text.
+        /* button text */
         te_text_widget* text_widget = text_widget_create();
         inspector->top_button_text = text_widget;
         {
@@ -1446,9 +1462,9 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
     const float world_item_list_y_pos = y_pos;
     const float nav_menu_height = theme_get_button_height();
 
-    // World item list.
+    /* world item list */
     {
-        // Count how much buttons for world items we can fit in the list.
+        /* count how much buttons for world items we can fit in the list */
         const float list_and_nav_menu_height =
             theme_get_world_inspector_height() - world_item_list_y_pos - nav_menu_height;
         const float list_item_spacing = vspacing;
@@ -1462,7 +1478,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
                      <= world_item_list_y_pos + list_and_nav_menu_height);
         }
 
-        // Create buttons.
+        /* create buttons */
         inspector->item_buttons = malloc(sizeof(te_button_widget*) * button_count);
         inspector->item_buttons_count = button_count;
         for (unsigned int i = 0; i < button_count; i++) {
@@ -1492,7 +1508,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
             button_widget_set_on_clicked(button, on_button_list_item_clicked);
             button_widget_set_on_right_clicked(button, on_button_list_item_right_clicked);
 
-            // Button text.
+            /* button text */
             te_text_widget* text = text_widget_create();
             {
                 te_widget* widget = text_widget_get_widget(text);
@@ -1510,14 +1526,14 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
         }
     }
 
-    // Navigation menu.
+    /* navigation menu */
     y_pos = theme_get_world_inspector_height() - nav_menu_height;
     {
         const float nav_item_width = (total_width - hspacing * 2.0f) / 3.0f;
         const float nav_button_pad = nav_item_width / 4.0f;
         const float nav_button_width = nav_item_width - nav_button_pad * 2.0f;
 
-        // Left button.
+        /* left button */
         {
             te_button_widget* button = button_widget_create();
             {
@@ -1541,7 +1557,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
 
             button_widget_set_on_clicked(button, on_button_prev_page_clicked);
 
-            // Button text.
+            /* button text */
             te_text_widget* text_widget = text_widget_create();
             {
                 te_widget* widget = text_widget_get_widget(text_widget);
@@ -1558,7 +1574,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
             text_widget_set_text_own(text_widget, text, text_len);
         }
 
-        // Page text.
+        /* page text */
         {
             const float nav_tex_total_width =
                 1.0f
@@ -1585,7 +1601,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
             text_widget_set_text_own(text_widget, text, text_len);
         }
 
-        // Right button.
+        /* right button */
         {
             te_button_widget* button = button_widget_create();
             {
@@ -1611,7 +1627,7 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
 
             button_widget_set_on_clicked(button, on_button_next_page_clicked);
 
-            // Button text.
+            /* button text */
             te_text_widget* text_widget = text_widget_create();
             {
                 te_widget* widget = text_widget_get_widget(text_widget);

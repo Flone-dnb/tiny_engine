@@ -19,36 +19,36 @@
 struct te_text_edit_widget {
     te_widget* widget;
 
-    // Text cursor child widget. May be NULL if cursor is not shown.
+    /* text cursor child widget. May be NULL if cursor is not shown */
     te_rect_widget* rect_cursor_widget;
 
-    // Always valid child widget.
+    /* always valid child widget */
     te_text_widget* text_widget;
 
-    // May be NULL if not set.
+    /* may be NULL if not set */
     void (*on_text_changed)(te_text_edit_widget*, wchar_t*, unsigned int);
     void (*on_text_accepted)(te_text_edit_widget*);
 
     vec4 text_color;
 
-    // Height of the text in range [0.0; 1.0] relative to window height.
+    /* height of the text in range [0.0; 1.0] relative to window height */
     float text_height;
 
-    // Index of wchar_t in @ref text_widget where the cursor is currently at, if the cursor
-    // is at the end of text the index will be equal to text's strlen.
-    // Stores invalid index value if cursor is not visible.
+    /* index of wchar_t in @ref text_widget where the cursor is currently at, if the cursor
+     * is at the end of text the index will be equal to text's strlen
+     * stores invalid index value if cursor is not visible */
     unsigned int text_cursor_index;
 
-    // `true` if entered the "destroy" function.
+    /* `true` if entered the "destroy" function */
     bool is_text_edit_widget_destroy;
 };
 
-// Widget callbacks:
+/* widget callbacks */
 static void prv_text_edit_widget_on_before_base_destroyed(void* this);
 static void prv_text_edit_widget_on_after_spawned(void* this);
 static void prv_text_edit_widget_on_before_despawned(void* this);
 
-// Interactable callbacks:
+/* interactable callbacks */
 static void prv_text_edit_widget_on_mouse_button_pressed(
     void* this, enum te_mouse_button button, vec2 cursor_pos);
 static void prv_text_edit_widget_on_cursor_left(void* this, vec2 cursor_pos);
@@ -98,7 +98,7 @@ void
 text_edit_widget_destroy(te_text_edit_widget* text_edit_widget) {
     text_edit_widget->is_text_edit_widget_destroy = true;
 
-    if (text_edit_widget->widget != NULL) { // may be null if we got here from base destroy
+    if (text_edit_widget->widget != NULL) { /* may be null if we got here from base destroy */
         widget_destroy(text_edit_widget->widget);
     }
 
@@ -113,8 +113,8 @@ prv_text_edit_widget_on_before_base_destroyed(void* this) {
         return;
     }
 
-    // Destroy was called on the base (widget) component, possibly due to
-    // parent being destroyed, cleanup our data.
+    /* destroy was called on the base (widget) component, possibly due to
+     * parent being destroyed, cleanup our data */
     text_edit_widget->widget = NULL;
     text_edit_widget_destroy(text_edit_widget);
 }
@@ -141,7 +141,7 @@ prv_text_edit_widget_on_after_spawned(void* this) {
     text_widget_set_color(text_edit_widget->text_widget, text_edit_widget->text_color);
     text_widget_set_text_height(text_edit_widget->text_widget, text_edit_widget->text_height);
 
-    // Self check:
+    /* self check */
     if (widget_get_child_widget_count(text_edit_widget->widget) != 1) {
         log_error(__FILE__, __LINE__, "unexpected child widget count on a widget");
         abort();
@@ -164,11 +164,11 @@ prv_text_edit_widget_despawn_destroy_cursor(te_text_edit_widget* text_edit_widge
     }
 
     if (prv_world_is_being_destroyed(world)) {
-        // Child widgets will be destroyed anyway.
+        /* child widgets will be destroyed anyway */
         return;
     }
 
-    // Detach and despawn.
+    /* detach and despawn */
     widget_set_parent(rect_widget_get_widget(text_edit_widget->rect_cursor_widget), NULL);
     world_despawn_widget(world, rect_widget_get_widget(text_edit_widget->rect_cursor_widget));
 
@@ -182,7 +182,7 @@ void
 prv_text_edit_widget_on_before_despawned(void* this) {
     te_text_edit_widget* text_edit_widget = this;
 
-    // Self check:
+    /* self check */
     if (widget_get_child_widget_count(text_edit_widget->widget) > 2) {
         log_error(__FILE__, __LINE__, "unexpected child widget count on a widget");
         abort();
@@ -209,7 +209,7 @@ prv_text_edit_widget_on_mouse_button_pressed(
 
     te_text_edit_widget* text_edit_widget = this;
 
-    // Determine where to put the text cursor (snap to closest glyph start).
+    /* determine where to put the text cursor (snap to closest glyph start) */
 
     te_world* world = widget_get_world(text_edit_widget->widget);
     if (world == NULL) {
@@ -244,13 +244,13 @@ prv_text_edit_widget_on_mouse_button_pressed(
     unsigned int text_len = 0;
     wchar_t* text = text_widget_get_text(text_edit_widget->text_widget, &text_len);
 
-    // Prepare cursor position.
+    /* prepare cursor position */
     vec2 rect_pos;
     glm_vec2_copy(data->pos_pix, rect_pos);
     text_edit_widget->text_cursor_index = 0;
 
     if (text_len > 0) {
-        // Put to end by default if have text.
+        /* put to end by default if have text */
         rect_pos[0] += data->glyphs[data->glyph_count - 1].offset_pix[0]
                        + data->glyphs[data->glyph_count - 1].size_pix[0];
 
@@ -292,16 +292,16 @@ prv_text_edit_widget_on_mouse_button_pressed(
     glm_vec2_div(rect_pos, (vec2){(float)window_width, (float)window_height}, rect_pos);
 
     if (text_edit_widget->rect_cursor_widget == NULL) {
-        // Create text cursor.
+        /* create text cursor */
         text_edit_widget->rect_cursor_widget = rect_widget_create();
         te_widget* rect = rect_widget_get_widget(text_edit_widget->rect_cursor_widget);
         widget_set_is_serialization_allowed(rect, false);
 
-        // Attach and spawn.
+        /* attach and spawn */
         widget_set_parent(rect, text_edit_widget->widget);
     }
 
-    // Calculate rect pos/size to be relative to parent.
+    /* calculate rect pos/size to be relative to parent */
 
     vec2 rect_size;
     rect_size[0] = 2.0f / (float)window_width;
@@ -319,7 +319,7 @@ prv_text_edit_widget_on_mouse_button_pressed(
     glm_vec2_sub(rect_pos, text_widget_pos, rect_pos);
     glm_vec2_div(rect_pos, text_widget_size, rect_pos);
 
-    // Update text cursor.
+    /* update text cursor */
     widget_set_relative_position(
         rect_widget_get_widget(text_edit_widget->rect_cursor_widget), rect_pos);
     widget_set_relative_size(
@@ -401,7 +401,7 @@ prv_text_edit_widget_update_cursor(te_text_edit_widget* text_edit_widget) {
 
     glm_vec2_div(rect_pos, (vec2){(float)window_width, (float)window_height}, rect_pos);
 
-    // Calculate rect pos to be relative to parent.
+    /* calculate rect pos to be relative to parent */
 
     vec2 text_widget_pos;
     vec2 text_widget_size;
@@ -584,27 +584,27 @@ text_edit_widget_get_color(te_text_edit_widget* text_edit_widget, vec4 out) {
     glm_vec4_copy(text_edit_widget->text_color, out);
 }
 
-static inline void
+static void
 prv_text_edit_widget_set_position(te_text_edit_widget* text_edit_widget, vec2 pos) {
     widget_set_relative_position(text_edit_widget->widget, pos);
 }
 
-static inline void
+static void
 prv_text_edit_widget_get_position(te_text_edit_widget* text_edit_widget, vec2 out) {
     widget_get_relative_position(text_edit_widget->widget, out);
 }
 
-static inline void
+static void
 prv_text_edit_widget_set_size(te_text_edit_widget* text_edit_widget, vec2 size) {
     widget_set_relative_size(text_edit_widget->widget, size);
 }
 
-static inline void
+static void
 prv_text_edit_widget_get_size(te_text_edit_widget* text_edit_widget, vec2 out) {
     widget_get_relative_size(text_edit_widget->widget, out);
 }
 
-static inline const wchar_t*
+static const wchar_t*
 prv_text_edit_widget_get_text(te_text_edit_widget* text_edit_widget) {
     unsigned int text_len;
     return text_edit_widget_get_text(text_edit_widget, &text_len);

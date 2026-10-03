@@ -7,11 +7,11 @@
 typedef struct te_game te_game;
 struct te_game_manager;
 
-te_game* game_create();
+te_game* game_create(void);
 void game_destroy(te_game* game);
 
-// window callbacks -------------------------------------------------------------------------------
-void game_register_custom_types();
+/* window callbacks --------------------------------------------------------------------------- */
+void game_register_custom_types(void);
 void game_on_game_started(void* game_instance, struct te_game_manager* game_manager);
 void game_on_game_tick(
     void* game_instance, struct te_game_manager* game_manager, float delta_time_sec);
@@ -47,4 +47,4 @@ void game_on_input_source_changed(
 void game_on_window_received_focus(void* game_instance, struct te_game_manager* game_manager);
 void game_on_window_lost_focus(void* game_instance, struct te_game_manager* game_manager);
 void game_on_window_close(void* game_instance, struct te_game_manager* game_manager);
-// ------------------------------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------------------------- */

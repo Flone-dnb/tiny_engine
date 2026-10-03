@@ -1,6 +1,6 @@
 #pragma once
 
-// Macros for creating GPU debug markers (groups GPU commands in RenderDoc).
+/* macros for creating GPU debug markers (groups GPU commands in RenderDoc) */
 #if defined(DEBUG)
 #include <glad/gl.h>
 

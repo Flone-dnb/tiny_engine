@@ -1,6 +1,6 @@
 #pragma once
 
-// Macros to measure GPU time.
+/* macros to measure GPU time */
 #if defined(ENGINE_DEBUG_TOOLS)
 #include <glad/gl.h>
 

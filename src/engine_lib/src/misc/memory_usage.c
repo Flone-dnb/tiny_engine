@@ -1,6 +1,7 @@
 #include <misc/memory_usage.h>
 
 #if defined(__linux__)
+/* for timespec */
 #define _POSIX_C_SOURCE 200809L
 #endif
 

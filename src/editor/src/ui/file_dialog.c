@@ -5,7 +5,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <world.h>
-#include <ui/theme.h>
+#include <ui/editor_theme.h>
 #include <io/log.h>
 #include <misc/wchar_funcs.h>
 #include <io/filesystem.h>
@@ -20,44 +20,40 @@
 #define DIALOG_HEIGHT 0.4f
 
 struct te_file_dialog {
-    // Always valid, absolute path to the current directory.
+    /* always valid, absolute path to the current directory */
     char* current_path;
 
-    // Custom user-specified pointer to pass to @ref on_selected.
+    /* custom user-specified pointer to pass to @ref on_selected */
     void* custom;
 
     void (*on_selected)(void* custom, const char* path_to_file);
     void (*on_cancel)(void* custom);
 
-    // Always valid, parent widget of all file explorer widgets.
+    /* always valid */
     te_widget* spawned_widget;
-
-    // Always valid, Widget used to display the current path.
     te_text_widget* current_path_text;
-
-    // Always valid, text that displays the page number.
     te_text_widget* page_text;
 
-    // Not NULL if selecting a new file. Has filename for new file.
+    /* not NULL if selecting a new file. Has filename for new file. */
     te_text_edit_widget* filename_text_edit;
 
-    // Always valid, buttons for filesystem entries.
-    // The number of elements in this array is @ref entry_button_count.
+    /* always valid, buttons for filesystem entries
+     * the number of elements in this array is @ref entry_button_count */
     te_button_widget** entry_buttons;
 
-    // Entries of @ref current_path. Size of this array is @ref dir_entry_count.
+    /* entries of @ref current_path. Size of this array is @ref dir_entry_count */
     te_filesystem_entry* dir_entries;
 
-    // Number of elements in @ref entry_buttons.
+    /* number of elements in @ref entry_buttons */
     unsigned int entry_button_count;
 
     unsigned int current_page;
     unsigned int page_count;
 
-    // 0xFFFFFFFF if nothing selected.
+    /* 0xFFFFFFFF if nothing selected */
     unsigned int selected_button_index;
 
-    // Number of elements in @ref dir_entries.
+    /* number of elements in @ref dir_entries */
     unsigned int dir_entry_count;
 
     enum te_file_dialog_mode mode;
@@ -88,8 +84,8 @@ refresh_entry_button_names(te_file_dialog* file_dialog) {
              file_dialog->current_page * (file_dialog->entry_button_count - 1);
          button_idx < file_dialog->entry_button_count; button_idx++) {
         if (button_idx > 0) {
-            // Do this check here instead of in the loop definition to be able
-            // to create ".." (go up) buttons in empty directories.
+            /* do this check here instead of in the loop definition to be able
+             * to create ".." (go up) buttons in empty directories */
             if (item_idx >= file_dialog->dir_entry_count) {
                 break;
             }
@@ -97,14 +93,14 @@ refresh_entry_button_names(te_file_dialog* file_dialog) {
 
         te_button_widget* button = file_dialog->entry_buttons[button_idx];
 
-        // Get button text widget.
+        /* get button text widget */
         unsigned int child_count;
         te_widget** child_widgets =
             widget_get_child_widgets(button_widget_get_widget(button), &child_count);
         te_text_widget* button_text = NULL;
         for (unsigned int i = 0; i < child_count; i++) {
             if (!widget_is_serialization_allowed(child_widgets[i])) {
-                // Internal widget (rect) of the button.
+                /* internal widget (rect) of the button */
                 continue;
             }
             button_text = widget_get_owner(child_widgets[i]);
@@ -112,7 +108,7 @@ refresh_entry_button_names(te_file_dialog* file_dialog) {
         }
         free(child_widgets);
 
-        // Fix pos of the button (in case it was hidden previously).
+        /* fix pos of the button (in case it was hidden previously) */
         {
             te_widget* widget = button_widget_get_widget(button);
 
@@ -124,7 +120,7 @@ refresh_entry_button_names(te_file_dialog* file_dialog) {
         }
 
         if (button_idx == 0) {
-            // Go up ".." button.
+            /* go up ".." button */
             unsigned int text_len;
             wchar_t* wtext = wchar_from_char("..", &text_len);
             text_widget_set_text_own(button_text, wtext, text_len);
@@ -151,7 +147,7 @@ refresh_entry_button_names(te_file_dialog* file_dialog) {
         }
     }
 
-    // Hide remaining buttons.
+    /* hide remaining buttons */
     for (; button_idx < file_dialog->entry_button_count; button_idx++) {
         te_widget* widget = button_widget_get_widget(file_dialog->entry_buttons[button_idx]);
 
@@ -163,7 +159,7 @@ refresh_entry_button_names(te_file_dialog* file_dialog) {
             button_widget_get_widget(file_dialog->entry_buttons[button_idx]), pos);
     }
 
-    // Update current path text.
+    /* update current path text */
     unsigned int text_len;
     wchar_t* text = wchar_from_char(file_dialog->current_path, &text_len);
     text_widget_set_text_own(file_dialog->current_path_text, text, text_len);
@@ -171,7 +167,7 @@ refresh_entry_button_names(te_file_dialog* file_dialog) {
 
 static void
 refresh_page_text(te_file_dialog* file_dialog) {
-    // Update page count (in case list changed).
+    /* update page count (in case list changed) */
     unsigned int page_count = file_dialog->dir_entry_count / file_dialog->entry_button_count;
     if (file_dialog->dir_entry_count % file_dialog->entry_button_count > 0) {
         page_count += 1;
@@ -240,7 +236,7 @@ on_button_entry_clicked(te_button_widget* button) {
         (unsigned int)widget_get_custom_value(button_widget_get_widget(button));
 
     if (file_dialog->selected_button_index < file_dialog->entry_button_count) {
-        // Clear selected button.
+        /* clear selected button */
         vec4 color;
         theme_get_button_color(color);
         button_widget_set_color(
@@ -250,7 +246,7 @@ on_button_entry_clicked(te_button_widget* button) {
     }
 
     if (button_index == 0) {
-        // ".." (go up) button.
+        /* ".." (go up) button */
         const size_t old_path_len = strlen(file_dialog->current_path);
         size_t slash_pos = 0;
         for (size_t i = old_path_len - 1; i > 1; i--) {
@@ -343,7 +339,7 @@ on_button_select_clicked(te_button_widget* button) {
                 return;
             }
 
-            // Build path to file.
+            /* build path to file */
             size_t len = strlen(file_dialog->current_path);
             const bool need_slash = file_dialog->current_path[len - 1] != '/'
                                     && file_dialog->current_path[len - 1] != '\\';
@@ -379,7 +375,7 @@ on_button_select_clicked(te_button_widget* button) {
 
             char* filename = wchar_to_char(wtext, &filename_len);
 
-            // Build path to file.
+            /* build path to file */
             size_t len = strlen(file_dialog->current_path);
             const bool need_slash = file_dialog->current_path[len - 1] != '/'
                                     && file_dialog->current_path[len - 1] != '\\';
@@ -437,7 +433,7 @@ file_dialog_create(
     file_dialog->dir_entries =
         filesystem_list_directory(file_dialog->current_path, &file_dialog->dir_entry_count);
 
-    // Dark full screen background.
+    /* dark full screen background */
     te_rect_widget* top_widget = rect_widget_create();
     {
         te_widget* widget = rect_widget_get_widget(top_widget);
@@ -454,7 +450,7 @@ file_dialog_create(
         const float hspacing = theme_get_horizontal_spacing() / DIALOG_WIDTH;
         const float vspacing = theme_get_vertical_spacing() / DIALOG_HEIGHT;
 
-        // Widget background.
+        /* widget background */
         te_rect_widget* back_rect = rect_widget_create();
         {
             te_widget* widget = rect_widget_get_widget(back_rect);
@@ -471,7 +467,7 @@ file_dialog_create(
         pos[0] = hpadding;
         pos[1] = vpadding;
 
-        // Current path.
+        /* current path */
         {
             te_rect_widget* rect = rect_widget_create();
             {
@@ -502,20 +498,20 @@ file_dialog_create(
         pos[0] = hpadding;
         pos[1] += button_height + vspacing;
 
-        // Filesystem entries.
+        /* filesystem entries */
         {
             const float below_items_height =
                 (mode == TE_FDM_SELECT_NEW_FILE
-                     ? button_height + vspacing // <- text edit for new file name
+                     ? button_height + vspacing /* text edit for new file name */
                      : 0.0f)
-                + vspacing + button_height; // <- nav menu height
+                + vspacing + button_height; /* nav menu height */
 
             const float entry_spacing = vspacing / 2.0f;
             vec2 size;
             size[0] = 1.0f - hpadding * 2.0f;
             size[1] = button_height;
 
-            // Count how much buttons we can fit.
+            /* count how much buttons we can fit */
             file_dialog->entry_button_count = 0;
             float test_y = pos[1];
             do {
@@ -550,7 +546,7 @@ file_dialog_create(
 
                 button_widget_set_on_clicked(button, on_button_entry_clicked);
 
-                // Button text.
+                /* button text */
                 te_text_widget* text = text_widget_create();
                 {
                     te_widget* widget = text_widget_get_widget(text);
@@ -587,7 +583,7 @@ file_dialog_create(
             pos[0] += text_width + hspacing;
             const float text_edit_width = 1.0f - hpadding - pos[0];
 
-            // Background for text edit.
+            /* background for text edit */
             te_rect_widget* rect_widget = rect_widget_create();
             {
                 te_widget* widget = rect_widget_get_widget(rect_widget);
@@ -619,7 +615,7 @@ file_dialog_create(
             pos[1] += button_height + vspacing;
         }
 
-        // Navigation menu and "cancel", "select" buttons.
+        /* navigation menu and "cancel", "select" buttons */
         {
             const float nav_item_width = (1.0f - hpadding * 2.0f - hspacing * 4.0f) / 5.0f;
 
@@ -629,7 +625,7 @@ file_dialog_create(
             size[0] = nav_item_width;
             size[1] = button_height;
 
-            // Cancel button.
+            /* cancel button */
             {
                 te_button_widget* button = button_widget_create();
                 {
@@ -651,7 +647,7 @@ file_dialog_create(
 
                 button_widget_set_on_clicked(button, on_button_cancel_clicked);
 
-                // Button text.
+                /* button text */
                 te_text_widget* text_widget = text_widget_create();
                 {
                     te_widget* widget = text_widget_get_widget(text_widget);
@@ -667,7 +663,7 @@ file_dialog_create(
             }
             pos[0] += nav_item_width + hspacing;
 
-            // Left button.
+            /* left button */
             {
                 te_button_widget* button = button_widget_create();
                 {
@@ -690,7 +686,7 @@ file_dialog_create(
 
                 button_widget_set_on_clicked(button, on_button_prev_page_clicked);
 
-                // Button text.
+                /* button text */
                 te_text_widget* text_widget = text_widget_create();
                 {
                     te_widget* widget = text_widget_get_widget(text_widget);
@@ -706,7 +702,7 @@ file_dialog_create(
             }
             pos[0] += nav_item_width + hspacing;
 
-            // Page text.
+            /* page text */
             {
                 const float adjust = size[0] / 3.0f; // adjust text to be somewhat centered
 
@@ -726,7 +722,7 @@ file_dialog_create(
             }
             pos[0] += nav_item_width + hspacing;
 
-            // Right button.
+            /* right button */
             {
                 te_button_widget* button = button_widget_create();
                 {
@@ -749,7 +745,7 @@ file_dialog_create(
 
                 button_widget_set_on_clicked(button, on_button_next_page_clicked);
 
-                // Button text.
+                /* button text */
                 te_text_widget* text_widget = text_widget_create();
                 {
                     te_widget* widget = text_widget_get_widget(text_widget);
@@ -765,7 +761,7 @@ file_dialog_create(
             }
             pos[0] += nav_item_width + hspacing;
 
-            // Select button.
+            /* select button */
             {
                 te_button_widget* button = button_widget_create();
                 {
@@ -787,7 +783,7 @@ file_dialog_create(
 
                 button_widget_set_on_clicked(button, on_button_select_clicked);
 
-                // Button text.
+                /* button text */
                 te_text_widget* text_widget = text_widget_create();
                 {
                     te_widget* widget = text_widget_get_widget(text_widget);

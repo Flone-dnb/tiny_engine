@@ -12,7 +12,7 @@
 #include <io/config.h>
 #include <io/filesystem.h>
 #include <io/config.h>
-#include <math_funcs.h>
+#include <math/math_funcs.h>
 #include <render/model_renderer.h>
 #include <render/renderer.h>
 #include <render/shader_manager.h>
@@ -29,38 +29,30 @@
 #if defined(ENGINE_GLES)
 static void
 bind_gl_vertex_attributes_model_vertex(unsigned int shader_prog_id) {
-    // Position.
     glBindAttribLocation(shader_prog_id, 0, "pos");
     glEnableVertexAttribArray(0);
 
-    // Normal.
     glBindAttribLocation(shader_prog_id, 1, "normal");
     glEnableVertexAttribArray(1);
 
-    // UV.
     glBindAttribLocation(shader_prog_id, 2, "uv");
     glEnableVertexAttribArray(2);
 }
 
 static void
 bind_gl_vertex_attributes_model_vertex_skinned(unsigned int shader_prog_id) {
-    // Position.
     glBindAttribLocation(shader_prog_id, 0, "pos");
     glEnableVertexAttribArray(0);
 
-    // Normal.
     glBindAttribLocation(shader_prog_id, 1, "normal");
     glEnableVertexAttribArray(1);
 
-    // UV.
     glBindAttribLocation(shader_prog_id, 2, "uv");
     glEnableVertexAttribArray(2);
 
-    // Bone indices.
     glBindAttribLocation(shader_prog_id, 3, "bone_indices");
     glEnableVertexAttribArray(3);
 
-    // Bone weights.
     glBindAttribLocation(shader_prog_id, 4, "bone_weights");
     glEnableVertexAttribArray(4);
 }
@@ -68,16 +60,16 @@ bind_gl_vertex_attributes_model_vertex_skinned(unsigned int shader_prog_id) {
 
 void
 prv_model_set_attribute_pointers_model_vertex(void) {
-    // Position.
+    /* position */
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), NULL);
 
-    // Normal.
+    /* normal */
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(
         1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)sizeof(vec3));
 
-    // UV.
+    /* UV */
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(
         2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)(sizeof(vec3) * 2));
@@ -85,33 +77,33 @@ prv_model_set_attribute_pointers_model_vertex(void) {
 
 void
 prv_model_set_attribute_pointers_model_vertex_skinned(void) {
-    // Position.
+    /* position */
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned), NULL);
 
-    // Normal.
+    /* normal */
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(
         1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned), (void*)sizeof(vec3));
 
-    // UV.
+    /* UV */
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(
         2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned), (void*)(sizeof(vec3) * 2));
 
-    // Bone indices.
+    /* bone indices */
     glEnableVertexAttribArray(3);
 #if defined(ENGINE_GLES)
     glVertexAttribPointer(
         3, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(te_model_vertex_skinned),
         (void*)(sizeof(vec3) * 2 + sizeof(vec2)));
 #else
-    glVertexAttribIPointer( // <- note `I` here, passing array of integers
-        3, 4, GL_UNSIGNED_BYTE, sizeof(te_model_vertex_skinned),
-        (void*)(sizeof(vec3) * 2 + sizeof(vec2)));
+    glVertexAttribIPointer(/* note `I` here, passing array of integers */
+                           3, 4, GL_UNSIGNED_BYTE, sizeof(te_model_vertex_skinned),
+                           (void*)(sizeof(vec3) * 2 + sizeof(vec2)));
 #endif
 
-    // Bone weights.
+    /* bone weights */
     glEnableVertexAttribArray(4);
     glVertexAttribPointer(
         4, 4, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned),
@@ -124,9 +116,9 @@ vertex_pack_create(unsigned int vertex_count, bool is_skinned) {
     pack->vertex_count = vertex_count;
     memset(pack->attribute_offsets, 255, sizeof(pack->attribute_offsets[0]) * TE_VA_COUNT);
     if (!is_skinned) {
+        unsigned char offset = 0;
         pack->vertex_sizeof = sizeof(te_model_vertex);
 
-        unsigned char offset = 0;
         pack->attribute_offsets[TE_VA_POSITION] = offset;
         offset += sizeof(vec3);
         pack->attribute_offsets[TE_VA_NORMAL] = offset;
@@ -138,9 +130,9 @@ vertex_pack_create(unsigned int vertex_count, bool is_skinned) {
 #endif
         pack->set_attribute_pointers = prv_model_set_attribute_pointers_model_vertex;
     } else {
+        unsigned char offset = 0;
         pack->vertex_sizeof = sizeof(te_model_vertex_skinned);
 
-        unsigned char offset = 0;
         pack->attribute_offsets[TE_VA_POSITION] = offset;
         offset += sizeof(vec3);
         pack->attribute_offsets[TE_VA_NORMAL] = offset;
@@ -169,38 +161,31 @@ vertex_pack_destroy(te_vertex_pack* pack) {
 }
 
 struct te_model {
-    // AABB in model space.
+    /* in model space */
     te_aabb_shape aabb_local;
 
-    // Path (relative to the `res` directory) to the file that stores mesh geometry.
-    // NULL if instead a default model should be used.
+    /* NULL if default is used, otherwise path (relative to the `res` directory). */
+    char* custom_vert_relative_path;
+    char* custom_frag_relative_path;
     char* path_to_geo;
 
-    // NULL if default vertex shader is used. Path (relative to the `res` directory) to a custom vertex shader.
-    char* custom_vert_relative_path;
-
-    // NULL if default fragment shader is used. Path (relative to the `res` directory) to a custom fragment shader.
-    char* custom_frag_relative_path;
-
-    // NULL if texture is not set, otherwise path (relative to the `res` directory) to a texture file.
+    /* NULL if not set, otherwise path (relative to the `res` directory) to a file */
     char* tex_relative_path;
-
-    // NULL if not set, otherwise path (relative to the `res` directory) to a skeleton file.
     char* skeleton_relative_path;
 
-    // NULL if not set.
+    /* NULL if not set */
     char* name;
 
-    // NULL if not spawned. Do not free/destroy this pointer.
+    /* NULL if not spawned, do not free/destroy this pointer */
     te_world* world;
 
-    // NULL if not attached.
+    /* NULL if not attached */
     te_model** child_models;
     te_model* parent_model;
     te_camera* attached_camera;
     te_sound** attached_sounds;
 
-    // Custom user-specified data.
+    /* custom user-specified data */
     void* custom_ptr;
     void (*custom_on_before_destroyed)(te_model*);
     void (*custom_on_after_spawned)(te_model*);
@@ -210,43 +195,43 @@ struct te_model {
         unsigned int* vertex_count, bool* free_custom_geometry);
     unsigned int custom_value;
 
-    // Color in RGBA format in range [0.0; 1.0].
+    /* color in RGBA format in range [0.0; 1.0] */
     vec4 color;
 
     vec3 position;
-    vec3 rotation; // in degrees
+    vec3 rotation; /* in degrees */
     vec3 scale;
 
     vec2 tex_tiling;
     vec2 uv_offset;
 
-    // Stores invalid value if not spawned (see @ref world).
+    /* stores invalid value if not spawned (see @ref world) */
     unsigned int render_data_handle;
 
-    // Stores invalid value if not spawned (see @ref world). OpenGL ID of the shader program used.
+    /* stores invalid value if not spawned (see @ref world). OpenGL ID of the shader program used */
     unsigned int shader_prog_id;
 
-    // Number of elements in the array @ref child_models.
+    /* number of elements in the array @ref child_models */
     unsigned int child_model_count;
 
-    // Number of elements in the array @ref attached_sounds.
+    /* number of elements in the array @ref attached_sounds */
     unsigned int attached_sound_count;
 
-    // 0xFFFFFFFF if invalid, otherwise points to a bone of @ref parent_model skeleton
-    // to which the model is attached to.
+    /* 0xFFFFFFFF if invalid, otherwise points to a bone of @ref parent_model skeleton
+     * to which the model is attached to */
     unsigned int parent_bone_idx;
 
-    // 0xFFFFFFFF if not being rendered, OpenGL vertex array object, vertex buffer object and element buffer object IDs.
+    /* 0xFFFFFFFF if not being rendered, OpenGL vertex array object, vertex buffer object and element buffer object IDs */
 #if !defined(ENGINE_GLES)
     unsigned int vao;
 #endif
     unsigned int vbo;
     unsigned int ebo;
 
-    // ID used to unregister tick callback. 0xFFFFFFFF if not registered.
+    /* ID used to unregister tick callback. 0xFFFFFFFF if not registered */
     unsigned int tick_callback_id;
 
-    // NULL if not spawned or if @ref skeleton_relative_path is NULL.
+    /* NULL if not spawned or if @ref skeleton_relative_path is NULL */
     te_skeleton* skeleton;
 
     bool is_opaque;
@@ -258,7 +243,7 @@ static void on_spawned(te_model* model, te_world* world);
 static void on_despawned(te_model* model);
 
 te_model*
-model_create() {
+model_create(void) {
     te_model* model = malloc(sizeof(te_model));
 
     model->world = NULL;
@@ -326,7 +311,8 @@ model_create_from_file(const char* relative_path) {
 
         for (unsigned int child_idx = 0; child_idx < child_model_count; child_idx++) {
             if (section_idx >= section_count) {
-                log_error_fmt(__FILE__, __LINE__, 
+                log_error_fmt(
+                    __FILE__, __LINE__,
                     "unexpected end of file \"%s\", have %u sections while expected to "
                     "have more",
                     relative_path, section_count);
@@ -352,10 +338,10 @@ model_destroy(te_model* model) {
         model->custom_on_before_destroyed(model);
     }
 
-    // Destroy models.
+    /* destroy models */
     for (unsigned int i = 0; i < model->child_model_count; i++) {
         if (model->child_models[i]->world != NULL) {
-            // We should have despawned it in our despawn callback.
+            /* we should have despawned it in our despawn callback */
             log_error(__FILE__, __LINE__, "expected the child model to be despawned already");
             abort();
         }
@@ -365,17 +351,18 @@ model_destroy(te_model* model) {
     model->child_models = NULL;
     model->child_model_count = 0;
 
-    // Destroy camera.
+    /* destroy camera */
     if (model->attached_camera != NULL) {
         if (camera_get_world(model->attached_camera) != NULL) {
-            log_error(__FILE__, __LINE__, "expected the attached camera to be despawned already");
+            log_error(
+                __FILE__, __LINE__, "expected the attached camera to be despawned already");
             abort();
         }
         camera_destroy(model->attached_camera);
         model->attached_camera = NULL;
     }
 
-    // Destroy sounds.
+    /* destroy sounds */
     for (unsigned int i = 0; i < model->attached_sound_count; i++) {
         sound_destroy(model->attached_sounds[i]);
     }
@@ -401,16 +388,16 @@ check_file_path(const char* relative_path) {
     }
 
     if (relative_path != NULL) {
-        // Check if path exists.
+        /* check if path exists */
         char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
         if (!filesystem_does_path_exists(res_path)) {
-            // Do nothing, probably user typing the path.
+            /* do nothing, probably user typing the path */
             free(res_path);
             return false;
         }
         FILE* fp = fopen(res_path, "rb");
         if (fp == NULL) {
-            // Not a file.
+            /* not a file */
             free(res_path);
             return false;
         }
@@ -423,7 +410,7 @@ check_file_path(const char* relative_path) {
 #endif
 
 te_game_object_info*
-model_get_game_object_info() {
+model_get_game_object_info(void) {
     return type_database_get_type_info(model_get_type_id())->game_object_info;
 }
 
@@ -488,13 +475,14 @@ prv_model_on_after_skeleton_updated(te_model* model) {
 
 static void
 prv_model_calc_world_normal_matrices(te_model* model, mat4 out_world, mat3 out_normal) {
+    mat4 mat1;
     mat4 mat2;
+
     math_make_rotation_mat(model->rotation, mat2);
 
-    mat4 mat1;
     glm_scale_make(mat1, model->scale);
 
-    // Scale, rotate and then translate.
+    /* scale, rotate and then translate */
     glm_mat4_mul(mat2, mat1, out_world);
     glm_translate_make(mat1, model->position);
     glm_mat4_mul(mat1, out_world, out_world);
@@ -515,7 +503,7 @@ prv_model_calc_world_normal_matrices(te_model* model, mat4 out_world, mat3 out_n
             glm_mat4_copy(data->world_mat, mat1);
         }
 
-        // Ignore parent's scale.
+        /* ignore parent's scale */
         math_normalize_safely(mat1[0]);
         math_normalize_safely(mat1[1]);
         math_normalize_safely(mat1[2]);
@@ -523,7 +511,7 @@ prv_model_calc_world_normal_matrices(te_model* model, mat4 out_world, mat3 out_n
         glm_mat4_mul(mat1, out_world, out_world);
     }
 
-    // Calculate normal matrix.
+    /* calculate normal matrix */
     glm_mat4_inv(out_world, mat1);
     glm_mat4_transpose(mat1);
     glm_mat4_pick3(mat1, out_normal);
@@ -540,7 +528,7 @@ model_set_position(te_model* model, vec3 position) {
     glm_vec3_copy(position, model->position);
 
     if (model->world != NULL) {
-        // Update render data.
+        /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             prv_model_get_renderer(model), model->render_data_handle);
 
@@ -554,7 +542,7 @@ model_set_rotation(te_model* model, vec3 rotation) {
     glm_vec3_copy(rotation, model->rotation);
 
     if (model->world != NULL) {
-        // Update render data.
+        /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             prv_model_get_renderer(model), model->render_data_handle);
 
@@ -568,7 +556,7 @@ model_set_scale(te_model* model, vec3 scale) {
     glm_vec3_copy(scale, model->scale);
 
     if (model->world != NULL) {
-        // Update render data.
+        /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             prv_model_get_renderer(model), model->render_data_handle);
 
@@ -582,7 +570,7 @@ model_set_color(te_model* model, vec4 color) {
     glm_vec4_copy(color, model->color);
 
     if (model->world != NULL) {
-        // Update render data.
+        /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             prv_model_get_renderer(model), model->render_data_handle);
         glm_vec4_copy(model->color, data->color);
@@ -601,10 +589,10 @@ model_set_texture(te_model* model, const char* relative_path) {
     model->tex_relative_path = NULL;
 
     if (relative_path == NULL || strcmp(relative_path, "") == 0) {
-        // Remove current texture.
+        /* remove current texture */
         model->tex_relative_path = NULL;
         if (model->world != NULL) {
-            // Update render data.
+            /* update render data */
             te_model_render_data* data = model_renderer_get_render_data_tmp(
                 prv_model_get_renderer(model), model->render_data_handle);
 
@@ -618,14 +606,14 @@ model_set_texture(te_model* model, const char* relative_path) {
             glm_vec2_make((vec2){-1.0f, -1.0f}, data->tex_tiling);
         }
     } else {
-        // Set new texture.
+        /* set new texture */
         const size_t len = strlen(relative_path);
         model->tex_relative_path = malloc(sizeof(char) * (len + 1));
         memcpy(model->tex_relative_path, relative_path, sizeof(char) * len);
         model->tex_relative_path[len] = 0;
 
         if (model->world != NULL) {
-            // Update render data.
+            /* update render data */
             te_model_render_data* data = model_renderer_get_render_data_tmp(
                 prv_model_get_renderer(model), model->render_data_handle);
 
@@ -646,7 +634,7 @@ model_set_texture_tiling(te_model* model, vec2 tex_tiling) {
     glm_vec2_copy(tex_tiling, model->tex_tiling);
 
     if (model->world != NULL && model->tex_relative_path != NULL) {
-        // Update render data.
+        /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             prv_model_get_renderer(model), model->render_data_handle);
         glm_vec2_copy(model->tex_tiling, data->tex_tiling);
@@ -658,7 +646,7 @@ model_set_uv_offset(te_model* model, vec2 uv_offset) {
     glm_vec2_copy(uv_offset, model->uv_offset);
 
     if (model->world != NULL) {
-        // Update render data.
+        /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             prv_model_get_renderer(model), model->render_data_handle);
         glm_vec2_copy(model->uv_offset, data->uv_offset);
@@ -791,7 +779,7 @@ model_set_parent(te_model* model, te_model* new_parent, unsigned int parent_bone
     }
 
     if (model->parent_model != NULL) {
-        // Remove from old parent.
+        /* remove from old parent */
         for (unsigned int i = 0; i < model->parent_model->child_model_count; i++) {
             if (model != model->parent_model->child_models[i]) {
                 continue;
@@ -821,7 +809,7 @@ model_set_parent(te_model* model, te_model* new_parent, unsigned int parent_bone
     model->parent_bone_idx = parent_bone_idx;
 
     if (new_parent != NULL) {
-        // Add to new parent.
+        /* add to new parent */
         te_model** new_children =
             malloc(sizeof(te_model*) * (new_parent->child_model_count + 1));
         memcpy(
@@ -848,8 +836,10 @@ model_set_parent(te_model* model, te_model* new_parent, unsigned int parent_bone
         } else {
             if (new_parent->world != NULL) {
                 if (new_parent->world != model->world) {
-                    log_error(__FILE__, __LINE__, "can't attach a model from a different world, despawn the child "
-                              "model first");
+                    log_error(
+                        __FILE__, __LINE__,
+                        "can't attach a model from a different world, despawn the child "
+                        "model first");
                     abort();
                 } else {
                     prv_world_remove_root_game_object_no_notify(model->world, model, false);
@@ -861,7 +851,7 @@ model_set_parent(te_model* model, te_model* new_parent, unsigned int parent_bone
     }
 
     if (model->world != NULL) {
-        // Update render data.
+        /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             prv_model_get_renderer(model), model->render_data_handle);
 
@@ -905,8 +895,9 @@ model_attach_camera(te_model* model, te_camera* camera) {
             abort();
         }
         if (model->parent_model != NULL) {
-            // Also serialization does not support this.
-            log_error(__FILE__, __LINE__, "can't attach camera to a model which has a parent model");
+            /* also serialization does not support this */
+            log_error(
+                __FILE__, __LINE__, "can't attach camera to a model which has a parent model");
             abort();
         }
     }
@@ -923,7 +914,8 @@ model_attach_camera(te_model* model, te_camera* camera) {
     if (camera != NULL) {
         te_world* camera_world = camera_get_world(camera);
         if (model->world != NULL && camera_world != NULL && model->world != camera_world) {
-            log_error(__FILE__, __LINE__, 
+            log_error(
+                __FILE__, __LINE__,
                 "can't attach a camera from a different world, despawn the camera first");
             abort();
         }
@@ -952,14 +944,16 @@ model_get_attached_camera(te_model* model) {
     return model->attached_camera;
 }
 
-// WARNING: Only called while needed for ex. while have attached sounds, otherwise NOT CALLED!
+/* WARNING: Only called while needed for ex. while have attached sounds, otherwise NOT CALLED! */
 static void
 model_tick(te_model* model, float delta_time_sec) {
+    unsigned int i;
+    vec3 pos;
+
     (void)delta_time_sec;
 
-    vec3 pos;
     model_get_world_position(model, pos);
-    for (unsigned int i = 0; i < model->attached_sound_count; i++) {
+    for (i = 0; i < model->attached_sound_count; i++) {
         sound_set_3d_position(model->attached_sounds[i], pos);
     }
 }
@@ -1054,7 +1048,7 @@ prv_model_add_to_model_renderer(te_model* model) {
     }
 #endif
 
-    // Get shader program.
+    /* get shader program */
     {
         te_shader_manager* shader_manager = renderer_get_shader_manager(
             game_manager_get_renderer(world_get_game_manager(model->world)));
@@ -1069,7 +1063,7 @@ prv_model_add_to_model_renderer(te_model* model) {
                                                      : "engine/shader/model.frag.glsl");
     }
 
-    // Load geometry.
+    /* load geometry */
     unsigned int index_count = 0;
     {
         te_vertex_pack* vertices;
@@ -1095,14 +1089,14 @@ prv_model_add_to_model_renderer(te_model* model) {
         glBindVertexArray(model->vao);
 #endif
         {
-            // Vertex buffer.
+            /* vertex buffer */
             glBindBuffer(GL_ARRAY_BUFFER, model->vbo);
             glBufferData(
                 GL_ARRAY_BUFFER,
                 (GLsizeiptr)(vertices->vertex_sizeof * vertices->vertex_count), vertices->data,
                 GL_STATIC_DRAW);
 
-            // Index buffer.
+            /* index buffer */
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, model->ebo);
             glBufferData(
                 GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(sizeof(unsigned short) * index_count),
@@ -1131,12 +1125,12 @@ prv_model_add_to_model_renderer(te_model* model) {
             prv_skeleton_create(model->skeleton_relative_path, model, game_manager);
     }
 
-    // Add to rendering.
+    /* add to rendering */
     te_model_renderer* model_renderer = prv_model_get_renderer(model);
     model->render_data_handle = model_renderer_add_model(
         model_renderer, model->shader_prog_id, model->disable_backface_culling);
 
-    // Init render data.
+    /* init render data */
     {
         te_model_render_data* data =
             model_renderer_get_render_data_tmp(model_renderer, model->render_data_handle);
@@ -1196,10 +1190,10 @@ prv_model_remove_from_model_renderer(te_model* model) {
         tex_id = data->tex_id;
     }
 
-    // Remove from rendering.
+    /* remove from rendering */
     model_renderer_remove_model(model_renderer, model->render_data_handle);
 
-    // Mark unused stuff.
+    /* mark unused stuff */
     shader_manager_mark_unused_shader(shader_manager, model->shader_prog_id);
     if (model->tex_relative_path != NULL) {
         texture_manager_mark_unused_texture(texture_manager, tex_id);
@@ -1210,7 +1204,7 @@ prv_model_remove_from_model_renderer(te_model* model) {
         model->skeleton = NULL;
     }
 
-    // Release geometry.
+    /* release geometry */
 #if !defined(ENGINE_GLES)
     glGenVertexArrays(1, &model->vao);
 #endif
@@ -1220,7 +1214,7 @@ prv_model_remove_from_model_renderer(te_model* model) {
     model->render_data_handle = 0xffffffff;
     model->shader_prog_id = 0xffffffff;
 
-    // DO NOT: set NULL to world in this function, the caller is expected to do it if needed
+    /* DO NOT: set NULL to world in this function, the caller is expected to do it if needed */
 }
 
 mat4*
@@ -1395,7 +1389,7 @@ prv_model_calc_aabb(te_vertex_pack* vertices) {
     aabb.center[1] = (min[1] + max[1]) * 0.5f;
     aabb.center[2] = (min[2] + max[2]) * 0.5f;
 
-    // to avoid thin sides
+    /* to avoid thin sides */
     const float delta = 0.001f;
 
     aabb.extents[0] = glm_max(max[0] - aabb.center[0], delta);
@@ -1410,7 +1404,7 @@ on_spawned(te_model* model, te_world* world) {
     model->world = world;
     prv_model_add_to_model_renderer(model);
 
-    // Spawn child models.
+    /* spawn child models */
     for (unsigned int i = 0; i < model->child_model_count; i++) {
         te_model* child_model = model->child_models[i];
 
@@ -1421,16 +1415,17 @@ on_spawned(te_model* model, te_world* world) {
         on_spawned(child_model, world);
     }
 
-    // Spawn attached camera.
+    /* spawn attached camera */
     if (model->attached_camera != NULL) {
         if (camera_get_world(model->attached_camera) != NULL) {
-            log_error(__FILE__, __LINE__, "expected the attached camera to not be spawned yet");
+            log_error(
+                __FILE__, __LINE__, "expected the attached camera to not be spawned yet");
             abort();
         }
         camera_get_game_object_info()->on_spawned(model->attached_camera, world);
     }
 
-    // Play sounds.
+    /* play sounds */
     if (model->attached_sound_count > 0) {
         vec3 pos;
         model_get_world_position(model, pos);
@@ -1438,7 +1433,7 @@ on_spawned(te_model* model, te_world* world) {
             sound_set_3d_position(model->attached_sounds[i], pos);
         }
 
-        // Register tick callback to update sound positions.
+        /* register tick callback to update sound positions */
         model->tick_callback_id = game_manager_add_tick_callback(
             world_get_game_manager(model->world), model, model_tick);
     }
@@ -1460,7 +1455,7 @@ on_despawned(te_model* model) {
         model->tick_callback_id = 0xFFFFFFFF;
     }
 
-    // Despawn child models.
+    /* despawn child models */
     for (unsigned int i = 0; i < model->child_model_count; i++) {
         te_model* child_model = model->child_models[i];
 
@@ -1469,12 +1464,12 @@ on_despawned(te_model* model) {
         }
     }
 
-    // Despawn attached camera.
+    /* despawn attached camera */
     if (model->attached_camera != NULL && camera_get_world(model->attached_camera) != NULL) {
         camera_get_game_object_info()->on_despawned(model->attached_camera);
     }
 
-    // Stop sounds.
+    /* stop sounds */
     for (unsigned int i = 0; i < model->attached_sound_count; i++) {
         sound_stop(model->attached_sounds[i]);
     }
@@ -1577,15 +1572,17 @@ prv_model_load_geo(
 
     FILE* fp = fopen(res_path, "rb");
     if (fp == NULL) {
-        log_error_fmt(__FILE__, __LINE__, 
+        log_error_fmt(
+            __FILE__, __LINE__,
             "failed to load model geometry from file %s: unable to open file", path_to_geo);
         abort();
     }
 
     unsigned char id = 0;
     fread(&id, sizeof(id), 1, fp);
-    if (id != 0 && id != 100) { // unskinned vertex format ID || skinned vertex format ID
-        log_error_fmt(__FILE__, __LINE__, 
+    if (id != 0 && id != 100) { /* unskinned || skinned vertex format ID (see import.c) */
+        log_error_fmt(
+            __FILE__, __LINE__,
             "failed to load model geometry from file %s: unexpected file type ID %u",
             path_to_geo, (unsigned int)id);
         abort();

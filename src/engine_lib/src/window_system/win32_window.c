@@ -13,7 +13,7 @@
 #include <Xinput.h>
 #include "wglext.h"
 
-#pragma comment(lib, "opengl32.lib") // for wgl functions
+#pragma comment(lib, "opengl32.lib") /* for wgl functions */
 #pragma comment(lib, "XInput.lib")
 
 typedef struct te_win32_window {
@@ -28,7 +28,7 @@ typedef struct te_win32_window {
 
     XINPUT_STATE xinput_state;
 
-    unsigned char controller_id; // 255 if not connected
+    unsigned char controller_id; /* 255 if not connected */
     bool capture_mouse;
     bool is_cached_cursor_pos_valid;
 } te_win32_window;
@@ -128,7 +128,7 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 
                 bool is_repeat = (lparam & (1 << 30)) != 0;
 
-                // update keyboard modifiers
+                /* update keyboard modifiers */
                 te_win32_window* win32_window =
                     (te_win32_window*)prv_os_window_get_impl(os_window);
                 enum te_keyboard_button button = (enum te_keyboard_button)(code);
@@ -149,7 +149,7 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                 bool is_extended = (lparam & (1 << 24)) != 0;
                 UINT code = is_extended ? (0xE000u | scancode) : scancode;
 
-                // update keyboard modifiers
+                /* update keyboard modifiers */
                 te_win32_window* win32_window =
                     (te_win32_window*)prv_os_window_get_impl(os_window);
                 enum te_keyboard_button button = (enum te_keyboard_button)(code);
@@ -184,7 +184,7 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                 te_win32_window* win32_window =
                     (te_win32_window*)prv_os_window_get_impl(os_window);
                 if (win32_window->controller_id == 255) {
-                    // check if newly connected
+                    /* check if newly connected */
                     for (DWORD i = 0; i < XUSER_MAX_COUNT; i++) {
                         memset(&win32_window->xinput_state, 0, sizeof(XINPUT_STATE));
                         if (XInputGetState(i, &win32_window->xinput_state) == ERROR_SUCCESS) {
@@ -196,7 +196,7 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                         }
                     }
                 } else {
-                    // check if disconnected
+                    /* check if disconnected */
                     memset(&win32_window->xinput_state, 0, sizeof(XINPUT_STATE));
                     if (XInputGetState(
                             win32_window->controller_id, &win32_window->xinput_state)
@@ -212,7 +212,6 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
             case WM_CLOSE: {
                 os_window_close(os_window);
                 PostQuitMessage(0);
-                // note: will call on_closed callback outside
                 return 0;
             }
         }
@@ -267,7 +266,8 @@ load_wgl_extensions(void) {
     wglCreateContextAttribsARB =
         (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
     if (wglCreateContextAttribsARB == NULL) {
-        log_error(__FILE__, __LINE__, "failed to load wgl extension wglCreateContextAttribsARB");
+        log_error(
+            __FILE__, __LINE__, "failed to load wgl extension wglCreateContextAttribsARB");
         abort();
     }
 
@@ -297,7 +297,7 @@ gladloadproc(const char* name) {
             }
         }
         func = (void*)GetProcAddress(opengl32dll, name);
-        // note: don't check if this one is NULL
+        /* note: don't check if this one is NULL, it can be a valid NULL */
     }
 
     return func;
@@ -332,7 +332,7 @@ win32_window_create(te_os_window* os_window, const char* title) {
 
     wchar_t* titlew = wchar_from_char(title, NULL);
 
-    // fullscreen borderless window
+    /* fullscreen borderless window */
     win32_window->hwnd = CreateWindowExW(
         WS_EX_APPWINDOW, window_class, titlew, WS_POPUP | WS_VISIBLE | WS_MAXIMIZE, 0, 0,
         screen_w, screen_h, NULL, NULL, hinstance, NULL);
@@ -428,18 +428,18 @@ win32_window_create(te_os_window* os_window, const char* title) {
         abort();
     }
 
-    // disable vsync
+    /* disable vsync */
     if (wglSwapIntervalEXT != NULL) {
         wglSwapIntervalEXT(0);
     }
 
-    // NOTE: RIDEV_NOLEGACY should only be used for fullscreen apps
-    // because it disables lots of window events that are needed for windowed apps
+    /* NOTE: RIDEV_NOLEGACY should only be used for fullscreen apps
+     * because it disables lots of window events that are needed for windowed apps */
     RAWINPUTDEVICE rid = {0};
     rid.usUsagePage = 0x01;
-    rid.usUsage = 0x02; // mouse
+    rid.usUsage = 0x02; /* mouse */
     rid.dwFlags =
-        RIDEV_NOLEGACY; // (see note from above) disable events like MOUSEMOVE for perf
+        RIDEV_NOLEGACY; /* (see note from above) disable events like MOUSEMOVE for perf */
     rid.hwndTarget = win32_window->hwnd;
     RegisterRawInputDevices(&rid, 1, sizeof(rid));
 
@@ -447,25 +447,25 @@ win32_window_create(te_os_window* os_window, const char* title) {
     win32_window->is_cached_cursor_pos_valid = false;
     win32_window->keyboard_mods.bitmask = 0;
 
-    // should return the actual pixel count
-    // not affected by the DPI because we set DPI awareness
+    /* should return the actual pixel count
+     * not affected by the DPI because we set DPI awareness */
     RECT rect;
     GetClientRect(win32_window->hwnd, &rect);
     int width = rect.right - rect.left;
     int height = rect.bottom - rect.top;
-    // set initial size
+    /* set initial size */
     prv_os_window_on_size_changed(os_window, (unsigned int)width, (unsigned int)height);
 
     SetCursor(LoadCursor(NULL, IDC_ARROW));
 
-    // check controller
+    /* check controller */
     win32_window->controller_id = 255;
     for (DWORD i = 0; i < XUSER_MAX_COUNT; i++) {
         memset(&win32_window->xinput_state, 0, sizeof(XINPUT_STATE));
         if (XInputGetState(i, &win32_window->xinput_state) == ERROR_SUCCESS) {
             win32_window->controller_id = (unsigned char)i;
             log_info(__FILE__, __LINE__, "gamepad connected");
-            // note: don't trigger gamepad_connected callback here
+            /* note: don't trigger gamepad_connected callback here */
             break;
         }
     }
@@ -565,7 +565,7 @@ win32_window_poll_event(te_os_window* os_window) {
         DispatchMessageA(&msg);
     }
 
-    // check gamepad input changes
+    /* check gamepad input changes */
     if (win32_window->controller_id != 255) {
         XINPUT_GAMEPAD prev_state = win32_window->xinput_state.Gamepad;
         memset(&win32_window->xinput_state, 0, sizeof(XINPUT_STATE));

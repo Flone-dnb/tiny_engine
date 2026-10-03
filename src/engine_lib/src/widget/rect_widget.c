@@ -20,23 +20,23 @@
 struct te_rect_widget {
     te_widget* widget;
 
-    // NULL if texture is not set, otherwise path (relative to the `res` directory) to the texture file.
+    /* NULL if texture is not set, otherwise path (relative to the `res` directory) to the texture file */
     char* tex_relative_path;
 
-    // Allows "cutting" part of the rectangle during the rendering.
-    // XY stores clip start in range [0.0; 1.0] and ZW stores clip size in the same range.
+    /* allows "cutting" part of the rectangle during the rendering
+     * XY stores clip start in range [0.0; 1.0] and ZW stores clip size in the same range */
     vec4 clip_rect;
 
     vec4 color;
 
-    // Stores invalid value if not being rendered.
+    /* stores invalid value if not being rendered */
     unsigned int render_data_handle;
 
-    // `true` if entered the "destroy" function.
+    /* `true` if entered the "destroy" function */
     bool is_rect_widget_destroy;
 };
 
-// Widget callbacks:
+/* widget callbacks */
 static void prv_rect_widget_on_pos_changed(void* this);
 static void prv_rect_widget_on_size_changed(void* this);
 static void prv_rect_widget_on_after_spawned(void* this);
@@ -71,7 +71,7 @@ void
 rect_widget_destroy(te_rect_widget* rect_widget) {
     rect_widget->is_rect_widget_destroy = true;
 
-    if (rect_widget->widget != NULL) { // may be null if we got here from base destroy
+    if (rect_widget->widget != NULL) { /* may be null if we got here from base destroy */
         if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
             prv_rect_widget_unregister_from_rendering(rect_widget);
         }
@@ -93,8 +93,8 @@ prv_rect_widget_on_before_base_destroyed(void* this) {
         prv_rect_widget_unregister_from_rendering(rect_widget);
     }
 
-    // Destroy was called on the base (widget) component, possibly due to
-    // parent being destroyed, cleanup our data.
+    /* destroy was called on the base (widget) component, possibly due to
+     * parent being destroyed, cleanup our data */
     rect_widget->widget = NULL;
     rect_widget_destroy(rect_widget);
 }
@@ -136,10 +136,10 @@ rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) 
     rect_widget->tex_relative_path = NULL;
 
 #if defined(ENGINE_EDITOR)
-    // Check if path exists.
+    /* check if path exists */
     char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
     if (!filesystem_does_path_exists(res_path)) {
-        // Do nothing, probably user typing the path.
+        /* do nothing, probably user typing the path */
         free(res_path);
         return;
     }
@@ -147,7 +147,7 @@ rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) 
 #endif
 
     if (relative_path == NULL || strcmp(relative_path, "") == 0) {
-        // Remove current texture.
+        /* remove current texture */
         rect_widget->tex_relative_path = NULL;
         if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
             te_world* world = widget_get_world(rect_widget->widget);
@@ -160,7 +160,7 @@ rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) 
                 world_get_widget_renderer(world), rect_widget->render_data_handle);
 
             if (data->tex_id > 0) {
-                // Mark texture as unused.
+                /* mark texture as unused */
                 te_texture_manager* texture_manager = renderer_get_texture_manager(
                     game_manager_get_renderer(world_get_game_manager(world)));
                 texture_manager_mark_unused_texture(texture_manager, data->tex_id);
@@ -169,7 +169,7 @@ rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) 
             data->tex_id = 0;
         }
     } else {
-        // Set new texture.
+        /* set new texture */
         const size_t len = strlen(relative_path);
         rect_widget->tex_relative_path = malloc(sizeof(char) * (len + 1));
         memcpy(rect_widget->tex_relative_path, relative_path, sizeof(char) * len);
@@ -191,7 +191,7 @@ rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) 
                 texture_manager_mark_unused_texture(texture_manager, data->tex_id);
             }
 
-            // Load new texture.
+            /* load new texture */
             data->tex_id = texture_manager_request_texture(
                 texture_manager, relative_path, RECT_WIDGET_TEX_LOAD_OPTION);
         }
@@ -247,7 +247,7 @@ prv_rect_widget_register_for_rendering(te_rect_widget* rect_widget) {
     te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
         widget_renderer, rect_widget->render_data_handle);
 
-    // Setup texture.
+    /* setup texture */
     data->tex_id = 0;
     if (rect_widget->tex_relative_path != NULL) {
         te_texture_manager* texture_manager =
@@ -275,7 +275,7 @@ prv_rect_widget_unregister_from_rendering(te_rect_widget* rect_widget) {
     }
     te_widget_renderer* widget_renderer = world_get_widget_renderer(world);
 
-    // Cleanup data.
+    /* cleanup data */
     te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
         widget_renderer, rect_widget->render_data_handle);
     if (data->tex_id > 0) {
@@ -368,22 +368,22 @@ prv_rect_widget_on_window_size_changed(void* this) {
     prv_rect_widget_update_non_tex_render_data(rect_widget);
 }
 
-static inline void
+static void
 prv_rect_widget_set_position(te_rect_widget* rect_widget, vec2 pos) {
     widget_set_relative_position(rect_widget->widget, pos);
 }
 
-static inline void
+static void
 prv_rect_widget_get_position(te_rect_widget* rect_widget, vec2 out) {
     widget_get_relative_position(rect_widget->widget, out);
 }
 
-static inline void
+static void
 prv_rect_widget_set_size(te_rect_widget* rect_widget, vec2 size) {
     widget_set_relative_size(rect_widget->widget, size);
 }
 
-static inline void
+static void
 prv_rect_widget_get_size(te_rect_widget* rect_widget, vec2 out) {
     widget_get_relative_size(rect_widget->widget, out);
 }

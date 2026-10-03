@@ -1,6 +1,6 @@
 #include <io/log.h>
 #if defined(WIN32)
-// Hide console on Windows.
+/* hide console on Windows */
 #pragma comment(linker, "/subsystem:windows /entry:mainCRTStartup")
 #endif
 

@@ -16,7 +16,8 @@ set(PROJECT_SOURCES
     src/gizmo.h
     src/ui/editor_ui.c
     src/ui/editor_ui.h
-    src/ui/theme.h
+    src/ui/editor_theme.h
+    src/ui/editor_theme.c
     src/ui/world_inspector.c
     src/ui/world_inspector.h
     src/ui/property_inspector.c

@@ -19,7 +19,7 @@ enum te_variable_type {
     TE_VT_VEC3,
     TE_VT_VEC4,
     TE_VT_STRING,
-    TE_VT_WSTRING,
+    TE_VT_WSTRING
 };
 
 typedef void (*te_bool_setter)(void* obj, bool val);
@@ -51,12 +51,12 @@ typedef struct te_variable_info {
 
     enum te_variable_type type;
 
-    // Index into the setters/getters array of function pointers from @ref te_type_info.
+    /* index into the setters/getters array of function pointers from @ref te_type_info */
     unsigned short set_get_index;
 } te_variable_info;
 
 typedef struct te_type_info {
-    // Unique identifier of the type.
+    /* unique identifier of the type */
     const char* id;
 
     void* (*create)(void);
@@ -65,14 +65,14 @@ typedef struct te_type_info {
     void (*spawn)(struct te_world* world, void* obj);
     void (*despawn)(struct te_world* world, void* obj);
 
-    // Function pointer is NULL if not a widget, otherwise returns a valid base widget type.
-    // Do not free returned pointer, valid while the `obj` exists.
+    /* function pointer is NULL if not a widget, otherwise returns a valid base widget type
+     * do not free returned pointer, valid while the `obj` exists */
     struct te_widget* (*get_widget)(void* obj);
 
-    // NULL if not a game object.
+    /* NULL if not a game object */
     struct te_game_object_info* game_object_info;
 
-    // Returns `false` if this object should not be serialized.
+    /* returns `false` if this object should not be serialized */
     bool (*is_serialization_allowed)(void* obj);
 
     te_variable_info* variables;
@@ -113,10 +113,10 @@ typedef struct te_type_info {
     unsigned short wstring_count;
 } te_type_info;
 
-// Creates a new type info to be registered using @ref type_database_register_type.
-// Specify NULL as get_widget if not a widget, otherwise return base widget type.
-// Specify NULL as game_object_info if not a game object, otherwise moves the ownership
-// of the pointer to the type database.
+/* creates a new type info to be registered using @ref type_database_register_type
+ * specify NULL as get_widget if not a widget, otherwise return base widget type
+ * specify NULL as game_object_info if not a game object, otherwise moves the ownership
+ * of the pointer to the type database */
 te_type_info* type_info_create(
     const char* id, void* (*create)(void), void (*destroy)(void* obj),
     void (*spawn)(struct te_world* world, void* obj),
@@ -139,29 +139,29 @@ void type_info_add_string_variable(
 void type_info_add_wstring_variable(
     te_type_info* info, const char* name, te_wstring_setter setter, te_wstring_getter getter);
 
-// Creates a new section in the specified config (returns index of the created section) and saves all reflected variables
-// in this new section.
+/* creates a new section in the specified config (returns index of the created section)
+ * and saves all reflected variables in this new section. */
 unsigned int
 type_info_save_to_config(const te_type_info* type_info, struct te_config* config, void* obj);
 
-// Loads variables from the specified config section into the specified object.
+/* loads variables from the specified config section into the specified object */
 void type_info_load_from_config(
     const te_type_info* type_info, struct te_config* config, unsigned int section_idx,
     void* obj);
 
-// Registers the specified type. Ownership of the pointer is moved to the type database.
+/* registers the specified type. Ownership of the pointer is moved to the type database */
 void type_database_register_type(te_type_info* info);
 
-// Returns NULL if not registered. Do not free/destroy returned pointer.
+/* returns NULL if not registered. Do not free/destroy returned pointer */
 const te_type_info* type_database_get_type_info(const char* id);
 
-// Returns array (which you need to free) to static strings (which you don't need to free)
-// to IDs of all currently registered types.
+/* returns array (which you need to free) to static strings (which you don't need to free)
+ * to IDs of all currently registered types */
 const char** type_database_get_all_type_ids(unsigned int* count);
 
-// ------------------------------------------------------------------------------------------------
-//                                       PRIVATE API
-// ------------------------------------------------------------------------------------------------
+/* ------------------------------------------------------------------------------------------------
+ *                                       PRIVATE API
+ * ------------------------------------------------------------------------------------------------ */
 
 void prv_type_database_init(void);
 void prv_type_database_deinit(void);

@@ -1,7 +1,7 @@
 #include <ui/editor_ui.h>
 
 #include <world.h>
-#include <ui/theme.h>
+#include <ui/editor_theme.h>
 #include <ui/property_inspector.h>
 #include <ui/world_inspector.h>
 #include <ui/filesystem_view.h>
@@ -16,7 +16,7 @@ struct te_editor_ui {
     te_filesystem_view* filesystem_view;
     te_world* game_world;
 
-    // NULL if not spawned yet. Background (parent) rectangles of left and right editor panels.
+    /* NULL if not spawned yet. Background (parent) rectangles of left and right editor panels */
     te_rect_widget* left_rect;
     te_rect_widget* right_rect;
 };
@@ -49,7 +49,7 @@ editor_ui_spawn(te_editor_ui* ui, te_world* editor_world) {
     vec4 background_color;
     theme_get_background_panel_color(background_color);
 
-    // Left panel.
+    /* left panel */
     te_rect_widget* left_rect = rect_widget_create();
     ui->left_rect = left_rect;
     {
@@ -59,7 +59,7 @@ editor_ui_spawn(te_editor_ui* ui, te_world* editor_world) {
     }
     rect_widget_set_color(left_rect, background_color);
 
-    // Right panel.
+    /* right panel */
     te_rect_widget* right_rect = rect_widget_create();
     ui->right_rect = right_rect;
     {
@@ -70,12 +70,12 @@ editor_ui_spawn(te_editor_ui* ui, te_world* editor_world) {
     }
     rect_widget_set_color(right_rect, background_color);
 
-    // Add editor widgets.
+    /* add editor widgets */
     world_inspector_add(ui->world_inspector, rect_widget_get_widget(left_rect));
     property_inspector_set_parent(ui->property_inspector, rect_widget_get_widget(right_rect));
     filesystem_view_add(ui->filesystem_view, rect_widget_get_widget(left_rect));
 
-    // Spawn.
+    /* spawn */
     world_spawn_widget(editor_world, rect_widget_get_widget(left_rect));
     world_spawn_widget(editor_world, rect_widget_get_widget(right_rect));
 }

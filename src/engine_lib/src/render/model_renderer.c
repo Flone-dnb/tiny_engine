@@ -11,16 +11,16 @@
 
 #define INVALID_DATA_INDEX 0xffffffff
 
-// Stores information about models that use the same render data (mostly shader).
+/* stores information about models that use the same render data (mostly shader) */
 typedef struct te_model_group {
-    // OpenGL ID of the shader program.
+    /* OpenGL ID of the shader program */
     unsigned int prog_id;
 
-    // Number of elements that use the same shader program.
+    /* number of elements that use the same shader program */
     unsigned short count;
     bool disable_backface_culling;
 
-    // uniform locations -----------------------
+    /* uniform locations ----------------------- */
     int uniform_view_mat;
     int uniform_view_proj_mat;
     int uniform_world_mat;
@@ -28,7 +28,7 @@ typedef struct te_model_group {
     int uniform_model_color;
     int uniform_tiling;
     int uniform_uv_offset;
-    int uniform_skin_mats; // -1 if not using skinning
+    int uniform_skin_mats; /* -1 if not using skinning */
     int uniform_ambient_light_color;
     int uniform_directional_light_color;
     int uniform_directional_light_direction;
@@ -39,40 +39,41 @@ typedef struct te_model_group {
 } te_model_group;
 
 struct te_model_renderer {
-    // This array stores render data sorted by shader program so first N elements use the same
-    // shader program, then next M elements use another shader program and so on. Information
-    // about which render data belongs to which shader is stored in @ref model_groups.
-    //
-    // Size of this array is @ref render_handle_arrays_size but the actual number of valid
-    // (used) elements might be different. When some model's render data is removed all next
-    // elements are shifted to the left to make sure the array does not have any "holes".
-    // This array does not shrink but the number of used (valid) elements may decrease.
+    /* This array stores render data sorted by shader program so first N elements use the same
+     * shader program, then next M elements use another shader program and so on, information
+     * about which render data belongs to which shader is stored in @ref model_groups.
+     * 
+     * Size of this array is @ref render_handle_arrays_size but the actual number of valid
+     * (used) elements might be different. When some model's render data is removed all next
+     * elements are shifted to the left to make sure the array does not have any "holes".
+     * This array does not shrink but the number of used (valid) elements may decrease. */
     te_model_render_data* render_data;
 
-    // Groups models into batches.
-    // First item in this array points to the first item in @ref render_data.
-    // Size of this array is @ref model_group_count.
+    /* Groups models into batches.
+     * First item in this array points to the first item in @ref render_data.
+     * Size of this array is @ref model_group_count. */
     te_model_group* model_groups;
 
-    // Index into this array using a model's handle to get index into @ref render_data.
-    //
-    // Public API users store indices into this array so items cannot be reordered/moved.
-    // This array CAN have "holes" in it (invalid items). Invalid items store INVALID_DATA_INDEX value.
-    // This array does not shrink. Size of this array is @ref render_handle_arrays_size.
+    /* Index into this array using a model's handle to get index into @ref render_data.
+     * 
+     * Public API users store indices into this array so items cannot be reordered/moved.
+     * This array CAN have "holes" in it (invalid items). Invalid items store INVALID_DATA_INDEX value.
+     * This array does not shrink. Size of this array is @ref render_handle_arrays_size. */
     unsigned int* handle_to_data;
 
-    // Number of elements in @ref model_groups.
+    /* number of elements in @ref model_groups */
     unsigned int model_group_count;
 
-    // Total number of elements that @ref render_data and @ref handle_to_data can store.
+    /* total number of elements that @ref render_data and @ref handle_to_data can store */
     unsigned int render_handle_arrays_size;
 
-    // Determines how much to expand data arrays if reached the limit of @ref render_handle_arrays_size.
+    /* determines how much to expand data arrays if reached the limit of @ref render_handle_arrays_size */
     unsigned int expand_size;
 };
 
 te_model_renderer*
 model_renderer_create(unsigned int capacity, unsigned int expand_size) {
+    unsigned int i;
     te_model_renderer* renderer = malloc(sizeof(te_model_renderer));
 
     renderer->expand_size = expand_size;
@@ -82,7 +83,7 @@ model_renderer_create(unsigned int capacity, unsigned int expand_size) {
 
     renderer->handle_to_data =
         malloc(sizeof(unsigned int) * renderer->render_handle_arrays_size);
-    for (unsigned int i = 0; i < renderer->render_handle_arrays_size; i++) {
+    for (i = 0; i < renderer->render_handle_arrays_size; i++) {
         renderer->handle_to_data[i] = INVALID_DATA_INDEX;
     }
 
@@ -95,8 +96,10 @@ model_renderer_create(unsigned int capacity, unsigned int expand_size) {
 void
 model_renderer_destroy(te_model_renderer* renderer) {
     if (renderer->model_group_count > 0) {
-        log_error(__FILE__, __LINE__, "model renderer is being destroyed but there are still some models/handles "
-                  "active (not removed)");
+        log_error(
+            __FILE__, __LINE__,
+            "model renderer is being destroyed but there are still some models/handles "
+            "active (not removed)");
         abort();
     }
 
@@ -143,10 +146,16 @@ model_renderer_init_uniforms(te_model_group* group) {
 unsigned int
 model_renderer_add_model(
     te_model_renderer* renderer, unsigned int prog_id, bool disable_backface_culling) {
-    // Find unused handle.
-    unsigned int handle = 0;
-    bool found = false;
-    for (unsigned int i = 0; i < renderer->render_handle_arrays_size; i++) {
+    unsigned int i;
+    unsigned int handle;
+    unsigned int group_idx;
+    unsigned int data_index;
+    bool found;
+
+    /* find unused handle */
+    handle = 0;
+    found = false;
+    for (i = 0; i < renderer->render_handle_arrays_size; i++) {
         if (renderer->handle_to_data[i] != INVALID_DATA_INDEX) {
             continue;
         }
@@ -155,7 +164,9 @@ model_renderer_add_model(
         break;
     }
     if (!found) {
-        // Expand handle array.
+        te_model_render_data* new_data;
+
+        /* expand handle array */
         unsigned int* new_handles = malloc(
             sizeof(unsigned int)
             * (renderer->render_handle_arrays_size + renderer->expand_size));
@@ -166,14 +177,14 @@ model_renderer_add_model(
         free(renderer->handle_to_data);
         renderer->handle_to_data = new_handles;
 
-        for (unsigned int i = renderer->render_handle_arrays_size;
+        for (i = renderer->render_handle_arrays_size;
              i < renderer->render_handle_arrays_size + renderer->expand_size; i++) {
             renderer->handle_to_data[i] = INVALID_DATA_INDEX;
         }
         handle = renderer->render_handle_arrays_size;
 
-        // Expand render data array.
-        te_model_render_data* new_data = malloc(
+        /* expand render data array */
+        new_data = malloc(
             sizeof(te_model_render_data)
             * (renderer->render_handle_arrays_size + renderer->expand_size));
         memcpy(
@@ -186,10 +197,10 @@ model_renderer_add_model(
         renderer->render_handle_arrays_size += renderer->expand_size;
     }
 
-    // Find shader group.
+    /* find shader group */
     found = false;
-    unsigned int group_idx = 0;
-    for (unsigned int i = 0; i < renderer->model_group_count; i++) {
+    group_idx = 0;
+    for (i = 0; i < renderer->model_group_count; i++) {
         if (renderer->model_groups[i].prog_id != prog_id) {
             continue;
         }
@@ -201,30 +212,33 @@ model_renderer_add_model(
         group_idx = i;
         break;
     }
-    unsigned int data_index = 0;
+    data_index = 0;
     if (!found) {
-        unsigned int render_data_count_before = 0;
-        for (unsigned int i = 0; i < renderer->model_group_count; i++) {
+        te_model_group* new_groups;
+        te_model_group* group;
+        unsigned int render_data_count_before;
+
+        render_data_count_before = 0;
+        for (i = 0; i < renderer->model_group_count; i++) {
             render_data_count_before += renderer->model_groups[i].count;
         }
 
-        // Create a new group.
-        te_model_group* new_groups =
-            malloc(sizeof(te_model_group) * (renderer->model_group_count + 1));
+        /* create a new group */
+        new_groups = malloc(sizeof(te_model_group) * (renderer->model_group_count + 1));
         memcpy(
             new_groups, renderer->model_groups,
             sizeof(te_model_group) * renderer->model_group_count);
 
         free(renderer->model_groups);
         renderer->model_groups = new_groups;
-        // don't increment group count yet
+        /* don't increment group count yet */
 
         group_idx = renderer->model_group_count;
-        te_model_group* group = &renderer->model_groups[group_idx];
+        group = &renderer->model_groups[group_idx];
 
         renderer->model_group_count += 1;
 
-        // Init group.
+        /* init group */
         group->prog_id = prog_id;
         group->disable_backface_culling = disable_backface_culling;
         group->count = 1;
@@ -232,24 +246,25 @@ model_renderer_add_model(
 
         data_index = render_data_count_before;
     } else {
-        for (unsigned int i = 0; i < group_idx + 1; i++) {
+        unsigned int shift_to_right_count;
+
+        for (i = 0; i < group_idx + 1; i++) {
             data_index += renderer->model_groups[i].count;
         }
 
-        // Shift some render data to the right to prepare space for new item.
-        // We already made sure that the render data array will be able to fit a new item (see above).
-        unsigned int shift_to_right_count = 0;
-        for (unsigned int i = group_idx + 1; i < renderer->model_group_count; i++) {
+        /* shift some render data to the right to prepare space for new item
+         * we already made sure that the render data array will be able to fit a new item (see above) */
+        shift_to_right_count = 0;
+        for (i = group_idx + 1; i < renderer->model_group_count; i++) {
             shift_to_right_count += renderer->model_groups[i].count;
         }
 
-        // We already made sure that the render data array will be able to fit a new item (see above).
         memmove(
             renderer->render_data + (data_index + 1), renderer->render_data + data_index,
             sizeof(te_model_render_data) * shift_to_right_count);
 
-        // Also shift handles.
-        for (unsigned int i = 0; i < renderer->render_handle_arrays_size; i++) {
+        /* also shift handles */
+        for (i = 0; i < renderer->render_handle_arrays_size; i++) {
             if (renderer->handle_to_data[i] == INVALID_DATA_INDEX
                 || renderer->handle_to_data[i] < data_index || i == handle) {
                 continue;
@@ -257,7 +272,7 @@ model_renderer_add_model(
             renderer->handle_to_data[i] += 1;
         }
 
-        // Update group.
+        /* update group */
         renderer->model_groups[group_idx].count += 1;
     }
 
@@ -267,24 +282,29 @@ model_renderer_add_model(
 
 void
 model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
+    unsigned int data_index;
+    unsigned int render_data_count_before;
+    unsigned int group_index;
+    unsigned int i;
+
     if (handle >= renderer->render_handle_arrays_size) {
         log_error(__FILE__, __LINE__, "the specified model render data handle is invalid");
         abort();
     }
 
-    const unsigned int data_index = renderer->handle_to_data[handle];
+    data_index = renderer->handle_to_data[handle];
 
-    unsigned int render_data_count_before = 0;
-    for (unsigned int i = 0; i < renderer->model_group_count; i++) {
+    render_data_count_before = 0;
+    for (i = 0; i < renderer->model_group_count; i++) {
         render_data_count_before += renderer->model_groups[i].count;
     }
 
-    // Find shader group.
-    unsigned int group_index = 0;
+    /* find shader group */
+    group_index = 0;
     {
         unsigned int start_index = 0;
         bool found = false;
-        for (unsigned int i = 0; i < renderer->model_group_count; i++) {
+        for (i = 0; i < renderer->model_group_count; i++) {
             if (data_index >= start_index
                 && data_index < start_index + renderer->model_groups[i].count) {
                 group_index = i;
@@ -294,14 +314,15 @@ model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
             start_index += renderer->model_groups[i].count;
         }
         if (!found) {
-            log_error(__FILE__, __LINE__, "unable to find shader group from the specified handle");
+            log_error(
+                __FILE__, __LINE__, "unable to find shader group from the specified handle");
             abort();
         }
     }
 
-    // Update group.
+    /* update group */
     if (renderer->model_groups[group_index].count == 1) {
-        // Delete group.
+        /* delete group */
         if (renderer->model_group_count == 1) {
             renderer->model_group_count = 0;
             free(renderer->model_groups);
@@ -322,16 +343,16 @@ model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
         renderer->model_groups[group_index].count -= 1;
     }
 
-    // Update render data.
+    /* update render data */
     memmove(
         renderer->render_data + data_index, renderer->render_data + (data_index + 1),
         sizeof(te_model_render_data) * (render_data_count_before - data_index - 1));
 
-    // Mark handle as unused.
+    /* mark handle as unused */
     renderer->handle_to_data[handle] = INVALID_DATA_INDEX;
 
-    // Shift render data indices after the removed one.
-    for (unsigned int i = 0; i < renderer->render_handle_arrays_size; i++) {
+    /* shift render data indices after the removed one */
+    for (i = 0; i < renderer->render_handle_arrays_size; i++) {
         if (renderer->handle_to_data[i] == INVALID_DATA_INDEX
             || renderer->handle_to_data[i] < data_index) {
             continue;
@@ -356,8 +377,10 @@ model_renderer_draw(
     mat4* view_proj_mat, te_frustum_shape* camera_frustum) {
     unsigned int model_count = 0;
     unsigned int render_data_idx = 0;
+    unsigned int group_idx = 0;
+    unsigned int i;
 
-    for (unsigned int group_idx = 0; group_idx < renderer->model_group_count; group_idx++) {
+    for (group_idx = 0; group_idx < renderer->model_group_count; group_idx++) {
         te_model_group* group = &renderer->model_groups[group_idx];
 
         if (group->disable_backface_culling) {
@@ -377,27 +400,27 @@ model_renderer_draw(
         glUniformMatrix4fv(group->uniform_view_mat, 1, GL_FALSE, (*view_mat)[0]);
         glUniform3fv(group->uniform_ambient_light_color, 1, light_params->ambient_light_color);
 
-        // Directional light.
+        /* directional light */
         glUniform4fv(
             group->uniform_directional_light_color, 1, light_params->directional_light_color);
         glUniform3fv(
             group->uniform_directional_light_direction, 1,
             light_params->directional_light_direction);
 
-        // Point light.
+        /* point light */
         glUniform4fv(group->uniform_point_light_color, 1, light_params->point_light_color);
         glUniform4fv(
             group->uniform_point_light_pos_and_dist, 1,
             light_params->point_light_pos_and_dist);
 
-        // Fog.
+        /* fog */
         glUniform3fv(group->uniform_distance_fog_color, 1, light_params->distance_fog_color);
         glUniform2fv(group->uniform_distance_fog_range, 1, light_params->distance_fog_range);
 
-        for (unsigned int unused = 0; unused < group->count; unused++, render_data_idx++) {
+        for (i = 0; i < group->count; i++, render_data_idx++) {
             te_model_render_data* data = &renderer->render_data[render_data_idx];
 
-            // Frustum culling (don't cull skeletal meshes due to animations).
+            /* frustum culling (don't cull skeletal meshes due to animations) */
             if (group->uniform_skin_mats == -1) {
                 if (!frustum_shape_is_aabb_inside(camera_frustum, &data->aabb_world)) {
                     continue;
@@ -414,7 +437,7 @@ model_renderer_draw(
             glUniform2fv(group->uniform_tiling, 1, data->tex_tiling);
             glUniform2fv(group->uniform_uv_offset, 1, data->uv_offset);
 
-            glBindTexture(GL_TEXTURE_2D, data->tex_id); // binds 0 if not set
+            glBindTexture(GL_TEXTURE_2D, data->tex_id); /* binds 0 if not set */
 
 #if defined(ENGINE_GLES)
             glBindBuffer(GL_ARRAY_BUFFER, data->vbo);

@@ -12,37 +12,37 @@ struct te_camera;
 struct te_game_object_info;
 struct te_world;
 
-te_editor* editor_create();
+te_editor* editor_create(void);
 void editor_destroy(te_editor* editor);
 
 struct te_game_manager* editor_get_game_manager(te_editor* editor);
 struct te_world* editor_get_game_world(te_editor* editor);
 
-// Destroys previous game world (if existed).
-// Optionally specify a non-NULL path to file to load as the new world.
+/* Destroys previous game world (if existed).
+ * Optionally specify a non-NULL path to file to load as the new world. */
 void editor_create_game_world(te_editor* editor, const char* relative_path_to_world);
 
-// Shows a file dialog on top of everything.
-// Specify NULL as `on_cancel` if you don't need it.
-// Do not free the path variable passed to you in the callback.
+/* Shows a file dialog on top of everything.
+ * Specify NULL as `on_cancel` if you don't need it.
+ * Do not free the path variable passed to you in the callback. */
 void editor_show_file_dialog(
     te_editor* editor, void* custom, void (*on_selected)(void* custom, const char* path),
     void (*on_cancel)(void* custom), enum te_file_dialog_mode mode);
 
 void editor_refresh_filesystem_view(te_editor* editor);
 
-// Shows or hides gizmo around the specified model.
-// Specify NULL to hide the gizmo.
+/* Shows or hides gizmo around the specified model.
+ * Specify NULL to hide the gizmo. */
 void editor_set_gizmo(te_editor* editor, struct te_model* target);
 
-// Makes the editor camera to pilot the specified game camera.
+/* Makes the editor camera to pilot the specified game camera. */
 void editor_pilot_camera(te_editor* editor, struct te_camera* camera);
 
-// Called before a game object is deleted from the game world.
+/* Called before a game object is deleted from the game world. */
 void editor_on_before_game_obj_deleted(
     te_editor* editor, void* game_object, struct te_game_object_info* info);
 
-// window callbacks -------------------------------------------------------------------------------
+/* window callbacks ------------------------------------------------------------------------------ */
 void editor_on_game_started(void* game_instance, struct te_game_manager* game_manager);
 void editor_on_game_tick(
     void* game_instance, struct te_game_manager* game_manager, float delta_time_sec);
@@ -79,4 +79,4 @@ void
 editor_on_window_received_focus(void* game_instance, struct te_game_manager* game_manager);
 void editor_on_window_lost_focus(void* game_instance, struct te_game_manager* game_manager);
 void editor_on_window_close(void* game_instance, struct te_game_manager* game_manager);
-// ------------------------------------------------------------------------------------------------
+/* ------------------------------------------------------------------------------------------------ */

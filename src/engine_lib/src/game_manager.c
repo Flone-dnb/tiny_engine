@@ -22,34 +22,34 @@ typedef struct te_game_tick_callback {
     unsigned int id;
 } te_game_tick_callback;
 
-// Stores all core systems such as game world, physics, audio, renderer and etc.
+/* stores all core systems such as game world, physics, audio, renderer and etc. */
 struct te_game_manager {
-    // Always valid pointer to the window that owns this object. This pointer should not be freed.
+    /* always valid pointer to the window that owns this object. This pointer should not be freed */
     struct te_window* window;
 
     te_renderer* renderer;
 
     te_sound_manager* sound_manager;
 
-    // Custom user tick callbacks. The number of elements in this array is @ref tick_callback_count.
+    /* custom user tick callbacks, the number of elements in this array is @ref tick_callback_count */
     te_game_tick_callback* tick_callbacks;
 
-    // Game worlds. Size of this array is @ref world_count.
+    /* game worlds, size of this array is @ref world_count */
     te_world** worlds;
 
-    // Number of elements in the @ref worlds array.
+    /* number of elements in the @ref worlds array */
     unsigned int world_count;
 
-    // Number of elements in the @ref tick_callbacks array.
+    /* number of elements in the @ref tick_callbacks array */
     unsigned int tick_callback_count;
 
-    // Next unique ID of a new tick callback to be used.
+    /* next unique ID of a new tick callback to be used */
     unsigned int next_tick_callback_id;
 
-    // `true` if we are currently iterating over @ref tick_callbacks.
+    /* `true` if we are currently iterating over @ref tick_callbacks */
     bool is_processing_tick_callbacks;
 
-    // `true` if while processing tick callbacks they changed.
+    /* `true` if while processing tick callbacks they changed */
     bool is_tick_callbacks_changed;
 };
 
@@ -57,9 +57,10 @@ te_game_manager*
 prv_game_manager_create(struct te_window* window) {
     srand((unsigned int)time(NULL));
 
-    // make sure "res" directory exists
+    /* make sure "res" directory exists */
     if (!filesystem_does_path_exists("res")) {
-        log_error(__FILE__, __LINE__, "expected to have \"res\" directory next to the executable");
+        log_error(
+            __FILE__, __LINE__, "expected to have \"res\" directory next to the executable");
         abort();
     }
 
@@ -77,7 +78,7 @@ prv_game_manager_create(struct te_window* window) {
     prv_type_database_init();
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    // init before other stuff to be able to register debug commands in subsystems
+    /* init before other stuff to be able to register debug commands in subsystems */
     prv_debug_console_init(game_manager);
 #endif
 
@@ -88,11 +89,13 @@ prv_game_manager_create(struct te_window* window) {
     prv_debug_drawer_init(game_manager->renderer);
 #endif
 
-    // Log some info.
+    /* log some info */
     log_info(__FILE__, __LINE__, "state:");
 
 #if defined(ENGINE_ASAN_ENABLED)
-    log_info(__FILE__, __LINE__, "- AddressSanitizer (ASan) is enabled, expect increased RAM usage!");
+    log_info(
+        __FILE__, __LINE__,
+        "- AddressSanitizer (ASan) is enabled, expect increased RAM usage!");
 #endif
 
 #if defined(DEBUG)
@@ -127,14 +130,16 @@ prv_game_manager_create(struct te_window* window) {
 
 void
 prv_game_manager_destroy(te_game_manager* game_manager) {
-    // First destroy worlds.
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    unsigned int i;
+
+    /* first destroy worlds */
+    for (i = 0; i < game_manager->world_count; i++) {
         prv_world_destroy(game_manager->worlds[i]);
     }
     free(game_manager->worlds);
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    // Destroy before renderer.
+    /* destroy before renderer */
     prv_debug_console_deinit();
     prv_debug_drawer_deinit(game_manager->renderer);
 #endif
@@ -145,7 +150,8 @@ prv_game_manager_destroy(te_game_manager* game_manager) {
     prv_type_database_deinit();
 
     if (game_manager->tick_callback_count > 0) {
-        log_error_fmt(__FILE__, __LINE__, 
+        log_error_fmt(
+            __FILE__, __LINE__,
             "the game manager is destroyed but there are still %u tick callback(s) registered",
             game_manager->tick_callback_count);
         abort();
@@ -156,20 +162,23 @@ prv_game_manager_destroy(te_game_manager* game_manager) {
 
 te_world*
 game_manager_create_world(te_game_manager* game_manager, const char* name) {
+    te_world** new_worlds;
+    te_world* new_world;
+
     if (name == NULL) {
         log_error(__FILE__, __LINE__, "world name must not be NULL");
         abort();
     }
 
-    // Expand array.
-    te_world** new_worlds = malloc(sizeof(te_world*) * (game_manager->world_count + 1));
+    /* expand array */
+    new_worlds = malloc(sizeof(te_world*) * (game_manager->world_count + 1));
     memcpy(new_worlds, game_manager->worlds, sizeof(te_world*) * game_manager->world_count);
 
     free(game_manager->worlds);
     game_manager->worlds = new_worlds;
 
-    // Create new world.
-    te_world* new_world = prv_world_create(game_manager, name);
+    /* create new world */
+    new_world = prv_world_create(game_manager, name);
     game_manager->worlds[game_manager->world_count] = new_world;
     game_manager->world_count += 1;
 
@@ -184,9 +193,11 @@ game_manager_destroy_world(te_game_manager* game_manager, te_world* world) {
         free(game_manager->worlds);
         game_manager->worlds = NULL;
     } else {
+        te_world** new_worlds;
         bool found = false;
         unsigned int index = 0;
-        for (unsigned int i = 0; i < game_manager->world_count; i++) {
+        unsigned int i;
+        for (i = 0; i < game_manager->world_count; i++) {
             if (game_manager->worlds[i] != world) {
                 continue;
             }
@@ -201,7 +212,7 @@ game_manager_destroy_world(te_game_manager* game_manager, te_world* world) {
 
         prv_world_destroy(game_manager->worlds[index]);
 
-        te_world** new_worlds = malloc(sizeof(te_world*) * (game_manager->world_count - 1));
+        new_worlds = malloc(sizeof(te_world*) * (game_manager->world_count - 1));
         memcpy(new_worlds, game_manager->worlds, sizeof(te_world*) * index);
         memcpy(
             new_worlds + index, game_manager->worlds + (index + 1),
@@ -218,6 +229,8 @@ unsigned int
 game_manager_add_tick_callback(
     te_game_manager* game_manager, void* custom,
     void (*on_tick)(void* custom, float delta_time_sec)) {
+    te_game_tick_callback* callback;
+
     te_game_tick_callback* new_callbacks =
         malloc(sizeof(te_game_tick_callback) * (game_manager->tick_callback_count + 1));
     memcpy(
@@ -227,7 +240,7 @@ game_manager_add_tick_callback(
     free(game_manager->tick_callbacks);
     game_manager->tick_callbacks = new_callbacks;
 
-    te_game_tick_callback* callback = &new_callbacks[game_manager->tick_callback_count];
+    callback = &new_callbacks[game_manager->tick_callback_count];
     callback->on_tick = on_tick;
     callback->custom = custom;
     callback->id = game_manager->next_tick_callback_id;
@@ -244,6 +257,9 @@ game_manager_add_tick_callback(
 
 void
 game_manager_remove_tick_callback(te_game_manager* game_manager, unsigned int callback_id) {
+    te_game_tick_callback* new_callbacks;
+    unsigned int i;
+
     if (game_manager->tick_callback_count == 1) {
         free(game_manager->tick_callbacks);
         game_manager->tick_callbacks = NULL;
@@ -251,12 +267,12 @@ game_manager_remove_tick_callback(te_game_manager* game_manager, unsigned int ca
         return;
     }
 
-    for (unsigned int i = 0; i < game_manager->tick_callback_count; i++) {
+    for (i = 0; i < game_manager->tick_callback_count; i++) {
         if (game_manager->tick_callbacks[i].id != callback_id) {
             continue;
         }
 
-        te_game_tick_callback* new_callbacks =
+        new_callbacks =
             malloc(sizeof(te_game_tick_callback) * (game_manager->tick_callback_count - 1));
         memcpy(new_callbacks, game_manager->tick_callbacks, sizeof(te_game_tick_callback) * i);
         memcpy(
@@ -273,7 +289,9 @@ game_manager_remove_tick_callback(te_game_manager* game_manager, unsigned int ca
         return;
     }
 
-    log_error_fmt(__FILE__, __LINE__, "unable to find a registered tick callback with ID %u", callback_id);
+    log_error_fmt(
+        __FILE__, __LINE__, "unable to find a registered tick callback with ID %u",
+        callback_id);
     abort();
 }
 
@@ -310,25 +328,27 @@ game_manager_get_tick_callback_count(te_game_manager* game_manager) {
 
 void
 prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
+    unsigned int i;
+
     (void)delta_time_sec;
 
-    // Get active camera to update sound listener.
+    /* get active camera to update sound listener */
     te_camera* active_camera = NULL;
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    for (i = 0; i < game_manager->world_count; i++) {
         active_camera = world_get_active_camera(game_manager->worlds[i]);
         if (active_camera == NULL) {
             continue;
         }
 
 #if defined(ENGINE_EDITOR)
-        // Use game world camera as sound listener.
+        /* use game world camera as sound listener */
         if (strcmp(world_get_name(game_manager->worlds[i]), "game") == 0) {
             break;
         } else {
             active_camera = NULL;
         }
 #else
-        // Just use the first active camera.
+        /* just use the first active camera */
         break;
 #endif
     }
@@ -345,23 +365,23 @@ prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
         prv_sound_manager_set_listener(game_manager->sound_manager, pos, forward, up);
     }
 
-    // Tick worlds.
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    /* tick worlds */
+    for (i = 0; i < game_manager->world_count; i++) {
         prv_world_tick(game_manager->worlds[i]);
     }
 
-    // Tick custom callbacks.
+    /* tick custom callbacks */
     {
 #if defined(ENGINE_DEBUG_TOOLS)
         te_debug_stats* debug_stats = prv_debug_console_get_stats();
         debug_stats->cpu_time_tick_callbacks_ms = 0.0f;
-        const uint64_t cpu_start_counter = high_freq_timer_now();
+        const te_hft_t cpu_start_counter = high_freq_timer_now();
 #endif
 
         game_manager->is_processing_tick_callbacks = true;
 
-        // Because logic inside a callback can add/remove tick callbacks (array we are iterating)
-        // we track which callbacks we triggered and recheck if needed.
+        /* because logic inside a callback can add/remove tick callbacks (array we are iterating)
+         * we track which callbacks we triggered and recheck if needed */
         unsigned int* notified_ids =
             malloc(sizeof(unsigned int) * game_manager->tick_callback_count);
         unsigned int notified_count = 0;

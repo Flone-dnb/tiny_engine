@@ -9,74 +9,71 @@ struct te_shader_manager;
 struct te_texture_manager;
 struct te_font_manager;
 
-// Groups data about all lighting used during the rendering.
+/* groups data about all lighting used during the rendering */
 typedef struct te_light_params {
-    // Color in RGB and intensity in A.
+    /* color in RGB and intensity in A */
     vec4 directional_light_color;
-
-    // Color in RGB and intensity in A.
     vec4 point_light_color;
 
-    // Position in XYZ and light radius in W.
+    /* position in XYZ and light radius in W */
     vec4 point_light_pos_and_dist;
 
-    // Unit vector in the direction of the light source.
+    /* unit vector in the direction of the light source */
     vec3 directional_light_direction;
 
-    // note: if adding new variables add them to reflection
-    // ------------------------------------------------------
+    /* note: if adding new variables add them to reflection
+     * ------------------------------------------------------ */
 
     vec3 ambient_light_color;
 
-    // Backbuffer (background) fill color.
+    /* backbuffer (background) fill color */
     vec3 clear_color;
 
-    // Color if distance fog (if enabled  @ref distance_fog_range).
+    /* color if distance fog (if enabled  @ref distance_fog_range) */
     vec3 distance_fog_color;
 
-    // Stores (-1, -1) if disabled otherwise stores start (min fog) and end (max fog)
-    // positions in range [0.0; +inf] as distance from camera.
+    /* stores (-1, -1) if disabled otherwise stores start (min fog) and end (max fog)
+     * positions in range [0.0; +inf] as distance from camera */
     vec2 distance_fog_range;
 } te_light_params;
 
 te_renderer* renderer_create(struct te_window* window);
 void renderer_destroy(te_renderer* renderer);
 
-// Returns parameters to configure lighting.
-// Do not free returned pointer, valid while the renderer exists.
+/* returns parameters to configure lighting
+ * do not free returned pointer, valid while the renderer exists */
 te_light_params* renderer_get_light_params(te_renderer* renderer);
 
-// Sets the maximum number of frames per second that is allowed for the renderer,
-// specify 0 to disable the limit.
+/* sets the maximum number of frames per second that is allowed for the renderer,
+ * specify 0 to disable the limit */
 void renderer_set_fps_limit(te_renderer* renderer, unsigned int limit);
 
-// Returns window.
-// Always valid pointer. Do not free/destroy the pointer.
+/* returns window, always valid pointer, do not free/destroy the pointer */
 struct te_window* renderer_get_window(te_renderer* renderer);
 
-// Returns shader manager.
-// Always valid pointer. Do not free/destroy the pointer, valid while the renderer exists.
+/* returns shader manager, always valid pointer
+ * do not free/destroy the pointer, valid while the renderer exists */
 struct te_shader_manager* renderer_get_shader_manager(te_renderer* renderer);
 
-// Returns texture manager.
-// Always valid pointer. Do not free/destroy the pointer, valid while the renderer exists.
+/* returns texture manager, always valid pointer
+ * do not free/destroy the pointer, valid while the renderer exists */
 struct te_texture_manager* renderer_get_texture_manager(te_renderer* renderer);
 
-// Returns font manager.
-// Always valid pointer. Do not free/destroy the pointer, valid while the renderer exists.
+/* returns font manager, always valid pointer
+ * do not free/destroy the pointer, valid while the renderer exists */
 struct te_font_manager* renderer_get_font_manager(te_renderer* renderer);
 
 unsigned int renderer_get_fps(te_renderer* renderer);
 
-// Returns 0 if not set.
+/* returns 0 if not set */
 unsigned int renderer_get_fps_limit(te_renderer* renderer);
 
-// ------------------------------------------------------------------------------------------------
-//                                       PRIVATE API
-// ------------------------------------------------------------------------------------------------
+/** ------------------------------------------------------------------------------------------------
+ *                                       PRIVATE API
+ * ------------------------------------------------------------------------------------------------- */
 
-// Submits a new frame.
+/* submits a new frame */
 void prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec);
 
-// Called after the window changed its size.
+/* called after the window changed its size */
 void prv_renderer_on_window_size_changed(te_renderer* renderer);

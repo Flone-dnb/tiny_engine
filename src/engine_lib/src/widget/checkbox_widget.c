@@ -12,13 +12,13 @@
 struct te_checkbox_widget {
     te_widget* widget;
 
-    // Always valid.
+    /* always valid */
     te_rect_widget* background_rect;
 
-    // NULL if the checkbox is not enabled (not checked).
+    /* NULL if the checkbox is not enabled (not checked) */
     te_rect_widget* checked_rect;
 
-    // May be NULL if not set.
+    /* may be NULL if not set */
     void (*on_changed)(te_checkbox_widget* checkbox_widget, bool is_checked);
 
     char* background_tex_relative_path;
@@ -27,21 +27,21 @@ struct te_checkbox_widget {
     vec4 background_color;
     vec4 checked_color;
 
-    // `true` if entered the "destroy" function.
+    /* `true` if entered the "destroy" function */
     bool is_checkbox_widget_destroy;
 
     bool is_checked;
     bool is_fixing_height;
 };
 
-// Widget callbacks:
+/* widget callbacks */
 static void prv_checkbox_widget_on_size_changed(void* this);
 static void prv_checkbox_widget_on_window_size_changed(void* this);
 static void prv_checkbox_widget_on_before_base_destroyed(void* this);
 static void prv_checkbox_widget_on_after_spawned(void* this);
 static void prv_checkbox_widget_on_before_despawned(void* this);
 
-// Interactable callbacks:
+/* interactable callbacks */
 static void prv_checkbox_widget_on_mouse_button_released(
     void* this, enum te_mouse_button button, vec2 cursor_pos);
 
@@ -89,7 +89,7 @@ void
 checkbox_widget_destroy(te_checkbox_widget* checkbox_widget) {
     checkbox_widget->is_checkbox_widget_destroy = true;
 
-    if (checkbox_widget->widget != NULL) { // may be null if we got here from base destroy
+    if (checkbox_widget->widget != NULL) { /* may be null if we got here from base destroy */
         widget_destroy(checkbox_widget->widget);
     }
 
@@ -105,8 +105,8 @@ prv_checkbox_widget_on_before_base_destroyed(void* this) {
         return;
     }
 
-    // Destroy was called on the base (widget) component, possibly due to
-    // parent being destroyed, cleanup our data.
+    /* destroy was called on the base (widget) component, possibly due to
+     * parent being destroyed, cleanup our data */
     checkbox_widget->widget = NULL;
     checkbox_widget_destroy(checkbox_widget);
 }
@@ -160,7 +160,7 @@ checkbox_widget_set_is_checked(te_checkbox_widget* checkbox_widget, bool is_chec
         if (is_checked) {
             prv_checkbox_widget_create_checked_rect(checkbox_widget);
         } else {
-            // Despawn.
+            /* despawn */
             widget_set_parent(rect_widget_get_widget(checkbox_widget->checked_rect), NULL);
             world_despawn_widget(world, rect_widget_get_widget(checkbox_widget->checked_rect));
 
@@ -252,22 +252,22 @@ checkbox_widget_get_checked_texture(te_checkbox_widget* checkbox_widget) {
     return checkbox_widget->checked_tex_relative_path;
 }
 
-static inline void
+static void
 prv_checkbox_widget_set_position(te_checkbox_widget* checkbox_widget, vec2 pos) {
     widget_set_relative_position(checkbox_widget->widget, pos);
 }
 
-static inline void
+static void
 prv_checkbox_widget_get_position(te_checkbox_widget* checkbox_widget, vec2 out) {
     widget_get_relative_position(checkbox_widget->widget, out);
 }
 
-static inline void
+static void
 prv_checkbox_widget_set_size(te_checkbox_widget* checkbox_widget, vec2 size) {
     widget_set_relative_size(checkbox_widget->widget, size);
 }
 
-static inline void
+static void
 prv_checkbox_widget_get_size(te_checkbox_widget* checkbox_widget, vec2 out) {
     widget_get_relative_size(checkbox_widget->widget, out);
 }
@@ -347,10 +347,10 @@ prv_checkbox_fix_height(te_checkbox_widget* checkbox_widget) {
         return;
     }
 
-    // To avoid recursion from on size changed callback.
+    /* to avoid recursion from on size changed callback */
     checkbox_widget->is_fixing_height = true;
 
-    // Recalculate height to be a square.
+    /* recalculate height to be a square */
     te_window* window = game_manager_get_window(world_get_game_manager(world));
 
     unsigned int window_width;
@@ -402,7 +402,7 @@ static void
 prv_checkbox_widget_on_after_spawned(void* this) {
     te_checkbox_widget* checkbox_widget = this;
 
-    // Self check:
+    /* self check */
     if (widget_get_child_widget_count(checkbox_widget->widget) != 1) {
         log_error(__FILE__, __LINE__, "unexpected child widget count on a widget");
         abort();
@@ -432,7 +432,7 @@ static void
 prv_checkbox_widget_on_before_despawned(void* this) {
     te_checkbox_widget* checkbox_widget = this;
 
-    // Self check:
+    /* self check */
     if (widget_get_child_widget_count(checkbox_widget->widget) > 2) {
         log_error(__FILE__, __LINE__, "unexpected child widget count on a widget");
         abort();

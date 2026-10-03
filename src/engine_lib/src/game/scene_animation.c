@@ -6,35 +6,34 @@
 #include <game_manager.h>
 #include <game/model.h>
 #include <game/camera.h>
-#include <math_funcs.h>
+#include <math/math_funcs.h>
 #include <io/log.h>
 #include <io/config.h>
 #include <cglm/quat.h>
 #include <cglm/euler.h>
 
-// Animation of a variable (of some object). Inside a variable keyframes are sorted in time increasing order.
+/* animation of a variable (of some object). Inside a variable keyframes are sorted in time increasing order */
 #define SCENE_ANIM_OBJ_VARIABLE_TYPE(type_name)                                               \
     typedef struct te_scene_animation_obj_variable_##type_name {                              \
         char* name;                                                                           \
-        /* Sort of like a cached obj ptr to not look for it every frame. Not saved. */        \
+        /* sort of like a cached obj ptr to not look for it every frame, not saved. */        \
         te_variable_info* transient_var_info;                                                 \
         te_scene_animation_keyframe_##type_name* keyframes;                                   \
         unsigned int keyframe_count;                                                          \
     } te_scene_animation_obj_variable_##type_name;
-SCENE_ANIM_OBJ_VARIABLE_TYPE(bool);
-SCENE_ANIM_OBJ_VARIABLE_TYPE(uint);
-SCENE_ANIM_OBJ_VARIABLE_TYPE(float);
-SCENE_ANIM_OBJ_VARIABLE_TYPE(vec2);
-SCENE_ANIM_OBJ_VARIABLE_TYPE(vec3);
-SCENE_ANIM_OBJ_VARIABLE_TYPE(vec4);
+SCENE_ANIM_OBJ_VARIABLE_TYPE(bool)
+SCENE_ANIM_OBJ_VARIABLE_TYPE(uint)
+SCENE_ANIM_OBJ_VARIABLE_TYPE(float)
+SCENE_ANIM_OBJ_VARIABLE_TYPE(vec2)
+SCENE_ANIM_OBJ_VARIABLE_TYPE(vec3)
+SCENE_ANIM_OBJ_VARIABLE_TYPE(vec4)
 
-// Animated variables of some object.
+/* animated variables of some object */
 typedef struct te_scene_animation_obj {
-    // Name of an object in the world (object name is supposed to be unique).
+    /* name of an object in the world (object name is supposed to be unique) */
     char* name;
 
-    // Sort of like a cached obj ptr to not look for it every frame.
-    // Not saved.
+    /* sort of like a cached obj ptr to not look for it every frame, not saved */
     void* transient_obj;
     const te_type_info* transient_obj_type_info;
 
@@ -54,22 +53,22 @@ typedef struct te_scene_animation_obj {
 } te_scene_animation_obj;
 
 struct te_scene_animation {
-    // Always valid.
+    /* always valid */
     te_world* world;
 
-    // NULL if nothing animated.
+    /* NULL if nothing animated */
     te_scene_animation_obj* animated_objects;
 
-    // NULL if not loaded from disk.
+    /* NULL if not loaded from disk (means that it's new, was not saved yet) */
     char* relative_path;
 
     unsigned int animated_object_count;
     float current_time_sec;
 
-    // Duration of the animation. Not saved, calculated at runtime.
+    /* duration of the animation, not saved, calculated at runtime */
     float transient_duration_sec;
 
-    // ID used to unregister tick callback. 0xFFFFFFFF if not registered.
+    /* ID used to unregister tick callback. 0xFFFFFFFF if not registered */
     unsigned int tick_callback_id;
 
     bool loop;
@@ -79,11 +78,13 @@ struct te_scene_animation {
 #define SCENE_ANIM_VAR_INIT(var_type)                                                         \
     void scene_animation_var_##var_type##_init(                                               \
         te_scene_animation_obj_variable_##var_type* var, const char* variable_name) {         \
+        size_t len;                                                                           \
+                                                                                              \
         var->transient_var_info = NULL;                                                       \
         var->keyframe_count = 0;                                                              \
         var->keyframes = NULL;                                                                \
                                                                                               \
-        size_t len = strlen(variable_name);                                                   \
+        len = strlen(variable_name);                                                          \
         var->name = malloc(sizeof(char) * (len + 1));                                         \
         memcpy(var->name, variable_name, sizeof(char) * len);                                 \
         var->name[len] = 0;                                                                   \
@@ -93,7 +94,7 @@ SCENE_ANIM_VAR_INIT(uint)
 SCENE_ANIM_VAR_INIT(float)
 SCENE_ANIM_VAR_INIT(vec2)
 SCENE_ANIM_VAR_INIT(vec3)
-SCENE_ANIM_VAR_INIT(vec4);
+SCENE_ANIM_VAR_INIT(vec4)
 
 #define SCENE_ANIM_VAR_DEINIT(var_type)                                                       \
     void scene_animation_var_##var_type##_deinit(                                             \
@@ -138,10 +139,12 @@ scene_animation_obj_init(te_scene_animation_obj* obj, const char* name) {
 
 void
 scene_animation_obj_deinit(te_scene_animation_obj* obj) {
+    unsigned int i;
+
     free(obj->name);
 
 #define DEINIT_VARIABLES(var_type)                                                            \
-    for (unsigned int i = 0; i < obj->var_type##_count; i++) {                                \
+    for (i = 0; i < obj->var_type##_count; i++) {                                             \
         scene_animation_var_##var_type##_deinit(&obj->var_type##s[i]);                        \
     }                                                                                         \
     free(obj->var_type##s);
@@ -156,6 +159,8 @@ scene_animation_obj_deinit(te_scene_animation_obj* obj) {
 
 te_scene_animation*
 prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
+    unsigned int var_idx;
+
     te_scene_animation* scene_animation = malloc(sizeof(te_scene_animation));
 
     scene_animation->animated_objects = NULL;
@@ -181,7 +186,8 @@ prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
         scene_animation->animated_object_count =
             config_section_get_uint(config, section_idx, "object_count", 0);
         if (scene_animation->animated_object_count == 0) {
-            log_error_fmt(__FILE__, __LINE__, 
+            log_error_fmt(
+                __FILE__, __LINE__,
                 "failed to load \"%s\", expected to find animated object count",
                 relative_path_to_load);
             abort();
@@ -223,16 +229,24 @@ prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
 
             section_idx += 1;
             if (section_idx >= section_count) {
-                log_error_fmt(__FILE__, __LINE__, 
-                    "reached unexpected end of file while reading %s", relative_path_to_load);
+                log_error_fmt(
+                    __FILE__, __LINE__, "reached unexpected end of file while reading %s",
+                    relative_path_to_load);
                 abort();
             }
 
 #define LOAD_NON_VEC_VARS_FROM_CONFIG(var_name, var_type)                                     \
-    for (unsigned int var_idx = 0; var_idx < obj->var_name##_count; var_idx++) {              \
+    for (var_idx = 0; var_idx < obj->var_name##_count; var_idx++) {                           \
+        const char* variable_name;                                                            \
+        unsigned int* interpolations;                                                         \
+        var_type* values;                                                                     \
+        float* times;                                                                         \
+        unsigned int item_count;                                                              \
+        unsigned int keyframe_idx;                                                            \
+                                                                                              \
         te_scene_animation_obj_variable_##var_name* var = &obj->var_name##s[var_idx];         \
                                                                                               \
-        const char* variable_name = config_section_get_name(config, section_idx);             \
+        variable_name = config_section_get_name(config, section_idx);                         \
         name_len = strlen(variable_name);                                                     \
         var->name = malloc(sizeof(char) * (name_len + 1));                                    \
         memcpy(var->name, variable_name, sizeof(char) * name_len);                            \
@@ -241,38 +255,40 @@ prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
         var->keyframe_count =                                                                 \
             config_section_get_uint(config, section_idx, "keyframe_count", 0);                \
         if (var->keyframe_count == 0) {                                                       \
-            log_error_fmt(__FILE__, __LINE__,                                                                     \
+            log_error_fmt(                                                                    \
+                __FILE__, __LINE__,                                                           \
                 "failed to get keyframe_count for variable %s of object %s while "            \
                 "reading %s",                                                                 \
                 variable_name, obj_name, relative_path_to_load);                              \
             abort();                                                                          \
         }                                                                                     \
                                                                                               \
-        unsigned int item_count;                                                              \
-        float* times =                                                                        \
-            config_section_get_float_array(config, section_idx, "times", &item_count);        \
+        times = config_section_get_float_array(config, section_idx, "times", &item_count);    \
         if (item_count == 0) {                                                                \
-            log_error_fmt(__FILE__, __LINE__,                                                                     \
+            log_error_fmt(                                                                    \
+                __FILE__, __LINE__,                                                           \
                 "failed to read keyframe times of variable %s of object %s while "            \
                 "reading %s",                                                                 \
                 variable_name, obj_name, relative_path_to_load);                              \
             abort();                                                                          \
         }                                                                                     \
                                                                                               \
-        var_type* values = config_section_get_##var_name##_array(                             \
+        values = config_section_get_##var_name##_array(                                       \
             config, section_idx, "values", &item_count);                                      \
         if (item_count == 0) {                                                                \
-            log_error_fmt(__FILE__, __LINE__,                                                                     \
+            log_error_fmt(                                                                    \
+                __FILE__, __LINE__,                                                           \
                 "failed to read keyframe values of variable %s of object %s while "           \
                 "reading %s",                                                                 \
                 variable_name, obj_name, relative_path_to_load);                              \
             abort();                                                                          \
         }                                                                                     \
                                                                                               \
-        unsigned int* interpolations = config_section_get_uint_array(                         \
+        interpolations = config_section_get_uint_array(                                       \
             config, section_idx, "interpolations", &item_count);                              \
         if (item_count == 0) {                                                                \
-            log_error_fmt(__FILE__, __LINE__,                                                                     \
+            log_error_fmt(                                                                    \
+                __FILE__, __LINE__,                                                           \
                 "failed to read keyframe interpolations of variable %s of object %s "         \
                 "while reading %s",                                                           \
                 variable_name, obj_name, relative_path_to_load);                              \
@@ -281,8 +297,7 @@ prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
                                                                                               \
         var->keyframes =                                                                      \
             malloc(sizeof(te_scene_animation_keyframe_##var_name) * var->keyframe_count);     \
-        for (unsigned int keyframe_idx = 0; keyframe_idx < var->keyframe_count;               \
-             keyframe_idx++) {                                                                \
+        for (keyframe_idx = 0; keyframe_idx < var->keyframe_count; keyframe_idx++) {          \
             var->keyframes[keyframe_idx].time = times[keyframe_idx];                          \
             var->keyframes[keyframe_idx].value = values[keyframe_idx];                        \
             var->keyframes[keyframe_idx].interpolation = interpolations[keyframe_idx];        \
@@ -295,11 +310,18 @@ prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
 
 #define LOAD_VEC_VARS_FROM_CONFIG(comp_count)                                                 \
     {                                                                                         \
-        for (unsigned int var_idx = 0; var_idx < obj->vec##comp_count##_count; var_idx++) {   \
+        for (var_idx = 0; var_idx < obj->vec##comp_count##_count; var_idx++) {                \
+            const char* variable_name;                                                        \
+            unsigned int* interpolations;                                                     \
+            float* values;                                                                    \
+            float* times;                                                                     \
+            unsigned int keyframe_idx;                                                        \
+            unsigned int item_count;                                                          \
+                                                                                              \
             te_scene_animation_obj_variable_vec##comp_count* var =                            \
                 &obj->vec##comp_count##s[var_idx];                                            \
                                                                                               \
-            const char* variable_name = config_section_get_name(config, section_idx);         \
+            variable_name = config_section_get_name(config, section_idx);                     \
             name_len = strlen(variable_name);                                                 \
             var->name = malloc(sizeof(char) * (name_len + 1));                                \
             memcpy(var->name, variable_name, sizeof(char) * name_len);                        \
@@ -308,38 +330,41 @@ prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
             var->keyframe_count =                                                             \
                 config_section_get_uint(config, section_idx, "keyframe_count", 0);            \
             if (var->keyframe_count == 0) {                                                   \
-                log_error_fmt(__FILE__, __LINE__,                                                                 \
+                log_error_fmt(                                                                \
+                    __FILE__, __LINE__,                                                       \
                     "failed to get keyframe_count for variable %s of object %s while "        \
                     "reading %s",                                                             \
                     variable_name, obj_name, relative_path_to_load);                          \
                 abort();                                                                      \
             }                                                                                 \
                                                                                               \
-            unsigned int item_count;                                                          \
-            float* times =                                                                    \
+            times =                                                                           \
                 config_section_get_float_array(config, section_idx, "times", &item_count);    \
             if (item_count == 0) {                                                            \
-                log_error_fmt(__FILE__, __LINE__,                                                                 \
+                log_error_fmt(                                                                \
+                    __FILE__, __LINE__,                                                       \
                     "failed to read keyframe times of variable %s of object %s while "        \
                     "reading %s",                                                             \
                     variable_name, obj_name, relative_path_to_load);                          \
                 abort();                                                                      \
             }                                                                                 \
                                                                                               \
-            float* values =                                                                   \
+            values =                                                                          \
                 config_section_get_float_array(config, section_idx, "values", &item_count);   \
             if (item_count == 0) {                                                            \
-                log_error_fmt(__FILE__, __LINE__,                                                                 \
+                log_error_fmt(                                                                \
+                    __FILE__, __LINE__,                                                       \
                     "failed to read keyframe values of variable %s of object %s while "       \
                     "reading %s",                                                             \
                     variable_name, obj_name, relative_path_to_load);                          \
                 abort();                                                                      \
             }                                                                                 \
                                                                                               \
-            unsigned int* interpolations = config_section_get_uint_array(                     \
+            interpolations = config_section_get_uint_array(                                   \
                 config, section_idx, "interpolations", &item_count);                          \
             if (item_count == 0) {                                                            \
-                log_error_fmt(__FILE__, __LINE__,                                                                 \
+                log_error_fmt(                                                                \
+                    __FILE__, __LINE__,                                                       \
                     "failed to read keyframe interpolations of variable %s of object %s "     \
                     "while reading %s",                                                       \
                     variable_name, obj_name, relative_path_to_load);                          \
@@ -348,8 +373,7 @@ prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
                                                                                               \
             var->keyframes = malloc(                                                          \
                 sizeof(te_scene_animation_keyframe_vec##comp_count) * var->keyframe_count);   \
-            for (unsigned int keyframe_idx = 0; keyframe_idx < var->keyframe_count;           \
-                 keyframe_idx++) {                                                            \
+            for (keyframe_idx = 0; keyframe_idx < var->keyframe_count; keyframe_idx++) {      \
                 var->keyframes[keyframe_idx].time = times[keyframe_idx];                      \
                 glm_vec##comp_count##_copy(                                                   \
                     &values[keyframe_idx * comp_count], var->keyframes[keyframe_idx].value);  \
@@ -374,9 +398,11 @@ prv_scene_animation_create(te_world* world, const char* relative_path_to_load) {
 
 void
 prv_scene_animation_destroy(te_scene_animation* scene_animation) {
+    unsigned int i;
+
     scene_animation_stop(scene_animation);
 
-    for (unsigned int i = 0; i < scene_animation->animated_object_count; i++) {
+    for (i = 0; i < scene_animation->animated_object_count; i++) {
         scene_animation_obj_deinit(&scene_animation->animated_objects[i]);
     }
     free(scene_animation->animated_objects);
@@ -388,25 +414,30 @@ prv_scene_animation_destroy(te_scene_animation* scene_animation) {
 
 void
 scene_animation_save(te_scene_animation* scene_animation, const char* relative_path) {
-    scene_animation_stop(scene_animation); // <- reset objects
+    te_config* config;
+    unsigned int obj_idx;
+    unsigned int var_idx;
+    unsigned int section_idx;
+
+    scene_animation_stop(scene_animation); /* reset objects */
 
     if (scene_animation->relative_path == NULL
         || strcmp(scene_animation->relative_path, relative_path) != 0) {
+        size_t len = strlen(relative_path);
+
         free(scene_animation->relative_path);
 
-        size_t len = strlen(relative_path);
         scene_animation->relative_path = malloc(sizeof(char) * (len + 1));
         memcpy(scene_animation->relative_path, relative_path, sizeof(char) * len);
         scene_animation->relative_path[len] = 0;
     }
 
-    te_config* config = config_create(NULL);
-    unsigned int section_idx = config_create_section(config, "scene_animation");
+    config = config_create(NULL);
+    section_idx = config_create_section(config, "scene_animation");
     config_section_set_uint(
         config, section_idx, "object_count", scene_animation->animated_object_count);
 
-    for (unsigned int obj_idx = 0; obj_idx < scene_animation->animated_object_count;
-         obj_idx++) {
+    for (obj_idx = 0; obj_idx < scene_animation->animated_object_count; obj_idx++) {
         te_scene_animation_obj* obj = &scene_animation->animated_objects[obj_idx];
 
         section_idx = config_create_section(config, obj->name);
@@ -418,17 +449,21 @@ scene_animation_save(te_scene_animation* scene_animation, const char* relative_p
         config_section_set_uint(config, section_idx, "vec4_count", obj->vec4_count);
 
 #define SAVE_NON_VEC_VARS_TO_CONFIG(var_name, var_type)                                       \
-    for (unsigned int var_idx = 0; var_idx < obj->var_name##_count; var_idx++) {              \
+    for (var_idx = 0; var_idx < obj->var_name##_count; var_idx++) {                           \
+        float* times;                                                                         \
+        var_type* values;                                                                     \
+        unsigned int* interpolations;                                                         \
+        unsigned int keyframe_idx;                                                            \
+                                                                                              \
         te_scene_animation_obj_variable_##var_name* var = &obj->var_name##s[var_idx];         \
                                                                                               \
         section_idx = config_create_section(config, var->name);                               \
         config_section_set_uint(config, section_idx, "keyframe_count", var->keyframe_count);  \
                                                                                               \
-        float* times = malloc(sizeof(float) * var->keyframe_count);                           \
-        var_type* values = malloc(sizeof(var_type) * var->keyframe_count);                    \
-        unsigned int* interpolations = malloc(sizeof(unsigned int) * var->keyframe_count);    \
-        for (unsigned int keyframe_idx = 0; keyframe_idx < var->keyframe_count;               \
-             keyframe_idx++) {                                                                \
+        times = malloc(sizeof(float) * var->keyframe_count);                                  \
+        values = malloc(sizeof(var_type) * var->keyframe_count);                              \
+        interpolations = malloc(sizeof(unsigned int) * var->keyframe_count);                  \
+        for (keyframe_idx = 0; keyframe_idx < var->keyframe_count; keyframe_idx++) {          \
             times[keyframe_idx] = var->keyframes[keyframe_idx].time;                          \
             values[keyframe_idx] = var->keyframes[keyframe_idx].value;                        \
             interpolations[keyframe_idx] = var->keyframes[keyframe_idx].interpolation;        \
@@ -451,18 +486,22 @@ scene_animation_save(te_scene_animation* scene_animation, const char* relative_p
         SAVE_NON_VEC_VARS_TO_CONFIG(float, float)
 
 #define SAVE_VEC_VARS_TO_CONFIG(comp_count)                                                   \
-    for (unsigned int var_idx = 0; var_idx < obj->vec##comp_count##_count; var_idx++) {       \
-        te_scene_animation_obj_variable_vec##comp_count* var =                                \
-            &obj->vec##comp_count##s[var_idx];                                                \
+    for (var_idx = 0; var_idx < obj->vec##comp_count##_count; var_idx++) {                    \
+        te_scene_animation_obj_variable_vec##comp_count* var;                                 \
+        float* times;                                                                         \
+        float* values;                                                                        \
+        unsigned int* interpolations;                                                         \
+        unsigned int keyframe_idx;                                                            \
+                                                                                              \
+        var = &obj->vec##comp_count##s[var_idx];                                              \
                                                                                               \
         section_idx = config_create_section(config, var->name);                               \
         config_section_set_uint(config, section_idx, "keyframe_count", var->keyframe_count);  \
                                                                                               \
-        float* times = malloc(sizeof(float) * var->keyframe_count);                           \
-        float* values = malloc(sizeof(float) * (var->keyframe_count * comp_count));           \
-        unsigned int* interpolations = malloc(sizeof(unsigned int) * var->keyframe_count);    \
-        for (unsigned int keyframe_idx = 0; keyframe_idx < var->keyframe_count;               \
-             keyframe_idx++) {                                                                \
+        times = malloc(sizeof(float) * var->keyframe_count);                                  \
+        values = malloc(sizeof(float) * (var->keyframe_count * comp_count));                  \
+        interpolations = malloc(sizeof(unsigned int) * var->keyframe_count);                  \
+        for (keyframe_idx = 0; keyframe_idx < var->keyframe_count; keyframe_idx++) {          \
             times[keyframe_idx] = var->keyframes[keyframe_idx].time;                          \
             glm_vec##comp_count##_copy(                                                       \
                 var->keyframes[keyframe_idx].value, &values[keyframe_idx * comp_count]);      \
@@ -497,15 +536,20 @@ find_game_obj_recursive(te_game_object_data* data, te_scene_animation_obj* targe
         target->transient_obj = data->object;
         target->transient_obj_type_info = type_database_get_type_info(data->info->type_id);
         if (target->transient_obj_type_info == NULL) {
-            log_error_fmt(__FILE__, __LINE__, "failed to get type info for type \"%s\"", data->info->type_id);
+            log_error_fmt(
+                __FILE__, __LINE__, "failed to get type info for type \"%s\"",
+                data->info->type_id);
         }
         return;
     }
 
-    // Special case for models.
+    /* special case for models */
     if (data->info->type == TE_GOT_MODEL) {
+        te_camera* camera;
+        unsigned int i;
+
         unsigned int child_count = model_get_child_model_count(data->object);
-        for (unsigned int i = 0; i < child_count; i++) {
+        for (i = 0; i < child_count; i++) {
             te_model* child = model_get_child_model(data->object, i);
             if (child != NULL && model_is_serialization_allowed(child)) {
                 obj_name = model_get_name(child);
@@ -518,7 +562,7 @@ find_game_obj_recursive(te_game_object_data* data, te_scene_animation_obj* targe
             }
         }
 
-        te_camera* camera = model_get_attached_camera(data->object);
+        camera = model_get_attached_camera(data->object);
         if (camera != NULL && camera_is_serialization_allowed(camera)) {
             obj_name = camera_get_name(camera);
             if (obj_name != NULL && strcmp(obj_name, target->name) == 0) {
@@ -555,7 +599,8 @@ cache_obj_and_var(te_scene_animation* anim) {
             }
         }
         if (obj->transient_obj == NULL || obj->transient_obj_type_info == NULL) {
-            log_error_fmt(__FILE__, __LINE__, 
+            log_error_fmt(
+                __FILE__, __LINE__,
                 "failed to find a world object with name \"%s\" to animate", obj->name);
             abort();
         }
@@ -575,7 +620,8 @@ cache_obj_and_var(te_scene_animation* anim) {
             break;                                                                            \
         }                                                                                     \
         if (var->transient_var_info == NULL) {                                                \
-            log_error_fmt(__FILE__, __LINE__,                                                                     \
+            log_error_fmt(                                                                    \
+                __FILE__, __LINE__,                                                           \
                 "failed to find variable with name \"%s\" of object \"%s\" to animate",       \
                 var->name, obj->name);                                                        \
             abort();                                                                          \
@@ -653,7 +699,7 @@ scene_animation_stop(te_scene_animation* scene_animation) {
 
     scene_animation->current_time_sec = 0.0f;
 
-    // Reset animated objects.
+    /* reset animated objects */
     scene_animation_tick(scene_animation, 0.0f);
 
     clear_obj_and_var_cache(scene_animation);
@@ -663,7 +709,7 @@ void
 scene_animation_set_current_time(te_scene_animation* scene_animation, float time_sec) {
     scene_animation->current_time_sec = time_sec;
 
-    // Update animated objects.
+    /* update animated objects */
     cache_obj_and_var(scene_animation);
     scene_animation_tick(scene_animation, 0.0f);
 }
@@ -1254,11 +1300,11 @@ scene_animation_tick(te_scene_animation* anim, float delta_time_sec) {
 
     anim->current_time_sec += delta_time_sec;
     if (anim->loop) {
-        if (anim->transient_duration_sec < 0.001f) { // to avoid NaN in current time
+        if (anim->transient_duration_sec < 0.001f) { /* to avoid NaN in current time */
             anim->current_time_sec = 0.0f;
         } else if (
             anim->current_time_sec
-            > anim->transient_duration_sec) { // to allow ticking on the last anim frame
+            > anim->transient_duration_sec) { /* to allow ticking on the last anim frame */
             anim->current_time_sec =
                 fmodf(anim->current_time_sec, anim->transient_duration_sec);
         }
@@ -1306,17 +1352,17 @@ scene_animation_tick(te_scene_animation* anim, float delta_time_sec) {
 void
 scene_animation_play(te_scene_animation* scene_animation) {
     if (scene_animation->tick_callback_id != 0xFFFFFFFF) {
-        // Already playing.
+        /* already playing */
         return;
     }
 
     cache_obj_and_var(scene_animation);
 
-    // Init animated objects.
+    /* init animated objects */
     scene_animation_tick(scene_animation, 0.0f);
 
     if (scene_animation->tick_callback_id == 0xFFFFFFFF) {
-        // Register tick callback to update animation.
+        /* register tick callback to update animation */
         scene_animation->tick_callback_id = game_manager_add_tick_callback(
             world_get_game_manager(scene_animation->world), scene_animation,
             scene_animation_tick);
