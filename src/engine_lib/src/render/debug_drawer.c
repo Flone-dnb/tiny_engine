@@ -104,8 +104,8 @@ double_array_switch_to_empty(te_double_array* array) {
 
 /* prepared data to render a glyph */
 typedef struct te_debug_drawer_glyph {
-    vec2 pos_offset;
-    vec2 size;
+    te_vec2 pos_offset;
+    te_vec2 size;
 
     /* 0 if " " (space) character */
     unsigned int tex_id;
@@ -127,17 +127,17 @@ typedef struct te_debug_drawer_text {
     /* if less than zero then text should be destroyed */
     float time_left_sec;
 
-    vec4 color;
+    te_vec4 color;
 
     /* -1 if should be automatically picked */
-    vec2 pos;
+    te_vec2 pos;
 } te_debug_drawer_text;
 
 /* data needed to draw AABB */
 typedef struct te_debug_drawer_aabb {
     te_aabb_shape aabb;
 
-    vec3 color;
+    te_vec3 color;
 
     /* if less than zero then item should be destroyed */
     float time_left_sec;
@@ -145,8 +145,8 @@ typedef struct te_debug_drawer_aabb {
 
 /* data needed to draw a line */
 typedef struct te_debug_drawer_line {
-    vec3 from;
-    vec3 to;
+    te_vec3 from;
+    te_vec3 to;
 
     /* if less than zero then item should be destroyed */
     float time_left_sec;
@@ -302,11 +302,11 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
 
     /* create quad geometry */
     {
-        vec4 vertices[4]; /* XY pos, ZW uv */
-        glm_vec4_copy((vec4){0.0f, 0.0f, 0.0f, 0.0f}, &vertices[0][0]);
-        glm_vec4_copy((vec4){0.0f, 1.0f, 0.0f, 1.0f}, &vertices[1][0]);
-        glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, &vertices[2][0]);
-        glm_vec4_copy((vec4){1.0f, 0.0f, 1.0f, 0.0f}, &vertices[3][0]);
+        te_vec4 vertices[4]; /* XY pos, ZW uv */
+        vec4_copy((vec4){0.0f, 0.0f, 0.0f, 0.0f}, &vertices[0][0]);
+        vec4_copy((vec4){0.0f, 1.0f, 0.0f, 1.0f}, &vertices[1][0]);
+        vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, &vertices[2][0]);
+        vec4_copy((vec4){1.0f, 0.0f, 1.0f, 0.0f}, &vertices[3][0]);
         const unsigned short indices[6] = {0, 1, 2, 0, 2, 3};
 
 #if !defined(ENGINE_GLES)
@@ -341,20 +341,20 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
 
     /* create AABB geometry (using lines) */
     {
-        vec3 extents;
-        glm_vec3_copy((vec3){1.0f, 1.0f, 1.0f}, extents);
+        te_vec3 extents;
+        vec3_copy((vec3){1.0f, 1.0f, 1.0f}, extents);
 
-        vec3 vertices[8];
+        te_vec3 vertices[8];
 
-        glm_vec3_copy((vec3){-extents[0], -extents[1], -extents[2]}, &vertices[0][0]);
-        glm_vec3_copy((vec3){+extents[0], -extents[1], -extents[2]}, &vertices[1][0]);
-        glm_vec3_copy((vec3){+extents[0], -extents[1], +extents[2]}, &vertices[2][0]);
-        glm_vec3_copy((vec3){-extents[0], -extents[1], +extents[2]}, &vertices[3][0]);
+        vec3_copy((vec3){-extents[0], -extents[1], -extents[2]}, &vertices[0][0]);
+        vec3_copy((vec3){+extents[0], -extents[1], -extents[2]}, &vertices[1][0]);
+        vec3_copy((vec3){+extents[0], -extents[1], +extents[2]}, &vertices[2][0]);
+        vec3_copy((vec3){-extents[0], -extents[1], +extents[2]}, &vertices[3][0]);
 
-        glm_vec3_copy((vec3){-extents[0], +extents[1], -extents[2]}, &vertices[4][0]);
-        glm_vec3_copy((vec3){+extents[0], +extents[1], -extents[2]}, &vertices[5][0]);
-        glm_vec3_copy((vec3){+extents[0], +extents[1], +extents[2]}, &vertices[6][0]);
-        glm_vec3_copy((vec3){-extents[0], +extents[1], +extents[2]}, &vertices[7][0]);
+        vec3_copy((vec3){-extents[0], +extents[1], -extents[2]}, &vertices[4][0]);
+        vec3_copy((vec3){+extents[0], +extents[1], -extents[2]}, &vertices[5][0]);
+        vec3_copy((vec3){+extents[0], +extents[1], +extents[2]}, &vertices[6][0]);
+        vec3_copy((vec3){-extents[0], +extents[1], +extents[2]}, &vertices[7][0]);
 
         const unsigned short indices[TE_DEBUG_DRAWER_AABB_INDEX_COUNT] = {
             0, 1, 1, 2, 2, 3, 3, 0, // lower quad
@@ -394,10 +394,10 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
 
     /* create line geometry */
     {
-        vec3 vertices[2];
+        te_vec3 vertices[2];
 
-        glm_vec3_copy((vec3){0.0f, 0.0f, 0.0f}, &vertices[0][0]);
-        glm_vec3_copy((vec3){1.0f, 1.0f, 1.0f}, &vertices[1][0]);
+        vec3_copy((vec3){0.0f, 0.0f, 0.0f}, &vertices[0][0]);
+        vec3_copy((vec3){1.0f, 1.0f, 1.0f}, &vertices[1][0]);
 
         const unsigned short indices[2] = {0, 1};
 
@@ -483,7 +483,7 @@ prv_debug_drawer_deinit(struct te_renderer* renderer) {
 }
 
 void
-debug_drawer_draw_aabb(te_aabb_shape* aabb, float time_sec, vec3 color) {
+debug_drawer_draw_aabb(te_aabb_shape* aabb, float time_sec, te_vec3 color) {
     if (drawer.renderer == NULL) {
         return;
     }
@@ -491,21 +491,21 @@ debug_drawer_draw_aabb(te_aabb_shape* aabb, float time_sec, vec3 color) {
     te_debug_drawer_aabb new_item;
     new_item.aabb = *aabb;
     new_item.time_left_sec = time_sec;
-    glm_vec3_copy(color, new_item.color);
+    vec3_copy(color, new_item.color);
 
     double_array_add_item(drawer.aabbs, &new_item);
 }
 
 void
-debug_drawer_draw_line(vec3 from, vec3 to, float time_sec) {
+debug_drawer_draw_line(te_vec3 from, te_vec3 to, float time_sec) {
     if (drawer.renderer == NULL) {
         return;
     }
 
     te_debug_drawer_line new_item;
     new_item.time_left_sec = time_sec;
-    glm_vec3_copy(from, new_item.from);
-    glm_vec3_copy(to, new_item.to);
+    vec3_copy(from, new_item.from);
+    vec3_copy(to, new_item.to);
 
     double_array_add_item(drawer.lines, &new_item);
 }
@@ -537,21 +537,21 @@ debug_drawer_draw_text_fmt(float time_sec, const char* fmt, ...) {
 }
 
 void
-debug_drawer_draw_text_color(const char* text, float time_sec, vec3 color) {
+debug_drawer_draw_text_color(const char* text, float time_sec, te_vec3 color) {
     debug_drawer_draw_text_color_pos(text, time_sec, color, (vec2){-1.0f, -1.0f});
 }
 
 void
-debug_drawer_draw_text_color_pos(const char* text, float time_sec, vec3 color, vec2 pos) {
+debug_drawer_draw_text_color_pos(const char* text, float time_sec, te_vec3 color, te_vec2 pos) {
     if (drawer.renderer == NULL) {
         return;
     }
 
     /* init data */
     te_debug_drawer_text new_item;
-    glm_vec3_copy(color, new_item.color);
+    vec3_copy(color, new_item.color);
     new_item.color[3] = 1.0f;
-    glm_vec2_copy(pos, new_item.pos);
+    vec2_copy(pos, new_item.pos);
     new_item.time_left_sec = time_sec;
 
     /* copy text */
@@ -579,10 +579,10 @@ debug_drawer_draw_text_color_pos(const char* text, float time_sec, vec3 color, v
             dst->tex_id = 0;
         } else {
             dst->tex_id = src.tex_id;
-            glm_vec2_copy(
+            vec2_copy(
                 (vec2){(float)src.bearing_x * font_scale, -(float)src.bearing_y * font_scale},
                 dst->pos_offset);
-            glm_vec2_copy(
+            vec2_copy(
                 (vec2){(float)src.width * font_scale, (float)src.height * font_scale},
                 dst->size);
         }
@@ -602,8 +602,8 @@ prv_debug_drawer_draw(
     unsigned int window_width;
     unsigned int window_height;
     window_get_size(renderer_get_window(renderer), &window_width, &window_height);
-    vec2 window_size;
-    glm_vec2_copy((vec2){(float)window_width, (float)window_height}, window_size);
+    te_vec2 window_size;
+    vec2_copy((vec2){(float)window_width, (float)window_height}, window_size);
 
     glDisable(GL_DEPTH_TEST);
 
@@ -692,15 +692,15 @@ prv_debug_drawer_draw(
 
         glActiveTexture(GL_TEXTURE0); /* glyph's bitmap */
 
-        vec4 clip_rect;
-        glm_vec4_copy((vec4){0.0f, 0.0f, 1.0f, 1.0f}, clip_rect);
+        te_vec4 clip_rect;
+        vec4_copy((vec4){0.0f, 0.0f, 1.0f, 1.0f}, clip_rect);
         glUniform4fv(drawer.text_shader.uniform_clip_rect, 1, clip_rect);
 
         glUniform2fv(drawer.text_shader.uniform_window_size, 1, window_size);
 
         /* prepare starting position for the first text (relative to screen's top-left corner)
          * x will be reset on every text so it's defined below */
-        vec2 screen_pos;
+        te_vec2 screen_pos;
         screen_pos[1] = (float)window_height * 0.1f;
 
         glEnable(GL_BLEND);
@@ -731,8 +731,8 @@ prv_debug_drawer_draw(
                 if (text->glyphs[i].tex_id == 0) {
                     screen_pos[0] += text->glyphs[i].distance_to_next_glyph;
                 } else {
-                    vec2 glyph_pos;
-                    glm_vec2_add(screen_pos, text->glyphs[i].pos_offset, glyph_pos);
+                    te_vec2 glyph_pos;
+                    vec2_add(screen_pos, text->glyphs[i].pos_offset, glyph_pos);
 
                     glUniform2fv(drawer.text_shader.uniform_in_pos, 1, glyph_pos);
                     glUniform2fv(drawer.text_shader.uniform_in_size, 1, text->glyphs[i].size);

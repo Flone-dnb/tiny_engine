@@ -1,11 +1,17 @@
 #include <math/math_funcs.h>
 
+#include <math.h>
 #include <io/log.h>
 #include <misc/globals.h>
 #include <cglm/affine.h>
 
+float
+math_abs(float value) {
+    return (float)math_abs(value);
+}
+
 void
-math_fix_diagonal_movement_speedup(vec2 movement) {
+math_fix_diagonal_movement_speedup(te_vec2 movement) {
     float length;
     float square_sum;
 
@@ -15,7 +21,7 @@ math_fix_diagonal_movement_speedup(vec2 movement) {
         return;
     }
 
-    length = sqrtf(square_sum);
+    length = (float)sqrt(square_sum);
     if (length
         <= 1.0f) { /* only normalize when exceeding 1 to keep small gamepad thumbstick movements */
         return;
@@ -27,34 +33,15 @@ math_fix_diagonal_movement_speedup(vec2 movement) {
 }
 
 void
-math_normalize_safely(vec3 vec) {
-    float square_sum;
-    float inv_sqrt;
-
-    square_sum = vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2];
-    if (square_sum < GLM_FLT_EPSILON) {
-        vec[0] = 0.0f;
-        vec[1] = 0.0f;
-        vec[2] = 0.0f;
-        return;
-    }
-
-    inv_sqrt = 1.0f / sqrtf(square_sum);
-    vec[0] *= inv_sqrt;
-    vec[1] *= inv_sqrt;
-    vec[2] *= inv_sqrt;
-}
-
-void
-math_convert_norm_dir_to_rot(vec3 dir, vec3 out) {
+math_convert_norm_dir_to_rot(te_vec3 dir, te_vec3 out) {
     if (glm_vec3_eq_eps(dir, 0.0f)) {
-        glm_vec3_zero(out);
+        vec3_zero(out);
         return;
     }
 
 #if defined(DEBUG)
     /* make sure we are given a normalized direction */
-    if (!glm_eq(glm_vec3_norm(dir), 1.0f)) {
+    if (!glm_eq(vec3_len(dir), 1.0f)) {
         log_error(
             __FILE__, __LINE__, "the specified direction vector should have been normalized");
         abort();
@@ -74,17 +61,17 @@ math_convert_norm_dir_to_rot(vec3 dir, vec3 out) {
 }
 
 void
-math_make_rotation_mat(vec3 rotation_deg, mat4 out) {
+math_make_rotation_mat(te_vec3 rotation_deg, mat4 out) {
     mat4 z_rot;
     mat4 y_rot;
     mat4 x_rot;
-    vec3 z;
-    vec3 y;
-    vec3 x;
+    te_vec3 z;
+    te_vec3 y;
+    te_vec3 x;
 
-    glm_vec3_zero(z);
-    glm_vec3_zero(y);
-    glm_vec3_zero(x);
+    vec3_zero(z);
+    vec3_zero(y);
+    vec3_zero(x);
 
     z[2] = 1.0f;
     y[1] = 1.0f;
@@ -101,10 +88,10 @@ math_make_rotation_mat(vec3 rotation_deg, mat4 out) {
 }
 
 void
-math_convert_rot_to_norm_dir(vec3 rot, vec3 out) {
+math_convert_rot_to_norm_dir(te_vec3 rot, te_vec3 out) {
     mat4 rot_mat;
-    vec4 forward;
-    vec4 result;
+    te_vec4 forward;
+    te_vec4 result;
 
     math_make_rotation_mat(rot, rot_mat);
 
@@ -113,5 +100,5 @@ math_convert_rot_to_norm_dir(vec3 rot, vec3 out) {
 
     glm_mat4_mulv(rot_mat, forward, result);
 
-    glm_vec3_copy(result, out);
+    vec3_copy(result, out);
 }

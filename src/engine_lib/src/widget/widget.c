@@ -34,24 +34,24 @@ struct te_widget {
     void (*on_window_size_changed)(void* owner);
 
     /* may be NULL, used by interactable widgets */
-    void (*on_cursor_entered)(void* owner, vec2 cursor_pos);
-    void (*on_cursor_left)(void* owner, vec2 cursor_pos);
-    void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, vec2 cursor_pos);
+    void (*on_cursor_entered)(void* owner, te_vec2 cursor_pos);
+    void (*on_cursor_left)(void* owner, te_vec2 cursor_pos);
+    void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, te_vec2 cursor_pos);
     void (*on_mouse_button_released)(
-        void* owner, enum te_mouse_button button, vec2 cursor_pos);
-    void (*on_hovered_cursor_moved)(void* owner, vec2 cursor_pos);
+        void* owner, enum te_mouse_button button, te_vec2 cursor_pos);
+    void (*on_hovered_cursor_moved)(void* owner, te_vec2 cursor_pos);
     void (*on_keyboard_input_text)(void* owner, const char* text);
     void (*on_keyboard_input)(void* owner, enum te_keyboard_button button);
 
     /* if @ref parent is NULL equal to screen pos/size, otherwise
      * stores pos/size relative to the parent */
-    vec2 relative_pos;
-    vec2 relative_size;
+    te_vec2 relative_pos;
+    te_vec2 relative_size;
 
     /* stores the final screen pos/size (includes parents if have parents)
      * in range [0.0; 1.0] relative to the window size */
-    vec2 screen_pos;
-    vec2 screen_size;
+    te_vec2 screen_pos;
+    te_vec2 screen_size;
 
     size_t custom_value;
     void* custom_ptr;
@@ -107,11 +107,11 @@ widget_create(
     widget->on_keyboard_input_text = NULL;
     widget->on_keyboard_input = NULL;
 
-    glm_vec2_copy((vec2){0.1f, 0.1f}, widget->relative_pos);
-    glm_vec2_copy((vec2){0.1f, 0.05f}, widget->relative_size);
+    vec2_copy((vec2){0.1f, 0.1f}, widget->relative_pos);
+    vec2_copy((vec2){0.1f, 0.05f}, widget->relative_size);
 
-    glm_vec2_copy(widget->relative_pos, widget->screen_pos);
-    glm_vec2_copy(widget->relative_size, widget->screen_size);
+    vec2_copy(widget->relative_pos, widget->screen_pos);
+    vec2_copy(widget->relative_size, widget->screen_size);
 
     return widget;
 }
@@ -169,7 +169,7 @@ widget_get_custom_ptr(te_widget* widget) {
 }
 
 static void
-prv_widget_calc_screen_pos_size_recursive(te_widget* base, vec2 pos, vec2 size) {
+prv_widget_calc_screen_pos_size_recursive(te_widget* base, te_vec2 pos, te_vec2 size) {
     pos[0] = base->relative_pos[0] + pos[0] * base->relative_size[0];
     pos[1] = base->relative_pos[1] + pos[1] * base->relative_size[1];
 
@@ -183,8 +183,8 @@ prv_widget_calc_screen_pos_size_recursive(te_widget* base, vec2 pos, vec2 size) 
 
 static void
 prv_widget_recalc_screen_pos_size(te_widget* widget) {
-    glm_vec2_copy(widget->relative_pos, widget->screen_pos);
-    glm_vec2_copy(widget->relative_size, widget->screen_size);
+    vec2_copy(widget->relative_pos, widget->screen_pos);
+    vec2_copy(widget->relative_size, widget->screen_size);
 
     if (widget->parent != NULL) {
         prv_widget_calc_screen_pos_size_recursive(
@@ -383,10 +383,10 @@ widget_get_name(te_widget* widget) {
 }
 
 void
-widget_set_relative_position(te_widget* widget, vec2 position) {
+widget_set_relative_position(te_widget* widget, te_vec2 position) {
     unsigned int i;
 
-    glm_vec2_copy(position, widget->relative_pos); /* don't check for [0.0; 1.0] */
+    vec2_copy(position, widget->relative_pos); /* don't check for [0.0; 1.0] */
     prv_widget_recalc_screen_pos_size(widget);
 
     /* notify child widgets */
@@ -400,15 +400,15 @@ widget_set_relative_position(te_widget* widget, vec2 position) {
 }
 
 void
-widget_get_relative_position(te_widget* widget, vec2 out) {
-    glm_vec2_copy(widget->relative_pos, out);
+widget_get_relative_position(te_widget* widget, te_vec2 out) {
+    vec2_copy(widget->relative_pos, out);
 }
 
 void
-widget_set_relative_size(te_widget* widget, vec2 size) {
+widget_set_relative_size(te_widget* widget, te_vec2 size) {
     unsigned int i;
 
-    glm_vec2_copy(size, widget->relative_size);
+    vec2_copy(size, widget->relative_size);
     prv_widget_recalc_screen_pos_size(widget);
 
     /* notify child widgets */
@@ -422,18 +422,18 @@ widget_set_relative_size(te_widget* widget, vec2 size) {
 }
 
 void
-widget_get_relative_size(te_widget* widget, vec2 out) {
-    glm_vec2_copy(widget->relative_size, out);
+widget_get_relative_size(te_widget* widget, te_vec2 out) {
+    vec2_copy(widget->relative_size, out);
 }
 
 void
-widget_get_screen_position(te_widget* widget, vec2 pos) {
-    glm_vec2_copy(widget->screen_pos, pos);
+widget_get_screen_position(te_widget* widget, te_vec2 pos) {
+    vec2_copy(widget->screen_pos, pos);
 }
 
 void
-widget_get_screen_size(te_widget* widget, vec2 size) {
-    glm_vec2_copy(widget->screen_size, size);
+widget_get_screen_size(te_widget* widget, te_vec2 size) {
+    vec2_copy(widget->screen_size, size);
 }
 
 te_world*
@@ -510,12 +510,12 @@ prv_widget_on_window_size_changed(te_widget* widget) {
 
 void
 prv_widget_set_input_callbacks(
-    te_widget* widget, void (*on_cursor_entered)(void* owner, vec2 cursor_pos),
-    void (*on_cursor_left)(void* owner, vec2 cursor_pos),
-    void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, vec2 cursor_pos),
+    te_widget* widget, void (*on_cursor_entered)(void* owner, te_vec2 cursor_pos),
+    void (*on_cursor_left)(void* owner, te_vec2 cursor_pos),
+    void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, te_vec2 cursor_pos),
     void (*on_mouse_button_released)(
-        void* owner, enum te_mouse_button button, vec2 cursor_pos),
-    void (*on_hovered_cursor_moved)(void* owner, vec2 cursor_pos),
+        void* owner, enum te_mouse_button button, te_vec2 cursor_pos),
+    void (*on_hovered_cursor_moved)(void* owner, te_vec2 cursor_pos),
     void (*on_keyboard_input_text)(void* owner, const char* input_text),
     void (*on_keyboard_input)(void* owner, enum te_keyboard_button button)) {
     widget->on_cursor_entered = on_cursor_entered;
@@ -529,7 +529,7 @@ prv_widget_set_input_callbacks(
 
 void
 prv_widget_on_mouse_button_pressed(
-    te_widget* widget, enum te_mouse_button button, vec2 cursor_pos) {
+    te_widget* widget, enum te_mouse_button button, te_vec2 cursor_pos) {
     if (widget->on_mouse_button_pressed == NULL) {
         return;
     }
@@ -539,7 +539,7 @@ prv_widget_on_mouse_button_pressed(
 
 void
 prv_widget_on_mouse_button_released(
-    te_widget* widget, enum te_mouse_button button, vec2 cursor_pos) {
+    te_widget* widget, enum te_mouse_button button, te_vec2 cursor_pos) {
     if (widget->on_mouse_button_released == NULL) {
         return;
     }
@@ -548,7 +548,7 @@ prv_widget_on_mouse_button_released(
 }
 
 void
-prv_widget_on_cursor_entered(te_widget* widget, vec2 cursor_pos) {
+prv_widget_on_cursor_entered(te_widget* widget, te_vec2 cursor_pos) {
     if (widget->on_cursor_entered == NULL) {
         return;
     }
@@ -557,7 +557,7 @@ prv_widget_on_cursor_entered(te_widget* widget, vec2 cursor_pos) {
 }
 
 void
-prv_widget_on_cursor_left(te_widget* widget, vec2 cursor_pos) {
+prv_widget_on_cursor_left(te_widget* widget, te_vec2 cursor_pos) {
     if (widget->on_cursor_left == NULL) {
         return;
     }
@@ -566,7 +566,7 @@ prv_widget_on_cursor_left(te_widget* widget, vec2 cursor_pos) {
 }
 
 void
-prv_widget_on_hovered_cursor_moved(te_widget* widget, vec2 cursor_pos) {
+prv_widget_on_hovered_cursor_moved(te_widget* widget, te_vec2 cursor_pos) {
     if (widget->on_hovered_cursor_moved == NULL) {
         return;
     }

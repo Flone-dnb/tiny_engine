@@ -133,25 +133,25 @@ debug_command_set_fps_limit(te_game_manager* game_manager, unsigned int new_limi
         te_light_params* params = ((te_light_params*)obj);                                    \
         body;                                                                                 \
     }
-LIGHT_PARAMS_FUNC(set_clear_color, glm_vec3_copy(arg, params->clear_color));
-LIGHT_PARAMS_FUNC(get_clear_color, glm_vec3_copy(params->clear_color, arg));
-LIGHT_PARAMS_FUNC(set_ambient_light_color, glm_vec3_copy(arg, params->ambient_light_color));
-LIGHT_PARAMS_FUNC(get_ambient_light_color, glm_vec3_copy(params->ambient_light_color, arg));
-LIGHT_PARAMS_FUNC(set_dir_light_color, glm_vec4_copy(arg, params->directional_light_color));
-LIGHT_PARAMS_FUNC(get_dir_light_color, glm_vec4_copy(params->directional_light_color, arg));
-LIGHT_PARAMS_FUNC(set_dir_light_dir, glm_vec3_normalize(arg);
-                  glm_vec3_copy(arg, params->directional_light_direction));
-LIGHT_PARAMS_FUNC(get_dir_light_dir, glm_vec3_copy(params->directional_light_direction, arg));
-LIGHT_PARAMS_FUNC(set_point_light_color, glm_vec4_copy(arg, params->point_light_color));
-LIGHT_PARAMS_FUNC(get_point_light_color, glm_vec4_copy(params->point_light_color, arg));
+LIGHT_PARAMS_FUNC(set_clear_color, vec3_copy(arg, params->clear_color));
+LIGHT_PARAMS_FUNC(get_clear_color, vec3_copy(params->clear_color, arg));
+LIGHT_PARAMS_FUNC(set_ambient_light_color, vec3_copy(arg, params->ambient_light_color));
+LIGHT_PARAMS_FUNC(get_ambient_light_color, vec3_copy(params->ambient_light_color, arg));
+LIGHT_PARAMS_FUNC(set_dir_light_color, vec4_copy(arg, params->directional_light_color));
+LIGHT_PARAMS_FUNC(get_dir_light_color, vec4_copy(params->directional_light_color, arg));
+LIGHT_PARAMS_FUNC(set_dir_light_dir, vec3_normalize(arg);
+                  vec3_copy(arg, params->directional_light_direction));
+LIGHT_PARAMS_FUNC(get_dir_light_dir, vec3_copy(params->directional_light_direction, arg));
+LIGHT_PARAMS_FUNC(set_point_light_color, vec4_copy(arg, params->point_light_color));
+LIGHT_PARAMS_FUNC(get_point_light_color, vec4_copy(params->point_light_color, arg));
 LIGHT_PARAMS_FUNC(
-    set_point_light_pos_and_dist, glm_vec4_copy(arg, params->point_light_pos_and_dist));
+    set_point_light_pos_and_dist, vec4_copy(arg, params->point_light_pos_and_dist));
 LIGHT_PARAMS_FUNC(
-    get_point_light_pos_and_dist, glm_vec4_copy(params->point_light_pos_and_dist, arg));
-LIGHT_PARAMS_FUNC(set_distance_fog_range, glm_vec2_copy(arg, params->distance_fog_range));
-LIGHT_PARAMS_FUNC(get_distance_fog_range, glm_vec2_copy(params->distance_fog_range, arg));
-LIGHT_PARAMS_FUNC(set_distance_fog_color, glm_vec3_copy(arg, params->distance_fog_color));
-LIGHT_PARAMS_FUNC(get_distance_fog_color, glm_vec3_copy(params->distance_fog_color, arg));
+    get_point_light_pos_and_dist, vec4_copy(params->point_light_pos_and_dist, arg));
+LIGHT_PARAMS_FUNC(set_distance_fog_range, vec2_copy(arg, params->distance_fog_range));
+LIGHT_PARAMS_FUNC(get_distance_fog_range, vec2_copy(params->distance_fog_range, arg));
+LIGHT_PARAMS_FUNC(set_distance_fog_color, vec3_copy(arg, params->distance_fog_color));
+LIGHT_PARAMS_FUNC(get_distance_fog_color, vec3_copy(params->distance_fog_color, arg));
 
 te_renderer*
 renderer_create(struct te_window* window) {
@@ -175,13 +175,13 @@ renderer_create(struct te_window* window) {
 
         te_light_params* data = renderer->light_params;
 
-        glm_vec3_copy((vec3){0.5f, 0.5f, 0.5f}, data->ambient_light_color);
+        vec3_copy((vec3){0.5f, 0.5f, 0.5f}, data->ambient_light_color);
 
-        glm_vec3_copy((vec3){1.0f, -1.0f, 1.0f}, data->directional_light_direction);
-        glm_vec3_normalize(data->directional_light_direction);
-        glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 0.0f}, data->directional_light_color);
+        vec3_copy((vec3){1.0f, -1.0f, 1.0f}, data->directional_light_direction);
+        vec3_normalize(data->directional_light_direction);
+        vec4_copy((vec4){1.0f, 1.0f, 1.0f, 0.0f}, data->directional_light_color);
 
-        glm_vec2_copy((vec2){-1.0f, -1.0f}, data->distance_fog_range);
+        vec2_copy((vec2){-1.0f, -1.0f}, data->distance_fog_range);
     }
 
 #if defined(__linux__)
@@ -559,7 +559,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         te_particle_renderer* particle_renderer = world_get_particle_renderer(worlds[i]);
 
         /* set camera's aspect ratio */
-        vec4 viewport;
+        te_vec4 viewport;
         camera_get_viewport(camera, viewport);
         const unsigned int viewport_width = (unsigned int)((float)window_width * viewport[2]);
         const unsigned int viewport_height =
@@ -571,7 +571,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         mat4* proj_mat = camera_get_proj_mat(camera);
         struct te_frustum_shape* camera_frustum = camera_get_frustum(camera);
 
-        ivec4 gl_viewport;
+        ite_vec4 gl_viewport;
         gl_viewport[0] = (int)((float)window_width * viewport[0]);
         gl_viewport[1] =
             (int)((float)window_height * (1.0f - fmin(1.0f, viewport[1] + viewport[3])));

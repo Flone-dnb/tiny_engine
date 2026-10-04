@@ -1,9 +1,9 @@
 #pragma once
 
 #include <stdbool.h>
-#include <cglm/vec2.h>
-#include <cglm/vec3.h>
-#include <cglm/vec4.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
 #include <wchar.h>
 
 struct te_config;
@@ -31,14 +31,14 @@ typedef unsigned int (*te_uint_getter)(void* obj);
 typedef void (*te_float_setter)(void* obj, float val);
 typedef float (*te_float_getter)(void* obj);
 
-typedef void (*te_vec2_setter)(void* obj, vec2 val);
-typedef void (*te_vec2_getter)(void* obj, vec2 out);
+typedef void (*te_vec2_setter)(void* obj, te_vec2 val);
+typedef void (*te_vec2_getter)(void* obj, te_vec2 out);
 
-typedef void (*te_vec3_setter)(void* obj, vec3 val);
-typedef void (*te_vec3_getter)(void* obj, vec3 out);
+typedef void (*te_vec3_setter)(void* obj, te_vec3 val);
+typedef void (*te_vec3_getter)(void* obj, te_vec3 out);
 
-typedef void (*te_vec4_setter)(void* obj, vec4 val);
-typedef void (*te_vec4_getter)(void* obj, vec4 out);
+typedef void (*te_vec4_setter)(void* obj, te_vec4 val);
+typedef void (*te_vec4_getter)(void* obj, te_vec4 out);
 
 typedef void (*te_string_setter)(void* obj, const char* val);
 typedef const char* (*te_string_getter)(void* obj);

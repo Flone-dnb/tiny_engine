@@ -1,7 +1,7 @@
 #include <camera_controller.h>
 
 #include <stdbool.h>
-#include <cglm/vec2.h>
+#include <math/vec2.h>
 #include <game/camera.h>
 #include <math/math_funcs.h>
 #include <misc/globals.h>
@@ -13,10 +13,10 @@ struct te_camera_controller {
 
     /* stores the current state of the input
      * X stores "forward" movement in [-1.0f; 1.0], Y stores "right" movement and Z stores up */
-    vec3 movement_input;
+    te_vec3 movement_input;
 
     /* the current state of the right thumbstick */
-    vec2 gamepad_look;
+    te_vec2 gamepad_look;
 
     float rotation_sensitivity;
     float speed;
@@ -33,8 +33,8 @@ camera_controller_create(void) {
     camera_controller->is_input_enabled = true;
     camera_controller->rotation_sensitivity = 0.1f;
     camera_controller->speed = 4.0f;
-    glm_vec2_zero(camera_controller->gamepad_look);
-    glm_vec3_zero(camera_controller->movement_input);
+    vec2_zero(camera_controller->gamepad_look);
+    vec3_zero(camera_controller->movement_input);
 
     return camera_controller;
 }
@@ -46,8 +46,8 @@ camera_controller_destroy(te_camera_controller* camera_controller) {
 
 static void
 reset_input_state(te_camera_controller* controller) {
-    glm_vec3_zero(controller->movement_input);
-    glm_vec2_zero(controller->gamepad_look);
+    vec3_zero(controller->movement_input);
+    vec2_zero(controller->gamepad_look);
 }
 
 static void
@@ -83,7 +83,7 @@ camera_controller_enable_input(te_camera_controller* controller, bool enable) {
 void
 camera_controller_apply_look_input(
     te_camera_controller* controller, float x_offset, float y_offset) {
-    vec3 rotation;
+    te_vec3 rotation;
 
     if (controller->camera == NULL) {
         return;
@@ -182,11 +182,11 @@ camera_controller_on_gamepad_disconnected(te_camera_controller* controller) {
 
 void
 camera_controller_on_game_tick(te_camera_controller* controller, float delta_time_sec) {
-    vec3 movement;
-    vec3 forward;
-    vec3 right;
-    vec3 up;
-    vec3 position;
+    te_vec3 movement;
+    te_vec3 forward;
+    te_vec3 right;
+    te_vec3 up;
+    te_vec3 position;
 
     if (controller->camera == NULL) {
         return;
@@ -204,24 +204,24 @@ camera_controller_on_game_tick(te_camera_controller* controller, float delta_tim
         return;
     }
 
-    glm_vec3_make(controller->movement_input, movement);
+    vec3_set(controller->movement_input, movement);
     math_fix_diagonal_movement_speedup(movement);
 
-    glm_vec3_scale(movement, controller->speed * delta_time_sec, movement);
+    vec3_muls(movement, controller->speed * delta_time_sec, movement);
 
     camera_get_forward(controller->camera, forward);
     camera_get_right(controller->camera, right);
     globals_get_world_up(up);
 
-    glm_vec3_scale(forward, movement[0], forward);
-    glm_vec3_scale(right, movement[1], right);
-    glm_vec3_scale(up, movement[2], up);
+    vec3_muls(forward, movement[0], forward);
+    vec3_muls(right, movement[1], right);
+    vec3_muls(up, movement[2], up);
 
     camera_get_position(controller->camera, position);
 
-    glm_vec3_add(position, forward, position);
-    glm_vec3_add(position, right, position);
-    glm_vec3_add(position, up, position);
+    vec3_add(position, forward, position);
+    vec3_add(position, right, position);
+    vec3_add(position, up, position);
 
     camera_set_position(controller->camera, position);
 }

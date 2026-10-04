@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cglm/vec4.h>
+#include <math/vec4.h>
 
 typedef struct te_button_widget te_button_widget;
 struct te_widget;
@@ -19,13 +19,13 @@ void button_widget_set_on_right_clicked(
     te_button_widget* button_widget, void (*on_right_clicked)(te_button_widget*));
 
 /* sets RGBA colors for 3 states: normal, hovered and pressed */
-void button_widget_set_color(te_button_widget* button_widget, vec4 color);
-void button_widget_set_color_hovered(te_button_widget* button_widget, vec4 color);
-void button_widget_set_color_pressed(te_button_widget* button_widget, vec4 color);
+void button_widget_set_color(te_button_widget* button_widget, te_vec4 color);
+void button_widget_set_color_hovered(te_button_widget* button_widget, te_vec4 color);
+void button_widget_set_color_pressed(te_button_widget* button_widget, te_vec4 color);
 
-void button_widget_get_color(te_button_widget* button_widget, vec4 out);
-void button_widget_get_color_hovered(te_button_widget* button_widget, vec4 out);
-void button_widget_get_color_pressed(te_button_widget* button_widget, vec4 out);
+void button_widget_get_color(te_button_widget* button_widget, te_vec4 out);
+void button_widget_get_color_hovered(te_button_widget* button_widget, te_vec4 out);
+void button_widget_get_color_pressed(te_button_widget* button_widget, te_vec4 out);
 
 /* sets textures (path relative to the "res" directory) for 3 states: normal, hovered and pressed
  * specify NULL to remove texture. The string will be copied to the button */

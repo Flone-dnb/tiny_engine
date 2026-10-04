@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cglm/vec3.h>
+#include <math/vec3.h>
 #include <shape/plane_shape.h>
 
 struct te_aabb_shape;
@@ -17,7 +17,7 @@ typedef struct te_frustum_shape {
 } te_frustum_shape;
 
 te_frustum_shape frustum_shape_create(
-    vec3 camera_pos, vec3 forward, vec3 up, float near_clip, float far_clip,
+    te_vec3 camera_pos, te_vec3 forward, te_vec3 up, float near_clip, float far_clip,
     float vertical_fov, float aspect_ratio);
 
 /* tests if the specified axis-aligned bounding box is inside of the frustum or intersects it */

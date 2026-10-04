@@ -6,20 +6,20 @@
 
 te_frustum_shape
 frustum_shape_create(
-    vec3 camera_pos, vec3 forward, vec3 up, float near_clip, float far_clip,
+    te_vec3 camera_pos, te_vec3 forward, te_vec3 up, float near_clip, float far_clip,
     float vertical_fov, float aspect_ratio) {
     te_frustum_shape frustum;
-    vec3 right;
-    vec3 far_normal;
-    vec3 to_near;
-    vec3 to_far;
-    vec3 near_pos;
-    vec3 far_pos;
-    vec3 right_scaled;
-    vec3 neg_right_scaled;
-    vec3 up_scaled;
-    vec3 neg_up_scaled;
-    vec3 temp;
+    te_vec3 right;
+    te_vec3 far_normal;
+    te_vec3 to_near;
+    te_vec3 to_far;
+    te_vec3 near_pos;
+    te_vec3 far_pos;
+    te_vec3 right_scaled;
+    te_vec3 neg_right_scaled;
+    te_vec3 up_scaled;
+    te_vec3 neg_up_scaled;
+    te_vec3 temp;
 
     const float tan_half_fov = (float)tan(0.5f * vertical_fov);
     const float far_half_height = far_clip * tan_half_fov;
@@ -27,53 +27,53 @@ frustum_shape_create(
 
     /* right */
     glm_vec3_cross(forward, up, right);
-    glm_vec3_normalize(right);
+    vec3_normalize(right);
 
     /* far normal */
-    glm_vec3_copy(forward, far_normal);
+    vec3_copy(forward, far_normal);
     glm_vec3_negate(far_normal);
 
     /* to near */
-    glm_vec3_scale(forward, near_clip, to_near);
+    vec3_muls(forward, near_clip, to_near);
 
     /* to far */
-    glm_vec3_scale(forward, far_clip, to_far);
+    vec3_muls(forward, far_clip, to_far);
 
     /* near pos */
-    glm_vec3_add(camera_pos, to_near, near_pos);
+    vec3_add(camera_pos, to_near, near_pos);
 
     /* far pos */
-    glm_vec3_add(camera_pos, to_far, far_pos);
+    vec3_add(camera_pos, to_far, far_pos);
 
     frustum.near = plane_shape_create(forward, near_pos);
     frustum.far = plane_shape_create(far_normal, far_pos);
 
-    glm_vec3_scale(right, far_half_width, right_scaled);
-    glm_vec3_copy(right_scaled, neg_right_scaled);
+    vec3_muls(right, far_half_width, right_scaled);
+    vec3_copy(right_scaled, neg_right_scaled);
     glm_vec3_negate(neg_right_scaled);
 
-    glm_vec3_add(to_far, right_scaled, temp);
+    vec3_add(to_far, right_scaled, temp);
     glm_vec3_cross(up, temp, temp);
-    glm_vec3_normalize(temp);
+    vec3_normalize(temp);
     frustum.right = plane_shape_create(temp, camera_pos);
 
-    glm_vec3_add(to_far, neg_right_scaled, temp);
+    vec3_add(to_far, neg_right_scaled, temp);
     glm_vec3_cross(temp, up, temp);
-    glm_vec3_normalize(temp);
+    vec3_normalize(temp);
     frustum.left = plane_shape_create(temp, camera_pos);
 
-    glm_vec3_scale(up, far_half_height, up_scaled);
-    glm_vec3_copy(up_scaled, neg_up_scaled);
+    vec3_muls(up, far_half_height, up_scaled);
+    vec3_copy(up_scaled, neg_up_scaled);
     glm_vec3_negate(neg_up_scaled);
 
-    glm_vec3_add(to_far, up_scaled, temp);
+    vec3_add(to_far, up_scaled, temp);
     glm_vec3_cross(temp, right, temp);
-    glm_vec3_normalize(temp);
+    vec3_normalize(temp);
     frustum.top = plane_shape_create(temp, camera_pos);
 
-    glm_vec3_add(to_far, neg_up_scaled, temp);
+    vec3_add(to_far, neg_up_scaled, temp);
     glm_vec3_cross(right, temp, temp);
-    glm_vec3_normalize(temp);
+    vec3_normalize(temp);
     frustum.bottom = plane_shape_create(temp, camera_pos);
 
     return frustum;

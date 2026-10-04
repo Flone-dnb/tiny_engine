@@ -1,7 +1,7 @@
 #pragma once
 
 #include <wchar.h>
-#include <cglm/vec4.h>
+#include <math/vec4.h>
 
 typedef struct te_text_edit_widget te_text_edit_widget;
 struct te_widget;
@@ -41,8 +41,8 @@ void text_edit_widget_set_text_height(te_text_edit_widget* text_edit_widget, flo
 float text_edit_widget_get_text_height(te_text_edit_widget* text_edit_widget);
 
 /* sets RGBA color of the text */
-void text_edit_widget_set_color(te_text_edit_widget* text_edit_widget, vec4 color);
-void text_edit_widget_get_color(te_text_edit_widget* text_edit_widget, vec4 out);
+void text_edit_widget_set_color(te_text_edit_widget* text_edit_widget, te_vec4 color);
+void text_edit_widget_get_color(te_text_edit_widget* text_edit_widget, te_vec4 out);
 
 /* returns unique ID of this type in the type database */
 const char* text_edit_widget_get_type_id(void);

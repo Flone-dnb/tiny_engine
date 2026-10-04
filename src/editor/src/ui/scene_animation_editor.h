@@ -2,7 +2,7 @@
 
 #include <input/mouse_button.h>
 #include <input/keyboard_button.h>
-#include <cglm/vec2.h>
+#include <math/vec2.h>
 
 typedef struct te_scene_animation_editor te_scene_animation_editor;
 struct te_world;
@@ -30,9 +30,9 @@ void scene_animation_editor_show(te_scene_animation_editor* editor);
 
 /* Cursor pos in range [0.0; 1.0] relative to scene animation root widget pos/size. */
 void prv_scene_animation_editor_on_mouse_click(
-    te_scene_animation_editor* editor, enum te_mouse_button button, vec2 cursor_pos);
+    te_scene_animation_editor* editor, enum te_mouse_button button, te_vec2 cursor_pos);
 void prv_scene_animation_editor_on_mouse_scroll_moved(
-    te_scene_animation_editor* editor, float offset, vec2 cursor_pos);
+    te_scene_animation_editor* editor, float offset, te_vec2 cursor_pos);
 
 void prv_scene_animation_editor_on_keyboard_button_pressed(
     te_scene_animation_editor* editor, enum te_keyboard_button button,

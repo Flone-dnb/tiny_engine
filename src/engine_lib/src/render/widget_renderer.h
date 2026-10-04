@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cglm/vec2.h>
-#include <cglm/vec4.h>
+#include <math/vec2.h>
+#include <math/vec4.h>
 
 typedef struct te_widget_renderer te_widget_renderer;
 struct te_renderer;
@@ -9,8 +9,8 @@ struct te_renderer;
 /* prepared data to render a text glyph */
 typedef struct te_text_widget_glyph {
     /* position offset (from the pivot) in pixels */
-    vec2 offset_pix;
-    vec2 size_pix;
+    te_vec2 offset_pix;
+    te_vec2 size_pix;
 
     /* 0 if " " (space) character */
     unsigned int tex_id;
@@ -22,10 +22,10 @@ typedef struct te_text_widget_render_data {
     te_text_widget_glyph* glyphs;
 
     /* RGBA color of the text */
-    vec4 color;
+    te_vec4 color;
 
     /* position of the text's pivot point in pixels */
-    vec2 pos_pix;
+    te_vec2 pos_pix;
 
     /* size of the array @ref glyphs */
     unsigned int glyph_count;
@@ -34,14 +34,14 @@ typedef struct te_text_widget_render_data {
 /* data needed to render a rect widget */
 typedef struct te_rect_widget_render_data {
     /* position and size in pixels */
-    vec2 pos_pix;
-    vec2 size_pix;
+    te_vec2 pos_pix;
+    te_vec2 size_pix;
 
     /* RGBA color */
-    vec4 color;
+    te_vec4 color;
 
     /* XY stores clip start in range [0.0; 1.0] and ZW stores clip size in the same range */
-    vec4 clip_rect;
+    te_vec4 clip_rect;
 
     /* 0 if not used */
     unsigned int tex_id;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cglm/vec3.h>
+#include <math/vec3.h>
 
 enum te_game_object_type { TE_GOT_CAMERA, TE_GOT_MODEL, TE_GOT_PARTICLE_EMITTER };
 
@@ -20,8 +20,8 @@ typedef struct te_game_object_info {
     const char* (*get_name)(void* game_object);
 
     /* NULL if not applicable */
-    void (*get_position)(void* game_object, vec3 out);
-    void (*set_position)(void* game_object, vec3 pos);
+    void (*get_position)(void* game_object, te_vec3 out);
+    void (*set_position)(void* game_object, te_vec3 pos);
 
     /* called by world to notify game object */
     void (*on_spawned)(void* game_object, struct te_world* world);

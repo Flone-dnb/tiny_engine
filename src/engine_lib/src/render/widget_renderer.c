@@ -95,11 +95,11 @@ widget_renderer_create(te_renderer* renderer) {
 
     /* create quad geometry */
     {
-        vec4 vertices[4]; /* XY pos, ZW uv */
-        glm_vec4_copy((vec4){0.0f, 0.0f, 0.0f, 0.0f}, &vertices[0][0]);
-        glm_vec4_copy((vec4){0.0f, 1.0f, 0.0f, 1.0f}, &vertices[1][0]);
-        glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, &vertices[2][0]);
-        glm_vec4_copy((vec4){1.0f, 0.0f, 1.0f, 0.0f}, &vertices[3][0]);
+        te_vec4 vertices[4]; /* XY pos, ZW uv */
+        vec4_copy((vec4){0.0f, 0.0f, 0.0f, 0.0f}, &vertices[0][0]);
+        vec4_copy((vec4){0.0f, 1.0f, 0.0f, 1.0f}, &vertices[1][0]);
+        vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, &vertices[2][0]);
+        vec4_copy((vec4){1.0f, 0.0f, 1.0f, 0.0f}, &vertices[3][0]);
         const unsigned short indices[6] = {0, 1, 2, 0, 2, 3};
 
 #if !defined(ENGINE_GLES)
@@ -225,7 +225,7 @@ widget_renderer_remove_rect_widget(te_widget_renderer* renderer, unsigned int ha
 
 void
 widget_renderer_draw(te_widget_renderer* widget_renderer) {
-    vec2 window_size;
+    te_vec2 window_size;
     unsigned int window_width;
     unsigned int window_height;
     unsigned int rect_widget_count;
@@ -237,7 +237,7 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
     window_get_size(
         renderer_get_window(widget_renderer->renderer), &window_width, &window_height);
-    glm_vec2_copy((vec2){(float)window_width, (float)window_height}, window_size);
+    vec2_copy((vec2){(float)window_width, (float)window_height}, window_size);
 
     /* draw rect widgets */
     rect_widget_count = render_data_array_get_item_count(widget_renderer->rect_widget_data);
@@ -286,8 +286,8 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
     text_widget_count = render_data_array_get_item_count(widget_renderer->text_widget_data);
     if (text_widget_count > 0) {
         te_text_widget_render_data* data;
-        vec4 clip_rect;
-        vec2 pos_pix;
+        te_vec4 clip_rect;
+        te_vec2 pos_pix;
         unsigned int widget_idx;
         unsigned int glyph_idx;
 
@@ -306,7 +306,7 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
         glActiveTexture(GL_TEXTURE0); /* glyph's bitmap */
 
-        glm_vec4_copy((vec4){0.0f, 0.0f, 1.0f, 1.0f}, clip_rect);
+        vec4_copy((vec4){0.0f, 0.0f, 1.0f, 1.0f}, clip_rect);
         glUniform4fv(shader->uniform_clip_rect, 1, clip_rect);
 
         glUniform2fv(shader->uniform_window_size, 1, window_size);
@@ -317,7 +317,7 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
             glUniform4fv(shader->uniform_text_color, 1, data->color);
 
             for (glyph_idx = 0; glyph_idx < data->glyph_count; glyph_idx++) {
-                glm_vec2_add(data->pos_pix, data->glyphs[glyph_idx].offset_pix, pos_pix);
+                vec2_add(data->pos_pix, data->glyphs[glyph_idx].offset_pix, pos_pix);
 
                 glUniform2fv(shader->uniform_in_pos, 1, pos_pix);
                 glUniform2fv(shader->uniform_in_size, 1, data->glyphs[glyph_idx].size_pix);

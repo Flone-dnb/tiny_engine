@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
-#include <cglm/vec4.h>
+#include <math/vec4.h>
 
 typedef struct te_checkbox_widget te_checkbox_widget;
 struct te_widget;
@@ -22,11 +22,11 @@ void checkbox_widget_set_is_checked(te_checkbox_widget* checkbox_widget, bool is
 bool checkbox_widget_is_checked(te_checkbox_widget* checkbox_widget);
 
 /* sets RGBA color to checkbox background and foreground (checked state) */
-void checkbox_widget_set_background_color(te_checkbox_widget* checkbox_widget, vec4 color);
-void checkbox_widget_set_checked_color(te_checkbox_widget* checkbox_widget, vec4 color);
+void checkbox_widget_set_background_color(te_checkbox_widget* checkbox_widget, te_vec4 color);
+void checkbox_widget_set_checked_color(te_checkbox_widget* checkbox_widget, te_vec4 color);
 
-void checkbox_widget_get_background_color(te_checkbox_widget* checkbox_widget, vec4 out);
-void checkbox_widget_get_checked_color(te_checkbox_widget* checkbox_widget, vec4 out);
+void checkbox_widget_get_background_color(te_checkbox_widget* checkbox_widget, te_vec4 out);
+void checkbox_widget_get_checked_color(te_checkbox_widget* checkbox_widget, te_vec4 out);
 
 /* sets path (relataive to the `res` directory) to background and foreground (checked) textures */
 void checkbox_widget_set_background_texture(

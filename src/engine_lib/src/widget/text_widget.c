@@ -21,7 +21,7 @@ struct te_text_widget {
     wchar_t* text;
 
     /* RGBA color of the text */
-    vec4 color;
+    te_vec4 color;
 
     /* strlen of @ref text */
     unsigned int text_len;
@@ -60,7 +60,7 @@ text_widget_create(void) {
     text_widget->text_height = 0.03f;
     text_widget->line_spacing = 0.1f;
     text_widget->is_multiline = false;
-    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, text_widget->color);
+    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, text_widget->color);
 
     text_widget->widget = widget_create(
         text_widget, text_widget_get_type_id, prv_text_widget_on_pos_changed,
@@ -162,8 +162,8 @@ text_widget_get_text(te_text_widget* text_widget, unsigned int* text_len) {
 }
 
 void
-text_widget_set_color(te_text_widget* text_widget, vec4 color) {
-    glm_vec4_copy(color, text_widget->color);
+text_widget_set_color(te_text_widget* text_widget, te_vec4 color) {
+    vec4_copy(color, text_widget->color);
 
     if (text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
         return;
@@ -178,12 +178,12 @@ text_widget_set_color(te_text_widget* text_widget, vec4 color) {
     te_text_widget_render_data* data = widget_renderer_get_text_widget_render_data_tmp(
         world_get_widget_renderer(world), text_widget->render_data_handle);
 
-    glm_vec4_copy(text_widget->color, data->color);
+    vec4_copy(text_widget->color, data->color);
 }
 
 void
-text_widget_get_color(te_text_widget* text_widget, vec4 out) {
-    glm_vec4_copy(text_widget->color, out);
+text_widget_get_color(te_text_widget* text_widget, te_vec4 out) {
+    vec4_copy(text_widget->color, out);
 }
 
 void
@@ -300,7 +300,7 @@ prv_text_widget_on_pos_changed(void* this) {
         world_get_widget_renderer(world), text_widget->render_data_handle);
 
     widget_get_screen_position(text_widget->widget, data->pos_pix);
-    glm_vec2_mul(
+    vec2_mul(
         data->pos_pix, (vec2){(float)window_width, (float)window_height}, data->pos_pix);
 }
 
@@ -350,13 +350,13 @@ collect_glyphs(
     const float glyph_height = text_widget->text_height * (float)window_height;
     const float line_spacing = text_widget->line_spacing * glyph_height;
 
-    vec2 size;
+    te_vec2 size;
     widget_get_screen_size(text_widget->widget, size);
-    glm_vec2_mul(size, (vec2){(float)window_width, (float)window_height}, size);
+    vec2_mul(size, (vec2){(float)window_width, (float)window_height}, size);
 
     /* offset from the widget's pivot */
-    vec2 offset;
-    glm_vec2_copy((vec2){0.0f, 0.0f}, offset);
+    te_vec2 offset;
+    vec2_copy((vec2){0.0f, 0.0f}, offset);
 
     /* switch to the first row of the text */
     offset[1] += glyph_height;
@@ -405,13 +405,13 @@ collect_glyphs(
 
             dst_glyph->tex_id = src_glyph.tex_id;
 
-            glm_vec2_copy(
+            vec2_copy(
                 (vec2){(float)src_glyph.width * glyph_scale,
                        (float)src_glyph.height * glyph_scale},
                 dst_glyph->size_pix);
 
-            glm_vec2_copy(offset, dst_glyph->offset_pix);
-            glm_vec2_add(
+            vec2_copy(offset, dst_glyph->offset_pix);
+            vec2_add(
                 dst_glyph->offset_pix,
                 (vec2){(float)src_glyph.bearing_x * glyph_scale,
                        -(float)src_glyph.bearing_y * glyph_scale},
@@ -446,14 +446,14 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
     te_text_widget_render_data* data = widget_renderer_get_text_widget_render_data_tmp(
         world_get_widget_renderer(world), text_widget->render_data_handle);
 
-    glm_vec4_copy(text_widget->color, data->color);
+    vec4_copy(text_widget->color, data->color);
 
     unsigned int window_width;
     unsigned int window_height;
     window_get_size(game_manager_get_window(game_manager), &window_width, &window_height);
 
     widget_get_screen_position(text_widget->widget, data->pos_pix);
-    glm_vec2_mul(
+    vec2_mul(
         data->pos_pix, (vec2){(float)window_width, (float)window_height}, data->pos_pix);
 
     data->glyph_count = 0;
@@ -469,22 +469,22 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
 }
 
 static void
-prv_text_widget_set_position(te_text_widget* text_widget, vec2 pos) {
+prv_text_widget_set_position(te_text_widget* text_widget, te_vec2 pos) {
     widget_set_relative_position(text_widget->widget, pos);
 }
 
 static void
-prv_text_widget_get_position(te_text_widget* text_widget, vec2 out) {
+prv_text_widget_get_position(te_text_widget* text_widget, te_vec2 out) {
     widget_get_relative_position(text_widget->widget, out);
 }
 
 static void
-prv_text_widget_set_size(te_text_widget* text_widget, vec2 size) {
+prv_text_widget_set_size(te_text_widget* text_widget, te_vec2 size) {
     widget_set_relative_size(text_widget->widget, size);
 }
 
 static void
-prv_text_widget_get_size(te_text_widget* text_widget, vec2 out) {
+prv_text_widget_get_size(te_text_widget* text_widget, te_vec2 out) {
     widget_get_relative_size(text_widget->widget, out);
 }
 

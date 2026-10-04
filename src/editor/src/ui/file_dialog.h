@@ -7,7 +7,7 @@ struct te_world;
 enum te_file_dialog_mode {
     TE_FDM_SELECT_DIR,
     TE_FDM_SELECT_EXISTING_FILE,
-    TE_FDM_SELECT_NEW_FILE,
+    TE_FDM_SELECT_NEW_FILE
 };
 
 /* Displays a file explorer to select a file/directory.

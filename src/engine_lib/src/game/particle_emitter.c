@@ -17,12 +17,12 @@
 
 /* data used to simulate a single particle */
 typedef struct te_particle_data {
-    vec4 color;
+    te_vec4 color;
 
-    vec3 pos;
+    te_vec3 pos;
     float size;
 
-    vec3 velocity;
+    te_vec3 velocity;
     float left_time_to_live_sec;
 } te_particle_data;
 
@@ -36,18 +36,18 @@ struct te_particle_emitter {
     te_particle_data* particle_buf_a;
     te_particle_data* particle_buf_b;
 
-    vec4 color;
+    te_vec4 color;
 
-    vec4 color_fade_in;
-    vec4 color_fade_out;
+    te_vec4 color_fade_in;
+    te_vec4 color_fade_out;
 
-    vec3 position;
+    te_vec3 position;
 
-    vec3 spawn_velocity;
-    vec3 spawn_velocity_rand;
-    vec3 spawn_offset_rand;
+    te_vec3 spawn_velocity;
+    te_vec3 spawn_velocity_rand;
+    te_vec3 spawn_offset_rand;
 
-    vec3 gravity;
+    te_vec3 gravity;
 
     float size;
     float size_fade_in;
@@ -90,17 +90,17 @@ te_particle_emitter*
 particle_emitter_create(void) {
     te_particle_emitter* emitter = malloc(sizeof(te_particle_emitter));
 
-    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, emitter->color);
-    glm_vec4_copy(emitter->color, emitter->color_fade_in);
-    glm_vec4_copy(emitter->color, emitter->color_fade_out);
+    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, emitter->color);
+    vec4_copy(emitter->color, emitter->color_fade_in);
+    vec4_copy(emitter->color, emitter->color_fade_out);
 
-    glm_vec3_copy((vec3){0.0f, 2.0f, 0.0f}, emitter->spawn_velocity);
-    glm_vec3_copy((vec3){0.5f, 0.0f, 0.5f}, emitter->spawn_velocity_rand);
-    glm_vec3_copy((vec3){0.0f, 0.0f, 0.0f}, emitter->spawn_offset_rand);
+    vec3_copy((vec3){0.0f, 2.0f, 0.0f}, emitter->spawn_velocity);
+    vec3_copy((vec3){0.5f, 0.0f, 0.5f}, emitter->spawn_velocity_rand);
+    vec3_copy((vec3){0.0f, 0.0f, 0.0f}, emitter->spawn_offset_rand);
 
-    glm_vec3_copy((vec3){0.0f, -1.0f, 0.0f}, emitter->gravity);
+    vec3_copy((vec3){0.0f, -1.0f, 0.0f}, emitter->gravity);
 
-    glm_vec3_copy((vec3){0.0f, 0.0f, 0.0f}, emitter->position);
+    vec3_copy((vec3){0.0f, 0.0f, 0.0f}, emitter->position);
 
     emitter->size = 0.25f;
     emitter->size_fade_in = emitter->size;
@@ -164,13 +164,13 @@ particle_emitter_get_name(te_particle_emitter* emitter) {
 }
 
 void
-particle_emitter_set_position(te_particle_emitter* emitter, vec3 pos) {
-    glm_vec3_copy(pos, emitter->position);
+particle_emitter_set_position(te_particle_emitter* emitter, te_vec3 pos) {
+    vec3_copy(pos, emitter->position);
 }
 
 void
-particle_emitter_get_position(te_particle_emitter* emitter, vec3 out) {
-    glm_vec3_copy(emitter->position, out);
+particle_emitter_get_position(te_particle_emitter* emitter, te_vec3 out) {
+    vec3_copy(emitter->position, out);
 }
 
 #if defined(ENGINE_EDITOR)
@@ -267,75 +267,75 @@ particle_emitter_get_texture(te_particle_emitter* emitter) {
 }
 
 void
-particle_emitter_set_color(te_particle_emitter* emitter, vec4 color) {
-    glm_vec4_copy(color, emitter->color);
+particle_emitter_set_color(te_particle_emitter* emitter, te_vec4 color) {
+    vec4_copy(color, emitter->color);
 }
 
 void
-particle_emitter_get_color(te_particle_emitter* emitter, vec4 out) {
-    glm_vec4_copy(emitter->color, out);
+particle_emitter_get_color(te_particle_emitter* emitter, te_vec4 out) {
+    vec4_copy(emitter->color, out);
 }
 
 void
-particle_emitter_set_color_fade_in(te_particle_emitter* emitter, vec4 color) {
-    glm_vec4_copy(color, emitter->color_fade_in);
+particle_emitter_set_color_fade_in(te_particle_emitter* emitter, te_vec4 color) {
+    vec4_copy(color, emitter->color_fade_in);
 }
 
 void
-particle_emitter_get_color_fade_in(te_particle_emitter* emitter, vec4 out) {
-    glm_vec4_copy(emitter->color_fade_in, out);
+particle_emitter_get_color_fade_in(te_particle_emitter* emitter, te_vec4 out) {
+    vec4_copy(emitter->color_fade_in, out);
 }
 
 void
-particle_emitter_set_color_fade_out(te_particle_emitter* emitter, vec4 color) {
-    glm_vec4_copy(color, emitter->color_fade_out);
+particle_emitter_set_color_fade_out(te_particle_emitter* emitter, te_vec4 color) {
+    vec4_copy(color, emitter->color_fade_out);
 }
 
 void
-particle_emitter_get_color_fade_out(te_particle_emitter* emitter, vec4 out) {
-    glm_vec4_copy(emitter->color_fade_out, out);
+particle_emitter_get_color_fade_out(te_particle_emitter* emitter, te_vec4 out) {
+    vec4_copy(emitter->color_fade_out, out);
 }
 
 void
-particle_emitter_set_spawn_velocity(te_particle_emitter* emitter, vec3 velocity) {
-    glm_vec3_copy(velocity, emitter->spawn_velocity);
+particle_emitter_set_spawn_velocity(te_particle_emitter* emitter, te_vec3 velocity) {
+    vec3_copy(velocity, emitter->spawn_velocity);
 }
 
 void
-particle_emitter_get_spawn_velocity(te_particle_emitter* emitter, vec3 out) {
-    glm_vec3_copy(emitter->spawn_velocity, out);
+particle_emitter_get_spawn_velocity(te_particle_emitter* emitter, te_vec3 out) {
+    vec3_copy(emitter->spawn_velocity, out);
 }
 
 void
-particle_emitter_set_spawn_velocity_rand(te_particle_emitter* emitter, vec3 rand) {
+particle_emitter_set_spawn_velocity_rand(te_particle_emitter* emitter, te_vec3 rand) {
     glm_vec3_abs(rand, rand);
-    glm_vec3_copy(rand, emitter->spawn_velocity_rand);
+    vec3_copy(rand, emitter->spawn_velocity_rand);
 }
 
 void
-particle_emitter_get_spawn_velocity_rand(te_particle_emitter* emitter, vec3 out) {
-    glm_vec3_copy(emitter->spawn_velocity_rand, out);
+particle_emitter_get_spawn_velocity_rand(te_particle_emitter* emitter, te_vec3 out) {
+    vec3_copy(emitter->spawn_velocity_rand, out);
 }
 
 void
-particle_emitter_set_spawn_offset_rand(te_particle_emitter* emitter, vec3 rand) {
+particle_emitter_set_spawn_offset_rand(te_particle_emitter* emitter, te_vec3 rand) {
     glm_vec3_abs(rand, rand);
-    glm_vec3_copy(rand, emitter->spawn_offset_rand);
+    vec3_copy(rand, emitter->spawn_offset_rand);
 }
 
 void
-particle_emitter_get_spawn_offset_rand(te_particle_emitter* emitter, vec3 out) {
-    glm_vec3_copy(emitter->spawn_offset_rand, out);
+particle_emitter_get_spawn_offset_rand(te_particle_emitter* emitter, te_vec3 out) {
+    vec3_copy(emitter->spawn_offset_rand, out);
 }
 
 void
-particle_emitter_set_gravity(te_particle_emitter* emitter, vec3 gravity) {
-    glm_vec3_copy(gravity, emitter->gravity);
+particle_emitter_set_gravity(te_particle_emitter* emitter, te_vec3 gravity) {
+    vec3_copy(gravity, emitter->gravity);
 }
 
 void
-particle_emitter_get_gravity(te_particle_emitter* emitter, vec3 out) {
-    glm_vec3_copy(emitter->gravity, out);
+particle_emitter_get_gravity(te_particle_emitter* emitter, te_vec3 out) {
+    vec3_copy(emitter->gravity, out);
 }
 
 void
@@ -566,18 +566,18 @@ particle_emitter_register_type(void) {
 }
 
 static void
-get_vec3_with_rand(vec3 base, vec3 rnd, vec3 out) {
+get_vec3_with_rand(te_vec3 base, te_vec3 rnd, te_vec3 out) {
     float x = ((((float)rand() / (float)(RAND_MAX)) - 0.5f) * 2.0f) * rnd[0];
     float y = ((((float)rand() / (float)(RAND_MAX)) - 0.5f) * 2.0f) * rnd[1];
     float z = ((((float)rand() / (float)(RAND_MAX)) - 0.5f) * 2.0f) * rnd[2];
-    glm_vec3_add(base, (vec3){x, y, z}, out);
+    vec3_add(base, (vec3){x, y, z}, out);
 }
 
 static void
 emitter_tick(te_particle_emitter* emitter, float delta_time_sec) {
     te_particle_data* from = NULL;
     te_particle_data* to = NULL;
-    vec3 temp3;
+    te_vec3 temp3;
     unsigned int i;
     unsigned int new_particle_count;
 
@@ -604,14 +604,14 @@ emitter_tick(te_particle_emitter* emitter, float delta_time_sec) {
         }
 
         /* update position */
-        glm_vec3_mul(
+        vec3_mul(
             data->velocity, (vec3){delta_time_sec, delta_time_sec, delta_time_sec}, temp3);
-        glm_vec3_add(data->pos, temp3, data->pos);
+        vec3_add(data->pos, temp3, data->pos);
 
         /* update velocity */
-        glm_vec3_mul(
+        vec3_mul(
             emitter->gravity, (vec3){delta_time_sec, delta_time_sec, delta_time_sec}, temp3);
-        glm_vec3_add(data->velocity, temp3, data->velocity);
+        vec3_add(data->velocity, temp3, data->velocity);
 
         float life_portion = 1.0f - (data->left_time_to_live_sec / emitter->time_to_live_sec);
         float fade_in_portion =
@@ -620,9 +620,9 @@ emitter_tick(te_particle_emitter* emitter, float delta_time_sec) {
             glm_smoothstep(emitter->fade_out_life_portion, 1.0f, life_portion);
 
         /* update color */
-        glm_vec4_copy(emitter->color, data->color);
-        glm_vec4_lerp(data->color, emitter->color_fade_in, fade_in_portion, data->color);
-        glm_vec4_lerp(data->color, emitter->color_fade_out, fade_out_portion, data->color);
+        vec4_copy(emitter->color, data->color);
+        vec4_lerp(data->color, emitter->color_fade_in, fade_in_portion, data->color);
+        vec4_lerp(data->color, emitter->color_fade_out, fade_out_portion, data->color);
 
         /* update size */
         data->size = emitter->size;
@@ -650,10 +650,10 @@ emitter_tick(te_particle_emitter* emitter, float delta_time_sec) {
                 emitter->spawn_velocity, emitter->spawn_velocity_rand, data->velocity);
             data->left_time_to_live_sec = emitter->time_to_live_sec;
             if (emitter->fade_in_life_portion > 0.0f) {
-                glm_vec4_copy(emitter->color_fade_in, data->color);
+                vec4_copy(emitter->color_fade_in, data->color);
                 data->size = emitter->size_fade_in;
             } else {
-                glm_vec4_copy(emitter->color, data->color);
+                vec4_copy(emitter->color, data->color);
                 data->size = emitter->size;
             }
         }
@@ -672,8 +672,8 @@ emitter_tick(te_particle_emitter* emitter, float delta_time_sec) {
         te_particle_data* src = &to[i];
         te_particle_render_data* dst = &data->particles[i];
 
-        glm_vec4_copy(src->color, dst->color);
-        glm_vec3_copy(src->pos, dst->pos_and_size);
+        vec4_copy(src->color, dst->color);
+        vec3_copy(src->pos, dst->pos_and_size);
         dst->pos_and_size[3] = src->size;
     }
 }

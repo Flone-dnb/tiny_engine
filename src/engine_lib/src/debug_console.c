@@ -47,7 +47,7 @@ struct te_debug_console {
     /* copy of @ref stats displayed for @ref time_sec_to_update_stats */
     te_debug_stats displayed_stats;
 
-    vec2 screen_pos;
+    te_vec2 screen_pos;
 
     /* time (in seconds) left to display @ref message */
     float message_sec_left;
@@ -117,7 +117,7 @@ prv_debug_console_init(te_game_manager* game_manager) {
     memset(&console.stats, 0, sizeof(te_debug_stats));
     memset(&console.displayed_stats, 0, sizeof(te_debug_stats));
 
-    glm_vec2_copy((vec2){0.01f, 0.95f}, console.screen_pos);
+    vec2_copy((vec2){0.01f, 0.95f}, console.screen_pos);
 
     {
         te_debug_console_command command = {0};
@@ -269,7 +269,7 @@ prv_debug_console_on_keyboard_input_text(const char* text) {
 }
 
 void
-prv_debug_console_draw_stat(vec2 screen_pos, const char* fmt, ...) {
+prv_debug_console_draw_stat(te_vec2 screen_pos, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
     va_list args_copy;
@@ -312,8 +312,8 @@ prv_debug_console_draw(float delta_time_sec) {
 
     if ((console.show_stats || console.show_fps) && update_stats) {
         te_debug_stats* stats = &console.displayed_stats;
-        vec2 screen_pos;
-        glm_vec2_copy((vec2){0.01f, 0.45f}, screen_pos);
+        te_vec2 screen_pos;
+        vec2_copy((vec2){0.01f, 0.45f}, screen_pos);
 
         /* FPS */
         const unsigned int fps_limit =

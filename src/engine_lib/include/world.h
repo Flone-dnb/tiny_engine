@@ -2,7 +2,7 @@
 
 #include <input/keyboard_button.h>
 #include <input/mouse_button.h>
-#include <cglm/vec3.h>
+#include <math/vec3.h>
 
 typedef struct te_world te_world;
 
@@ -46,7 +46,7 @@ void world_set_active_camera(te_world* world, struct te_camera* camera);
  * in case you want to attach a 3D sound to a model use model's functionality */
 void world_play_fire_and_forget_sound_2d(te_world* world, struct te_sound* sound);
 void world_play_fire_and_forget_sound_3d(
-    te_world* world, struct te_sound* sound, vec3 world_position);
+    te_world* world, struct te_sound* sound, te_vec3 world_position);
 
 /* creates (or loads if path is not NULL) a new scene animation that will be saved next to the world file
  * (separately) when @ref world_save_to_file is called
@@ -71,7 +71,7 @@ void world_save_to_file(te_world* world, const char* relative_path, bool write_l
  * - additionally can add a location offset to 3D game objects */
 void world_add_from_file(te_world* world, const char* relative_path, bool load_light_params);
 void world_add_from_file_with_offset(
-    te_world* world, const char* relative_path, bool load_light_params, vec3 location_offset);
+    te_world* world, const char* relative_path, bool load_light_params, te_vec3 location_offset);
 
 /* returns NULL if the world has no active camera
  * do not free/destroy returned pointer, valid until the camera is not destroyed */
@@ -79,7 +79,7 @@ struct te_camera* world_get_active_camera(te_world* world);
 
 /* returns `false` if the cursor is outside of the world's viewport (or if there's no active camera)
  * otherwise returns cursor pos relative to the world camera's viewport */
-bool world_get_cursor_relative_pos(te_world* world, vec2 cursor_pos);
+bool world_get_cursor_relative_pos(te_world* world, te_vec2 cursor_pos);
 
 /* returns NULL if no objects are spawned, otherwise all spawned objects
  * you must free returned array (but not the items in the array)

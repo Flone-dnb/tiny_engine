@@ -1044,7 +1044,7 @@ scene_animation_add_keyframe_float(
 void
 scene_animation_add_keyframe_vec2(
     te_scene_animation* scene_animation, const char* object_name, const char* variable_name,
-    float time, vec2 value) {
+    float time, te_vec2 value) {
     scene_animation_pause(scene_animation);
     clear_obj_and_var_cache(scene_animation);
     te_scene_animation_obj* obj = get_obj(scene_animation, object_name);
@@ -1052,14 +1052,14 @@ scene_animation_add_keyframe_vec2(
     te_scene_animation_keyframe_vec2* keyframe = get_keyframe_vec2(var, time);
 
     keyframe->time = time;
-    glm_vec2_copy(value, keyframe->value);
+    vec2_copy(value, keyframe->value);
     keyframe->interpolation = TE_SAIT_CUBIC_SPLINE;
 }
 
 void
 scene_animation_add_keyframe_vec3(
     te_scene_animation* scene_animation, const char* object_name, const char* variable_name,
-    float time, vec3 value) {
+    float time, te_vec3 value) {
     scene_animation_pause(scene_animation);
     clear_obj_and_var_cache(scene_animation);
     te_scene_animation_obj* obj = get_obj(scene_animation, object_name);
@@ -1067,14 +1067,14 @@ scene_animation_add_keyframe_vec3(
     te_scene_animation_keyframe_vec3* keyframe = get_keyframe_vec3(var, time);
 
     keyframe->time = time;
-    glm_vec3_copy(value, keyframe->value);
+    vec3_copy(value, keyframe->value);
     keyframe->interpolation = TE_SAIT_CUBIC_SPLINE;
 }
 
 void
 scene_animation_add_keyframe_vec4(
     te_scene_animation* scene_animation, const char* object_name, const char* variable_name,
-    float time, vec4 value) {
+    float time, te_vec4 value) {
     scene_animation_pause(scene_animation);
     clear_obj_and_var_cache(scene_animation);
     te_scene_animation_obj* obj = get_obj(scene_animation, object_name);
@@ -1082,7 +1082,7 @@ scene_animation_add_keyframe_vec4(
     te_scene_animation_keyframe_vec4* keyframe = get_keyframe_vec4(var, time);
 
     keyframe->time = time;
-    glm_vec4_copy(value, keyframe->value);
+    vec4_copy(value, keyframe->value);
     keyframe->interpolation = TE_SAIT_CUBIC_SPLINE;
 }
 
@@ -1183,15 +1183,15 @@ interpolate_vec2(
             (anim->current_time_sec - var->keyframes[left_idx].time)
             / (var->keyframes[left_idx + 1].time - var->keyframes[left_idx].time);
 
-        vec2 out_value;
+        te_vec2 out_value;
 
         if (var->keyframes[left_idx].interpolation == TE_SAIT_LINEAR) {
-            glm_vec2_lerp(
+            vec2_lerp(
                 var->keyframes[left_idx].value, var->keyframes[left_idx + 1].value, factor,
                 out_value);
         } else {
             float s = glm_smoothstep(0.0f, 1.0f, factor);
-            glm_vec2_lerp(
+            vec2_lerp(
                 var->keyframes[left_idx].value, var->keyframes[left_idx + 1].value, s,
                 out_value);
         }
@@ -1214,7 +1214,7 @@ interpolate_vec3(
             (anim->current_time_sec - var->keyframes[left_idx].time)
             / (var->keyframes[left_idx + 1].time - var->keyframes[left_idx].time);
 
-        vec3 out_value;
+        te_vec3 out_value;
 
         if (strcmp(var->name, "rotation") == 0) {
             mat4 rot_mat_from;
@@ -1223,12 +1223,12 @@ interpolate_vec3(
             mat4 rot_mat_to;
             math_make_rotation_mat(var->keyframes[left_idx + 1].value, rot_mat_to);
 
-            vec4 from;
-            vec4 to;
+            te_vec4 from;
+            te_vec4 to;
             glm_mat4_quat(rot_mat_from, from);
             glm_mat4_quat(rot_mat_to, to);
 
-            vec4 result;
+            te_vec4 result;
 
             if (var->keyframes[left_idx].interpolation == TE_SAIT_LINEAR) {
                 glm_quat_slerp(from, to, factor, result);
@@ -1245,12 +1245,12 @@ interpolate_vec3(
             out_value[2] = glm_deg(out_value[2]);
         } else {
             if (var->keyframes[left_idx].interpolation == TE_SAIT_LINEAR) {
-                glm_vec3_lerp(
+                vec3_lerp(
                     var->keyframes[left_idx].value, var->keyframes[left_idx + 1].value, factor,
                     out_value);
             } else {
                 float s = glm_smoothstep(0.0f, 1.0f, factor);
-                glm_vec3_lerp(
+                vec3_lerp(
                     var->keyframes[left_idx].value, var->keyframes[left_idx + 1].value, s,
                     out_value);
             }
@@ -1274,15 +1274,15 @@ interpolate_vec4(
             (anim->current_time_sec - var->keyframes[left_idx].time)
             / (var->keyframes[left_idx + 1].time - var->keyframes[left_idx].time);
 
-        vec4 out_value;
+        te_vec4 out_value;
 
         if (var->keyframes[left_idx].interpolation == TE_SAIT_LINEAR) {
-            glm_vec4_lerp(
+            vec4_lerp(
                 var->keyframes[left_idx].value, var->keyframes[left_idx + 1].value, factor,
                 out_value);
         } else {
             float s = glm_smoothstep(0.0f, 1.0f, factor);
-            glm_vec4_lerp(
+            vec4_lerp(
                 var->keyframes[left_idx].value, var->keyframes[left_idx + 1].value, s,
                 out_value);
         }

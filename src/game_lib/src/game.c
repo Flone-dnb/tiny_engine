@@ -75,9 +75,9 @@ game_on_game_started(void* game_instance, te_game_manager* game_manager) {
 
     /* setup light */
     light_params = renderer_get_light_params(game_manager_get_renderer(game_manager));
-    glm_vec3_copy((vec3){1.0f, -1.0f, 1.0f}, light_params->directional_light_direction);
-    glm_vec3_normalize(light_params->directional_light_direction);
-    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, light_params->directional_light_color);
+    vec3_copy((vec3){1.0f, -1.0f, 1.0f}, light_params->directional_light_direction);
+    vec3_normalize(light_params->directional_light_direction);
+    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, light_params->directional_light_color);
 
     {
         /* prepare a sample scene */

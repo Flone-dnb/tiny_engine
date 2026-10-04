@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cglm/vec4.h>
+#include <math/vec4.h>
 
 typedef struct te_progress_widget te_progress_widget;
 struct te_widget;
@@ -18,10 +18,10 @@ void progress_widget_set_value(te_progress_widget* progress_widget, float value)
 float progress_widget_get_value(te_progress_widget* progress_widget);
 
 /* sets RGBA color of the elements */
-void progress_widget_set_background_color(te_progress_widget* progress_widget, vec4 color);
-void progress_widget_set_foreground_color(te_progress_widget* progress_widget, vec4 color);
-void progress_widget_get_background_color(te_progress_widget* progress_widget, vec4 out);
-void progress_widget_get_foreground_color(te_progress_widget* progress_widget, vec4 out);
+void progress_widget_set_background_color(te_progress_widget* progress_widget, te_vec4 color);
+void progress_widget_set_foreground_color(te_progress_widget* progress_widget, te_vec4 color);
+void progress_widget_get_background_color(te_progress_widget* progress_widget, te_vec4 out);
+void progress_widget_get_foreground_color(te_progress_widget* progress_widget, te_vec4 out);
 
 /* sets path (relative to the `res` directory) to the texture of the widget elements
  * specify NULL to remove texture. The string is copied to the widget's internal data */

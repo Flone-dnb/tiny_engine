@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cglm/vec4.h>
+#include <math/vec4.h>
 
 /* rectangular widget, displays a color or a texture */
 typedef struct te_rect_widget te_rect_widget;
@@ -15,8 +15,8 @@ void rect_widget_destroy(te_rect_widget* rect_widget);
 struct te_widget* rect_widget_get_widget(te_rect_widget* rect_widget);
 
 /* sets RGBA color of the rectangle */
-void rect_widget_set_color(te_rect_widget* rect_widget, vec4 color);
-void rect_widget_get_color(te_rect_widget* rect_widget, vec4 out);
+void rect_widget_set_color(te_rect_widget* rect_widget, te_vec4 color);
+void rect_widget_get_color(te_rect_widget* rect_widget, te_vec4 out);
 
 /* sets path (relative to the `res` directory) to texture to use
  * the path string will be copied and stored in the model, specify NULL to remove texture */
@@ -28,8 +28,8 @@ const char* rect_widget_get_texture(te_rect_widget* rect_widget);
 
 /* allows "cutting" part of the rectangle during the rendering
  * XY stores clip start in range [0.0; 1.0] and ZW stores clip size in the same range */
-void rect_widget_set_clip_rect(te_rect_widget* rect_widget, vec4 clip_rect);
-void rect_widget_get_clip_rect(te_rect_widget* rect_widget, vec4 out);
+void rect_widget_set_clip_rect(te_rect_widget* rect_widget, te_vec4 clip_rect);
+void rect_widget_get_clip_rect(te_rect_widget* rect_widget, te_vec4 out);
 
 /* returns unique ID of this type in the type database */
 const char* rect_widget_get_type_id(void);

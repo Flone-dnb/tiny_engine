@@ -19,8 +19,8 @@ struct te_slider_widget {
     /* may be NULL if not set */
     void (*on_value_changed)(te_slider_widget* slider_widget, float new_value);
 
-    vec4 background_color;
-    vec4 handle_color;
+    te_vec4 background_color;
+    te_vec4 handle_color;
 
     char* background_tex_relative_path;
     char* handle_tex_relative_path;
@@ -42,18 +42,18 @@ static void prv_slider_widget_on_before_despawned(void* this);
 
 /* interactable callbacks */
 static void prv_slider_widget_on_mouse_button_pressed(
-    void* this, enum te_mouse_button button, vec2 cursor_pos);
+    void* this, enum te_mouse_button button, te_vec2 cursor_pos);
 static void prv_slider_widget_on_mouse_button_released(
-    void* this, enum te_mouse_button button, vec2 cursor_pos);
-static void prv_slider_widget_on_hovered_cursor_moved(void* this, vec2 cursor_pos);
-static void prv_slider_widget_on_cursor_left(void* this, vec2 cursor_pos);
+    void* this, enum te_mouse_button button, te_vec2 cursor_pos);
+static void prv_slider_widget_on_hovered_cursor_moved(void* this, te_vec2 cursor_pos);
+static void prv_slider_widget_on_cursor_left(void* this, te_vec2 cursor_pos);
 
 te_slider_widget*
 slider_widget_create(void) {
     te_slider_widget* slider_widget = malloc(sizeof(te_slider_widget));
 
-    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, slider_widget->background_color);
-    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, slider_widget->handle_color);
+    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, slider_widget->background_color);
+    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, slider_widget->handle_color);
     slider_widget->background_tex_relative_path = NULL;
     slider_widget->handle_tex_relative_path = NULL;
     slider_widget->value = 0.5f;
@@ -169,14 +169,14 @@ slider_widget_get_step_size(te_slider_widget* slider_widget) {
 }
 
 void
-slider_widget_set_background_color(te_slider_widget* slider_widget, vec4 color) {
-    glm_vec4_copy(color, slider_widget->background_color);
+slider_widget_set_background_color(te_slider_widget* slider_widget, te_vec4 color) {
+    vec4_copy(color, slider_widget->background_color);
     rect_widget_set_color(slider_widget->background_rect, color);
 }
 
 void
-slider_widget_set_handle_color(te_slider_widget* slider_widget, vec4 color) {
-    glm_vec4_copy(color, slider_widget->handle_color);
+slider_widget_set_handle_color(te_slider_widget* slider_widget, te_vec4 color) {
+    vec4_copy(color, slider_widget->handle_color);
     rect_widget_set_color(slider_widget->handle_rect, color);
 }
 
@@ -221,13 +221,13 @@ slider_widget_set_handle_texture(te_slider_widget* slider_widget, const char* re
 }
 
 void
-slider_widget_get_background_color(te_slider_widget* slider_widget, vec4 out) {
-    glm_vec4_copy(slider_widget->background_color, out);
+slider_widget_get_background_color(te_slider_widget* slider_widget, te_vec4 out) {
+    vec4_copy(slider_widget->background_color, out);
 }
 
 void
-slider_widget_get_handle_color(te_slider_widget* slider_widget, vec4 out) {
-    glm_vec4_copy(slider_widget->handle_color, out);
+slider_widget_get_handle_color(te_slider_widget* slider_widget, te_vec4 out) {
+    vec4_copy(slider_widget->handle_color, out);
 }
 
 char*
@@ -293,9 +293,9 @@ prv_slider_widget_on_before_despawned(void* this) {
 }
 
 static void
-prv_slider_widget_update_value(te_slider_widget* slider_widget, vec2 cursor_pos) {
-    vec2 screen_pos;
-    vec2 screen_size;
+prv_slider_widget_update_value(te_slider_widget* slider_widget, te_vec2 cursor_pos) {
+    te_vec2 screen_pos;
+    te_vec2 screen_size;
     widget_get_screen_position(slider_widget->widget, screen_pos);
     widget_get_screen_size(slider_widget->widget, screen_size);
 
@@ -320,7 +320,7 @@ prv_slider_widget_update_value(te_slider_widget* slider_widget, vec2 cursor_pos)
 
 static void
 prv_slider_widget_on_mouse_button_pressed(
-    void* this, enum te_mouse_button button, vec2 cursor_pos) {
+    void* this, enum te_mouse_button button, te_vec2 cursor_pos) {
     if (button != TE_MB_LEFT) {
         return;
     }
@@ -331,7 +331,7 @@ prv_slider_widget_on_mouse_button_pressed(
 
 static void
 prv_slider_widget_on_mouse_button_released(
-    void* this, enum te_mouse_button button, vec2 cursor_pos) {
+    void* this, enum te_mouse_button button, te_vec2 cursor_pos) {
     te_slider_widget* slider_widget = this;
     if (!slider_widget->is_handle_grabbed) {
         return;
@@ -346,7 +346,7 @@ prv_slider_widget_on_mouse_button_released(
 }
 
 static void
-prv_slider_widget_on_hovered_cursor_moved(void* this, vec2 cursor_pos) {
+prv_slider_widget_on_hovered_cursor_moved(void* this, te_vec2 cursor_pos) {
     te_slider_widget* slider_widget = this;
 
     if (!slider_widget->is_handle_grabbed) {
@@ -357,7 +357,7 @@ prv_slider_widget_on_hovered_cursor_moved(void* this, vec2 cursor_pos) {
 }
 
 static void
-prv_slider_widget_on_cursor_left(void* this, vec2 cursor_pos) {
+prv_slider_widget_on_cursor_left(void* this, te_vec2 cursor_pos) {
     te_slider_widget* slider_widget = this;
     if (!slider_widget->is_handle_grabbed) {
         return;
@@ -368,22 +368,22 @@ prv_slider_widget_on_cursor_left(void* this, vec2 cursor_pos) {
 }
 
 static void
-prv_slider_widget_set_position(te_slider_widget* slider_widget, vec2 pos) {
+prv_slider_widget_set_position(te_slider_widget* slider_widget, te_vec2 pos) {
     widget_set_relative_position(slider_widget->widget, pos);
 }
 
 static void
-prv_slider_widget_get_position(te_slider_widget* slider_widget, vec2 out) {
+prv_slider_widget_get_position(te_slider_widget* slider_widget, te_vec2 out) {
     widget_get_relative_position(slider_widget->widget, out);
 }
 
 static void
-prv_slider_widget_set_size(te_slider_widget* slider_widget, vec2 size) {
+prv_slider_widget_set_size(te_slider_widget* slider_widget, te_vec2 size) {
     widget_set_relative_size(slider_widget->widget, size);
 }
 
 static void
-prv_slider_widget_get_size(te_slider_widget* slider_widget, vec2 out) {
+prv_slider_widget_get_size(te_slider_widget* slider_widget, te_vec2 out) {
     widget_get_relative_size(slider_widget->widget, out);
 }
 

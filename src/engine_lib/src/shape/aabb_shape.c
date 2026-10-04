@@ -5,7 +5,7 @@
 
 bool
 aabb_shape_is_behind_plane(te_aabb_shape* aabb, te_plane_shape* plane) {
-    vec3 abs_normal;
+    te_vec3 abs_normal;
     float proj_radius;
     float dist_to_plane;
 
@@ -13,8 +13,8 @@ aabb_shape_is_behind_plane(te_aabb_shape* aabb, te_plane_shape* plane) {
 
     glm_vec3_abs(plane->normal, abs_normal);
 
-    proj_radius = glm_vec3_dot(aabb->extents, abs_normal);
-    dist_to_plane = glm_vec3_dot(plane->normal, aabb->center) - plane->distance;
+    proj_radius = vec3_dot(aabb->extents, abs_normal);
+    dist_to_plane = vec3_dot(plane->normal, aabb->center) - plane->distance;
 
     return !(-proj_radius <= dist_to_plane);
 }
@@ -31,22 +31,22 @@ aabb_shape_intersect(te_aabb_shape* a, te_aabb_shape* b) {
 
 bool
 aabb_shape_intersect_ray(
-    te_aabb_shape* aabb, vec3 ray_origin, vec3 ray_dir, float* hit_dist_along_ray) {
-    vec3 min;
-    vec3 max;
-    vec3 tmin;
-    vec3 tmax;
-    vec3 t1;
-    vec3 t2;
+    te_aabb_shape* aabb, te_vec3 ray_origin, te_vec3 ray_dir, float* hit_dist_along_ray) {
+    te_vec3 min;
+    te_vec3 max;
+    te_vec3 tmin;
+    te_vec3 tmax;
+    te_vec3 t1;
+    te_vec3 t2;
     float t_near, t_far;
 
-    glm_vec3_sub(aabb->center, aabb->extents, min);
-    glm_vec3_add(aabb->center, aabb->extents, max);
+    vec3_sub(aabb->center, aabb->extents, min);
+    vec3_add(aabb->center, aabb->extents, max);
 
-    glm_vec3_sub(min, ray_origin, tmin);
+    vec3_sub(min, ray_origin, tmin);
     glm_vec3_div(tmin, ray_dir, tmin);
 
-    glm_vec3_sub(max, ray_origin, tmax);
+    vec3_sub(max, ray_origin, tmax);
     glm_vec3_div(tmax, ray_dir, tmax);
 
     t1[0] = glm_min(tmin[0], tmax[0]);
@@ -71,13 +71,13 @@ aabb_shape_intersect_ray(
 te_aabb_shape
 aabb_shape_convert_to_world(te_aabb_shape* aabb, mat4 world_mat) {
     te_aabb_shape result;
-    vec4 center;
-    vec4 forward;
-    vec4 right;
-    vec4 up;
-    vec4 obb_forward;
-    vec4 obb_right;
-    vec4 obb_up;
+    te_vec4 center;
+    te_vec4 forward;
+    te_vec4 right;
+    te_vec4 up;
+    te_vec4 obb_forward;
+    te_vec4 obb_right;
+    te_vec4 obb_up;
 
     /* we can't just transform AABB to world space (using world matrix) as this would result
      * in OBB (oriented bounding box) because of rotation in world matrix while we need an AABB */
@@ -85,27 +85,27 @@ aabb_shape_convert_to_world(te_aabb_shape* aabb, mat4 world_mat) {
     /* prepare some vec4s */
 
     /* center */
-    glm_vec3_copy(aabb->center, center);
+    vec3_copy(aabb->center, center);
     center[3] = 1.0f;
 
     /* forward */
     globals_get_world_forward(forward);
     forward[3] = 0.0f;
-    glm_vec4_scale(forward, aabb->extents[2], forward);
+    vec4_muls(forward, aabb->extents[2], forward);
 
     /* right */
     globals_get_world_right(right);
     right[3] = 0.0f;
-    glm_vec4_scale(right, aabb->extents[0], right);
+    vec4_muls(right, aabb->extents[0], right);
 
     /* up */
     globals_get_world_up(up);
     up[3] = 0.0f;
-    glm_vec4_scale(up, aabb->extents[1], up);
+    vec4_muls(up, aabb->extents[1], up);
 
     glm_mat4_mulv(world_mat, center, center);
 
-    glm_vec3_copy(center, result.center);
+    vec3_copy(center, result.center);
 
     /* calculate OBB directions in world space
      * (directions are considered to point from OBB's center) */
@@ -119,17 +119,17 @@ aabb_shape_convert_to_world(te_aabb_shape* aabb, mat4 world_mat) {
 
     /* we can convert scaled OBB directions to AABB extents (directions) by projecting each
      * OBB direction onto world axis */
-    result.extents[0] = fabs(glm_vec4_dot(obb_forward, (vec4){1.0f, 0.0f, 0.0f, 0.0f}))
-                        + fabs(glm_vec4_dot(obb_right, (vec4){1.0f, 0.0f, 0.0f, 0.0f}))
-                        + fabs(glm_vec4_dot(obb_up, (vec4){1.0f, 0.0f, 0.0f, 0.0f}));
+    result.extents[0] = math_abs(vec4_dot(obb_forward, (vec4){1.0f, 0.0f, 0.0f, 0.0f}))
+                        + math_abs(vec4_dot(obb_right, (vec4){1.0f, 0.0f, 0.0f, 0.0f}))
+                        + math_abs(vec4_dot(obb_up, (vec4){1.0f, 0.0f, 0.0f, 0.0f}));
 
-    result.extents[1] = fabs(glm_vec4_dot(obb_forward, (vec4){0.0f, 1.0f, 0.0f, 0.0f}))
-                        + fabs(glm_vec4_dot(obb_right, (vec4){0.0f, 1.0f, 0.0f, 0.0f}))
-                        + fabs(glm_vec4_dot(obb_up, (vec4){0.0f, 1.0f, 0.0f, 0.0f}));
+    result.extents[1] = math_abs(vec4_dot(obb_forward, (vec4){0.0f, 1.0f, 0.0f, 0.0f}))
+                        + math_abs(vec4_dot(obb_right, (vec4){0.0f, 1.0f, 0.0f, 0.0f}))
+                        + math_abs(vec4_dot(obb_up, (vec4){0.0f, 1.0f, 0.0f, 0.0f}));
 
-    result.extents[2] = fabs(glm_vec4_dot(obb_forward, (vec4){0.0f, 0.0f, 1.0f, 0.0f}))
-                        + fabs(glm_vec4_dot(obb_right, (vec4){0.0f, 0.0f, 1.0f, 0.0f}))
-                        + fabs(glm_vec4_dot(obb_up, (vec4){0.0f, 0.0f, 1.0f, 0.0f}));
+    result.extents[2] = math_abs(vec4_dot(obb_forward, (vec4){0.0f, 0.0f, 1.0f, 0.0f}))
+                        + math_abs(vec4_dot(obb_right, (vec4){0.0f, 0.0f, 1.0f, 0.0f}))
+                        + math_abs(vec4_dot(obb_up, (vec4){0.0f, 0.0f, 1.0f, 0.0f}));
 
     return result;
 }

@@ -535,7 +535,7 @@ world_play_fire_and_forget_sound_2d(te_world* world, te_sound* sound) {
 
 void
 world_play_fire_and_forget_sound_3d(
-    te_world* world, struct te_sound* sound, vec3 world_position) {
+    te_world* world, struct te_sound* sound, te_vec3 world_position) {
     te_sound** new_sounds = malloc(sizeof(te_sound*) * (world->spawned_sound_count + 1));
     memcpy(new_sounds, world->spawned_sounds, sizeof(te_sound*) * world->spawned_sound_count);
 
@@ -763,7 +763,7 @@ load_vec_from_config(
 
 void
 world_add_from_file_with_offset(
-    te_world* world, const char* relative_path, bool load_light_params, vec3 location_offset) {
+    te_world* world, const char* relative_path, bool load_light_params, te_vec3 location_offset) {
     const te_type_info* model_type_info = type_database_get_type_info(model_get_type_id());
     const te_type_info* camera_type_info = type_database_get_type_info(camera_get_type_id());
 
@@ -829,9 +829,9 @@ world_add_from_file_with_offset(
         if (type_info->game_object_info != NULL) {
             te_game_object_info* game_obj_info = type_info->game_object_info;
             if (game_obj_info->set_position != NULL && game_obj_info->get_position != NULL) {
-                vec3 pos;
+                te_vec3 pos;
                 game_obj_info->get_position(obj, pos);
-                glm_vec3_add(pos, location_offset, pos);
+                vec3_add(pos, location_offset, pos);
                 game_obj_info->set_position(obj, pos);
             }
         }
@@ -895,7 +895,7 @@ world_get_active_camera(te_world* world) {
 }
 
 bool
-world_get_cursor_relative_pos(te_world* world, vec2 cursor_pos) {
+world_get_cursor_relative_pos(te_world* world, te_vec2 cursor_pos) {
     te_window* window = game_manager_get_window(world_get_game_manager(world));
 
     window_get_cursor_position(window, &cursor_pos[0], &cursor_pos[1]);
@@ -904,14 +904,14 @@ world_get_cursor_relative_pos(te_world* world, vec2 cursor_pos) {
     unsigned int window_height;
     window_get_size(window, &window_width, &window_height);
 
-    glm_vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
+    vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
 
     te_camera* camera = world_get_active_camera(world);
     if (camera == NULL) {
         return false;
     }
 
-    vec4 viewport;
+    te_vec4 viewport;
     camera_get_viewport(camera, viewport);
 
     if (cursor_pos[0] < viewport[0] || cursor_pos[1] < viewport[1]
@@ -922,8 +922,8 @@ world_get_cursor_relative_pos(te_world* world, vec2 cursor_pos) {
     }
 
     /* remap to viewport */
-    glm_vec2_sub(cursor_pos, viewport, cursor_pos);
-    glm_vec2_div(cursor_pos, &viewport[2], cursor_pos);
+    vec2_sub(cursor_pos, viewport, cursor_pos);
+    vec2_div(cursor_pos, &viewport[2], cursor_pos);
 
     return true;
 }
@@ -1113,7 +1113,7 @@ prv_world_remove_interactable_widget(te_world* world, te_widget* widget) {
 
 void
 prv_world_interactable_widget_pos_size_changed(te_world* world) {
-    vec2 cursor_pos;
+    te_vec2 cursor_pos;
     if (!world_get_cursor_relative_pos(world, cursor_pos)) {
         return;
     }
@@ -1141,8 +1141,8 @@ prv_world_on_mouse_moved(te_world* world, float cursor_pos[2]) {
         return;
     }
 
-    vec2 pos;
-    vec2 size;
+    te_vec2 pos;
+    te_vec2 size;
     for (unsigned int i = 0; i < world->interactable_widget_count; i++) {
         widget_get_screen_position(world->interactable_widgets[i], pos);
         if (pos[0] > cursor_pos[0] || pos[1] > cursor_pos[1]) {
@@ -1187,8 +1187,8 @@ prv_world_on_mouse_button_pressed(
         return false;
     }
 
-    vec2 pos;
-    vec2 size;
+    te_vec2 pos;
+    te_vec2 size;
     for (unsigned int i = 0; i < world->interactable_widget_count; i++) {
         widget_get_screen_position(world->interactable_widgets[i], pos);
         if (pos[0] > cursor_pos[0] || pos[1] > cursor_pos[1]) {
@@ -1216,8 +1216,8 @@ prv_world_on_mouse_button_released(
         return false;
     }
 
-    vec2 pos;
-    vec2 size;
+    te_vec2 pos;
+    te_vec2 size;
     for (unsigned int i = 0; i < world->interactable_widget_count; i++) {
         widget_get_screen_position(world->interactable_widgets[i], pos);
         if (pos[0] > cursor_pos[0] || pos[1] > cursor_pos[1]) {
@@ -1263,14 +1263,14 @@ prv_world_on_input_source_changed(te_world* world) {
     if (world->hovered_interactable_widget != NULL) {
         te_window* window = game_manager_get_window(world->game_manager);
 
-        vec2 cursor_pos;
+        te_vec2 cursor_pos;
         window_get_cursor_position(window, &cursor_pos[0], &cursor_pos[1]);
 
         unsigned int window_width;
         unsigned int window_height;
         window_get_size(window, &window_width, &window_height);
 
-        glm_vec2_div(
+        vec2_div(
             cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
 
         prv_widget_on_cursor_left(world->hovered_interactable_widget, cursor_pos);

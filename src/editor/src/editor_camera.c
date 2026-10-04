@@ -1,43 +1,43 @@
 #include <editor_camera.h>
 
 #include <stdbool.h>
-#include <cglm/vec2.h>
+#include <math/vec2.h>
 #include <game/camera.h>
 #include <math/math_funcs.h>
 #include <misc/globals.h>
 #include <ui/editor_theme.h>
+#include <io/log.h>
 #include <world.h>
 
 #define DEFAULT_CAMERA_SPEED 4.0f
 
 struct te_editor_camera {
-    // Always valid, camera being piloted.
-    // Do not free this camera.
+    /* always valid, camera being piloted
+     * do not free this camera */
     te_camera* controlled_camera_ref;
 
-    // Always valid, may be equal to @ref camera but is different when piloting some game camera.
-    // See @ref is_piloting_custom_camera.
-    // Must be freed/destroyed.
+    /* always valid, may be equal to @ref camera but is different when piloting some game camera.
+     * see @ref is_piloting_custom_camera, must be freed/destroyed */
     te_camera* viewport_camera;
 
-    // Stores the current state of the input.
-    // X stores "forward" movement in [-1.0f; 1.0], Y stores "right" movement and Z stores up.
-    vec3 movement_input;
+    /* stores the current state of the input
+     * X stores "forward" movement in [-1.0f; 1.0], Y stores "right" movement and Z stores up */
+    te_vec3 movement_input;
 
-    // The current state of the right thumbstick.
-    vec2 gamepad_look;
+    /* current state of the right thumbstick */
+    te_vec2 gamepad_look;
 
     float rotation_sensitivity;
     float speed;
 
-    // `true` if should react to the input.
+    /* `true` if should react to the input */
     bool is_input_enabled;
     bool is_fullscreen;
     bool is_piloting_custom_camera;
 };
 
 te_editor_camera*
-editor_camera_create() {
+editor_camera_create(void) {
     te_editor_camera* editor_camera = malloc(sizeof(te_editor_camera));
 
     editor_camera->viewport_camera = camera_create();
@@ -47,8 +47,8 @@ editor_camera_create() {
     editor_camera->rotation_sensitivity = 0.1f;
     editor_camera->speed = DEFAULT_CAMERA_SPEED;
     editor_camera->is_fullscreen = false;
-    glm_vec2_zero(editor_camera->gamepad_look);
-    glm_vec3_zero(editor_camera->movement_input);
+    vec2_zero(editor_camera->gamepad_look);
+    vec3_zero(editor_camera->movement_input);
 
     camera_set_is_serialization_allowed(editor_camera->viewport_camera, false);
 
@@ -64,16 +64,20 @@ editor_camera_destroy(te_editor_camera* editor_camera) {
 
 void
 editor_camera_spawn(te_editor_camera* editor_camera, struct te_world* world) {
-    // Set initial position/rotation.
-    camera_set_position(editor_camera->viewport_camera, (vec3){0.0f, 2.0f, 4.0f});
-    camera_set_rotation(editor_camera->viewport_camera, (vec3){0.0f, 0.0f, 0.0f});
+    te_vec3 tmp3;
 
-    // Spawn.
+    /* set initial position/rotation */
+    vec3_set(0.0f, 2.0f, 4.0f, tmp3);
+    camera_set_position(editor_camera->viewport_camera, tmp3);
+    vec3_set(0.0f, 0.0f, 0.0f, tmp3);
+    camera_set_rotation(editor_camera->viewport_camera, tmp3);
+
+    /* spawn */
     world_spawn_game_object(
         world, editor_camera->viewport_camera, camera_get_game_object_info());
     world_set_active_camera(world, editor_camera->viewport_camera);
 
-    // Set viewport.
+    /* set viewport */
     editor_camera_set_is_fullscreen(editor_camera, false);
 }
 
@@ -85,16 +89,16 @@ editor_camera_despawn(te_editor_camera* editor_camera, struct te_world* world) {
 
 void
 editor_camera_set_is_fullscreen(te_editor_camera* editor_camera, bool is_fullscreen) {
-    vec4 viewport;
+    te_vec4 viewport;
 
     if (is_fullscreen) {
-        glm_vec4_copy((vec4){0.0f, 0.0f, 1.0f, 1.0f}, viewport);
+        vec4_set(.0f, 0.0f, 1.0f, 1.0f, viewport);
     } else {
-        glm_vec4_copy(
-            (vec4){theme_get_left_panel_width(), 0.0f,
-                   1.0f - (theme_get_left_panel_width() + theme_get_right_panel_width()),
-                   1.0f},
-            viewport);
+        vec4_set(
+            editor_theme_get_left_panel_width(), 0.0f,
+            1.0f
+                - (editor_theme_get_left_panel_width() + editor_theme_get_right_panel_width()),
+            1.0f, viewport);
     }
 
     camera_set_viewport(editor_camera->controlled_camera_ref, viewport);
@@ -110,18 +114,20 @@ void
 editor_camera_enable_input(te_editor_camera* editor_camera, bool enable) {
     editor_camera->is_input_enabled = enable;
 
-    glm_vec3_zero(editor_camera->movement_input);
-    glm_vec2_zero(editor_camera->gamepad_look);
+    vec3_zero(editor_camera->movement_input);
+    vec2_zero(editor_camera->gamepad_look);
 }
 
 void
 editor_camera_pilot_custom_camera(te_editor_camera* editor_camera, te_camera* camera) {
+    te_world* world;
+
     editor_camera->controlled_camera_ref =
         camera == NULL ? editor_camera->viewport_camera : camera;
     editor_camera->is_piloting_custom_camera =
         editor_camera->controlled_camera_ref != editor_camera->viewport_camera;
 
-    te_world* world = camera_get_world(editor_camera->controlled_camera_ref);
+    world = camera_get_world(editor_camera->controlled_camera_ref);
     if (world == NULL) {
         log_error(__FILE__, __LINE__, "expected the camera to be spawned");
         abort();
@@ -142,7 +148,7 @@ editor_camera_is_piloting_custom_camera(te_editor_camera* editor_camera) {
 void
 editor_camera_apply_look_input(
     te_editor_camera* editor_camera, float x_offset, float y_offset) {
-    vec3 rotation;
+    te_vec3 rotation;
     camera_get_rotation(editor_camera->controlled_camera_ref, rotation);
 
     rotation[1] -= x_offset * editor_camera->rotation_sensitivity;
@@ -236,14 +242,14 @@ editor_camera_on_keyboard_button_released(
 
 void
 editor_camera_on_gamepad_connected(te_editor_camera* editor_camera) {
-    glm_vec3_zero(editor_camera->movement_input);
-    glm_vec2_zero(editor_camera->gamepad_look);
+    vec3_zero(editor_camera->movement_input);
+    vec2_zero(editor_camera->gamepad_look);
 }
 
 void
 editor_camera_on_gamepad_disconnected(te_editor_camera* editor_camera) {
-    glm_vec3_zero(editor_camera->movement_input);
-    glm_vec2_zero(editor_camera->gamepad_look);
+    vec3_zero(editor_camera->movement_input);
+    vec2_zero(editor_camera->gamepad_look);
 }
 
 void
@@ -258,31 +264,32 @@ editor_camera_on_game_tick(te_editor_camera* editor_camera, float delta_time_sec
     if (editor_camera->movement_input[0] == 0.0f && editor_camera->movement_input[1] == 0.0f
         && editor_camera->movement_input[2] == 0.0f) {
         return;
+    } else {
+        te_vec3 movement;
+        te_vec3 forward;
+        te_vec3 right;
+        te_vec3 up;
+        te_vec3 position;
+
+        vec3_copy(editor_camera->movement_input, movement);
+        math_fix_diagonal_movement_speedup(movement);
+
+        vec3_muls(movement, editor_camera->speed * delta_time_sec, movement);
+
+        camera_get_forward(editor_camera->controlled_camera_ref, forward);
+        camera_get_right(editor_camera->controlled_camera_ref, right);
+        globals_get_world_up(up);
+
+        vec3_muls(forward, movement[0], forward);
+        vec3_muls(right, movement[1], right);
+        vec3_muls(up, movement[2], up);
+
+        camera_get_position(editor_camera->controlled_camera_ref, position);
+
+        vec3_add(position, forward, position);
+        vec3_add(position, right, position);
+        vec3_add(position, up, position);
+
+        camera_set_position(editor_camera->controlled_camera_ref, position);
     }
-
-    vec3 movement;
-    glm_vec3_make(editor_camera->movement_input, movement);
-    math_fix_diagonal_movement_speedup(movement);
-
-    glm_vec3_scale(movement, editor_camera->speed * delta_time_sec, movement);
-
-    vec3 forward;
-    vec3 right;
-    vec3 up;
-    camera_get_forward(editor_camera->controlled_camera_ref, forward);
-    camera_get_right(editor_camera->controlled_camera_ref, right);
-    globals_get_world_up(up);
-
-    glm_vec3_scale(forward, movement[0], forward);
-    glm_vec3_scale(right, movement[1], right);
-    glm_vec3_scale(up, movement[2], up);
-
-    vec3 position;
-    camera_get_position(editor_camera->controlled_camera_ref, position);
-
-    glm_vec3_add(position, forward, position);
-    glm_vec3_add(position, right, position);
-    glm_vec3_add(position, up, position);
-
-    camera_set_position(editor_camera->controlled_camera_ref, position);
 }

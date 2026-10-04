@@ -45,8 +45,8 @@ prv_log(enum te_log_category category, const char* message, const char* filepath
     const char* path_to_log_file;
     struct tm* tm_info;
     FILE* log_file;
-    vec3 color_warn = {1.0f, 1.0f, 0.0f};
-    vec3 color_error = {1.0f, 0.0f, 0.0f};
+    te_vec3 color_warn = {1.0f, 1.0f, 0.0f};
+    te_vec3 color_error = {1.0f, 0.0f, 0.0f};
     time_t t;
     unsigned long filename_start = 0;
     unsigned long i;

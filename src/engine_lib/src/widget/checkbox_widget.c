@@ -24,8 +24,8 @@ struct te_checkbox_widget {
     char* background_tex_relative_path;
     char* checked_tex_relative_path;
 
-    vec4 background_color;
-    vec4 checked_color;
+    te_vec4 background_color;
+    te_vec4 checked_color;
 
     /* `true` if entered the "destroy" function */
     bool is_checkbox_widget_destroy;
@@ -43,7 +43,7 @@ static void prv_checkbox_widget_on_before_despawned(void* this);
 
 /* interactable callbacks */
 static void prv_checkbox_widget_on_mouse_button_released(
-    void* this, enum te_mouse_button button, vec2 cursor_pos);
+    void* this, enum te_mouse_button button, te_vec2 cursor_pos);
 
 te_checkbox_widget*
 checkbox_widget_create(void) {
@@ -59,8 +59,8 @@ checkbox_widget_create(void) {
         checkbox_widget->widget, NULL, NULL, NULL,
         prv_checkbox_widget_on_mouse_button_released, NULL, NULL, NULL);
 
-    glm_vec4_copy((vec4){0.5f, 0.5f, 0.5f, 1.0f}, checkbox_widget->background_color);
-    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, checkbox_widget->checked_color);
+    vec4_copy((vec4){0.5f, 0.5f, 0.5f, 1.0f}, checkbox_widget->background_color);
+    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, checkbox_widget->checked_color);
 
     checkbox_widget->background_tex_relative_path = NULL;
     checkbox_widget->checked_tex_relative_path = NULL;
@@ -176,14 +176,14 @@ checkbox_widget_is_checked(te_checkbox_widget* checkbox_widget) {
 }
 
 void
-checkbox_widget_set_background_color(te_checkbox_widget* checkbox_widget, vec4 color) {
-    glm_vec4_copy(color, checkbox_widget->background_color);
+checkbox_widget_set_background_color(te_checkbox_widget* checkbox_widget, te_vec4 color) {
+    vec4_copy(color, checkbox_widget->background_color);
     rect_widget_set_color(checkbox_widget->background_rect, color);
 }
 
 void
-checkbox_widget_set_checked_color(te_checkbox_widget* checkbox_widget, vec4 color) {
-    glm_vec4_copy(color, checkbox_widget->checked_color);
+checkbox_widget_set_checked_color(te_checkbox_widget* checkbox_widget, te_vec4 color) {
+    vec4_copy(color, checkbox_widget->checked_color);
 
     if (checkbox_widget->checked_rect != NULL) {
         rect_widget_set_color(checkbox_widget->checked_rect, color);
@@ -191,13 +191,13 @@ checkbox_widget_set_checked_color(te_checkbox_widget* checkbox_widget, vec4 colo
 }
 
 void
-checkbox_widget_get_background_color(te_checkbox_widget* checkbox_widget, vec4 out) {
-    glm_vec4_copy(checkbox_widget->background_color, out);
+checkbox_widget_get_background_color(te_checkbox_widget* checkbox_widget, te_vec4 out) {
+    vec4_copy(checkbox_widget->background_color, out);
 }
 
 void
-checkbox_widget_get_checked_color(te_checkbox_widget* checkbox_widget, vec4 out) {
-    glm_vec4_copy(checkbox_widget->checked_color, out);
+checkbox_widget_get_checked_color(te_checkbox_widget* checkbox_widget, te_vec4 out) {
+    vec4_copy(checkbox_widget->checked_color, out);
 }
 
 void
@@ -253,22 +253,22 @@ checkbox_widget_get_checked_texture(te_checkbox_widget* checkbox_widget) {
 }
 
 static void
-prv_checkbox_widget_set_position(te_checkbox_widget* checkbox_widget, vec2 pos) {
+prv_checkbox_widget_set_position(te_checkbox_widget* checkbox_widget, te_vec2 pos) {
     widget_set_relative_position(checkbox_widget->widget, pos);
 }
 
 static void
-prv_checkbox_widget_get_position(te_checkbox_widget* checkbox_widget, vec2 out) {
+prv_checkbox_widget_get_position(te_checkbox_widget* checkbox_widget, te_vec2 out) {
     widget_get_relative_position(checkbox_widget->widget, out);
 }
 
 static void
-prv_checkbox_widget_set_size(te_checkbox_widget* checkbox_widget, vec2 size) {
+prv_checkbox_widget_set_size(te_checkbox_widget* checkbox_widget, te_vec2 size) {
     widget_set_relative_size(checkbox_widget->widget, size);
 }
 
 static void
-prv_checkbox_widget_get_size(te_checkbox_widget* checkbox_widget, vec2 out) {
+prv_checkbox_widget_get_size(te_checkbox_widget* checkbox_widget, te_vec2 out) {
     widget_get_relative_size(checkbox_widget->widget, out);
 }
 
@@ -357,7 +357,7 @@ prv_checkbox_fix_height(te_checkbox_widget* checkbox_widget) {
     unsigned int window_height;
     window_get_size(window, &window_width, &window_height);
 
-    vec2 old_screen_size;
+    te_vec2 old_screen_size;
     widget_get_screen_size(checkbox_widget->widget, old_screen_size);
 
     const float screen_height = (float)window_height * old_screen_size[1];
@@ -365,19 +365,19 @@ prv_checkbox_fix_height(te_checkbox_widget* checkbox_widget) {
     const float target_pixel_count =
         screen_height < screen_width ? screen_height : screen_width;
 
-    vec2 new_screen_size;
-    glm_vec2_copy(
+    te_vec2 new_screen_size;
+    vec2_copy(
         (vec2){target_pixel_count / (float)window_width,
                target_pixel_count / (float)window_height},
         new_screen_size);
 
-    vec2 multiplier;
-    glm_vec2_div(new_screen_size, old_screen_size, multiplier);
+    te_vec2 multiplier;
+    vec2_div(new_screen_size, old_screen_size, multiplier);
 
-    vec2 relative_size;
+    te_vec2 relative_size;
     widget_get_relative_size(checkbox_widget->widget, relative_size);
 
-    glm_vec2_mul(relative_size, multiplier, relative_size);
+    vec2_mul(relative_size, multiplier, relative_size);
     widget_set_relative_size(checkbox_widget->widget, relative_size);
 
     checkbox_widget->is_fixing_height = false;
@@ -448,7 +448,7 @@ prv_checkbox_widget_on_before_despawned(void* this) {
 
 static void
 prv_checkbox_widget_on_mouse_button_released(
-    void* this, enum te_mouse_button button, vec2 cursor_pos) {
+    void* this, enum te_mouse_button button, te_vec2 cursor_pos) {
     (void)cursor_pos;
 
     if (button != TE_MB_LEFT) {

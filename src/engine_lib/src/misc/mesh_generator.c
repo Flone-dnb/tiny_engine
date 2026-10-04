@@ -14,26 +14,26 @@ mesh_generator_plane(
     const unsigned int vert_size = (*vertices)->vertex_sizeof;
     unsigned char offset = (*vertices)->attribute_offsets[TE_VA_UV];
 
-    glm_vec2_make((vec2){0.0f, 0.0f}, (float*)((*vertices)->data + (vert_size * 0 + offset)));
-    glm_vec2_make((vec2){1.0f, 0.0f}, (float*)((*vertices)->data + (vert_size * 1 + offset)));
-    glm_vec2_make((vec2){0.0f, 1.0f}, (float*)((*vertices)->data + (vert_size * 2 + offset)));
-    glm_vec2_make((vec2){1.0f, 1.0f}, (float*)((*vertices)->data + (vert_size * 3 + offset)));
+    vec2_set((vec2){0.0f, 0.0f}, (float*)((*vertices)->data + (vert_size * 0 + offset)));
+    vec2_set((vec2){1.0f, 0.0f}, (float*)((*vertices)->data + (vert_size * 1 + offset)));
+    vec2_set((vec2){0.0f, 1.0f}, (float*)((*vertices)->data + (vert_size * 2 + offset)));
+    vec2_set((vec2){1.0f, 1.0f}, (float*)((*vertices)->data + (vert_size * 3 + offset)));
 
     offset = (*vertices)->attribute_offsets[TE_VA_NORMAL];
     for (unsigned int i = 0; i < 4; i++) {
-        glm_vec3_make(
+        vec3_set(
             (vec3){0.0f, 0.0f, 1.0f}, (float*)((*vertices)->data + (vert_size * i + offset)));
     }
 
     offset = (*vertices)->attribute_offsets[TE_VA_POSITION];
 
-    glm_vec3_make(
+    vec3_set(
         (vec3){-half, half, -half}, (float*)((*vertices)->data + (vert_size * 0 + offset)));
-    glm_vec3_make(
+    vec3_set(
         (vec3){half, half, -half}, (float*)((*vertices)->data + (vert_size * 1 + offset)));
-    glm_vec3_make(
+    vec3_set(
         (vec3){-half, -half, -half}, (float*)((*vertices)->data + (vert_size * 2 + offset)));
-    glm_vec3_make(
+    vec3_set(
         (vec3){half, -half, -half}, (float*)((*vertices)->data + (vert_size * 3 + offset)));
 
     (*index_count) = 6;
@@ -58,15 +58,15 @@ mesh_generator_cube(
     /* init UVs */
     const unsigned char uv_offset = (*vertices)->attribute_offsets[TE_VA_UV];
     for (unsigned int i = 0; i < (*vertices)->vertex_count; i += 4) {
-        glm_vec2_make(
+        vec2_set(
             (vec2){1.0f, 1.0f}, (float*)((*vertices)->data + (vert_size * i + uv_offset)));
-        glm_vec2_make(
+        vec2_set(
             (vec2){0.0f, 1.0f},
             (float*)((*vertices)->data + (vert_size * (i + 1) + uv_offset)));
-        glm_vec2_make(
+        vec2_set(
             (vec2){1.0f, 0.0f},
             (float*)((*vertices)->data + (vert_size * (i + 2) + uv_offset)));
-        glm_vec2_make(
+        vec2_set(
             (vec2){0.0f, 0.0f},
             (float*)((*vertices)->data + (vert_size * (i + 3) + uv_offset)));
     }
@@ -75,32 +75,32 @@ mesh_generator_cube(
     const unsigned char normal_offset = (*vertices)->attribute_offsets[TE_VA_NORMAL];
     unsigned int normal_i = 0;
     for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make(
+        vec3_set(
             (vec3){1.0f, 0.0f, 0.0f},
             (float*)((*vertices)->data + (vert_size * normal_i + normal_offset)));
     }
     for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make(
+        vec3_set(
             (vec3){-1.0f, 0.0f, 0.0f},
             (float*)((*vertices)->data + (vert_size * normal_i + normal_offset)));
     }
     for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make(
+        vec3_set(
             (vec3){0.0f, 1.0f, 0.0f},
             (float*)((*vertices)->data + (vert_size * normal_i + normal_offset)));
     }
     for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make(
+        vec3_set(
             (vec3){0.0f, -1.0f, 0.0f},
             (float*)((*vertices)->data + (vert_size * normal_i + normal_offset)));
     }
     for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make(
+        vec3_set(
             (vec3){0.0f, 0.0f, 1.0f},
             (float*)((*vertices)->data + (vert_size * normal_i + normal_offset)));
     }
     for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make(
+        vec3_set(
             (vec3){.0f, 0.0f, -1.0f},
             (float*)((*vertices)->data + (vert_size * normal_i + normal_offset)));
     }
@@ -110,97 +110,97 @@ mesh_generator_cube(
     /* +X face */
     const unsigned char pos_offset = (*vertices)->attribute_offsets[TE_VA_POSITION];
     unsigned int i = 0;
-    glm_vec3_make(
+    vec3_set(
         (vec3){half, -half, -half},
         (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make(
+    vec3_set(
         (vec3){half, half, -half}, (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make(
+    vec3_set(
         (vec3){half, -half, half}, (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make(
+    vec3_set(
         (vec3){half, half, half}, (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
 
     /* -X face */
-    glm_vec3_make(
+    vec3_set(
         (vec3){-half, half, -half},
         (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make(
+    vec3_set(
         (vec3){-half, -half, -half},
         (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make(
+    vec3_set(
         (vec3){-half, half, half}, (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make(
+    vec3_set(
         (vec3){-half, -half, half},
         (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
 
     /* +Y face */
-    glm_vec3_make(
+    vec3_set(
         (vec3){half, half, -half}, (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make(
+    vec3_set(
         (vec3){-half, half, -half},
         (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make(
+    vec3_set(
         (vec3){half, half, half}, (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make(
+    vec3_set(
         (vec3){-half, half, half}, (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
 
     /* -Y face */
-    glm_vec3_make(
+    vec3_set(
         (vec3){-half, -half, -half},
         (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make(
+    vec3_set(
         (vec3){half, -half, -half},
         (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make(
+    vec3_set(
         (vec3){-half, -half, half},
         (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make(
+    vec3_set(
         (vec3){half, -half, half}, (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
 
     /* +Z face */
-    glm_vec3_make(
+    vec3_set(
         (vec3){-half, -half, half},
         (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make(
+    vec3_set(
         (vec3){half, -half, half}, (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make(
+    vec3_set(
         (vec3){-half, half, half}, (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make(
+    vec3_set(
         (vec3){half, half, half}, (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
 
     /* -Z face */
-    glm_vec3_make(
+    vec3_set(
         (vec3){-half, half, -half},
         (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make(
+    vec3_set(
         (vec3){half, half, -half}, (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make(
+    vec3_set(
         (vec3){-half, -half, -half},
         (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
-    glm_vec3_make(
+    vec3_set(
         (vec3){half, -half, -half},
         (float*)((*vertices)->data + (vert_size * i + pos_offset)));
     i += 1;
@@ -252,7 +252,7 @@ mesh_generator_icosphere(
     const float Z = 0.850650808352039932f;
     const float N = 0.0f;
 
-    vec3 positions[] = {{-X, N, Z}, {X, N, Z},  {-X, N, -Z}, {X, N, -Z},
+    te_vec3 positions[] = {{-X, N, Z}, {X, N, Z},  {-X, N, -Z}, {X, N, -Z},
                         {N, Z, X},  {N, Z, -X}, {N, -Z, X},  {N, -Z, -X},
                         {Z, X, N},  {-Z, X, N}, {Z, -X, N},  {-Z, -X, N}};
 
@@ -265,8 +265,8 @@ mesh_generator_icosphere(
     (*indices) = malloc(sizeof(unsigned short) * (*index_count));
     memcpy((*indices), triangle_indices, sizeof(unsigned short) * (*index_count));
 
-    vec2 uv;
-    glm_vec2_zero(uv);
+    te_vec2 uv;
+    vec2_zero(uv);
 
     (*vertices) = vertex_pack_create(12, false);
     const unsigned int vert_size = (*vertices)->vertex_sizeof;
@@ -275,14 +275,14 @@ mesh_generator_icosphere(
     const unsigned char uv_offset = (*vertices)->attribute_offsets[TE_VA_UV];
 
     for (unsigned int i = 0; i < 12; i++) {
-        glm_vec3_copy(
+        vec3_copy(
             positions[i], (float*)((*vertices)->data + (vert_size * i + pos_offset)));
 
-        vec3 normal;
-        glm_vec3_copy(positions[i], normal);
+        te_vec3 normal;
+        vec3_copy(positions[i], normal);
         glm_normalize(normal);
-        glm_vec3_copy(normal, (float*)((*vertices)->data + (vert_size * i + norm_offset)));
+        vec3_copy(normal, (float*)((*vertices)->data + (vert_size * i + norm_offset)));
 
-        glm_vec2_copy(uv, (float*)((*vertices)->data + (vert_size * i + uv_offset)));
+        vec2_copy(uv, (float*)((*vertices)->data + (vert_size * i + uv_offset)));
     }
 }

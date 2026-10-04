@@ -32,6 +32,9 @@ set(PROJECT_SOURCES
     src/shape/plane_shape.c
     src/shape/sphere_shape.c
     src/math/math_funcs.c
+    src/math/vec2.c
+    src/math/vec3.c
+    src/math/vec4.c
     src/render/renderer.c
     src/render/model_renderer.c
     src/render/shader_manager.c
@@ -63,6 +66,9 @@ set(PROJECT_SOURCES
     src/widget/progress_widget.c
     src/widget/vbox_widget.c
     include/math/math_funcs.h
+    include/math/vec2.h
+    include/math/vec3.h
+    include/math/vec4.h
     include/window.h
     include/debug_console.h
     include/type_database.h

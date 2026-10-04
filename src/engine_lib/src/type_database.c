@@ -299,19 +299,19 @@ type_info_save_to_config(const te_type_info* type_info, te_config* config, void*
                 break;
             }
             case (TE_VT_VEC2): {
-                vec2 val;
+                te_vec2 val;
                 type_info->vec2_getters[var_info->set_get_index](obj, val);
                 config_section_set_float_array(config, section_idx, var_info->name, val, 2);
                 break;
             }
             case (TE_VT_VEC3): {
-                vec3 val;
+                te_vec3 val;
                 type_info->vec3_getters[var_info->set_get_index](obj, val);
                 config_section_set_float_array(config, section_idx, var_info->name, val, 3);
                 break;
             }
             case (TE_VT_VEC4): {
-                vec4 val;
+                te_vec4 val;
                 type_info->vec4_getters[var_info->set_get_index](obj, val);
                 config_section_set_float_array(config, section_idx, var_info->name, val, 4);
                 break;

@@ -196,14 +196,14 @@ struct te_model {
     unsigned int custom_value;
 
     /* color in RGBA format in range [0.0; 1.0] */
-    vec4 color;
+    te_vec4 color;
 
-    vec3 position;
-    vec3 rotation; /* in degrees */
-    vec3 scale;
+    te_vec3 position;
+    te_vec3 rotation; /* in degrees */
+    te_vec3 scale;
 
-    vec2 tex_tiling;
-    vec2 uv_offset;
+    te_vec2 tex_tiling;
+    te_vec2 uv_offset;
 
     /* stores invalid value if not spawned (see @ref world) */
     unsigned int render_data_handle;
@@ -277,12 +277,12 @@ model_create(void) {
     model->is_serialization_allowed = true;
 
     glm_vec2_one(model->tex_tiling);
-    glm_vec2_zero(model->uv_offset);
+    vec2_zero(model->uv_offset);
 
     glm_vec4_one(model->color);
 
-    glm_vec3_zero(model->position);
-    glm_vec3_zero(model->rotation);
+    vec3_zero(model->position);
+    vec3_zero(model->rotation);
     glm_vec3_one(model->scale);
 
     return model;
@@ -524,8 +524,8 @@ prv_model_calc_world_normal_matrices(te_model* model, mat4 out_world, mat3 out_n
 }
 
 void
-model_set_position(te_model* model, vec3 position) {
-    glm_vec3_copy(position, model->position);
+model_set_position(te_model* model, te_vec3 position) {
+    vec3_copy(position, model->position);
 
     if (model->world != NULL) {
         /* update render data */
@@ -538,8 +538,8 @@ model_set_position(te_model* model, vec3 position) {
 }
 
 void
-model_set_rotation(te_model* model, vec3 rotation) {
-    glm_vec3_copy(rotation, model->rotation);
+model_set_rotation(te_model* model, te_vec3 rotation) {
+    vec3_copy(rotation, model->rotation);
 
     if (model->world != NULL) {
         /* update render data */
@@ -552,8 +552,8 @@ model_set_rotation(te_model* model, vec3 rotation) {
 }
 
 void
-model_set_scale(te_model* model, vec3 scale) {
-    glm_vec3_copy(scale, model->scale);
+model_set_scale(te_model* model, te_vec3 scale) {
+    vec3_copy(scale, model->scale);
 
     if (model->world != NULL) {
         /* update render data */
@@ -566,14 +566,14 @@ model_set_scale(te_model* model, vec3 scale) {
 }
 
 void
-model_set_color(te_model* model, vec4 color) {
-    glm_vec4_copy(color, model->color);
+model_set_color(te_model* model, te_vec4 color) {
+    vec4_copy(color, model->color);
 
     if (model->world != NULL) {
         /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             prv_model_get_renderer(model), model->render_data_handle);
-        glm_vec4_copy(model->color, data->color);
+        vec4_copy(model->color, data->color);
     }
 }
 
@@ -603,7 +603,7 @@ model_set_texture(te_model* model, const char* relative_path) {
             }
 
             data->tex_id = 0;
-            glm_vec2_make((vec2){-1.0f, -1.0f}, data->tex_tiling);
+            vec2_set((vec2){-1.0f, -1.0f}, data->tex_tiling);
         }
     } else {
         /* set new texture */
@@ -624,32 +624,32 @@ model_set_texture(te_model* model, const char* relative_path) {
             }
             data->tex_id = texture_manager_request_texture(
                 texture_manager, relative_path, MODEL_TEX_LOAD_OPTION);
-            glm_vec2_copy(model->tex_tiling, data->tex_tiling);
+            vec2_copy(model->tex_tiling, data->tex_tiling);
         }
     }
 }
 
 void
-model_set_texture_tiling(te_model* model, vec2 tex_tiling) {
-    glm_vec2_copy(tex_tiling, model->tex_tiling);
+model_set_texture_tiling(te_model* model, te_vec2 tex_tiling) {
+    vec2_copy(tex_tiling, model->tex_tiling);
 
     if (model->world != NULL && model->tex_relative_path != NULL) {
         /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             prv_model_get_renderer(model), model->render_data_handle);
-        glm_vec2_copy(model->tex_tiling, data->tex_tiling);
+        vec2_copy(model->tex_tiling, data->tex_tiling);
     }
 }
 
 void
-model_set_uv_offset(te_model* model, vec2 uv_offset) {
-    glm_vec2_copy(uv_offset, model->uv_offset);
+model_set_uv_offset(te_model* model, te_vec2 uv_offset) {
+    vec2_copy(uv_offset, model->uv_offset);
 
     if (model->world != NULL) {
         /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             prv_model_get_renderer(model), model->render_data_handle);
-        glm_vec2_copy(model->uv_offset, data->uv_offset);
+        vec2_copy(model->uv_offset, data->uv_offset);
     }
 }
 
@@ -669,22 +669,22 @@ model_is_serialization_allowed(te_model* model) {
 }
 
 void
-model_get_position(te_model* model, vec3 out) {
-    glm_vec3_copy(model->position, out);
+model_get_position(te_model* model, te_vec3 out) {
+    vec3_copy(model->position, out);
 }
 
 void
-model_get_rotation(te_model* model, vec3 out) {
-    glm_vec3_copy(model->rotation, out);
+model_get_rotation(te_model* model, te_vec3 out) {
+    vec3_copy(model->rotation, out);
 }
 
 void
-model_get_scale(te_model* model, vec3 out) {
-    glm_vec3_copy(model->scale, out);
+model_get_scale(te_model* model, te_vec3 out) {
+    vec3_copy(model->scale, out);
 }
 
 void
-model_get_world_position(te_model* model, vec3 out) {
+model_get_world_position(te_model* model, te_vec3 out) {
     if (model->render_data_handle == 0xFFFFFFFF) {
         model_get_position(model, out);
         return;
@@ -693,7 +693,7 @@ model_get_world_position(te_model* model, vec3 out) {
     te_model_render_data* target_data = model_renderer_get_render_data_tmp(
         prv_model_get_model_renderer(model), prv_model_get_render_data_handle(model));
 
-    glm_vec3_copy(target_data->world_mat[3], out);
+    vec3_copy(target_data->world_mat[3], out);
 }
 
 static void prv_model_remove_from_model_renderer(te_model* model);
@@ -737,8 +737,8 @@ model_get_skeleton(te_model* model) {
 }
 
 void
-model_get_color(te_model* model, vec4 out) {
-    glm_vec4_copy(model->color, out);
+model_get_color(te_model* model, te_vec4 out) {
+    vec4_copy(model->color, out);
 }
 
 const char*
@@ -747,13 +747,13 @@ model_get_texture(te_model* model) {
 }
 
 void
-model_get_texture_tiling(te_model* model, vec2 tex_tiling) {
-    glm_vec2_copy(model->tex_tiling, tex_tiling);
+model_get_texture_tiling(te_model* model, te_vec2 tex_tiling) {
+    vec2_copy(model->tex_tiling, tex_tiling);
 }
 
 void
-model_get_uv_offset(te_model* model, vec2 uv_offset) {
-    glm_vec2_copy(model->uv_offset, uv_offset);
+model_get_uv_offset(te_model* model, te_vec2 uv_offset) {
+    vec2_copy(model->uv_offset, uv_offset);
 }
 
 void
@@ -948,7 +948,7 @@ model_get_attached_camera(te_model* model) {
 static void
 model_tick(te_model* model, float delta_time_sec) {
     unsigned int i;
-    vec3 pos;
+    te_vec3 pos;
 
     (void)delta_time_sec;
 
@@ -970,7 +970,7 @@ model_attach_sound(te_model* model, te_sound* sound) {
     model->attached_sound_count += 1;
 
     if (model->world != NULL) {
-        vec3 pos;
+        te_vec3 pos;
         model_get_world_position(model, pos);
         sound_set_3d_position(sound, pos);
 
@@ -1135,7 +1135,7 @@ prv_model_add_to_model_renderer(te_model* model) {
         te_model_render_data* data =
             model_renderer_get_render_data_tmp(model_renderer, model->render_data_handle);
 
-        glm_vec4_copy(model->color, data->color);
+        vec4_copy(model->color, data->color);
         prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
 
 #if defined(ENGINE_GLES)
@@ -1147,8 +1147,8 @@ prv_model_add_to_model_renderer(te_model* model) {
         data->index_count = (int)index_count;
 
         data->tex_id = 0;
-        glm_vec2_copy((vec2){-1.0f, -1.0f}, data->tex_tiling);
-        glm_vec2_copy(model->uv_offset, data->uv_offset);
+        vec2_copy((vec2){-1.0f, -1.0f}, data->tex_tiling);
+        vec2_copy(model->uv_offset, data->uv_offset);
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
 
         if (model->tex_relative_path != NULL) {
@@ -1158,7 +1158,7 @@ prv_model_add_to_model_renderer(te_model* model) {
             data->tex_id = texture_manager_request_texture(
                 texture_manager, model->tex_relative_path, MODEL_TEX_LOAD_OPTION);
 
-            glm_vec2_copy(model->tex_tiling, data->tex_tiling);
+            vec2_copy(model->tex_tiling, data->tex_tiling);
         }
 
         data->skinning_mats_count = 0;
@@ -1371,10 +1371,10 @@ prv_model_get_model_renderer(te_model* model) {
 
 static te_aabb_shape
 prv_model_calc_aabb(te_vertex_pack* vertices) {
-    vec3 min;
-    vec3 max;
-    glm_vec3_copy((vec3){FLT_MAX, FLT_MAX, FLT_MAX}, min);
-    glm_vec3_copy((vec3){FLT_MIN, FLT_MIN, FLT_MIN}, max);
+    te_vec3 min;
+    te_vec3 max;
+    vec3_copy((vec3){FLT_MAX, FLT_MAX, FLT_MAX}, min);
+    vec3_copy((vec3){FLT_MIN, FLT_MIN, FLT_MIN}, max);
 
     for (unsigned int i = 0; i < vertices->vertex_count; i++) {
         unsigned char* data =
@@ -1427,7 +1427,7 @@ on_spawned(te_model* model, te_world* world) {
 
     /* play sounds */
     if (model->attached_sound_count > 0) {
-        vec3 pos;
+        te_vec3 pos;
         model_get_world_position(model, pos);
         for (unsigned int i = 0; i < model->attached_sound_count; i++) {
             sound_set_3d_position(model->attached_sounds[i], pos);

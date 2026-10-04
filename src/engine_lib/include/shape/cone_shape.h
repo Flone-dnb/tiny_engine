@@ -1,13 +1,13 @@
 #pragma once
 
 #include <stdbool.h>
-#include <cglm/vec3.h>
+#include <math/vec3.h>
 #include <shape/plane_shape.h>
 
 typedef struct te_cone_shape {
-    vec3 position;
+    te_vec3 position;
     float height;
-    vec3 direction;
+    te_vec3 direction;
     float bottom_radius;
 } te_cone_shape;
 

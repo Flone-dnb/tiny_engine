@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <type_database.h>
+#include <misc/globals.h>
 #include <game/game_object_info.h>
 #include <game/model.h>
 #include <game/skeleton.h>
@@ -60,6 +61,9 @@ property_inspector_set_parent(te_property_inspector* inspector, te_widget* right
 
 static void
 on_variable_checkbox_changed(te_checkbox_widget* checkbox, bool is_checked) {
+    const te_type_info* info;
+    unsigned int var_idx;
+
     te_widget* widget = checkbox_widget_get_widget(checkbox);
     te_property_inspector* inspector = widget_get_custom_ptr(widget);
 
@@ -68,9 +72,9 @@ on_variable_checkbox_changed(te_checkbox_widget* checkbox, bool is_checked) {
         abort();
     }
 
-    const unsigned int var_idx = (unsigned int)widget_get_custom_value(widget);
+    var_idx = (unsigned int)widget_get_custom_value(widget);
 
-    const te_type_info* info = type_database_get_type_info(inspector->obj_type_id);
+    info = type_database_get_type_info(inspector->obj_type_id);
     if (info == NULL) {
         log_error(__FILE__, __LINE__, "unable to find type info");
         abort();
@@ -81,7 +85,15 @@ on_variable_checkbox_changed(te_checkbox_widget* checkbox, bool is_checked) {
 
 static void
 on_variable_text_edit_changed(te_text_edit_widget* text_edit) {
+    const char* widget_name;
+    const te_type_info* info;
+    char* endptr;
+    char* text;
     unsigned int src_text_len;
+    unsigned int var_idx;
+    unsigned int comp_idx;
+    unsigned int set_get_index;
+    unsigned int text_len;
     const wchar_t* src_text = text_edit_widget_get_text(text_edit, &src_text_len);
 
     te_widget* widget = text_edit_widget_get_widget(text_edit);
@@ -92,26 +104,24 @@ on_variable_text_edit_changed(te_text_edit_widget* text_edit) {
         abort();
     }
 
-    const unsigned int var_idx = (unsigned int)widget_get_custom_value(widget);
+    var_idx = (unsigned int)widget_get_custom_value(widget);
 
-    unsigned int comp_idx = 0;
-    const char* widget_name = widget_get_name(widget);
+    comp_idx = 0;
+    widget_name = widget_get_name(widget);
     if (widget_name != NULL) {
         comp_idx = (unsigned int)widget_name[0];
     }
 
-    unsigned int text_len;
-    char* text = wchar_to_char(src_text, &text_len);
+    wchar_to_char(src_text, &text_len);
 
-    const te_type_info* info = type_database_get_type_info(inspector->obj_type_id);
+    info = type_database_get_type_info(inspector->obj_type_id);
     if (info == NULL) {
         log_error(__FILE__, __LINE__, "unable to find type info");
         abort();
     }
 
-    const unsigned int set_get_index = info->variables[var_idx].set_get_index;
+    set_get_index = info->variables[var_idx].set_get_index;
 
-    char* endptr;
     switch (info->variables[var_idx].type) {
         case (TE_VT_BOOL): {
             log_error(__FILE__, __LINE__, "unexpected type");
@@ -135,7 +145,7 @@ on_variable_text_edit_changed(te_text_edit_widget* text_edit) {
         }
         case (TE_VT_VEC2): {
             const float item = globals_convert_string_to_float(text, &endptr);
-            vec2 value;
+            te_vec2 value;
             info->vec2_getters[set_get_index](inspector->obj, value);
             value[comp_idx] = item;
             info->vec2_setters[set_get_index](inspector->obj, value);
@@ -143,7 +153,7 @@ on_variable_text_edit_changed(te_text_edit_widget* text_edit) {
         }
         case (TE_VT_VEC3): {
             const float item = globals_convert_string_to_float(text, &endptr);
-            vec3 value;
+            te_vec3 value;
             info->vec3_getters[set_get_index](inspector->obj, value);
             value[comp_idx] = item;
             info->vec3_setters[set_get_index](inspector->obj, value);
@@ -151,7 +161,7 @@ on_variable_text_edit_changed(te_text_edit_widget* text_edit) {
         }
         case (TE_VT_VEC4): {
             const float item = globals_convert_string_to_float(text, &endptr);
-            vec4 value;
+            te_vec4 value;
             info->vec4_getters[set_get_index](inspector->obj, value);
             value[comp_idx] = item;
             info->vec4_setters[set_get_index](inspector->obj, value);
@@ -177,7 +187,10 @@ on_variable_text_edit_changed(te_text_edit_widget* text_edit) {
 }
 
 static void
-add_name_widget(te_widget* parent, const char* name, vec2 pos, vec2 size) {
+add_name_widget(te_widget* parent, const char* name, te_vec2 pos, te_vec2 size) {
+    wchar_t* wtext;
+    unsigned int text_len;
+
     te_text_widget* text_widget = text_widget_create();
     {
         te_widget* widget = text_widget_get_widget(text_widget);
@@ -186,17 +199,21 @@ add_name_widget(te_widget* parent, const char* name, vec2 pos, vec2 size) {
         widget_set_relative_size(widget, size);
     }
 
-    text_widget_set_text_height(text_widget, theme_get_text_height());
+    text_widget_set_text_height(text_widget, editor_theme_get_text_height());
 
-    unsigned int text_len;
-    wchar_t* text = wchar_from_char(name, &text_len);
-    text_widget_set_text_own(text_widget, text, text_len);
+    wtext = wchar_from_char(name, &text_len);
+    text_widget_set_text_own(text_widget, wtext, text_len);
 }
 
 static void
 add_float_widget(
     te_property_inspector* inspector, unsigned int var_idx, unsigned int comp_idx,
-    te_widget* parent, float value, vec2 pos, vec2 size) {
+    te_widget* parent, float value, te_vec2 pos, te_vec2 size) {
+    char* src_text;
+    wchar_t* wtext;
+    unsigned int text_len;
+    int len;
+
     te_text_edit_widget* text_edit = text_edit_widget_create();
     {
         te_widget* widget = text_edit_widget_get_widget(text_edit);
@@ -215,20 +232,19 @@ add_float_widget(
             widget_set_name(widget, "\3");
         }
     }
-    text_edit_widget_set_text_height(text_edit, theme_get_text_height() * 0.95f);
+    text_edit_widget_set_text_height(text_edit, editor_theme_get_text_height() * 0.95f);
     text_edit_widget_set_on_text_accepted(text_edit, on_variable_text_edit_changed);
 
-    int len = snprintf(NULL, 0, "%.2f", value);
+    len = snprintf(NULL, 0, "%.2f", value);
     if (len < 0) {
         log_error(__FILE__, __LINE__, "snprintf error");
         abort();
     }
-    char* src_text = malloc(sizeof(char) * (size_t)(len + 1));
+    src_text = malloc(sizeof(char) * (size_t)(len + 1));
     snprintf(src_text, (size_t)len + 1, "%.2f", value);
 
-    unsigned int text_len;
-    wchar_t* text = wchar_from_char(src_text, &text_len);
-    text_edit_widget_set_text_own(text_edit, text, text_len);
+    wtext = wchar_from_char(src_text, &text_len);
+    text_edit_widget_set_text_own(text_edit, wtext, text_len);
 
     free(src_text);
 }
@@ -243,16 +259,21 @@ on_button_pilot_camera_clicked(te_button_widget* button) {
 
 static void
 on_preview_animation_selected(void* custom, const char* absolute_path_to_file) {
+    const char* filename;
+    char* relative_path_to_anim;
+    te_model* model;
+    te_skeleton* skeleton;
+
     te_property_inspector* inspector = custom;
 
-    te_model* model = inspector->obj;
-    te_skeleton* skeleton = model_get_skeleton(model);
+    model = inspector->obj;
+    skeleton = model_get_skeleton(model);
 
-    char* relative_path_to_anim = filesystem_convert_path_to_relative(absolute_path_to_file);
+    relative_path_to_anim = filesystem_convert_path_to_relative(absolute_path_to_file);
 
     skeleton_load_animations(skeleton, relative_path_to_anim);
 
-    const char* filename = filesystem_find_filename(relative_path_to_anim, false, NULL);
+    filename = filesystem_find_filename(relative_path_to_anim, false, NULL);
     skeleton_play_animation(skeleton, filename, true, 0.0f);
 
     free(relative_path_to_anim);
@@ -269,6 +290,20 @@ on_button_preview_animation_clicked(te_button_widget* button) {
 
 void
 property_inspector_show(te_property_inspector* inspector, void* obj, const char* obj_type_id) {
+    const te_type_info* type_info;
+    te_text_widget* text_widget;
+    wchar_t* wtext;
+    te_vec4 text_edit_background_color;
+    te_vec4 checkbox_checked_color;
+    te_vec4 color;
+    te_vec2 tmp2;
+    te_vec2 size;
+    te_vec2 pos;
+    unsigned int text_len;
+    unsigned int var_idx;
+    float hpadding;
+    float vec_item_width;
+
     if (inspector->obj == obj) {
         return;
     }
@@ -284,27 +319,23 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
     inspector->obj = obj;
     inspector->obj_type_id = obj_type_id;
 
-    const te_type_info* type_info = type_database_get_type_info(obj_type_id);
+    type_info = type_database_get_type_info(obj_type_id);
     if (type_info == NULL) {
         log_error(__FILE__, __LINE__, "invalid object type ID");
         abort();
     }
 
-    const float hpadding = theme_get_horizontal_padding() / theme_get_right_panel_width();
-    const float vec_item_width = (1.0f - hpadding) / 4.0f - (hpadding / 2.0f) * 3.0f;
+    hpadding = editor_theme_get_horizontal_padding() / editor_theme_get_right_panel_width();
+    vec_item_width = (1.0f - hpadding) / 4.0f - (hpadding / 2.0f) * 3.0f;
 
-    vec4 text_edit_background_color;
-    theme_get_text_edit_background_color(text_edit_background_color);
-    vec4 checkbox_checked_color;
-    theme_get_accent_color(checkbox_checked_color);
+    editor_theme_get_text_edit_background_color(text_edit_background_color);
+    editor_theme_get_accent_color(checkbox_checked_color);
 
-    vec2 size;
     size[0] = 1.0f - hpadding * 2.0f;
-    size[1] = theme_get_button_height();
+    size[1] = editor_theme_get_button_height();
 
-    vec2 pos;
     pos[0] = hpadding;
-    pos[1] = theme_get_vertical_padding() / 2.0f;
+    pos[1] = editor_theme_get_vertical_padding() / 2.0f;
 
     if (type_info->game_object_info != NULL) {
         if (type_info->game_object_info->type == TE_GOT_CAMERA) {
@@ -318,32 +349,34 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 widget_set_relative_size(widget, size);
             }
 
-            vec4 color;
-            theme_get_button_color(color);
+            editor_theme_get_button_color(color);
             button_widget_set_color(button, color);
 
-            theme_get_button_color_hovered(color);
+            editor_theme_get_button_color_hovered(color);
             button_widget_set_color_hovered(button, color);
 
-            theme_get_button_color_pressed(color);
+            editor_theme_get_button_color_pressed(color);
             button_widget_set_color_pressed(button, color);
 
             button_widget_set_on_clicked(button, on_button_pilot_camera_clicked);
 
             /* button text */
-            te_text_widget* text_widget = text_widget_create();
+            text_widget = text_widget_create();
             {
                 te_widget* widget = text_widget_get_widget(text_widget);
                 widget_set_parent(widget, button_widget_get_widget(button));
-                widget_set_relative_position(widget, (vec2){hpadding, 0.0f});
-                widget_set_relative_size(widget, (vec2){1.0f - hpadding, 1.0f});
+
+                vec2_set(hpadding, 0.0f, tmp2);
+                widget_set_relative_position(widget, tmp2);
+
+                vec2_set(1.0f - hpadding, 1.0f, tmp2);
+                widget_set_relative_size(widget, tmp2);
             }
 
-            text_widget_set_text_height(text_widget, theme_get_text_height());
+            text_widget_set_text_height(text_widget, editor_theme_get_text_height());
 
-            unsigned int text_len;
-            wchar_t* text = wchar_from_char("Pilot camera", &text_len);
-            text_widget_set_text_own(text_widget, text, text_len);
+            wtext = wchar_from_char("Pilot camera", &text_len);
+            text_widget_set_text_own(text_widget, wtext, text_len);
 
             pos[1] += size[1];
         } else if (
@@ -359,32 +392,34 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 widget_set_relative_size(widget, size);
             }
 
-            vec4 color;
-            theme_get_button_color(color);
+            editor_theme_get_button_color(color);
             button_widget_set_color(button, color);
 
-            theme_get_button_color_hovered(color);
+            editor_theme_get_button_color_hovered(color);
             button_widget_set_color_hovered(button, color);
 
-            theme_get_button_color_pressed(color);
+            editor_theme_get_button_color_pressed(color);
             button_widget_set_color_pressed(button, color);
 
             button_widget_set_on_clicked(button, on_button_preview_animation_clicked);
 
             /* button text */
-            te_text_widget* text_widget = text_widget_create();
+            text_widget = text_widget_create();
             {
                 te_widget* widget = text_widget_get_widget(text_widget);
                 widget_set_parent(widget, button_widget_get_widget(button));
-                widget_set_relative_position(widget, (vec2){hpadding, 0.0f});
-                widget_set_relative_size(widget, (vec2){1.0f - hpadding, 1.0f});
+
+                vec2_set(hpadding, 0.0f, tmp2);
+                widget_set_relative_position(widget, tmp2);
+
+                vec2_set(1.0f - hpadding, 1.0f, tmp2);
+                widget_set_relative_size(widget, tmp2);
             }
 
-            text_widget_set_text_height(text_widget, theme_get_text_height());
+            text_widget_set_text_height(text_widget, editor_theme_get_text_height());
 
-            unsigned int text_len;
-            wchar_t* text = wchar_from_char("Preview animation", &text_len);
-            text_widget_set_text_own(text_widget, text, text_len);
+            wtext = wchar_from_char("Preview animation", &text_len);
+            text_widget_set_text_own(text_widget, wtext, text_len);
 
             pos[1] += size[1];
         }
@@ -396,7 +431,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
         scene_animation_editor_show_tracks(anim_editor, obj, type_info);
     }
 
-    for (unsigned int var_idx = 0; var_idx < type_info->variable_count; var_idx++) {
+    for (var_idx = 0; var_idx < type_info->variable_count; var_idx++) {
         te_variable_info* var_info = &type_info->variables[var_idx];
 
         add_name_widget(inspector->right_panel, var_info->name, pos, size);
@@ -422,6 +457,11 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 break;
             }
             case (TE_VT_UINT): {
+                te_text_edit_widget* text_edit;
+                char* src_text;
+                unsigned int value;
+                int len;
+
                 /* text edit background  ---------------------------- */
 
                 te_rect_widget* rect = rect_widget_create();
@@ -435,10 +475,9 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
                 /* text edit ---------------------------------------- */
 
-                const unsigned int value =
-                    type_info->uint_getters[var_info->set_get_index](obj);
+                value = type_info->uint_getters[var_info->set_get_index](obj);
 
-                te_text_edit_widget* text_edit = text_edit_widget_create();
+                text_edit = text_edit_widget_create();
                 {
                     te_widget* widget = text_edit_widget_get_widget(text_edit);
                     widget_set_parent(widget, rect_widget_get_widget(rect));
@@ -448,26 +487,29 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                     widget_set_custom_ptr(widget, inspector);
                     widget_set_custom_value(widget, var_idx);
                 }
-                text_edit_widget_set_text_height(text_edit, theme_get_text_height());
+                text_edit_widget_set_text_height(text_edit, editor_theme_get_text_height());
                 text_edit_widget_set_on_text_accepted(
                     text_edit, on_variable_text_edit_changed);
 
-                int len = snprintf(NULL, 0, "%u", value);
+                len = snprintf(NULL, 0, "%u", value);
                 if (len < 0) {
                     log_error(__FILE__, __LINE__, "snprintf error");
                     abort();
                 }
-                char* src_text = malloc(sizeof(char) * (size_t)(len + 1));
+                src_text = malloc(sizeof(char) * (size_t)(len + 1));
                 snprintf(src_text, (size_t)len + 1, "%u", value);
 
-                unsigned int text_len;
-                wchar_t* text = wchar_from_char(src_text, &text_len);
-                text_edit_widget_set_text_own(text_edit, text, text_len);
+                wtext = wchar_from_char(src_text, &text_len);
+                text_edit_widget_set_text_own(text_edit, wtext, text_len);
 
                 free(src_text);
                 break;
             }
             case (TE_VT_FLOAT): {
+                float value;
+                te_vec2 wpos;
+                te_vec2 wsize;
+
                 /* text edit background  ---------------------------- */
 
                 te_rect_widget* rect = rect_widget_create();
@@ -481,22 +523,28 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
                 /* text edit ---------------------------------------- */
 
-                const float value = type_info->float_getters[var_info->set_get_index](obj);
+                value = type_info->float_getters[var_info->set_get_index](obj);
 
+                vec2_set(hpadding, 0.0f, wpos);
+                vec2_set(1.0f - hpadding, 1.0f, wsize);
                 add_float_widget(
-                    inspector, var_idx, 0, rect_widget_get_widget(rect), value,
-                    (vec2){hpadding, 0.0f}, (vec2){1.0f - hpadding, 1.0f});
+                    inspector, var_idx, 0, rect_widget_get_widget(rect), value, wpos, wsize);
                 break;
             }
             case (TE_VT_VEC2): {
-                vec2 value;
+                te_rect_widget* rect;
+                te_widget* widget;
+                te_vec2 wpos;
+                te_vec2 wsize;
+                te_vec2 value;
+
                 type_info->vec2_getters[var_info->set_get_index](obj, value);
 
                 /* text edit background  ---------------------------- */
 
-                te_rect_widget* rect = rect_widget_create();
+                rect = rect_widget_create();
 
-                te_widget* widget = rect_widget_get_widget(rect);
+                widget = rect_widget_get_widget(rect);
                 widget_set_parent(widget, inspector->right_panel);
                 widget_set_relative_position(widget, pos);
                 widget_set_relative_size(widget, size);
@@ -505,25 +553,29 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
                 /* text edit ---------------------------------------- */
 
-                add_float_widget(
-                    inspector, var_idx, 0, widget, value[0], (vec2){hpadding, 0.0f},
-                    (vec2){vec_item_width, 1.0f});
-                add_float_widget(
-                    inspector, var_idx, 1, widget, value[1],
-                    (vec2){hpadding + vec_item_width + hpadding, 0.0f},
-                    (vec2){vec_item_width, 1.0f});
+                vec2_set(hpadding, 0.0f, wpos);
+                vec2_set(vec_item_width, 1.0f, wsize);
+                add_float_widget(inspector, var_idx, 0, widget, value[0], wpos, wsize);
+
+                vec2_set(hpadding + vec_item_width + hpadding, 0.0f, wpos);
+                add_float_widget(inspector, var_idx, 1, widget, value[1], wpos, wsize);
 
                 break;
             }
             case (TE_VT_VEC3): {
-                vec3 value;
+                te_rect_widget* rect;
+                te_widget* widget;
+                te_vec3 value;
+                te_vec2 wpos;
+                te_vec2 wsize;
+
                 type_info->vec3_getters[var_info->set_get_index](obj, value);
 
                 /* text edit background  ---------------------------- */
 
-                te_rect_widget* rect = rect_widget_create();
+                rect = rect_widget_create();
 
-                te_widget* widget = rect_widget_get_widget(rect);
+                widget = rect_widget_get_widget(rect);
                 widget_set_parent(widget, inspector->right_panel);
                 widget_set_relative_position(widget, pos);
                 widget_set_relative_size(widget, size);
@@ -532,30 +584,34 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
                 /* text edit ---------------------------------------- */
 
-                add_float_widget(
-                    inspector, var_idx, 0, widget, value[0], (vec2){hpadding, 0.0f},
-                    (vec2){vec_item_width, 1.0f});
-                add_float_widget(
-                    inspector, var_idx, 1, widget, value[1],
-                    (vec2){hpadding + vec_item_width + hpadding, 0.0f},
-                    (vec2){vec_item_width, 1.0f});
-                add_float_widget(
-                    inspector, var_idx, 2, widget, value[2],
-                    (vec2){hpadding + vec_item_width + hpadding + vec_item_width + hpadding,
-                           0.0f},
-                    (vec2){vec_item_width, 1.0f});
+                vec2_set(hpadding, 0.0f, wpos);
+                vec2_set(vec_item_width, 1.0f, wsize);
+                add_float_widget(inspector, var_idx, 0, widget, value[0], wpos, wsize);
+
+                vec2_set(hpadding + vec_item_width + hpadding, 0.0f, wpos);
+                add_float_widget(inspector, var_idx, 1, widget, value[1], wpos, wsize);
+
+                vec2_set(
+                    hpadding + vec_item_width + hpadding + vec_item_width + hpadding, 0.0f,
+                    wpos);
+                add_float_widget(inspector, var_idx, 2, widget, value[2], wpos, wsize);
 
                 break;
             }
             case (TE_VT_VEC4): {
-                vec4 value;
+                te_rect_widget* rect;
+                te_widget* widget;
+                te_vec2 wpos;
+                te_vec2 wsize;
+                te_vec4 value;
+
                 type_info->vec4_getters[var_info->set_get_index](obj, value);
 
                 /* text edit background  ---------------------------- */
 
-                te_rect_widget* rect = rect_widget_create();
+                rect = rect_widget_create();
 
-                te_widget* widget = rect_widget_get_widget(rect);
+                widget = rect_widget_get_widget(rect);
                 widget_set_parent(widget, inspector->right_panel);
                 widget_set_relative_position(widget, pos);
                 widget_set_relative_size(widget, size);
@@ -564,35 +620,38 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
                 /* text edit ---------------------------------------- */
 
-                add_float_widget(
-                    inspector, var_idx, 0, widget, value[0], (vec2){hpadding, 0.0f},
-                    (vec2){vec_item_width, 1.0f});
-                add_float_widget(
-                    inspector, var_idx, 1, widget, value[1],
-                    (vec2){hpadding + vec_item_width + hpadding, 0.0f},
-                    (vec2){vec_item_width, 1.0f});
-                add_float_widget(
-                    inspector, var_idx, 2, widget, value[2],
-                    (vec2){hpadding + vec_item_width + hpadding + vec_item_width + hpadding,
-                           0.0f},
-                    (vec2){vec_item_width, 1.0f});
-                add_float_widget(
-                    inspector, var_idx, 3, widget, value[3],
-                    (vec2){hpadding + vec_item_width + hpadding + vec_item_width + hpadding
-                               + vec_item_width + hpadding,
-                           0.0f},
-                    (vec2){vec_item_width, 1.0f});
+                vec2_set(hpadding, 0.0f, wpos);
+                vec2_set(vec_item_width, 1.0f, wsize);
+                add_float_widget(inspector, var_idx, 0, widget, value[0], wpos, wsize);
+
+                vec2_set(hpadding + vec_item_width + hpadding, 0.0f, wpos);
+                add_float_widget(inspector, var_idx, 1, widget, value[1], wpos, wsize);
+
+                vec2_set(
+                    hpadding + vec_item_width + hpadding + vec_item_width + hpadding, 0.0f,
+                    wpos);
+                add_float_widget(inspector, var_idx, 2, widget, value[2], wpos, wsize);
+
+                vec2_set(
+                    hpadding + vec_item_width + hpadding + vec_item_width + hpadding
+                        + vec_item_width + hpadding,
+                    0.0f, wpos);
+                add_float_widget(inspector, var_idx, 3, widget, value[3], wpos, wsize);
 
                 break;
             }
             case (TE_VT_STRING): {
+                te_text_edit_widget* text_edit;
+                te_rect_widget* rect;
+                te_widget* widget;
+
                 const char* var_text = type_info->string_getters[var_info->set_get_index](obj);
 
                 /* text edit background  ---------------------------- */
 
-                te_rect_widget* rect = rect_widget_create();
+                rect = rect_widget_create();
 
-                te_widget* widget = rect_widget_get_widget(rect);
+                widget = rect_widget_get_widget(rect);
                 widget_set_parent(widget, inspector->right_panel);
                 widget_set_relative_position(widget, pos);
                 widget_set_relative_size(widget, size);
@@ -601,17 +660,21 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
                 /* text edit ---------------------------------------- */
 
-                te_text_edit_widget* text_edit = text_edit_widget_create();
+                text_edit = text_edit_widget_create();
                 {
                     te_widget* widget = text_edit_widget_get_widget(text_edit);
                     widget_set_parent(widget, rect_widget_get_widget(rect));
-                    widget_set_relative_position(widget, (vec2){hpadding, 0.0f});
-                    widget_set_relative_size(widget, (vec2){1.0f - hpadding, 1.0f});
+
+                    vec2_set(hpadding, 0.0f, tmp2);
+                    widget_set_relative_position(widget, tmp2);
+
+                    vec2_set(1.0f - hpadding, 1.0f, tmp2);
+                    widget_set_relative_size(widget, tmp2);
 
                     widget_set_custom_ptr(widget, inspector);
                     widget_set_custom_value(widget, var_idx);
                 }
-                text_edit_widget_set_text_height(text_edit, theme_get_text_height());
+                text_edit_widget_set_text_height(text_edit, editor_theme_get_text_height());
                 text_edit_widget_set_on_text_accepted(
                     text_edit, on_variable_text_edit_changed);
 
@@ -625,6 +688,8 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 break;
             }
             case (TE_VT_WSTRING): {
+                te_text_edit_widget* text_edit;
+
                 const wchar_t* var_text =
                     type_info->wstring_getters[var_info->set_get_index](obj);
 
@@ -641,17 +706,21 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
                 /* text edit ---------------------------------------- */
 
-                te_text_edit_widget* text_edit = text_edit_widget_create();
+                text_edit = text_edit_widget_create();
                 {
                     te_widget* widget = text_edit_widget_get_widget(text_edit);
                     widget_set_parent(widget, rect_widget_get_widget(rect));
-                    widget_set_relative_position(widget, (vec2){hpadding, 0.0f});
-                    widget_set_relative_size(widget, (vec2){1.0f - hpadding, 1.0f});
+
+                    vec2_set(hpadding, 0.0f, tmp2);
+                    widget_set_relative_position(widget, tmp2);
+
+                    vec2_set(1.0f - hpadding, 1.0f, tmp2);
+                    widget_set_relative_size(widget, tmp2);
 
                     widget_set_custom_ptr(widget, inspector);
                     widget_set_custom_value(widget, var_idx);
                 }
-                text_edit_widget_set_text_height(text_edit, theme_get_text_height());
+                text_edit_widget_set_text_height(text_edit, editor_theme_get_text_height());
                 text_edit_widget_set_on_text_accepted(
                     text_edit, on_variable_text_edit_changed);
 
@@ -669,6 +738,12 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
 
 void
 property_inspector_hide(te_property_inspector* inspector) {
+    te_widget** widgets;
+    te_scene_animation_editor* anim_editor;
+    te_world* world;
+    unsigned int count;
+    unsigned int i;
+
     {
         /* check if we have a model with skeleton animation preview playing */
         const te_type_info* type_info = type_database_get_type_info(inspector->obj_type_id);
@@ -684,7 +759,7 @@ property_inspector_hide(te_property_inspector* inspector) {
     inspector->obj = NULL;
     inspector->obj_type_id = NULL;
 
-    te_scene_animation_editor* anim_editor = world_inspector_get_scene_animation_editor(
+    anim_editor = world_inspector_get_scene_animation_editor(
         editor_ui_get_world_inspector(inspector->ui));
     if (anim_editor != NULL) {
         scene_animation_editor_show_tracks(anim_editor, NULL, NULL);
@@ -694,15 +769,14 @@ property_inspector_hide(te_property_inspector* inspector) {
         return;
     }
 
-    te_world* world = widget_get_world(inspector->right_panel);
+    world = widget_get_world(inspector->right_panel);
     if (world == NULL) {
         return;
     }
 
-    unsigned int count;
-    te_widget** widgets = widget_get_child_widgets(inspector->right_panel, &count);
+    widgets = widget_get_child_widgets(inspector->right_panel, &count);
 
-    for (unsigned int i = 0; i < count; i++) {
+    for (i = 0; i < count; i++) {
         widget_set_parent(widgets[i], NULL);
 
         world_despawn_widget(world, widgets[i]);

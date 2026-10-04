@@ -1,5 +1,6 @@
 #include <ui/editor_ui.h>
 
+#include <stdlib.h>
 #include <world.h>
 #include <ui/editor_theme.h>
 #include <ui/property_inspector.h>
@@ -46,27 +47,38 @@ editor_ui_destroy(te_editor_ui* ui) {
 
 void
 editor_ui_spawn(te_editor_ui* ui, te_world* editor_world) {
-    vec4 background_color;
-    theme_get_background_panel_color(background_color);
+    te_rect_widget* left_rect;
+    te_rect_widget* right_rect;
+    te_vec4 background_color;
+    te_vec2 tmp2;
+
+    editor_theme_get_background_panel_color(background_color);
 
     /* left panel */
-    te_rect_widget* left_rect = rect_widget_create();
+    left_rect = rect_widget_create();
     ui->left_rect = left_rect;
     {
         te_widget* widget = rect_widget_get_widget(left_rect);
-        widget_set_relative_position(widget, (vec2){0.0f, 0.0f});
-        widget_set_relative_size(widget, (vec2){theme_get_left_panel_width(), 1.0f});
+
+        vec2_set(0.0f, 0.0f, tmp2);
+        widget_set_relative_position(widget, tmp2);
+
+        vec2_set(editor_theme_get_left_panel_width(), 1.0f, tmp2);
+        widget_set_relative_size(widget, tmp2);
     }
     rect_widget_set_color(left_rect, background_color);
 
     /* right panel */
-    te_rect_widget* right_rect = rect_widget_create();
+    right_rect = rect_widget_create();
     ui->right_rect = right_rect;
     {
         te_widget* widget = rect_widget_get_widget(right_rect);
-        widget_set_relative_position(
-            widget, (vec2){1.0f - theme_get_right_panel_width(), 0.0f});
-        widget_set_relative_size(widget, (vec2){theme_get_left_panel_width(), 1.0f});
+
+        vec2_set(1.0f - editor_theme_get_right_panel_width(), 0.0f, tmp2);
+        widget_set_relative_position(widget, tmp2);
+
+        vec2_set(editor_theme_get_left_panel_width(), 1.0f, tmp2);
+        widget_set_relative_size(widget, tmp2);
     }
     rect_widget_set_color(right_rect, background_color);
 
@@ -82,19 +94,28 @@ editor_ui_spawn(te_editor_ui* ui, te_world* editor_world) {
 
 void
 editor_ui_set_visibility(te_editor_ui* ui, bool is_visible) {
+    te_widget* left_widget;
+    te_widget* right_widget;
+    te_vec2 tmp2;
+
     if (ui->left_rect == NULL) {
         return;
     }
 
-    te_widget* left_widget = rect_widget_get_widget(ui->left_rect);
-    te_widget* right_widget = rect_widget_get_widget(ui->right_rect);
+    left_widget = rect_widget_get_widget(ui->left_rect);
+    right_widget = rect_widget_get_widget(ui->right_rect);
     if (is_visible) {
-        widget_set_relative_position(left_widget, (vec2){0.0f, 0.0f});
-        widget_set_relative_position(
-            right_widget, (vec2){1.0f - theme_get_right_panel_width(), 0.0f});
+        vec2_set(0.0f, 0.0f, tmp2);
+        widget_set_relative_position(left_widget, tmp2);
+
+        vec2_set(1.0f - editor_theme_get_right_panel_width(), 0.0f, tmp2);
+        widget_set_relative_position(right_widget, tmp2);
     } else {
-        widget_set_relative_position(left_widget, (vec2){0.0f, 1.0f});
-        widget_set_relative_position(right_widget, (vec2){1.0f, 1.0f});
+        vec2_set(0.0f, 1.0f, tmp2);
+        widget_set_relative_position(left_widget, tmp2);
+
+        vec2_set(1.0f, 1.0f, tmp2);
+        widget_set_relative_position(right_widget, tmp2);
 
         world_inspector_select_obj(ui->world_inspector, NULL, NULL);
         property_inspector_hide(ui->property_inspector);

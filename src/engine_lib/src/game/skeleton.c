@@ -19,9 +19,9 @@ typedef struct te_skeleton_bone {
     char* name;
 
     /* transform of the node relative to its parent */
-    vec3 position;
-    vec3 rotation; /* in degrees */
-    vec3 scale;
+    te_vec3 position;
+    te_vec3 rotation; /* in degrees */
+    te_vec3 scale;
 
     unsigned int child_count;
     unsigned int parent_idx; /* if has no parent then 0xFFFFFFFF */
@@ -73,7 +73,7 @@ struct te_skeleton {
 typedef struct te_skeleton_animation_keyframe {
     enum te_keyframe_interpolation_type interpolation_type;
     float time;
-    vec4 value; /* for rotation quaternion, for others 4th component is zero */
+    te_vec4 value; /* for rotation quaternion, for others 4th component is zero */
 } te_skeleton_animation_keyframe;
 
 /* animates transform of a single skeleton bone */
@@ -276,21 +276,21 @@ skeleton_bone_interpolate_pos_scale(
         left_idx = keyframe_count - 1;
     }
 
-    vec3 out_value;
+    te_vec3 out_value;
 
     if (left_idx == keyframe_count - 1
         || keyframes[left_idx].interpolation_type == TE_KIT_STEP) {
-        glm_vec3_copy(keyframes[left_idx].value, out_value);
+        vec3_copy(keyframes[left_idx].value, out_value);
     } else {
         const float factor = (curr_time_sec - keyframes[left_idx].time)
                              / (keyframes[left_idx + 1].time - keyframes[left_idx].time);
 
         if (keyframes[left_idx].interpolation_type == TE_KIT_LINEAR) {
-            glm_vec3_lerp(
+            vec3_lerp(
                 keyframes[left_idx].value, keyframes[left_idx + 1].value, factor, out_value);
         } else {
             float s = glm_smoothstep(0.0f, 1.0f, factor);
-            glm_vec3_lerp(
+            vec3_lerp(
                 keyframes[left_idx].value, keyframes[left_idx + 1].value, s, out_value);
         }
     }
@@ -330,15 +330,15 @@ skeleton_bone_interpolate_rotation(
         left_idx = keyframe_count - 1;
     }
 
-    vec4 from;
-    glm_vec4_copy(keyframes[left_idx].value, from);
+    te_vec4 from;
+    vec4_copy(keyframes[left_idx].value, from);
 
     if (left_idx == keyframe_count - 1
         || keyframes[left_idx].interpolation_type == TE_KIT_STEP) {
         mat4 mat;
         glm_quat_mat4(from, mat);
 
-        vec3 rot;
+        te_vec3 rot;
         glm_euler_angles(mat, rot);
         rot[0] = glm_deg(rot[0]);
         rot[1] = glm_deg(rot[1]);
@@ -351,10 +351,10 @@ skeleton_bone_interpolate_rotation(
     const float factor = (curr_time_sec - keyframes[left_idx].time)
                          / (keyframes[left_idx + 1].time - keyframes[left_idx].time);
 
-    vec4 to;
-    glm_vec4_copy(keyframes[left_idx + 1].value, to);
+    te_vec4 to;
+    vec4_copy(keyframes[left_idx + 1].value, to);
 
-    vec4 result;
+    te_vec4 result;
 
     if (keyframes[left_idx].interpolation_type == TE_KIT_LINEAR) {
         glm_quat_slerp(from, to, factor, result);
@@ -366,7 +366,7 @@ skeleton_bone_interpolate_rotation(
     mat4 mat;
     glm_quat_mat4(result, mat);
 
-    vec3 rot;
+    te_vec3 rot;
     glm_euler_angles(mat, rot);
     rot[0] = glm_deg(rot[0]);
     rot[1] = glm_deg(rot[1]);
@@ -434,7 +434,7 @@ update_skeleton_bone_skinning_mat(
         const float factor =
             skeleton->curr_anim_blend_time_sec / skeleton->anim_blend_time_sec;
         for (unsigned int i = 0; i < 4; i++) {
-            glm_vec4_lerp(
+            vec4_lerp(
                 skeleton->skinning_mats[*bone_idx][i], mat1[i], factor,
                 skeleton->skinning_mats[*bone_idx][i]);
         }
@@ -531,7 +531,7 @@ load_bone_anim(te_skeleton_animation* skel_anim, unsigned int bone_anim_idx, FIL
         /* count keyframes */
         unsigned int keyframe_count = 0;
         float timestamp = 0.0f;
-        vec4 value;
+        te_vec4 value;
         while (1) {
             fread(&timestamp, sizeof(timestamp), 1, fp);
             if (timestamp < -0.5f) {

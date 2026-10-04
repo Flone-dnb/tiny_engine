@@ -312,7 +312,7 @@ x11_gamepad_axis_in_deadzone(te_x11_gamepad* gamepad, int axis, int value) {
     }
 
     float normalized = ((float)value - center) / range;
-    return fabsf(normalized) < TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE;
+    return math_abs(normalized) < TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE;
 }
 
 static enum te_gamepad_button

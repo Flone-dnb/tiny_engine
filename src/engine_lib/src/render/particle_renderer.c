@@ -4,7 +4,7 @@
 #include <render/render_data_array.h>
 #include <render/shader_manager.h>
 #include <glad/gl.h>
-#include <cglm/vec2.h>
+#include <math/vec2.h>
 
 #define PARTICLE_QUAD_GL_VERT_ATTRIB_PTR                                                      \
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vec2), NULL);
@@ -67,11 +67,11 @@ particle_renderer_create(te_renderer* renderer) {
 
     /* create quad geometry */
     {
-        vec2 vertices[4]; /* XY pos, ZW uv */
-        glm_vec2_copy((vec2){0.0f, 0.0f}, &vertices[0][0]);
-        glm_vec2_copy((vec2){0.0f, 1.0f}, &vertices[1][0]);
-        glm_vec2_copy((vec2){1.0f, 1.0f}, &vertices[2][0]);
-        glm_vec2_copy((vec2){1.0f, 0.0f}, &vertices[3][0]);
+        te_vec2 vertices[4]; /* XY pos, ZW uv */
+        vec2_copy((vec2){0.0f, 0.0f}, &vertices[0][0]);
+        vec2_copy((vec2){0.0f, 1.0f}, &vertices[1][0]);
+        vec2_copy((vec2){1.0f, 1.0f}, &vertices[2][0]);
+        vec2_copy((vec2){1.0f, 0.0f}, &vertices[3][0]);
         const unsigned short indices[6] = {0, 2, 1, 0, 3, 2};
 
 #if !defined(ENGINE_GLES)

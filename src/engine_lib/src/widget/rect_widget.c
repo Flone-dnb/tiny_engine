@@ -25,9 +25,9 @@ struct te_rect_widget {
 
     /* allows "cutting" part of the rectangle during the rendering
      * XY stores clip start in range [0.0; 1.0] and ZW stores clip size in the same range */
-    vec4 clip_rect;
+    te_vec4 clip_rect;
 
-    vec4 color;
+    te_vec4 color;
 
     /* stores invalid value if not being rendered */
     unsigned int render_data_handle;
@@ -57,12 +57,12 @@ rect_widget_create(void) {
         prv_rect_widget_on_size_changed, prv_rect_widget_on_before_base_destroyed, NULL, NULL,
         prv_rect_widget_on_after_spawned, prv_rect_widget_on_before_despawned,
         prv_rect_widget_on_window_size_changed);
-    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, rect_widget->color);
+    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, rect_widget->color);
     rect_widget->tex_relative_path = NULL;
     rect_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
     rect_widget->is_rect_widget_destroy = false;
 
-    glm_vec4_copy((vec4){0.0f, 0.0f, 1.0f, 1.0f}, rect_widget->clip_rect);
+    vec4_copy((vec4){0.0f, 0.0f, 1.0f, 1.0f}, rect_widget->clip_rect);
 
     return rect_widget;
 }
@@ -105,8 +105,8 @@ rect_widget_get_widget(te_rect_widget* rect_widget) {
 }
 
 void
-rect_widget_set_color(te_rect_widget* rect_widget, vec4 color) {
-    glm_vec4_copy(color, rect_widget->color);
+rect_widget_set_color(te_rect_widget* rect_widget, te_vec4 color) {
+    vec4_copy(color, rect_widget->color);
 
     if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
         te_world* world = widget_get_world(rect_widget->widget);
@@ -117,13 +117,13 @@ rect_widget_set_color(te_rect_widget* rect_widget, vec4 color) {
 
         te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
             world_get_widget_renderer(world), rect_widget->render_data_handle);
-        glm_vec4_copy(rect_widget->color, data->color);
+        vec4_copy(rect_widget->color, data->color);
     }
 }
 
 void
-rect_widget_get_color(te_rect_widget* rect_widget, vec4 out) {
-    glm_vec4_copy(rect_widget->color, out);
+rect_widget_get_color(te_rect_widget* rect_widget, te_vec4 out) {
+    vec4_copy(rect_widget->color, out);
 }
 
 void
@@ -204,8 +204,8 @@ rect_widget_get_texture(te_rect_widget* rect_widget) {
 }
 
 void
-rect_widget_set_clip_rect(te_rect_widget* rect_widget, vec4 clip_rect) {
-    glm_vec4_copy(clip_rect, rect_widget->clip_rect);
+rect_widget_set_clip_rect(te_rect_widget* rect_widget, te_vec4 clip_rect) {
+    vec4_copy(clip_rect, rect_widget->clip_rect);
 
     if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
         te_world* world = widget_get_world(rect_widget->widget);
@@ -216,13 +216,13 @@ rect_widget_set_clip_rect(te_rect_widget* rect_widget, vec4 clip_rect) {
 
         te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
             world_get_widget_renderer(world), rect_widget->render_data_handle);
-        glm_vec4_copy(clip_rect, data->clip_rect);
+        vec4_copy(clip_rect, data->clip_rect);
     }
 }
 
 void
-rect_widget_get_clip_rect(te_rect_widget* rect_widget, vec4 out) {
-    glm_vec4_copy(rect_widget->clip_rect, out);
+rect_widget_get_clip_rect(te_rect_widget* rect_widget, te_vec4 out) {
+    vec4_copy(rect_widget->clip_rect, out);
 }
 
 static void
@@ -307,7 +307,7 @@ prv_rect_widget_update_non_tex_render_data(te_rect_widget* rect_widget) {
     te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
         world_get_widget_renderer(world), rect_widget->render_data_handle);
 
-    glm_vec4_copy(rect_widget->color, data->color);
+    vec4_copy(rect_widget->color, data->color);
 
     unsigned int window_width;
     unsigned int window_height;
@@ -315,12 +315,12 @@ prv_rect_widget_update_non_tex_render_data(te_rect_widget* rect_widget) {
 
     widget_get_screen_position(rect_widget->widget, data->pos_pix);
     widget_get_screen_size(rect_widget->widget, data->size_pix);
-    glm_vec2_mul(
+    vec2_mul(
         data->pos_pix, (vec2){(float)window_width, (float)window_height}, data->pos_pix);
-    glm_vec2_mul(
+    vec2_mul(
         data->size_pix, (vec2){(float)window_width, (float)window_height}, data->size_pix);
 
-    glm_vec4_copy(rect_widget->clip_rect, data->clip_rect);
+    vec4_copy(rect_widget->clip_rect, data->clip_rect);
 }
 
 static void
@@ -369,22 +369,22 @@ prv_rect_widget_on_window_size_changed(void* this) {
 }
 
 static void
-prv_rect_widget_set_position(te_rect_widget* rect_widget, vec2 pos) {
+prv_rect_widget_set_position(te_rect_widget* rect_widget, te_vec2 pos) {
     widget_set_relative_position(rect_widget->widget, pos);
 }
 
 static void
-prv_rect_widget_get_position(te_rect_widget* rect_widget, vec2 out) {
+prv_rect_widget_get_position(te_rect_widget* rect_widget, te_vec2 out) {
     widget_get_relative_position(rect_widget->widget, out);
 }
 
 static void
-prv_rect_widget_set_size(te_rect_widget* rect_widget, vec2 size) {
+prv_rect_widget_set_size(te_rect_widget* rect_widget, te_vec2 size) {
     widget_set_relative_size(rect_widget->widget, size);
 }
 
 static void
-prv_rect_widget_get_size(te_rect_widget* rect_widget, vec2 out) {
+prv_rect_widget_get_size(te_rect_widget* rect_widget, te_vec2 out) {
     widget_get_relative_size(rect_widget->widget, out);
 }
 

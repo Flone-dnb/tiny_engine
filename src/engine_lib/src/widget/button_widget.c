@@ -13,9 +13,9 @@
 #define BUTTON_WIDGET_TEX_LOAD_OPTION TE_TLO_NO_MIPMAPS
 
 struct te_button_widget {
-    vec4 color;
-    vec4 color_hovered;
-    vec4 color_pressed;
+    te_vec4 color;
+    te_vec4 color_hovered;
+    te_vec4 color_pressed;
 
     te_widget* widget;
 
@@ -50,11 +50,11 @@ static void prv_button_widget_on_before_despawned(void* this);
 
 /* interactable callbacks */
 static void prv_button_widget_on_mouse_button_pressed(
-    void* this, enum te_mouse_button button, vec2 cursor_pos);
+    void* this, enum te_mouse_button button, te_vec2 cursor_pos);
 static void prv_button_widget_on_mouse_button_released(
-    void* this, enum te_mouse_button button, vec2 cursor_pos);
-static void prv_button_widget_on_cursor_entered(void* this, vec2 cursor_pos);
-static void prv_button_widget_on_cursor_left(void* this, vec2 cursor_pos);
+    void* this, enum te_mouse_button button, te_vec2 cursor_pos);
+static void prv_button_widget_on_cursor_entered(void* this, te_vec2 cursor_pos);
+static void prv_button_widget_on_cursor_left(void* this, te_vec2 cursor_pos);
 
 static void prv_button_widget_register_render_data(te_button_widget* button_widget);
 static void prv_button_widget_unregister_render_data(te_button_widget* button_widget);
@@ -67,9 +67,9 @@ button_widget_create(void) {
         button_widget, button_widget_get_type_id, prv_button_widget_on_pos_changed,
         prv_button_widget_on_size_changed, prv_button_widget_on_before_base_destroyed, NULL,
         NULL, prv_button_widget_on_after_spawned, prv_button_widget_on_before_despawned, NULL);
-    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color);
-    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color_hovered);
-    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color_pressed);
+    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color);
+    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color_hovered);
+    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color_pressed);
 
     button_widget->on_clicked = NULL;
     button_widget->on_right_clicked = NULL;
@@ -210,22 +210,22 @@ button_widget_get_widget(te_button_widget* button_widget) {
 }
 
 static void
-prv_button_widget_set_position(te_button_widget* button_widget, vec2 pos) {
+prv_button_widget_set_position(te_button_widget* button_widget, te_vec2 pos) {
     widget_set_relative_position(button_widget->widget, pos);
 }
 
 static void
-prv_button_widget_get_position(te_button_widget* button_widget, vec2 out) {
+prv_button_widget_get_position(te_button_widget* button_widget, te_vec2 out) {
     widget_get_relative_position(button_widget->widget, out);
 }
 
 static void
-prv_button_widget_set_size(te_button_widget* button_widget, vec2 size) {
+prv_button_widget_set_size(te_button_widget* button_widget, te_vec2 size) {
     widget_set_relative_size(button_widget->widget, size);
 }
 
 static void
-prv_button_widget_get_size(te_button_widget* button_widget, vec2 out) {
+prv_button_widget_get_size(te_button_widget* button_widget, te_vec2 out) {
     widget_get_relative_size(button_widget->widget, out);
 }
 
@@ -311,8 +311,8 @@ button_widget_set_on_right_clicked(
 }
 
 void
-button_widget_set_color(te_button_widget* button_widget, vec4 color) {
-    glm_vec4_copy(color, button_widget->color);
+button_widget_set_color(te_button_widget* button_widget, te_vec4 color) {
+    vec4_copy(color, button_widget->color);
 
     if (widget_get_world(button_widget->widget) != NULL
         && !button_widget->is_cursor_inside_widget) {
@@ -321,8 +321,8 @@ button_widget_set_color(te_button_widget* button_widget, vec4 color) {
 }
 
 void
-button_widget_set_color_hovered(te_button_widget* button_widget, vec4 color) {
-    glm_vec4_copy(color, button_widget->color_hovered);
+button_widget_set_color_hovered(te_button_widget* button_widget, te_vec4 color) {
+    vec4_copy(color, button_widget->color_hovered);
 
     if (widget_get_world(button_widget->widget) != NULL
         && button_widget->is_cursor_inside_widget) {
@@ -331,23 +331,23 @@ button_widget_set_color_hovered(te_button_widget* button_widget, vec4 color) {
 }
 
 void
-button_widget_set_color_pressed(te_button_widget* button_widget, vec4 color) {
-    glm_vec4_copy(color, button_widget->color_pressed);
+button_widget_set_color_pressed(te_button_widget* button_widget, te_vec4 color) {
+    vec4_copy(color, button_widget->color_pressed);
 }
 
 void
-button_widget_get_color(te_button_widget* button_widget, vec4 out) {
-    glm_vec4_copy(button_widget->color, out);
+button_widget_get_color(te_button_widget* button_widget, te_vec4 out) {
+    vec4_copy(button_widget->color, out);
 }
 
 void
-button_widget_get_color_hovered(te_button_widget* button_widget, vec4 out) {
-    glm_vec4_copy(button_widget->color_hovered, out);
+button_widget_get_color_hovered(te_button_widget* button_widget, te_vec4 out) {
+    vec4_copy(button_widget->color_hovered, out);
 }
 
 void
-button_widget_get_color_pressed(te_button_widget* button_widget, vec4 out) {
-    glm_vec4_copy(button_widget->color_pressed, out);
+button_widget_get_color_pressed(te_button_widget* button_widget, te_vec4 out) {
+    vec4_copy(button_widget->color_pressed, out);
 }
 
 void
@@ -505,7 +505,7 @@ button_widget_enter_pressed_state(te_button_widget* button_widget) {
 
 static void
 prv_button_widget_on_mouse_button_pressed(
-    void* this, enum te_mouse_button button, vec2 cursor_pos) {
+    void* this, enum te_mouse_button button, te_vec2 cursor_pos) {
     (void)cursor_pos;
     te_button_widget* button_widget = this;
 
@@ -517,7 +517,7 @@ prv_button_widget_on_mouse_button_pressed(
 
 static void
 prv_button_widget_on_mouse_button_released(
-    void* this, enum te_mouse_button button, vec2 cursor_pos) {
+    void* this, enum te_mouse_button button, te_vec2 cursor_pos) {
     (void)cursor_pos;
     te_button_widget* button_widget = this;
 
@@ -538,7 +538,7 @@ prv_button_widget_on_mouse_button_released(
 }
 
 static void
-prv_button_widget_on_cursor_entered(void* this, vec2 cursor_pos) {
+prv_button_widget_on_cursor_entered(void* this, te_vec2 cursor_pos) {
     (void)cursor_pos;
     te_button_widget* button_widget = this;
 
@@ -547,7 +547,7 @@ prv_button_widget_on_cursor_entered(void* this, vec2 cursor_pos) {
 }
 
 static void
-prv_button_widget_on_cursor_left(void* this, vec2 cursor_pos) {
+prv_button_widget_on_cursor_left(void* this, te_vec2 cursor_pos) {
     (void)cursor_pos;
     te_button_widget* button_widget = this;
 

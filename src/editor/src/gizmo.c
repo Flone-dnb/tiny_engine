@@ -45,13 +45,13 @@ create_gizmo_model(te_gizmo* gizmo, unsigned int axis_idx) {
 
 static void
 update_gizmo_rotation(te_gizmo* gizmo) {
-    vec3 rot;
+    te_vec3 rot;
     te_model* parent = model_get_parent(gizmo->target);
     if (parent == NULL) {
         if (gizmo->mode == TE_GM_ROTATE || gizmo->mode == TE_GM_SCALE) {
             model_get_rotation(gizmo->target, rot);
         } else {
-            glm_vec3_zero(rot);
+            vec3_zero(rot);
         }
     } else {
         model_get_rotation(parent, rot);
@@ -64,6 +64,8 @@ update_gizmo_rotation(te_gizmo* gizmo) {
 
 static void
 spawn_gizmo_models(te_gizmo* gizmo, te_world* world) {
+    te_vec3 target_pos;
+
     /* only 1 model should call this */
     model_set_custom_on_before_destroyed(gizmo->model_z, on_before_model_destroyed);
 
@@ -71,7 +73,6 @@ spawn_gizmo_models(te_gizmo* gizmo, te_world* world) {
     world_spawn_game_object(world, gizmo->model_y, model_get_game_object_info());
     world_spawn_game_object(world, gizmo->model_z, model_get_game_object_info());
 
-    vec3 target_pos;
     model_get_world_position(gizmo->target, target_pos);
 
     model_set_position(gizmo->model_x, target_pos);
@@ -120,6 +121,8 @@ gizmo_get_target(te_gizmo* gizmo) {
 
 void
 gizmo_set_mode(te_gizmo* gizmo, enum te_gizmo_mode mode) {
+    te_world* world;
+
     if (gizmo->mode == mode) {
         return;
     }
@@ -128,7 +131,7 @@ gizmo_set_mode(te_gizmo* gizmo, enum te_gizmo_mode mode) {
 
     model_set_custom_on_before_destroyed(gizmo->model_z, NULL);
 
-    te_world* world = model_get_world(gizmo->model_x);
+    world = model_get_world(gizmo->model_x);
 
     world_despawn_game_object(world, gizmo->model_x, model_get_game_object_info());
     world_despawn_game_object(world, gizmo->model_y, model_get_game_object_info());
@@ -179,63 +182,68 @@ gizmo_is_grabbed(te_gizmo* gizmo) {
 
 void
 gizmo_move(te_gizmo* gizmo, te_camera* camera, float x_offset, float y_offset) {
+    te_vec3 right;
+    te_vec3 up;
+    te_vec3 dir;
+    te_vec3 gizmo_offset;
+    mat4* world_mat;
+
     y_offset *= -1.0f;
 
-    vec3 right;
     camera_get_right(camera, right);
 
-    vec3 up;
     camera_get_up(camera, up);
 
-    glm_vec3_scale(right, x_offset, right);
-    glm_vec3_scale(up, y_offset, up);
+    vec3_muls(right, x_offset, right);
+    vec3_muls(up, y_offset, up);
 
-    vec3 dir;
-    glm_vec3_add(right, up, dir);
-    glm_vec3_normalize(dir);
+    vec3_add(right, up, dir);
+    vec3_normalize(dir);
 
-    mat4* world_mat = prv_model_get_world_mat_tmp(gizmo->target);
+    world_mat = prv_model_get_world_mat_tmp(gizmo->target);
 
-    vec3 gizmo_offset;
-    glm_vec3_zero(gizmo_offset);
+    vec3_zero(gizmo_offset);
     if (gizmo->grab_x) {
-        gizmo_offset[0] = glm_vec3_dot(dir, (*world_mat)[0]);
+        gizmo_offset[0] = vec3_dot(dir, (*world_mat)[0]);
     } else if (gizmo->grab_y) {
-        gizmo_offset[1] = glm_vec3_dot(dir, (*world_mat)[1]);
+        gizmo_offset[1] = vec3_dot(dir, (*world_mat)[1]);
     } else if (gizmo->grab_z) {
-        gizmo_offset[2] = glm_vec3_dot(dir, (*world_mat)[2]);
+        gizmo_offset[2] = vec3_dot(dir, (*world_mat)[2]);
     }
 
     if (gizmo->mode == TE_GM_MOVE) {
-        glm_vec3_scale(gizmo_offset, 0.01f * fabsf(x_offset + y_offset), gizmo_offset);
+        te_vec3 pos;
+        te_vec3 target_pos;
 
-        vec3 pos;
+        vec3_muls(gizmo_offset, 0.01f * math_abs(x_offset + y_offset), gizmo_offset);
+
         model_get_position(gizmo->target, pos);
-        glm_vec3_add(pos, gizmo_offset, pos);
+        vec3_add(pos, gizmo_offset, pos);
 
         model_set_position(gizmo->target, pos);
 
-        vec3 target_pos;
         model_get_world_position(gizmo->target, target_pos);
         model_set_position(gizmo->model_x, target_pos);
         model_set_position(gizmo->model_y, target_pos);
         model_set_position(gizmo->model_z, target_pos);
     } else if (gizmo->mode == TE_GM_ROTATE) {
-        glm_vec3_scale(gizmo_offset, 0.5f * fabsf(x_offset + y_offset), gizmo_offset);
+        te_vec3 rot;
 
-        vec3 rot;
+        vec3_muls(gizmo_offset, 0.5f * math_abs(x_offset + y_offset), gizmo_offset);
+
         model_get_rotation(gizmo->target, rot);
-        glm_vec3_add(rot, gizmo_offset, rot);
+        vec3_add(rot, gizmo_offset, rot);
 
         model_set_rotation(gizmo->target, rot);
 
         update_gizmo_rotation(gizmo);
     } else if (gizmo->mode == TE_GM_SCALE) {
-        glm_vec3_scale(gizmo_offset, 0.005f * fabsf(x_offset + y_offset), gizmo_offset);
+        te_vec3 scale;
 
-        vec3 scale;
+        vec3_muls(gizmo_offset, 0.005f * math_abs(x_offset + y_offset), gizmo_offset);
+
         model_get_scale(gizmo->target, scale);
-        glm_vec3_add(scale, gizmo_offset, scale);
+        vec3_add(scale, gizmo_offset, scale);
 
         model_set_scale(gizmo->target, scale);
     }
@@ -264,15 +272,19 @@ static void
 get_geometry(
     te_model* model, te_vertex_pack** vertices, unsigned short** indices,
     unsigned int* index_count, bool* free_geometry) {
+    size_t axis_idx;
+    unsigned int vert_count;
+    unsigned int k;
+
+    const float half_width = 1.0f;
+    const float half = 0.125f;
+
     te_gizmo* gizmo = model_get_custom_ptr(model);
 
     /* create geometry of single axis */
     (*free_geometry) = true;
 
-    const float half_width = 1.0f;
-    const float half = 0.125f;
-
-    const unsigned int vert_count = gizmo->mode == TE_GM_MOVE ? 24 : 24 * 2;
+    vert_count = gizmo->mode == TE_GM_MOVE ? 24 : 24 * 2;
     (*vertices) = vertex_pack_create(vert_count, false);
 
     (*index_count) = gizmo->mode == TE_GM_MOVE ? 36 : 36 * 2;
@@ -284,27 +296,26 @@ get_geometry(
         /* add new shape near the origin */
         generate_base(half * 2.0f, half * 2.0f, (*vertices), (*indices), 24, 36, 24);
 
-        for (unsigned int k = 24; k < 24 * 2; k++) {
+        for (k = 24; k < 24 * 2; k++) {
             unsigned char* data = (*vertices)->data
                                   + ((*vertices)->vertex_sizeof * k
                                      + (*vertices)->attribute_offsets[TE_VA_POSITION]);
-            glm_vec3_add((float*)data, (vec3){half * 2.0f, 0.0f, 0.0f}, (float*)data);
+            vec3_add((float*)data, (vec3){half * 2.0f, 0.0f, 0.0f}, (float*)data);
         }
     } else if (gizmo->mode == TE_GM_SCALE) {
         /* add new shape */
         generate_base(half * 2.0f, half * 2.0f, (*vertices), (*indices), 24, 36, 24);
 
-        for (unsigned int k = 24; k < 24 * 2; k++) {
+        for (k = 24; k < 24 * 2; k++) {
             unsigned char* data = (*vertices)->data
                                   + ((*vertices)->vertex_sizeof * k
                                      + (*vertices)->attribute_offsets[TE_VA_POSITION]);
-            glm_vec3_add(
-                (float*)data, (vec3){half_width * 2.0f + half, 0.0f, 0.0f}, (float*)data);
+            vec3_add((float*)data, (vec3){half_width * 2.0f + half, 0.0f, 0.0f}, (float*)data);
         }
     }
 
     /* rotate according to the axis */
-    const size_t axis_idx = model_get_custom_value(model);
+    axis_idx = model_get_custom_value(model);
     if (axis_idx > 0) {
         mat4 rot_mat;
         if (axis_idx == 1) {
@@ -313,18 +324,18 @@ get_geometry(
             math_make_rotation_mat((vec3){0.0f, -90.0f, 0.0f}, rot_mat);
         }
 
-        for (unsigned int k = 0; k < vert_count; k++) {
+        for (k = 0; k < vert_count; k++) {
             unsigned char* data = (*vertices)->data
                                   + ((*vertices)->vertex_sizeof * k
                                      + (*vertices)->attribute_offsets[TE_VA_POSITION]);
 
-            vec4 pos;
-            glm_vec3_copy((float*)data, pos);
+            te_vec4 pos;
+            vec3_copy((float*)data, pos);
             pos[3] = 1.0f;
 
             glm_mat4_mulv(rot_mat, pos, pos);
 
-            glm_vec3_copy(pos, (float*)data);
+            vec3_copy(pos, (float*)data);
         }
     }
 }
@@ -333,173 +344,174 @@ static void
 generate_base(
     float half_width, float half, te_vertex_pack* vertices, unsigned short* indices,
     unsigned int start_vertex, unsigned int start_index, unsigned short index_offset) {
+    unsigned int i;
+
     const unsigned int vert_size = vertices->vertex_sizeof;
 
     /* init UVs */
     const unsigned char uv_offset = vertices->attribute_offsets[TE_VA_UV];
-    for (unsigned int i = 0; i < 24; i += 4) {
-        glm_vec2_make(
-            (vec2){1.0f, 1.0f},
-            (float*)(vertices->data + vert_size * (start_vertex + i) + uv_offset));
-        glm_vec2_make(
-            (vec2){0.0f, 1.0f},
+    for (i = 0; i < 24; i += 4) {
+        vec2_set(
+            1.0f, 1.0f, (float*)(vertices->data + vert_size * (start_vertex + i) + uv_offset));
+        vec2_set(
+            0.0f, 1.0f,
             (float*)(vertices->data + vert_size * (start_vertex + i + 1) + uv_offset));
-        glm_vec2_make(
-            (vec2){1.0f, 0.0f},
+        vec2_set(
+            1.0f, 0.0f,
             (float*)(vertices->data + vert_size * (start_vertex + i + 2) + uv_offset));
-        glm_vec2_make(
-            (vec2){0.0f, 0.0f},
+        vec2_set(
+            0.0f, 0.0f,
             (float*)(vertices->data + vert_size * (start_vertex + i + 3) + uv_offset));
     }
 
     /* init normals */
     const unsigned char normal_offset = vertices->attribute_offsets[TE_VA_NORMAL];
     unsigned int normal_i = 0;
-    for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make(
-            (vec3){1.0f, 0.0f, 0.0f},
+    for (i = normal_i; normal_i < i + 4; normal_i++) {
+        vec3_set(
+            1.0f, 0.0f, 0.0f,
             (float*)(vertices->data + vert_size * (start_vertex + normal_i) + normal_offset));
     }
-    for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make(
-            (vec3){-1.0f, 0.0f, 0.0f},
+    for (i = normal_i; normal_i < i + 4; normal_i++) {
+        vec3_set(
+            -1.0f, 0.0f, 0.0f,
             (float*)(vertices->data + vert_size * (start_vertex + normal_i) + normal_offset));
     }
-    for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make(
-            (vec3){0.0f, 1.0f, 0.0f},
+    for (i = normal_i; normal_i < i + 4; normal_i++) {
+        vec3_set(
+            0.0f, 1.0f, 0.0f,
             (float*)(vertices->data + vert_size * (start_vertex + normal_i) + normal_offset));
     }
-    for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make(
-            (vec3){0.0f, -1.0f, 0.0f},
+    for (i = normal_i; normal_i < i + 4; normal_i++) {
+        vec3_set(
+            0.0f, -1.0f, 0.0f,
             (float*)(vertices->data + vert_size * (start_vertex + normal_i) + normal_offset));
     }
-    for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make(
-            (vec3){0.0f, 0.0f, 1.0f},
+    for (i = normal_i; normal_i < i + 4; normal_i++) {
+        vec3_set(
+            0.0f, 0.0f, 1.0f,
             (float*)(vertices->data + vert_size * (start_vertex + normal_i) + normal_offset));
     }
-    for (unsigned int i = normal_i; normal_i < i + 4; normal_i++) {
-        glm_vec3_make(
-            (vec3){.0f, 0.0f, -1.0f},
+    for (i = normal_i; normal_i < i + 4; normal_i++) {
+        vec3_set(
+            0.0f, 0.0f, -1.0f,
             (float*)(vertices->data + vert_size * (start_vertex + normal_i) + normal_offset));
     }
 
     /* init positions */
     const unsigned int pos_offset = vertices->attribute_offsets[TE_VA_POSITION];
     /* +X face */
-    unsigned int i = 0;
-    glm_vec3_make(
-        (vec3){half_width, -half, -half},
+    i = 0;
+    vec3_set(
+        half_width, -half, -half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make(
-        (vec3){half_width, half, -half},
+    vec3_set(
+        half_width, half, -half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make(
-        (vec3){half_width, -half, half},
+    vec3_set(
+        half_width, -half, half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make(
-        (vec3){half_width, half, half},
+    vec3_set(
+        half_width, half, half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
 
     /* -X face */
-    glm_vec3_make(
-        (vec3){-half_width, half, -half},
+    vec3_set(
+        -half_width, half, -half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make(
-        (vec3){-half_width, -half, -half},
+    vec3_set(
+        -half_width, -half, -half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make(
-        (vec3){-half_width, half, half},
+    vec3_set(
+        -half_width, half, half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make(
-        (vec3){-half_width, -half, half},
+    vec3_set(
+        -half_width, -half, half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
 
     /* +Y face */
-    glm_vec3_make(
-        (vec3){half_width, half, -half},
+    vec3_set(
+        half_width, half, -half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make(
-        (vec3){-half_width, half, -half},
+    vec3_set(
+        -half_width, half, -half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make(
-        (vec3){half_width, half, half},
+    vec3_set(
+        half_width, half, half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make(
-        (vec3){-half_width, half, half},
+    vec3_set(
+        -half_width, half, half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
 
     /* -Y face */
-    glm_vec3_make(
-        (vec3){-half_width, -half, -half},
+    vec3_set(
+        -half_width, -half, -half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make(
-        (vec3){half_width, -half, -half},
+    vec3_set(
+        half_width, -half, -half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make(
-        (vec3){-half_width, -half, half},
+    vec3_set(
+        -half_width, -half, half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make(
-        (vec3){half_width, -half, half},
+    vec3_set(
+        half_width, -half, half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
 
     /* +Z face */
-    glm_vec3_make(
-        (vec3){-half_width, -half, half},
+    vec3_set(
+        -half_width, -half, half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make(
-        (vec3){half_width, -half, half},
+    vec3_set(
+        half_width, -half, half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make(
-        (vec3){-half_width, half, half},
+    vec3_set(
+        -half_width, half, half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make(
-        (vec3){half_width, half, half},
+    vec3_set(
+        half_width, half, half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
 
     /* -Z face */
-    glm_vec3_make(
-        (vec3){-half_width, half, -half},
+    vec3_set(
+        -half_width, half, -half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make(
-        (vec3){half_width, half, -half},
+    vec3_set(
+        half_width, half, -half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make(
-        (vec3){-half_width, -half, -half},
+    vec3_set(
+        -half_width, -half, -half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
-    glm_vec3_make(
-        (vec3){half_width, -half, -half},
+    vec3_set(
+        half_width, -half, -half,
         (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
     i += 1;
 
     /* make origin around 0 */
-    for (unsigned int k = 0; k < 24; k++) {
-        float* data = (float*)(vertices->data + vert_size * (start_vertex + k) + pos_offset);
+    for (i = 0; i < 24; i++) {
+        float* data = (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset);
         (*data) += half_width + half_width / 4.0f; /* modify X (pos[0]) */
     }
 

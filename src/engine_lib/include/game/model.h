@@ -1,8 +1,8 @@
 #pragma once
 
 #include <cglm/mat4.h>
-#include <cglm/vec2.h>
-#include <cglm/vec3.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
 
 typedef struct te_model te_model;
 struct te_world;
@@ -58,18 +58,18 @@ void vertex_pack_destroy(te_vertex_pack* pack);
 
 typedef struct te_model_vertex {
     /* NOTE: if changing this struct also update gl vertex attribute description and offsets */
-    vec3 pos;
-    vec3 normal;
-    vec2 uv;
+    te_vec3 pos;
+    te_vec3 normal;
+    te_vec2 uv;
     /* NOTE: if changing this struct also update gl vertex attribute description and offsets */
 } te_model_vertex;
 
 typedef unsigned char te_bone_index_t;
 typedef struct te_model_vertex_skinned {
     /* NOTE: if changing this struct also update gl vertex attribute description and offsets */
-    vec3 pos;
-    vec3 normal;
-    vec2 uv;
+    te_vec3 pos;
+    te_vec3 normal;
+    te_vec2 uv;
     te_bone_index_t bone_indices[4];
     float boneWeights[4];
     /* NOTE: if changing this struct also update gl vertex attribute description and offsets */
@@ -110,16 +110,16 @@ void model_set_custom_geometry_provider(
 void model_set_name(te_model* model, const char* name);
 const char* model_get_name(te_model* model);
 
-void model_set_position(te_model* model, vec3 position);
-void model_set_rotation(te_model* model, vec3 rotation); /* in degrees */
-void model_set_scale(te_model* model, vec3 scale);
+void model_set_position(te_model* model, te_vec3 position);
+void model_set_rotation(te_model* model, te_vec3 rotation); /* in degrees */
+void model_set_scale(te_model* model, te_vec3 scale);
 
-void model_get_position(te_model* model, vec3 out);
-void model_get_rotation(te_model* model, vec3 out); /* in degrees */
-void model_get_scale(te_model* model, vec3 out);
+void model_get_position(te_model* model, te_vec3 out);
+void model_get_rotation(te_model* model, te_vec3 out); /* in degrees */
+void model_get_scale(te_model* model, te_vec3 out);
 
 /* unlike @ref model_get_position this function considers possible parent models */
-void model_get_world_position(te_model* model, vec3 out);
+void model_get_world_position(te_model* model, te_vec3 out);
 
 /* sets path (relative to the `res` directory) to skeleton to use */
 void model_set_skeleton_path(te_model* model, const char* relative_path);
@@ -128,8 +128,8 @@ struct te_skeleton* model_get_skeleton(te_model* model);
 
 /* sets color of the model in the RGBA format in range [0.0; 1.0]
  * note that alpha will be ignored if @ref model_enable_transparency is disabled */
-void model_set_color(te_model* model, vec4 color);
-void model_get_color(te_model* model, vec4 out);
+void model_set_color(te_model* model, te_vec4 color);
+void model_get_color(te_model* model, te_vec4 out);
 
 /* sets path (relative to the `res` directory) to texture to use
  * the path string will be copied and stored in the model, specify NULL to remove texture */
@@ -140,12 +140,12 @@ void model_set_texture(te_model* model, const char* relative_path);
 const char* model_get_texture(te_model* model);
 
 /* sets texture tiling multiplier */
-void model_set_texture_tiling(te_model* model, vec2 tex_tiling);
-void model_get_texture_tiling(te_model* model, vec2 tex_tiling);
+void model_set_texture_tiling(te_model* model, te_vec2 tex_tiling);
+void model_get_texture_tiling(te_model* model, te_vec2 tex_tiling);
 
 /* sets offset for UV coordinates */
-void model_set_uv_offset(te_model* model, vec2 uv_offset);
-void model_get_uv_offset(te_model* model, vec2 uv_offset);
+void model_set_uv_offset(te_model* model, te_vec2 uv_offset);
+void model_get_uv_offset(te_model* model, te_vec2 uv_offset);
 
 /* disables backface culling */
 void model_set_disable_backface_culling(te_model* model, bool disable_backface_culling);

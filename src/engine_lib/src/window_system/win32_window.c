@@ -530,9 +530,9 @@ check_thumbstick_changes(
     XINPUT_GAMEPAD* new_state) {
 #define CHECK_GAMEPAD_AXIS(xaxis, engine_axis, sign)                                          \
     if (prev_state->xaxis != new_state->xaxis) {                                              \
-        float prev_abs_norm = fabsf(fmaxf(-1, (float)prev_state->xaxis / 32767));             \
+        float prev_abs_norm = math_abs(fmaxf(-1, (float)prev_state->xaxis / 32767));             \
         float norm = fmaxf(-1, (float)new_state->xaxis / 32767);                              \
-        float abs_norm = fabsf(norm);                                                         \
+        float abs_norm = math_abs(norm);                                                         \
         if (prev_abs_norm > TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE                                \
             || abs_norm > TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE) {                               \
             float pos = abs_norm < TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE                         \

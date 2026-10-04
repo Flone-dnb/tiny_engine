@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stdbool.h>
-#include <cglm/vec4.h>
-#include <cglm/vec3.h>
+#include <math/vec4.h>
+#include <math/vec3.h>
 
 typedef struct te_particle_emitter te_particle_emitter;
 
@@ -20,42 +20,42 @@ struct te_game_object_info* particle_emitter_get_game_object_info(void);
 void particle_emitter_set_name(te_particle_emitter* emitter, const char* name);
 const char* particle_emitter_get_name(te_particle_emitter* emitter);
 
-void particle_emitter_set_position(te_particle_emitter* emitter, vec3 pos);
-void particle_emitter_get_position(te_particle_emitter* emitter, vec3 out);
+void particle_emitter_set_position(te_particle_emitter* emitter, te_vec3 pos);
+void particle_emitter_get_position(te_particle_emitter* emitter, te_vec3 out);
 
 /* sets texture that particles will use */
 void particle_emitter_set_texture(te_particle_emitter* emitter, const char* relative_path);
 const char* particle_emitter_get_texture(te_particle_emitter* emitter);
 
 /* sets RGBA color of particles */
-void particle_emitter_set_color(te_particle_emitter* emitter, vec4 color);
-void particle_emitter_get_color(te_particle_emitter* emitter, vec4 out);
+void particle_emitter_set_color(te_particle_emitter* emitter, te_vec4 color);
+void particle_emitter_get_color(te_particle_emitter* emitter, te_vec4 out);
 
 /* sets RGBA color of particles during fade in (see @ref particle_emitter_set_fade_in_life_portion) */
-void particle_emitter_set_color_fade_in(te_particle_emitter* emitter, vec4 color);
-void particle_emitter_get_color_fade_in(te_particle_emitter* emitter, vec4 out);
+void particle_emitter_set_color_fade_in(te_particle_emitter* emitter, te_vec4 color);
+void particle_emitter_get_color_fade_in(te_particle_emitter* emitter, te_vec4 out);
 
 /* sets RGBA color of particles during fade out (see @ref particle_emitter_set_fade_out_life_portion) */
-void particle_emitter_set_color_fade_out(te_particle_emitter* emitter, vec4 color);
-void particle_emitter_get_color_fade_out(te_particle_emitter* emitter, vec4 out);
+void particle_emitter_set_color_fade_out(te_particle_emitter* emitter, te_vec4 color);
+void particle_emitter_get_color_fade_out(te_particle_emitter* emitter, te_vec4 out);
 
 /* sets velocity of particles when spawned */
-void particle_emitter_set_spawn_velocity(te_particle_emitter* emitter, vec3 velocity);
-void particle_emitter_get_spawn_velocity(te_particle_emitter* emitter, vec3 out);
+void particle_emitter_set_spawn_velocity(te_particle_emitter* emitter, te_vec3 velocity);
+void particle_emitter_get_spawn_velocity(te_particle_emitter* emitter, te_vec3 out);
 
 /* sets a non-negative "range value" that will be randomly added to spawn velocity per particle,
  * for example: for value 5 (on 1 axis) the spawn velocity will have a random value in range [-5; 5] added */
-void particle_emitter_set_spawn_velocity_rand(te_particle_emitter* emitter, vec3 rand);
-void particle_emitter_get_spawn_velocity_rand(te_particle_emitter* emitter, vec3 out);
+void particle_emitter_set_spawn_velocity_rand(te_particle_emitter* emitter, te_vec3 rand);
+void particle_emitter_get_spawn_velocity_rand(te_particle_emitter* emitter, te_vec3 out);
 
 /* sets a non-negative "range value" that will be randomly added to spawn position per particle,
  * for example: for value 5 (on 1 axis) the spawn position will have a random value in range [-5; 5] added */
-void particle_emitter_set_spawn_offset_rand(te_particle_emitter* emitter, vec3 rand);
-void particle_emitter_get_spawn_offset_rand(te_particle_emitter* emitter, vec3 out);
+void particle_emitter_set_spawn_offset_rand(te_particle_emitter* emitter, te_vec3 rand);
+void particle_emitter_get_spawn_offset_rand(te_particle_emitter* emitter, te_vec3 out);
 
 /* sets gravity that affects particles */
-void particle_emitter_set_gravity(te_particle_emitter* emitter, vec3 gravity);
-void particle_emitter_get_gravity(te_particle_emitter* emitter, vec3 out);
+void particle_emitter_set_gravity(te_particle_emitter* emitter, te_vec3 gravity);
+void particle_emitter_get_gravity(te_particle_emitter* emitter, te_vec3 out);
 
 /* sets size of particles */
 void particle_emitter_set_size(te_particle_emitter* emitter, float size);

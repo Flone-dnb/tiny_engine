@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <cglm/vec2.h>
+#include <math/vec2.h>
 #include <debug_console.h>
 #include <io/log.h>
 #include <io/filesystem.h>
@@ -354,11 +354,11 @@ prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
     }
 
     if (active_camera != NULL) {
-        vec3 pos;
+        te_vec3 pos;
         camera_get_world_position(active_camera, pos);
 
-        vec3 forward;
-        vec3 up;
+        te_vec3 forward;
+        te_vec3 up;
         camera_get_forward(active_camera, forward);
         camera_get_up(active_camera, up);
 
@@ -464,7 +464,7 @@ prv_game_manager_on_window_size_changed(te_game_manager* game_manager) {
 bool
 prv_game_manager_on_mouse_button_pressed(
     te_game_manager* game_manager, enum te_mouse_button button) {
-    vec2 cursor_pos;
+    te_vec2 cursor_pos;
     bool is_handled = false;
     for (unsigned int i = 0; i < game_manager->world_count; i++) {
         if (!world_get_cursor_relative_pos(game_manager->worlds[i], cursor_pos)) {
@@ -480,7 +480,7 @@ prv_game_manager_on_mouse_button_pressed(
 bool
 prv_game_manager_on_mouse_button_released(
     te_game_manager* game_manager, enum te_mouse_button button) {
-    vec2 cursor_pos;
+    te_vec2 cursor_pos;
     bool is_handled = false;
     for (unsigned int i = 0; i < game_manager->world_count; i++) {
         if (!world_get_cursor_relative_pos(game_manager->worlds[i], cursor_pos)) {
@@ -495,7 +495,7 @@ prv_game_manager_on_mouse_button_released(
 
 void
 prv_game_manager_on_mouse_moved(te_game_manager* game_manager) {
-    vec2 cursor_pos;
+    te_vec2 cursor_pos;
     for (unsigned int i = 0; i < game_manager->world_count; i++) {
         if (!world_get_cursor_relative_pos(game_manager->worlds[i], cursor_pos)) {
             continue;
@@ -506,7 +506,7 @@ prv_game_manager_on_mouse_moved(te_game_manager* game_manager) {
 
 void
 prv_game_manager_on_mouse_cursor_captured(te_game_manager* game_manager, bool captured) {
-    vec2 cursor_pos;
+    te_vec2 cursor_pos;
     for (unsigned int i = 0; i < game_manager->world_count; i++) {
         if (!world_get_cursor_relative_pos(game_manager->worlds[i], cursor_pos)) {
             continue;

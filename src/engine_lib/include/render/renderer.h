@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cglm/vec3.h>
+#include <math/vec3.h>
 
 typedef struct te_renderer te_renderer;
 
@@ -12,29 +12,29 @@ struct te_font_manager;
 /* groups data about all lighting used during the rendering */
 typedef struct te_light_params {
     /* color in RGB and intensity in A */
-    vec4 directional_light_color;
-    vec4 point_light_color;
+    te_vec4 directional_light_color;
+    te_vec4 point_light_color;
 
     /* position in XYZ and light radius in W */
-    vec4 point_light_pos_and_dist;
+    te_vec4 point_light_pos_and_dist;
 
     /* unit vector in the direction of the light source */
-    vec3 directional_light_direction;
+    te_vec3 directional_light_direction;
 
     /* note: if adding new variables add them to reflection
      * ------------------------------------------------------ */
 
-    vec3 ambient_light_color;
+    te_vec3 ambient_light_color;
 
     /* backbuffer (background) fill color */
-    vec3 clear_color;
+    te_vec3 clear_color;
 
     /* color if distance fog (if enabled  @ref distance_fog_range) */
-    vec3 distance_fog_color;
+    te_vec3 distance_fog_color;
 
     /* stores (-1, -1) if disabled otherwise stores start (min fog) and end (max fog)
      * positions in range [0.0; +inf] as distance from camera */
-    vec2 distance_fog_range;
+    te_vec2 distance_fog_range;
 } te_light_params;
 
 te_renderer* renderer_create(struct te_window* window);

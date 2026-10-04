@@ -125,10 +125,10 @@ save_texture(
 static void
 save_skeleton_node(cgltf_node* node, FILE* fp, cgltf_skin* skin) {
     mat4 transform;
-    vec3 rot;
-    vec4 loc;
+    te_vec3 rot;
+    te_vec4 loc;
     mat4 rot_mat;
-    vec3 scale;
+    te_vec3 scale;
     size_t i;
     unsigned int child_count;
     unsigned int name_len;
@@ -147,10 +147,10 @@ save_skeleton_node(cgltf_node* node, FILE* fp, cgltf_skin* skin) {
     /* prepare local transform */
     glm_mat4_identity(transform);
     if (node->has_matrix) {
-        glm_vec4_copy(&node->matrix[0], transform[0]);
-        glm_vec4_copy(&node->matrix[4], transform[1]);
-        glm_vec4_copy(&node->matrix[8], transform[2]);
-        glm_vec4_copy(&node->matrix[12], transform[3]);
+        vec4_copy(&node->matrix[0], transform[0]);
+        vec4_copy(&node->matrix[4], transform[1]);
+        vec4_copy(&node->matrix[8], transform[2]);
+        vec4_copy(&node->matrix[12], transform[3]);
     } else if (node->has_translation || node->has_rotation || node->has_scale) {
         mat4 translate_mat;
         mat4 rot_mat;
@@ -264,19 +264,19 @@ import_skeleton(
 }
 
 static bool
-keyframe_value_eps_cmp(vec4 a, vec4 b) {
+keyframe_value_eps_cmp(te_vec4 a, te_vec4 b) {
     const float eps = 0.002f;
-    return fabs(a[0] - b[0]) <= eps && fabs(a[1] - b[1]) <= eps && fabs(a[2] - b[2]) <= eps
-           && fabs(a[3] - b[3]) <= eps;
+    return math_abs(a[0] - b[0]) <= eps && math_abs(a[1] - b[1]) <= eps && math_abs(a[2] - b[2]) <= eps
+           && math_abs(a[3] - b[3]) <= eps;
 }
 
 static void
-keyframe_value_to_vec4(enum te_animation_channel_type channel_type, float* values, vec4 dst) {
+keyframe_value_to_vec4(enum te_animation_channel_type channel_type, float* values, te_vec4 dst) {
     if (channel_type == TE_ACT_ROTATION) {
         glm_quat_copy(values, dst);
         glm_quat_normalize(dst);
     } else {
-        glm_vec3_copy(values, dst);
+        vec3_copy(values, dst);
         dst[3] = 0.0f;
     }
 }
@@ -312,9 +312,9 @@ save_anim_channel(
     cgltf_accessor* output;
     cgltf_buffer_view* time_buffer_view;
     cgltf_buffer_view* value_buffer_view;
-    vec4 first_value;
-    vec4 prev_value;
-    vec4 step;
+    te_vec4 first_value;
+    te_vec4 prev_value;
+    te_vec4 step;
     float* values;
     float* timestamps;
     float duration_sec;
@@ -363,7 +363,7 @@ save_anim_channel(
                 "found an animation channel with an unexpected input type");
             abort();
         }
-        if (output->type != cgltf_type_vec3 && output->type != cgltf_type_vec4) {
+        if (output->type != cgltf_type_te_vec3 && output->type != cgltf_type_vec4) {
             log_error(
                 __FILE__, __LINE__,
                 "found an animation channel with an unexpected output type");
@@ -429,7 +429,7 @@ save_anim_channel(
         keyframe_value_to_vec4(channel_type, values, first_value);
 
         prev_timestamp = *timestamps;
-        glm_vec4_copy(first_value, prev_value);
+        vec4_copy(first_value, prev_value);
 
         if (*timestamps < 0.0f) {
             log_error_fmt(
@@ -445,32 +445,32 @@ save_anim_channel(
         step_found = false;
         write_keyframe = true;
         for (i = 1; i < output->count; i++) {
-            vec4 value;
+            te_vec4 value;
             keyframe_value_to_vec4(channel_type, values, value);
 
             if (i + 1 < output->count) {
                 if (!step_found) {
-                    vec4 diff;
-                    glm_vec4_sub(value, prev_value, diff);
-                    glm_vec4_copy(diff, step);
+                    te_vec4 diff;
+                    vec4_sub(value, prev_value, diff);
+                    vec4_copy(diff, step);
 
                     step_found = true;
                     write_keyframe = false;
                 } else {
-                    vec4 expected;
-                    glm_vec4_copy(prev_value, expected);
+                    te_vec4 expected;
+                    vec4_copy(prev_value, expected);
                     glm_vec4_add(expected, step, expected);
 
                     if (keyframe_value_eps_cmp(value, expected)) {
                         write_keyframe = false;
                     } else {
-                        vec4 diff;
+                        te_vec4 diff;
 
                         fwrite(&prev_timestamp, sizeof(float), 1, fp);
                         fwrite(prev_value, sizeof(vec4), 1, fp);
 
-                        glm_vec4_sub(value, prev_value, diff);
-                        glm_vec4_copy(diff, step);
+                        vec4_sub(value, prev_value, diff);
+                        vec4_copy(diff, step);
 
                         write_keyframe = false;
                     }
@@ -489,7 +489,7 @@ save_anim_channel(
                 abort();
             }
 
-            glm_vec4_copy(value, prev_value);
+            vec4_copy(value, prev_value);
             prev_timestamp = *timestamps;
 
             timestamps += 1;
@@ -769,7 +769,7 @@ save_primitive(
                 unsigned char* dst = &vertices->data
                                           [vertices->vertex_sizeof * i
                                            + vertices->attribute_offsets[TE_VA_POSITION]];
-                glm_vec3_copy(*(vec3*)data, (float*)dst);
+                vec3_copy(*(vec3*)data, (float*)dst);
                 data += stride;
             }
         }
@@ -788,7 +788,7 @@ save_primitive(
                 unsigned char* dst = &vertices->data
                                           [vertices->vertex_sizeof * i
                                            + vertices->attribute_offsets[TE_VA_NORMAL]];
-                glm_vec3_copy(*(vec3*)data, (float*)dst);
+                vec3_copy(*(vec3*)data, (float*)dst);
                 data += stride;
             }
         }
@@ -807,7 +807,7 @@ save_primitive(
                 unsigned char* dst =
                     &vertices->data
                          [vertices->vertex_sizeof * i + vertices->attribute_offsets[TE_VA_UV]];
-                glm_vec2_copy(*(vec2*)data, (float*)dst);
+                vec2_copy(*(vec2*)data, (float*)dst);
                 data += stride;
             }
         }
@@ -848,7 +848,7 @@ save_primitive(
                 unsigned char* dst = &vertices->data
                                           [vertices->vertex_sizeof * i
                                            + vertices->attribute_offsets[TE_VA_BONE_WEIGHTS]];
-                glm_vec4_copy(*(vec4*)data, (float*)dst);
+                vec4_copy(*(vec4*)data, (float*)dst);
                 data += stride;
             }
         }
@@ -876,8 +876,8 @@ save_primitive(
     /* save material */
     if (primitive->material != NULL) {
         /* color */
-        vec4 rgba;
-        glm_vec3_copy(primitive->material->pbr_metallic_roughness.base_color_factor, rgba);
+        te_vec4 rgba;
+        vec3_copy(primitive->material->pbr_metallic_roughness.base_color_factor, rgba);
         rgba[3] = 1.0f;
         model_set_color(model, rgba);
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cglm/mat4.h>
-#include <cglm/vec3.h>
+#include <math/vec3.h>
 
 struct te_game_manager;
 struct te_model;

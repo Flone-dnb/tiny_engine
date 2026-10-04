@@ -122,7 +122,7 @@ sound_is_finished_playing(te_sound* sound) {
 }
 
 void
-sound_set_3d_position(te_sound* sound, vec3 pos) {
+sound_set_3d_position(te_sound* sound, te_vec3 pos) {
     ma_sound_set_spatialization_enabled(
         &sound->ma_sound, 1); /* because we disable it by default */
 
@@ -140,7 +140,7 @@ sound_set_distance(te_sound* sound, float min, float max) {
 
 void
 prv_sound_manager_set_listener(
-    te_sound_manager* sound_manager, vec3 pos, vec3 forward, vec3 up) {
+    te_sound_manager* sound_manager, te_vec3 pos, te_vec3 forward, te_vec3 up) {
     ma_engine_listener_set_position(&sound_manager->ma_engine, 0, pos[0], pos[1], pos[2]);
     ma_engine_listener_set_direction(
         &sound_manager->ma_engine, 0, forward[0], forward[1], forward[2]);

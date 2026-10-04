@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
-#include <cglm/vec2.h>
+#include <math/vec2.h>
 #include <input/keyboard_button.h>
 #include <input/mouse_button.h>
 
@@ -56,18 +56,18 @@ const char* widget_get_name(te_widget* widget);
 
 /* sets position of the widget in range [0.0; 1.0] relative to the window's top-left corner
  * if the widget has a parent then this position becomes relative to the parent's position/size */
-void widget_set_relative_position(te_widget* widget, vec2 position);
-void widget_get_relative_position(te_widget* widget, vec2 out);
+void widget_set_relative_position(te_widget* widget, te_vec2 position);
+void widget_get_relative_position(te_widget* widget, te_vec2 out);
 
 /* sets size of the widget in range [0.0; 1.0] relative to the window's top-left corner
  * if the widget has a parent then this size becomes relative to the parent's size */
-void widget_set_relative_size(te_widget* widget, vec2 size);
-void widget_get_relative_size(te_widget* widget, vec2 out);
+void widget_set_relative_size(te_widget* widget, te_vec2 size);
+void widget_get_relative_size(te_widget* widget, te_vec2 out);
 
 /* returns widget's position and size in range [0.0; 1.0] relative to the window's size
  * includes transformations of all parents (if the widget has parents) */
-void widget_get_screen_position(te_widget* widget, vec2 pos);
-void widget_get_screen_size(te_widget* widget, vec2 size);
+void widget_get_screen_position(te_widget* widget, te_vec2 pos);
+void widget_get_screen_size(te_widget* widget, te_vec2 size);
 
 /* returns NULL if not spawned */
 struct te_world* widget_get_world(te_widget* widget);
@@ -92,23 +92,23 @@ void prv_widget_on_window_size_changed(te_widget* widget);
  * cursor pos here is in range [0.0; 1.0] relative to the window
  * some callbacks may be specified as NULL */
 void prv_widget_set_input_callbacks(
-    te_widget* widget, void (*on_cursor_entered)(void* owner, vec2 cursor_pos),
-    void (*on_cursor_left)(void* owner, vec2 cursor_pos),
-    void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, vec2 cursor_pos),
+    te_widget* widget, void (*on_cursor_entered)(void* owner, te_vec2 cursor_pos),
+    void (*on_cursor_left)(void* owner, te_vec2 cursor_pos),
+    void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, te_vec2 cursor_pos),
     void (*on_mouse_button_released)(
-        void* owner, enum te_mouse_button button, vec2 cursor_pos),
-    void (*on_hovered_cursor_moved)(void* owner, vec2 cursor_pos),
+        void* owner, enum te_mouse_button button, te_vec2 cursor_pos),
+    void (*on_hovered_cursor_moved)(void* owner, te_vec2 cursor_pos),
     void (*on_keyboard_input_text)(void* owner, const char* input_text),
     void (*on_keyboard_input)(void* owner, enum te_keyboard_button button));
 
 /* called by world when the mouse cursor is inside of the widget
  * cursor pos is position in range [0.0; 1.0] relative to the window */
 void prv_widget_on_mouse_button_pressed(
-    te_widget* widget, enum te_mouse_button button, vec2 cursor_pos);
+    te_widget* widget, enum te_mouse_button button, te_vec2 cursor_pos);
 void prv_widget_on_mouse_button_released(
-    te_widget* widget, enum te_mouse_button button, vec2 cursor_pos);
-void prv_widget_on_cursor_entered(te_widget* widget, vec2 cursor_pos);
-void prv_widget_on_cursor_left(te_widget* widget, vec2 cursor_pos);
-void prv_widget_on_hovered_cursor_moved(te_widget* widget, vec2 cursor_pos);
+    te_widget* widget, enum te_mouse_button button, te_vec2 cursor_pos);
+void prv_widget_on_cursor_entered(te_widget* widget, te_vec2 cursor_pos);
+void prv_widget_on_cursor_left(te_widget* widget, te_vec2 cursor_pos);
+void prv_widget_on_hovered_cursor_moved(te_widget* widget, te_vec2 cursor_pos);
 void prv_widget_on_keyboard_input(te_widget* widget, enum te_keyboard_button button);
 void prv_widget_on_keyboard_input_text(te_widget* widget, const char* text);

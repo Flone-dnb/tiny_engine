@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 #include <wchar.h>
-#include <cglm/vec4.h>
+#include <math/vec4.h>
 
 typedef struct te_text_widget te_text_widget;
 struct te_widget;
@@ -24,8 +24,8 @@ wchar_t* text_widget_get_text(te_text_widget* text_widget, unsigned int* text_le
 void text_widget_set_text_own(te_text_widget* text_widget, wchar_t* text, unsigned int strlen);
 
 /* sets RGBA color of the text */
-void text_widget_set_color(te_text_widget* text_widget, vec4 color);
-void text_widget_get_color(te_text_widget* text_widget, vec4 out);
+void text_widget_set_color(te_text_widget* text_widget, te_vec4 color);
+void text_widget_get_color(te_text_widget* text_widget, te_vec4 out);
 
 /* sets height of the text in range [0.0; 1.0] relative to window height */
 void text_widget_set_text_height(te_text_widget* text_widget, float height);

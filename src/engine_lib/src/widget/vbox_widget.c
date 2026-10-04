@@ -1,6 +1,6 @@
 #include <widget/vbox_widget.h>
 
-#include <cglm/vec2.h>
+#include <math/vec2.h>
 #include <widget/widget.h>
 #include <world.h>
 #include <type_database.h>
@@ -83,14 +83,14 @@ prv_vbox_widget_update_children(te_vbox_widget* vbox_widget) {
     }
 
     /* recalculate child spacing to relative spacing */
-    vec2 screen_size;
+    te_vec2 screen_size;
     widget_get_screen_size(vbox_widget->widget, screen_size);
     const float relative_spacing = vbox_widget->child_spacing / screen_size[1];
 
-    vec2 relative_pos;
-    glm_vec2_copy((vec2){0.0f, 0.0f}, relative_pos);
+    te_vec2 relative_pos;
+    vec2_copy((vec2){0.0f, 0.0f}, relative_pos);
     for (unsigned int i = 0; i < child_count; i++) {
-        vec2 child_relative_size;
+        te_vec2 child_relative_size;
         widget_get_relative_size(child_widgets[i], child_relative_size);
 
         widget_set_relative_position(child_widgets[i], relative_pos);
@@ -130,22 +130,22 @@ prv_vbox_widget_on_after_spawned(void* this) {
 }
 
 static void
-prv_vbox_widget_set_position(te_vbox_widget* vbox_widget, vec2 pos) {
+prv_vbox_widget_set_position(te_vbox_widget* vbox_widget, te_vec2 pos) {
     widget_set_relative_position(vbox_widget->widget, pos);
 }
 
 static void
-prv_vbox_widget_get_position(te_vbox_widget* vbox_widget, vec2 out) {
+prv_vbox_widget_get_position(te_vbox_widget* vbox_widget, te_vec2 out) {
     widget_get_relative_position(vbox_widget->widget, out);
 }
 
 static void
-prv_vbox_widget_set_size(te_vbox_widget* vbox_widget, vec2 size) {
+prv_vbox_widget_set_size(te_vbox_widget* vbox_widget, te_vec2 size) {
     widget_set_relative_size(vbox_widget->widget, size);
 }
 
 static void
-prv_vbox_widget_get_size(te_vbox_widget* vbox_widget, vec2 out) {
+prv_vbox_widget_get_size(te_vbox_widget* vbox_widget, te_vec2 out) {
     widget_get_relative_size(vbox_widget->widget, out);
 }
 

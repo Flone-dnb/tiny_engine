@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cglm/vec4.h>
+#include <math/vec4.h>
 
 typedef struct te_particle_renderer te_particle_renderer;
 struct te_renderer;
@@ -8,8 +8,8 @@ struct te_light_params;
 
 /* data needed to render a single particle */
 typedef struct te_particle_render_data {
-    vec4 color;        /* RGBA color */
-    vec4 pos_and_size; /* pos in world space in XYZ and size in W */
+    te_vec4 color;        /* RGBA color */
+    te_vec4 pos_and_size; /* pos in world space in XYZ and size in W */
 } te_particle_render_data;
 
 /* data needed to render a bunch of particles */

@@ -3,8 +3,8 @@
 #include <cglm/ivec3.h>
 #include <cglm/mat3.h>
 #include <cglm/mat4.h>
-#include <cglm/vec2.h>
-#include <cglm/vec4.h>
+#include <math/vec2.h>
+#include <math/vec4.h>
 #include <shape/aabb_shape.h>
 
 typedef struct te_model_renderer te_model_renderer;
@@ -16,10 +16,10 @@ struct te_light_params;
 typedef struct te_model_render_data {
     mat4 world_mat;
     mat3 normal_mat;
-    vec4 color;
+    te_vec4 color;
 
     /* texture tiling multiplier, must store -1 if @ref tex_id is 0 */
-    vec2 tex_tiling;
+    te_vec2 tex_tiling;
 
     /* 0 if not used */
     unsigned int tex_id;
@@ -28,7 +28,7 @@ typedef struct te_model_render_data {
 
     te_aabb_shape aabb_world;
 
-    vec2 uv_offset;
+    te_vec2 uv_offset;
 
     /* NULL if not using skinning */
     mat4* skinning_mats;

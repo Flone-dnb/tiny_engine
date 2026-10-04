@@ -1,10 +1,10 @@
 #pragma once
 
-#include <cglm/vec3.h>
+#include <math/vec3.h>
 #include <shape/plane_shape.h>
 
 typedef struct te_sphere_shape {
-    vec3 center;
+    te_vec3 center;
     float radius;
 } te_sphere_shape;
 

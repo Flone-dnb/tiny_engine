@@ -10,7 +10,7 @@ typedef struct te_editor_camera te_editor_camera;
 struct te_camera;
 struct te_world;
 
-te_editor_camera* editor_camera_create();
+te_editor_camera* editor_camera_create(void);
 void editor_camera_destroy(te_editor_camera* editor_camera);
 
 /* Spawns the viewport camera in the specified world and makes the camera active.

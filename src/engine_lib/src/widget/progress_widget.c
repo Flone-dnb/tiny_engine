@@ -14,8 +14,8 @@ struct te_progress_widget {
     te_rect_widget* background_rect;
     te_rect_widget* foreground_rect;
 
-    vec4 background_color;
-    vec4 foreground_color;
+    te_vec4 background_color;
+    te_vec4 foreground_color;
 
     /* NULL if was not set */
     char* background_tex_relative_path;
@@ -43,8 +43,8 @@ progress_widget_create(void) {
 
     progress_widget->background_tex_relative_path = NULL;
     progress_widget->foreground_tex_relative_path = NULL;
-    glm_vec4_copy((vec4){0.5f, 0.5f, 0.5f, 1.0f}, progress_widget->background_color);
-    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, progress_widget->foreground_color);
+    vec4_copy((vec4){0.5f, 0.5f, 0.5f, 1.0f}, progress_widget->background_color);
+    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, progress_widget->foreground_color);
     progress_widget->value = 0.5f;
     progress_widget->is_progress_widget_destroy = false;
 
@@ -115,25 +115,25 @@ progress_widget_get_value(te_progress_widget* progress_widget) {
 }
 
 void
-progress_widget_set_background_color(te_progress_widget* progress_widget, vec4 color) {
-    glm_vec4_copy(color, progress_widget->background_color);
+progress_widget_set_background_color(te_progress_widget* progress_widget, te_vec4 color) {
+    vec4_copy(color, progress_widget->background_color);
     rect_widget_set_color(progress_widget->background_rect, color);
 }
 
 void
-progress_widget_set_foreground_color(te_progress_widget* progress_widget, vec4 color) {
-    glm_vec4_copy(color, progress_widget->foreground_color);
+progress_widget_set_foreground_color(te_progress_widget* progress_widget, te_vec4 color) {
+    vec4_copy(color, progress_widget->foreground_color);
     rect_widget_set_color(progress_widget->foreground_rect, color);
 }
 
 void
-progress_widget_get_background_color(te_progress_widget* progress_widget, vec4 out) {
-    glm_vec4_copy(progress_widget->background_color, out);
+progress_widget_get_background_color(te_progress_widget* progress_widget, te_vec4 out) {
+    vec4_copy(progress_widget->background_color, out);
 }
 
 void
-progress_widget_get_foreground_color(te_progress_widget* progress_widget, vec4 out) {
-    glm_vec4_copy(progress_widget->foreground_color, out);
+progress_widget_get_foreground_color(te_progress_widget* progress_widget, te_vec4 out) {
+    vec4_copy(progress_widget->foreground_color, out);
 }
 
 void
@@ -226,22 +226,22 @@ prv_progress_widget_on_before_despawned(void* this) {
 }
 
 static void
-prv_progress_widget_set_position(te_progress_widget* progress_widget, vec2 pos) {
+prv_progress_widget_set_position(te_progress_widget* progress_widget, te_vec2 pos) {
     widget_set_relative_position(progress_widget->widget, pos);
 }
 
 static void
-prv_progress_widget_get_position(te_progress_widget* progress_widget, vec2 out) {
+prv_progress_widget_get_position(te_progress_widget* progress_widget, te_vec2 out) {
     widget_get_relative_position(progress_widget->widget, out);
 }
 
 static void
-prv_progress_widget_set_size(te_progress_widget* progress_widget, vec2 size) {
+prv_progress_widget_set_size(te_progress_widget* progress_widget, te_vec2 size) {
     widget_set_relative_size(progress_widget->widget, size);
 }
 
 static void
-prv_progress_widget_get_size(te_progress_widget* progress_widget, vec2 out) {
+prv_progress_widget_get_size(te_progress_widget* progress_widget, te_vec2 out) {
     widget_get_relative_size(progress_widget->widget, out);
 }
 

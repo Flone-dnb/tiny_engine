@@ -2,8 +2,8 @@
 
 #include <stdbool.h>
 #include <cglm/mat4.h>
-#include <cglm/vec3.h>
-#include <cglm/vec4.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
 
 typedef struct te_camera te_camera;
 struct te_model;
@@ -22,15 +22,15 @@ const char* camera_get_name(te_camera* camera);
 
 /* sets position of the camera
  * returns relative position if the camera has a parent */
-void camera_set_position(te_camera* camera, vec3 position);
-void camera_get_position(te_camera* camera, vec3 out);
+void camera_set_position(te_camera* camera, te_vec3 position);
+void camera_get_position(te_camera* camera, te_vec3 out);
 
 /* unlike @ref camera_get_position this function considers parent model (if it was set) */
-void camera_get_world_position(te_camera* camera, vec3 out);
+void camera_get_world_position(te_camera* camera, te_vec3 out);
 
 /* sets rotation (in degrees) of the camera */
-void camera_set_rotation(te_camera* camera, vec3 rotation);
-void camera_get_rotation(te_camera* camera, vec3 out);
+void camera_set_rotation(te_camera* camera, te_vec3 rotation);
+void camera_get_rotation(te_camera* camera, te_vec3 out);
 
 /* sets camera's vertical field of view (in degrees) */
 void camera_set_vertical_fov(te_camera* camera, unsigned int vertical_fov);
@@ -44,13 +44,13 @@ float camera_get_far_clip(te_camera* camera);
 
 /* sets camera's viewport rectangle
  * position of the top-left corner of the viewport rectangle in XY and size in ZW (in range [0; 1]) */
-void camera_set_viewport(te_camera* camera, vec4 viewport);
-void camera_get_viewport(te_camera* camera, vec4 out);
+void camera_set_viewport(te_camera* camera, te_vec4 viewport);
+void camera_get_viewport(te_camera* camera, te_vec4 out);
 
 /* returns direction of the camera in the world */
-void camera_get_forward(te_camera* camera, vec3 out);
-void camera_get_right(te_camera* camera, vec3 out);
-void camera_get_up(te_camera* camera, vec3 out);
+void camera_get_forward(te_camera* camera, te_vec3 out);
+void camera_get_right(te_camera* camera, te_vec3 out);
+void camera_get_up(te_camera* camera, te_vec3 out);
 
 /* optionally you can set a custom pointer to be stored in the camera */
 void camera_set_custom_ptr(te_camera* camera, void* ptr);
@@ -67,7 +67,7 @@ void camera_set_custom_on_before_destroyed(
 /* uses mouse cursor's position in range [0.0; 1.0] (relative to the window)
  * and converts it into a world space direction from the camera along the cursor
  * returns `false` if the cursor is outside of the camera's viewport */
-bool camera_calc_cursor_world_dir(te_camera* camera, vec2 cursor_relative_pos, vec3 out);
+bool camera_calc_cursor_world_dir(te_camera* camera, te_vec2 cursor_relative_pos, te_vec3 out);
 
 /* allows disabling serialization of the camera (enabled by default) */
 void camera_set_is_serialization_allowed(te_camera* camera, bool enable);

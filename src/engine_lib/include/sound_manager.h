@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cglm/vec3.h>
+#include <math/vec3.h>
 
 /* ------------------------------------------------------------------------------------------------
  *                                   SOUND MANAGER API
@@ -48,7 +48,7 @@ bool sound_is_finished_playing(te_sound* sound);
 
 /* sets position of the sound in 3D world (enables spatialization)
  * generally a world object will handle this for you */
-void sound_set_3d_position(te_sound* sound, vec3 pos);
+void sound_set_3d_position(te_sound* sound, te_vec3 pos);
 
 /* enables spatialization and sets the minimum and maximum distances
  * for the attenuation calculation (see @ref sound_set_3d_position) */
@@ -59,7 +59,7 @@ void sound_set_distance(te_sound* sound, float min, float max);
  * ------------------------------------------------------------------------------------------------ */
 
 void prv_sound_manager_set_listener(
-    te_sound_manager* sound_manager, vec3 pos, vec3 forward, vec3 up);
+    te_sound_manager* sound_manager, te_vec3 pos, te_vec3 forward, te_vec3 up);
 
 /* sets callback that will be triggered once the sound is finished
  * this will never be called for looping sound

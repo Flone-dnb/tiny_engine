@@ -110,7 +110,7 @@ refresh_page_text(te_filesystem_view* explorer) {
 
 static void
 refresh_dir_entry_names(te_filesystem_view* explorer) {
-    const float hpadding = theme_get_horizontal_padding() / theme_get_left_panel_width();
+    const float hpadding = editor_theme_get_horizontal_padding() / editor_theme_get_left_panel_width();
 
     unsigned int button_idx;
     unsigned int item_idx;
@@ -141,7 +141,7 @@ refresh_dir_entry_names(te_filesystem_view* explorer) {
         {
             te_widget* widget = button_widget_get_widget(button);
 
-            vec2 pos;
+            te_vec2 pos;
             widget_get_relative_position(widget, pos);
             pos[0] = hpadding;
 
@@ -181,7 +181,7 @@ refresh_dir_entry_names(te_filesystem_view* explorer) {
     for (; button_idx < explorer->dir_entry_button_count; button_idx++) {
         te_widget* widget = button_widget_get_widget(explorer->dir_entry_buttons[button_idx]);
 
-        vec2 pos;
+        te_vec2 pos;
         widget_get_relative_position(widget, pos);
         pos[0] = BUTTON_HIDDEN_X_POS;
 
@@ -217,18 +217,22 @@ refresh_current_path_text(te_filesystem_view* explorer) {
 
 static void
 collect_dir_entries(te_filesystem_view* explorer) {
-    for (unsigned int i = 0; i < explorer->dir_entry_count; i++) {
+    char* path;
+    size_t relative_path_len;
+    unsigned int i;
+
+    for (i = 0; i < explorer->dir_entry_count; i++) {
         free(explorer->dir_entries[i].name);
     }
     free(explorer->dir_entries);
     explorer->dir_entry_count = 0;
 
-    size_t relative_path_len = 0;
+    relative_path_len = 0;
     if (explorer->relative_path != NULL) {
         relative_path_len = strlen(explorer->relative_path);
     }
 
-    char* path = malloc(sizeof(char) * (4 + relative_path_len + 1));
+    path = malloc(sizeof(char) * (4 + relative_path_len + 1));
     memcpy(path, "res/", sizeof(char) * 4);
     if (explorer->relative_path != NULL) {
         memcpy(path + 4, explorer->relative_path, sizeof(char) * relative_path_len);
@@ -288,6 +292,9 @@ on_button_next_page_clicked(te_button_widget* button) {
 
 static void
 on_button_dir_entry_clicked(te_button_widget* button) {
+    te_filesystem_entry* entry;
+    unsigned int i;
+
     te_filesystem_view* explorer = widget_get_custom_ptr(button_widget_get_widget(button));
     size_t button_index = widget_get_custom_value(button_widget_get_widget(button));
 
@@ -295,7 +302,7 @@ on_button_dir_entry_clicked(te_button_widget* button) {
         /* go up the directory */
         const unsigned int path_len = (unsigned int)strlen(explorer->relative_path);
         unsigned int slash_pos = 0;
-        for (unsigned int i = path_len - 2; i > 0; i--) {
+        for (i = path_len - 2; i > 0; i--) {
             if (explorer->relative_path[i] == '/') {
                 slash_pos = i;
                 break;
@@ -326,18 +333,19 @@ on_button_dir_entry_clicked(te_button_widget* button) {
         button_index -= 1;
     }
 
-    te_filesystem_entry* entry =
-        &explorer->dir_entries
-             [explorer->current_page * explorer->dir_entry_button_count + button_index];
+    entry = &explorer->dir_entries
+                 [explorer->current_page * explorer->dir_entry_button_count + button_index];
 
     if (entry->is_dir) {
+        char* new_path;
+
         /* change current dir path */
         size_t old_dir_len = 0;
         if (explorer->relative_path != NULL) {
             old_dir_len = strlen(explorer->relative_path);
         }
 
-        char* new_path = malloc(sizeof(char) * (old_dir_len + entry->name_len + 2));
+        new_path = malloc(sizeof(char) * (old_dir_len + entry->name_len + 2));
         if (explorer->relative_path != NULL) {
             memcpy(new_path, explorer->relative_path, sizeof(char) * old_dir_len);
         }
@@ -353,7 +361,7 @@ on_button_dir_entry_clicked(te_button_widget* button) {
     } else {
         /* check file extension */
         unsigned int dot_pos = 0;
-        for (unsigned int i = entry->name_len - 1; i > 0; i--) {
+        for (i = entry->name_len - 1; i > 0; i--) {
             if (entry->name[i] == '.') {
                 dot_pos = i;
                 break;
@@ -361,12 +369,13 @@ on_button_dir_entry_clicked(te_button_widget* button) {
         }
 
         if (strcmp(entry->name + dot_pos + 1, "txt") == 0) {
+            char* file_relative_path;
             size_t relative_path_len = 0;
             if (explorer->relative_path != NULL) {
                 relative_path_len = strlen(explorer->relative_path);
             }
 
-            char* file_relative_path =
+            file_relative_path =
                 malloc(sizeof(char) * (relative_path_len + entry->name_len + 1));
             if (explorer->relative_path != NULL) {
                 memcpy(
@@ -391,21 +400,28 @@ filesystem_view_refresh(te_filesystem_view* explorer) {
 
 void
 filesystem_view_add(te_filesystem_view* explorer, te_widget* left_panel) {
-    const float hpadding = theme_get_horizontal_padding() / theme_get_left_panel_width();
-    const float vpadding = theme_get_vertical_padding();
-    const float hspacing = theme_get_horizontal_spacing() / theme_get_left_panel_width();
-    const float dir_item_spacing = theme_get_vertical_spacing() / 2.0f;
-    const float nav_menu_height = theme_get_button_height();
+    te_text_widget* text_widget;
+    wchar_t* wtext;
+    unsigned int text_len;
+    unsigned int i;
+    te_vec4 color;
+    te_vec2 tmp2;
+    te_vec2 size;
+    te_vec2 pos;
+
+    const float hpadding = editor_theme_get_horizontal_padding() / editor_theme_get_left_panel_width();
+    const float vpadding = editor_theme_get_vertical_padding();
+    const float hspacing = editor_theme_get_horizontal_spacing() / editor_theme_get_left_panel_width();
+    const float dir_item_spacing = editor_theme_get_vertical_spacing() / 2.0f;
+    const float nav_menu_height = editor_theme_get_button_height();
     const float hpadding_in_button = hpadding;
     const float vpadding_in_button = 0.0f;
 
-    vec2 pos;
     pos[0] = hpadding;
-    pos[1] = theme_get_world_inspector_height() + vpadding;
+    pos[1] = editor_theme_get_world_inspector_height() + vpadding;
 
-    vec2 size;
     size[0] = 1.0f - hpadding * 2.0f;
-    size[1] = theme_get_button_height();
+    size[1] = editor_theme_get_button_height();
 
     /* import GLTF button */
     {
@@ -418,33 +434,33 @@ filesystem_view_add(te_filesystem_view* explorer, te_widget* left_panel) {
             widget_set_custom_ptr(widget, explorer);
         }
 
-        vec4 color;
-        theme_get_button_color(color);
+        editor_theme_get_button_color(color);
         button_widget_set_color(button, color);
 
-        theme_get_button_color_hovered(color);
+        editor_theme_get_button_color_hovered(color);
         button_widget_set_color_hovered(button, color);
 
-        theme_get_button_color_pressed(color);
+        editor_theme_get_button_color_pressed(color);
         button_widget_set_color_pressed(button, color);
 
         button_widget_set_on_clicked(button, on_button_import_gltf_clicked);
 
         /* button text */
-        te_text_widget* text = text_widget_create();
+        text_widget = text_widget_create();
         {
-            te_widget* widget = text_widget_get_widget(text);
+            te_widget* widget = text_widget_get_widget(text_widget);
             widget_set_parent(widget, button_widget_get_widget(button));
-            widget_set_relative_position(
-                widget, (vec2){hpadding_in_button, vpadding_in_button});
-            widget_set_relative_size(
-                widget, (vec2){1.0f - hpadding_in_button, 1.0f - vpadding_in_button});
-        }
-        text_widget_set_text_height(text, theme_get_text_height());
 
-        unsigned int text_len;
-        wchar_t* wtext = wchar_from_char("Import GLTF here", &text_len);
-        text_widget_set_text_own(text, wtext, text_len);
+            vec2_set(hpadding_in_button, vpadding_in_button, tmp2);
+            widget_set_relative_position(widget, tmp2);
+
+            vec2_set(1.0f - hpadding_in_button, 1.0f - vpadding_in_button, tmp2);
+            widget_set_relative_size(widget, tmp2);
+        }
+        text_widget_set_text_height(text_widget, editor_theme_get_text_height());
+
+        wtext = wchar_from_char("Import GLTF here", &text_len);
+        text_widget_set_text_own(text_widget, wtext, text_len);
     }
     pos[1] += size[1];
 
@@ -458,31 +474,34 @@ filesystem_view_add(te_filesystem_view* explorer, te_widget* left_panel) {
             widget_set_parent(widget, left_panel);
         }
 
-        text_widget_set_text_height(explorer->current_path_text, theme_get_text_height());
+        text_widget_set_text_height(explorer->current_path_text, editor_theme_get_text_height());
 
-        unsigned int text_len;
-        wchar_t* wtext = wchar_from_char("res/", &text_len);
+        wtext = wchar_from_char("res/", &text_len);
         text_widget_set_text_own(explorer->current_path_text, wtext, text_len);
     }
     pos[1] += size[1];
 
     /* directory items */
     {
+        float test_y;
+
         /* count how much buttons we can fit */
         explorer->dir_entry_button_count = 0;
-        float test_y = pos[1];
+        test_y = pos[1];
         do {
-            test_y += dir_item_spacing + theme_get_button_height();
+            test_y += dir_item_spacing + editor_theme_get_button_height();
             explorer->dir_entry_button_count += 1;
-        } while (test_y + dir_item_spacing + theme_get_button_height()
+        } while (test_y + dir_item_spacing + editor_theme_get_button_height()
                  <= 1.0f - nav_menu_height);
 
         explorer->dir_entry_buttons =
             malloc(sizeof(te_button_widget*) * explorer->dir_entry_button_count);
-        for (unsigned int i = 0; i < explorer->dir_entry_button_count; i++) {
+        for (i = 0; i < explorer->dir_entry_button_count; i++) {
+            te_button_widget* button;
+
             pos[1] += dir_item_spacing;
 
-            te_button_widget* button = button_widget_create();
+            button = button_widget_create();
             {
                 te_widget* widget = button_widget_get_widget(button);
                 widget_set_relative_position(widget, pos);
@@ -492,32 +511,33 @@ filesystem_view_add(te_filesystem_view* explorer, te_widget* left_panel) {
                 widget_set_custom_value(widget, i);
             }
 
-            vec4 color;
-            theme_get_button_color(color);
+            editor_theme_get_button_color(color);
             button_widget_set_color(button, color);
 
-            theme_get_button_color_hovered(color);
+            editor_theme_get_button_color_hovered(color);
             button_widget_set_color_hovered(button, color);
 
-            theme_get_button_color_pressed(color);
+            editor_theme_get_button_color_pressed(color);
             button_widget_set_color_pressed(button, color);
 
             button_widget_set_on_clicked(button, on_button_dir_entry_clicked);
 
             /* button text */
-            te_text_widget* text = text_widget_create();
+            text_widget = text_widget_create();
             {
-                te_widget* widget = text_widget_get_widget(text);
+                te_widget* widget = text_widget_get_widget(text_widget);
                 widget_set_parent(widget, button_widget_get_widget(button));
-                widget_set_relative_position(
-                    widget, (vec2){hpadding_in_button, vpadding_in_button});
-                widget_set_relative_size(
-                    widget, (vec2){1.0f - hpadding_in_button, 1.0f - vpadding_in_button});
+
+                vec2_set(hpadding_in_button, vpadding_in_button, tmp2);
+                widget_set_relative_position(widget, tmp2);
+
+                vec2_set(1.0f - hpadding_in_button, 1.0f - vpadding_in_button, tmp2);
+                widget_set_relative_size(widget, tmp2);
             }
-            text_widget_set_text_height(text, theme_get_text_height());
+            text_widget_set_text_height(text_widget, editor_theme_get_text_height());
 
             explorer->dir_entry_buttons[i] = button;
-            pos[1] += theme_get_button_height();
+            pos[1] += editor_theme_get_button_height();
         }
     }
 
@@ -533,41 +553,44 @@ filesystem_view_add(te_filesystem_view* explorer, te_widget* left_panel) {
             te_button_widget* button = button_widget_create();
             {
                 te_widget* widget = button_widget_get_widget(button);
-                widget_set_relative_position(
-                    widget, (vec2){hpadding + nav_button_pad, pos[1]});
-                widget_set_relative_size(
-                    widget, (vec2){nav_button_width, theme_get_button_height()});
+
+                vec2_set(hpadding + nav_button_pad, pos[1], tmp2);
+                widget_set_relative_position(widget, tmp2);
+
+                vec2_set(nav_button_width, editor_theme_get_button_height(), tmp2);
+                widget_set_relative_size(widget, tmp2);
+
                 widget_set_parent(widget, left_panel);
                 widget_set_custom_ptr(widget, explorer);
             }
 
-            vec4 color;
-            theme_get_button_color(color);
+            editor_theme_get_button_color(color);
             button_widget_set_color(button, color);
 
-            theme_get_button_color_hovered(color);
+            editor_theme_get_button_color_hovered(color);
             button_widget_set_color_hovered(button, color);
 
-            theme_get_button_color_pressed(color);
+            editor_theme_get_button_color_pressed(color);
             button_widget_set_color_pressed(button, color);
 
             button_widget_set_on_clicked(button, on_button_prev_page_clicked);
 
             /* button text */
-            te_text_widget* text_widget = text_widget_create();
+            text_widget = text_widget_create();
             {
                 te_widget* widget = text_widget_get_widget(text_widget);
                 widget_set_parent(widget, button_widget_get_widget(button));
-                widget_set_relative_position(
-                    widget, (vec2){hpadding_in_button, vpadding_in_button});
-                widget_set_relative_size(
-                    widget, (vec2){1.0f - hpadding_in_button, 1.0f - vpadding_in_button});
-            }
-            text_widget_set_text_height(text_widget, theme_get_text_height());
 
-            unsigned int text_len;
-            wchar_t* text = wchar_from_char("<", &text_len);
-            text_widget_set_text_own(text_widget, text, text_len);
+                vec2_set(hpadding_in_button, vpadding_in_button, tmp2);
+                widget_set_relative_position(widget, tmp2);
+
+                vec2_set(1.0f - hpadding_in_button, 1.0f - vpadding_in_button, tmp2);
+                widget_set_relative_size(widget, tmp2);
+            }
+            text_widget_set_text_height(text_widget, editor_theme_get_text_height());
+
+            wtext = wchar_from_char("<", &text_len);
+            text_widget_set_text_own(text_widget, wtext, text_len);
         }
 
         /* page text */
@@ -584,17 +607,19 @@ filesystem_view_add(te_filesystem_view* explorer, te_widget* left_panel) {
             {
                 te_widget* widget = text_widget_get_widget(text_widget);
                 widget_set_parent(widget, left_panel);
-                widget_set_relative_position(
-                    widget, (vec2){hpadding + nav_button_pad + nav_button_width + hspacing
-                                       + nav_tex_pad,
-                                   pos[1]});
-                widget_set_relative_size(widget, (vec2){nav_tex_width, nav_menu_height});
-            }
-            text_widget_set_text_height(text_widget, theme_get_text_height());
 
-            unsigned int text_len;
-            wchar_t* text = wchar_from_char("1 / 1", &text_len);
-            text_widget_set_text_own(text_widget, text, text_len);
+                vec2_set(
+                    hpadding + nav_button_pad + nav_button_width + hspacing + nav_tex_pad,
+                    pos[1], tmp2);
+                widget_set_relative_position(widget, tmp2);
+
+                vec2_set(nav_tex_width, nav_menu_height, tmp2);
+                widget_set_relative_size(widget, tmp2);
+            }
+            text_widget_set_text_height(text_widget, editor_theme_get_text_height());
+
+            wtext = wchar_from_char("1 / 1", &text_len);
+            text_widget_set_text_own(text_widget, wtext, text_len);
         }
 
         /* right button */
@@ -602,42 +627,44 @@ filesystem_view_add(te_filesystem_view* explorer, te_widget* left_panel) {
             te_button_widget* button = button_widget_create();
             {
                 te_widget* widget = button_widget_get_widget(button);
-                widget_set_relative_position(
-                    widget,
-                    (vec2){1.0f - hpadding - nav_button_pad - nav_button_width, pos[1]});
-                widget_set_relative_size(
-                    widget, (vec2){nav_button_width, theme_get_button_height()});
+
+                vec2_set(1.0f - hpadding - nav_button_pad - nav_button_width, pos[1], tmp2);
+                widget_set_relative_position(widget, tmp2);
+
+                vec2_set(nav_button_width, editor_theme_get_button_height(), tmp2);
+                widget_set_relative_size(widget, tmp2);
+
                 widget_set_custom_ptr(widget, explorer);
                 widget_set_parent(widget, left_panel);
             }
 
-            vec4 color;
-            theme_get_button_color(color);
+            editor_theme_get_button_color(color);
             button_widget_set_color(button, color);
 
-            theme_get_button_color_hovered(color);
+            editor_theme_get_button_color_hovered(color);
             button_widget_set_color_hovered(button, color);
 
-            theme_get_button_color_pressed(color);
+            editor_theme_get_button_color_pressed(color);
             button_widget_set_color_pressed(button, color);
 
             button_widget_set_on_clicked(button, on_button_next_page_clicked);
 
             /* button text */
-            te_text_widget* text_widget = text_widget_create();
+            text_widget = text_widget_create();
             {
                 te_widget* widget = text_widget_get_widget(text_widget);
                 widget_set_parent(widget, button_widget_get_widget(button));
-                widget_set_relative_position(
-                    widget, (vec2){hpadding_in_button, vpadding_in_button});
-                widget_set_relative_size(
-                    widget, (vec2){1.0f - hpadding_in_button, 1.0f - vpadding_in_button});
-            }
-            text_widget_set_text_height(text_widget, theme_get_text_height());
 
-            unsigned int text_len;
-            wchar_t* text = wchar_from_char(">", &text_len);
-            text_widget_set_text_own(text_widget, text, text_len);
+                vec2_set(hpadding_in_button, vpadding_in_button, tmp2);
+                widget_set_relative_position(widget, tmp2);
+
+                vec2_set(1.0f - hpadding_in_button, 1.0f - vpadding_in_button, tmp2);
+                widget_set_relative_size(widget, tmp2);
+            }
+            text_widget_set_text_height(text_widget, editor_theme_get_text_height());
+
+            wtext = wchar_from_char(">", &text_len);
+            text_widget_set_text_own(text_widget, wtext, text_len);
         }
     }
 

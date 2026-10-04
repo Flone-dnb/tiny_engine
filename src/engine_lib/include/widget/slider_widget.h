@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cglm/vec4.h>
+#include <math/vec4.h>
 
 typedef struct te_slider_widget te_slider_widget;
 struct te_widget;
@@ -27,11 +27,11 @@ void slider_widget_set_step_size(te_slider_widget* slider_widget, float step_siz
 float slider_widget_get_step_size(te_slider_widget* slider_widget);
 
 /* sets RGBA color of slider elements */
-void slider_widget_set_background_color(te_slider_widget* slider_widget, vec4 color);
-void slider_widget_set_handle_color(te_slider_widget* slider_widget, vec4 color);
+void slider_widget_set_background_color(te_slider_widget* slider_widget, te_vec4 color);
+void slider_widget_set_handle_color(te_slider_widget* slider_widget, te_vec4 color);
 
-void slider_widget_get_background_color(te_slider_widget* slider_widget, vec4 out);
-void slider_widget_get_handle_color(te_slider_widget* slider_widget, vec4 out);
+void slider_widget_get_background_color(te_slider_widget* slider_widget, te_vec4 out);
+void slider_widget_get_handle_color(te_slider_widget* slider_widget, te_vec4 out);
 
 /* sets path (relative to the `res` directory) to the texture of slider elements
  * specify NULL to remove texture. The string is copied to the slider's internal data */

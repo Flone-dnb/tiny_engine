@@ -29,7 +29,7 @@ struct te_text_edit_widget {
     void (*on_text_changed)(te_text_edit_widget*, wchar_t*, unsigned int);
     void (*on_text_accepted)(te_text_edit_widget*);
 
-    vec4 text_color;
+    te_vec4 text_color;
 
     /* height of the text in range [0.0; 1.0] relative to window height */
     float text_height;
@@ -50,8 +50,8 @@ static void prv_text_edit_widget_on_before_despawned(void* this);
 
 /* interactable callbacks */
 static void prv_text_edit_widget_on_mouse_button_pressed(
-    void* this, enum te_mouse_button button, vec2 cursor_pos);
-static void prv_text_edit_widget_on_cursor_left(void* this, vec2 cursor_pos);
+    void* this, enum te_mouse_button button, te_vec2 cursor_pos);
+static void prv_text_edit_widget_on_cursor_left(void* this, te_vec2 cursor_pos);
 static void prv_text_edit_widget_on_keyboard_input_text(void* this, const char* input_text);
 static void prv_text_edit_widget_on_keyboard_input(void* this, enum te_keyboard_button button);
 
@@ -66,7 +66,7 @@ text_edit_widget_create(void) {
 
     text_edit_widget->rect_cursor_widget = NULL;
 
-    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, text_edit_widget->text_color);
+    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, text_edit_widget->text_color);
     text_edit_widget->text_height = 0.03f;
 
     text_edit_widget->text_cursor_index = TE_INVALID_TEXT_CURSOR_INDEX;
@@ -202,7 +202,7 @@ prv_text_edit_widget_on_before_despawned(void* this) {
 
 void
 prv_text_edit_widget_on_mouse_button_pressed(
-    void* this, enum te_mouse_button button, vec2 cursor_pos) {
+    void* this, enum te_mouse_button button, te_vec2 cursor_pos) {
     if (button != TE_MB_LEFT) {
         return;
     }
@@ -234,8 +234,8 @@ prv_text_edit_widget_on_mouse_button_pressed(
     te_text_widget_render_data* data = widget_renderer_get_text_widget_render_data_tmp(
         world_get_widget_renderer(world), text_render_data_handle);
 
-    vec2 cursor_pos_pix;
-    glm_vec2_mul(
+    te_vec2 cursor_pos_pix;
+    vec2_mul(
         cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos_pix);
     if (data->pos_pix[0] > cursor_pos_pix[0]) {
         return;
@@ -245,8 +245,8 @@ prv_text_edit_widget_on_mouse_button_pressed(
     wchar_t* text = text_widget_get_text(text_edit_widget->text_widget, &text_len);
 
     /* prepare cursor position */
-    vec2 rect_pos;
-    glm_vec2_copy(data->pos_pix, rect_pos);
+    te_vec2 rect_pos;
+    vec2_copy(data->pos_pix, rect_pos);
     text_edit_widget->text_cursor_index = 0;
 
     if (text_len > 0) {
@@ -289,7 +289,7 @@ prv_text_edit_widget_on_mouse_button_pressed(
             text_edit_widget->text_cursor_index = text_len;
         }
     }
-    glm_vec2_div(rect_pos, (vec2){(float)window_width, (float)window_height}, rect_pos);
+    vec2_div(rect_pos, (vec2){(float)window_width, (float)window_height}, rect_pos);
 
     if (text_edit_widget->rect_cursor_widget == NULL) {
         /* create text cursor */
@@ -303,21 +303,21 @@ prv_text_edit_widget_on_mouse_button_pressed(
 
     /* calculate rect pos/size to be relative to parent */
 
-    vec2 rect_size;
+    te_vec2 rect_size;
     rect_size[0] = 2.0f / (float)window_width;
     rect_size[1] = text_widget_get_text_height(text_edit_widget->text_widget);
 
-    vec2 text_widget_pos;
-    vec2 text_widget_size;
+    te_vec2 text_widget_pos;
+    te_vec2 text_widget_size;
     widget_get_screen_position(
         text_widget_get_widget(text_edit_widget->text_widget), text_widget_pos);
     widget_get_screen_size(
         text_widget_get_widget(text_edit_widget->text_widget), text_widget_size);
 
-    glm_vec2_div(rect_size, text_widget_size, rect_size);
+    vec2_div(rect_size, text_widget_size, rect_size);
 
-    glm_vec2_sub(rect_pos, text_widget_pos, rect_pos);
-    glm_vec2_div(rect_pos, text_widget_size, rect_pos);
+    vec2_sub(rect_pos, text_widget_pos, rect_pos);
+    vec2_div(rect_pos, text_widget_size, rect_pos);
 
     /* update text cursor */
     widget_set_relative_position(
@@ -327,7 +327,7 @@ prv_text_edit_widget_on_mouse_button_pressed(
 }
 
 void
-prv_text_edit_widget_on_cursor_left(void* this, vec2 cursor_pos) {
+prv_text_edit_widget_on_cursor_left(void* this, te_vec2 cursor_pos) {
     (void)cursor_pos;
     te_text_edit_widget* text_edit_widget = this;
 
@@ -364,8 +364,8 @@ prv_text_edit_widget_update_cursor(te_text_edit_widget* text_edit_widget) {
     unsigned int window_height;
     window_get_size(window, &window_width, &window_height);
 
-    vec2 rect_pos;
-    glm_vec2_copy(data->pos_pix, rect_pos);
+    te_vec2 rect_pos;
+    vec2_copy(data->pos_pix, rect_pos);
     if (text_edit_widget->text_cursor_index > 0) {
         float x_start = data->pos_pix[0];
         const float glyph_scale =
@@ -399,19 +399,19 @@ prv_text_edit_widget_update_cursor(te_text_edit_widget* text_edit_widget) {
         }
     }
 
-    glm_vec2_div(rect_pos, (vec2){(float)window_width, (float)window_height}, rect_pos);
+    vec2_div(rect_pos, (vec2){(float)window_width, (float)window_height}, rect_pos);
 
     /* calculate rect pos to be relative to parent */
 
-    vec2 text_widget_pos;
-    vec2 text_widget_size;
+    te_vec2 text_widget_pos;
+    te_vec2 text_widget_size;
     widget_get_screen_position(
         text_widget_get_widget(text_edit_widget->text_widget), text_widget_pos);
     widget_get_screen_size(
         text_widget_get_widget(text_edit_widget->text_widget), text_widget_size);
 
-    glm_vec2_sub(rect_pos, text_widget_pos, rect_pos);
-    glm_vec2_div(rect_pos, text_widget_size, rect_pos);
+    vec2_sub(rect_pos, text_widget_pos, rect_pos);
+    vec2_div(rect_pos, text_widget_size, rect_pos);
 
     if (rect_pos[0] < 0.0f) {
         rect_pos[0] = 1.0f;
@@ -574,33 +574,33 @@ text_edit_widget_get_text_height(te_text_edit_widget* text_edit_widget) {
 }
 
 void
-text_edit_widget_set_color(te_text_edit_widget* text_edit_widget, vec4 color) {
-    glm_vec4_copy(color, text_edit_widget->text_color);
+text_edit_widget_set_color(te_text_edit_widget* text_edit_widget, te_vec4 color) {
+    vec4_copy(color, text_edit_widget->text_color);
     text_widget_set_color(text_edit_widget->text_widget, color);
 }
 
 void
-text_edit_widget_get_color(te_text_edit_widget* text_edit_widget, vec4 out) {
-    glm_vec4_copy(text_edit_widget->text_color, out);
+text_edit_widget_get_color(te_text_edit_widget* text_edit_widget, te_vec4 out) {
+    vec4_copy(text_edit_widget->text_color, out);
 }
 
 static void
-prv_text_edit_widget_set_position(te_text_edit_widget* text_edit_widget, vec2 pos) {
+prv_text_edit_widget_set_position(te_text_edit_widget* text_edit_widget, te_vec2 pos) {
     widget_set_relative_position(text_edit_widget->widget, pos);
 }
 
 static void
-prv_text_edit_widget_get_position(te_text_edit_widget* text_edit_widget, vec2 out) {
+prv_text_edit_widget_get_position(te_text_edit_widget* text_edit_widget, te_vec2 out) {
     widget_get_relative_position(text_edit_widget->widget, out);
 }
 
 static void
-prv_text_edit_widget_set_size(te_text_edit_widget* text_edit_widget, vec2 size) {
+prv_text_edit_widget_set_size(te_text_edit_widget* text_edit_widget, te_vec2 size) {
     widget_set_relative_size(text_edit_widget->widget, size);
 }
 
 static void
-prv_text_edit_widget_get_size(te_text_edit_widget* text_edit_widget, vec2 out) {
+prv_text_edit_widget_get_size(te_text_edit_widget* text_edit_widget, te_vec2 out) {
     widget_get_relative_size(text_edit_widget->widget, out);
 }
 

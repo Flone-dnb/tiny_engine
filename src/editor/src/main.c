@@ -13,17 +13,20 @@
 
 int
 main(void) {
+    te_window* window;
+    te_editor* editor;
+    te_window_callbacks callbacks;
+
 #if defined(ENGINE_MEMCHECK_ENABLED)
     memcheck_init();
 #endif
 
-    te_window* window = window_create("tiny engine editor");
+    window = window_create("tiny engine editor");
 
     if (sizeof(te_window_callbacks) != sizeof(void*) * 18) {
         log_error(__FILE__, __LINE__, "add new callbacks here");
         abort();
     }
-    te_window_callbacks callbacks;
     callbacks.on_game_started = &editor_on_game_started;
     callbacks.on_game_tick = &editor_on_game_tick;
     callbacks.on_keyboard_button_pressed = &editor_on_keyboard_button_pressed;
@@ -43,7 +46,7 @@ main(void) {
     callbacks.on_window_lost_focus = &editor_on_window_lost_focus;
     callbacks.on_window_close = &editor_on_window_close;
 
-    te_editor* editor = editor_create();
+    editor = editor_create();
     window_process_events(window, &callbacks, editor);
     editor_destroy(editor);
 
