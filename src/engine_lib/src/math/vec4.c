@@ -59,6 +59,22 @@ vec4_mul(te_vec4 a, te_vec4 b, te_vec4 dst) {
 }
 
 void
+vec4_adds(te_vec4 a, float b, te_vec4 dst) {
+    dst[0] = a[0] + b;
+    dst[1] = a[1] + b;
+    dst[2] = a[2] + b;
+    dst[3] = a[3] + b;
+}
+
+void
+vec4_subs(te_vec4 a, float b, te_vec4 dst) {
+    dst[0] = a[0] - b;
+    dst[1] = a[1] - b;
+    dst[2] = a[2] - b;
+    dst[3] = a[3] - b;
+}
+
+void
 vec4_muls(te_vec4 a, float b, te_vec4 dst) {
     dst[0] = a[0] * b;
     dst[1] = a[1] * b;
@@ -67,11 +83,11 @@ vec4_muls(te_vec4 a, float b, te_vec4 dst) {
 }
 
 void
-vec4_adds(te_vec4 a, float b, te_vec4 dst) {
-    dst[0] = a[0] + b;
-    dst[1] = a[1] + b;
-    dst[2] = a[2] + b;
-    dst[3] = a[3] + b;
+vec4_divs(te_vec4 a, float b, te_vec4 dst) {
+    dst[0] = a[0] / b;
+    dst[1] = a[1] / b;
+    dst[2] = a[2] / b;
+    dst[3] = a[3] / b;
 }
 
 void
@@ -111,4 +127,37 @@ vec4_normalize(te_vec4 v) {
     v[1] *= tmp;
     v[2] *= tmp;
     v[3] *= tmp;
+}
+
+void
+vec4_slerp(te_vec4 from, te_vec4 to, float t, te_vec4 dst) {
+    te_vec4 q1, q2;
+    float cos_theta, sin_theta, angle;
+
+    cos_theta = vec4_dot(from, to);
+    vec4_copy(from, q1);
+
+    if (fabs(cos_theta) >= 1.0) {
+        vec4_copy(q1, dst);
+        return;
+    }
+
+    if (cos_theta < 0.0f) {
+        vec4_muls(q1, -1.0f, q1);
+        cos_theta = -cos_theta;
+    }
+
+    sin_theta = (float)sqrt(1.0f - cos_theta * cos_theta);
+
+    if (fabs(sin_theta) < 0.001) {
+        vec4_lerp(from, to, t, dst);
+        return;
+    }
+
+    angle = (float)acos(cos_theta);
+    vec4_muls(q1, (float)sin((1.0f - t) * angle), q1);
+    vec4_muls(to, (float)sin(t * angle), q2);
+
+    vec4_add(q1, q2, q1);
+    vec4_muls(q1, 1.0f / sin_theta, dst);
 }

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
-#include <cglm/mat4.h>
+#include <math/mat4.h>
 #include <math/vec3.h>
 #include <shape/plane_shape.h>
 

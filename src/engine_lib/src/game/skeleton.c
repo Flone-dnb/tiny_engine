@@ -1,5 +1,6 @@
 #include <game/skeleton.h>
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <game_manager.h>
@@ -7,14 +8,11 @@
 #include <io/log.h>
 #include <io/filesystem.h>
 #include <math/math_funcs.h>
-#include <cglm/affine.h>
-#include <cglm/quat.h>
-#include <cglm/euler.h>
 #include <hashmap.c/hashmap.h>
 
 struct te_skeleton_bone;
 typedef struct te_skeleton_bone {
-    mat4 inverse_bind_pose_mat;
+    te_mat4 inverse_bind_pose_mat;
 
     char* name;
 
@@ -48,7 +46,7 @@ struct te_skeleton {
      * so that matrix at index 0 stores transform for a bone at index 0 from @ref bones
      * these matrices contain the current state of the skeleton (which may be animated)
      * stored outside of the bones array to be passed to the shader */
-    mat4* skinning_mats;
+    te_mat4* skinning_mats;
 
     /* NULL if not playing an animation, otherwise reference to the animation
      * do not destroy/free this pointer, references an animation from @ref preloaded_anims */
@@ -131,6 +129,10 @@ static void load_skeleton_bone(
 te_skeleton*
 prv_skeleton_create(
     const char* relative_path, te_model* model, te_game_manager* game_manager) {
+    char* res_path;
+    FILE* fp;
+    unsigned int bone_idx;
+
     te_skeleton* skeleton = malloc(sizeof(te_skeleton));
     skeleton->game_manager = game_manager;
     skeleton->model = model;
@@ -143,22 +145,22 @@ prv_skeleton_create(
     skeleton->preloaded_anims = hashmap_new(
         sizeof(te_skeleton_animation*), 8, 0, 0, anim_hash, anim_compare, NULL, NULL);
 
-    char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
-    FILE* fp = fopen(res_path, "rb");
+    res_path = filesystem_prepend_res_to_path(relative_path, NULL);
+    fp = fopen(res_path, "rb");
 
     /* read bone count */
     fread(&skeleton->bone_count, sizeof(skeleton->bone_count), 1, fp);
     skeleton->bones = malloc(sizeof(te_skeleton_bone) * skeleton->bone_count);
 
     /* read bones */
-    unsigned int bone_idx = 0;
+    bone_idx = 0;
     load_skeleton_bone(skeleton, fp, &bone_idx, 0xFFFFFFFF);
 
     fclose(fp);
     free(res_path);
 
     /* allocate skinning matrices for each bone */
-    skeleton->skinning_mats = malloc(sizeof(mat4) * skeleton->bone_count);
+    skeleton->skinning_mats = malloc(sizeof(te_mat4) * skeleton->bone_count);
 
     /* init bone transforms (first update) */
     prv_skeleton_update(skeleton, 0.0f);
@@ -192,10 +194,13 @@ skeleton_animation_destroy(te_skeleton_animation* anim) {
 
 void
 prv_skeleton_destroy(te_skeleton* skeleton) {
+    void* item;
+    unsigned int i;
+    size_t iter;
+
     skeleton_stop_animation(skeleton);
 
-    size_t iter = 0;
-    void* item;
+    iter = 0;
     while (hashmap_iter(skeleton->preloaded_anims, &iter, &item)) {
         const te_skeleton_animation** ptr = item;
         te_skeleton_animation* anim = (te_skeleton_animation*)*ptr;
@@ -205,7 +210,7 @@ prv_skeleton_destroy(te_skeleton* skeleton) {
 
     free(skeleton->skinning_mats);
 
-    for (unsigned int i = 0; i < skeleton->bone_count; i++) {
+    for (i = 0; i < skeleton->bone_count; i++) {
         free(skeleton->bones[i].name);
     }
     free(skeleton->bones);
@@ -216,6 +221,9 @@ prv_skeleton_destroy(te_skeleton* skeleton) {
 static void
 load_skeleton_bone(
     te_skeleton* skeleton, FILE* fp, unsigned int* bone_idx, unsigned int parent_bone_idx) {
+    unsigned int name_len;
+    unsigned int i;
+
     const unsigned int this_bone_idx = *bone_idx;
     te_skeleton_bone* bone = &skeleton->bones[this_bone_idx];
     (*bone_idx) += 1;
@@ -224,7 +232,6 @@ load_skeleton_bone(
 
     /* read name */
     bone->name = NULL;
-    unsigned int name_len;
     fread(&name_len, sizeof(name_len), 1, fp);
     if (name_len > 0) {
         bone->name = malloc(sizeof(char) * (name_len + 1));
@@ -237,12 +244,12 @@ load_skeleton_bone(
     fread(bone->rotation, sizeof(float), 3, fp);
     fread(bone->scale, sizeof(float), 3, fp);
 
-    fread(&bone->inverse_bind_pose_mat[0], sizeof(mat4), 1, fp);
+    fread(&bone->inverse_bind_pose_mat[0], sizeof(te_mat4), 1, fp);
 
     /* read child count */
     fread(&bone->child_count, sizeof(bone->child_count), 1, fp);
 
-    for (unsigned int i = 0; i < bone->child_count; i++) {
+    for (i = 0; i < bone->child_count; i++) {
         load_skeleton_bone(skeleton, fp, bone_idx, this_bone_idx);
     }
 }
@@ -250,7 +257,10 @@ load_skeleton_bone(
 static void
 skeleton_bone_interpolate_pos_scale(
     float curr_time_sec, te_skeleton_bone_animation* bone_anim,
-    enum te_animation_channel_type channel_type, mat4 out) {
+    enum te_animation_channel_type channel_type, te_mat4 out) {
+    te_vec3 out_value;
+    unsigned int left_idx;
+
     const unsigned int keyframe_count = bone_anim->keyframe_count[channel_type];
     te_skeleton_animation_keyframe* keyframes = bone_anim->keyframes[channel_type];
 
@@ -261,7 +271,7 @@ skeleton_bone_interpolate_pos_scale(
     }
 #endif
 
-    unsigned int left_idx = 0;
+    left_idx = 0;
     for (; left_idx < keyframe_count;) {
         if (curr_time_sec > keyframes[left_idx].time) {
             left_idx += 1;
@@ -275,8 +285,6 @@ skeleton_bone_interpolate_pos_scale(
     if (left_idx >= keyframe_count) {
         left_idx = keyframe_count - 1;
     }
-
-    te_vec3 out_value;
 
     if (left_idx == keyframe_count - 1
         || keyframes[left_idx].interpolation_type == TE_KIT_STEP) {
@@ -289,24 +297,31 @@ skeleton_bone_interpolate_pos_scale(
             vec3_lerp(
                 keyframes[left_idx].value, keyframes[left_idx + 1].value, factor, out_value);
         } else {
-            float s = glm_smoothstep(0.0f, 1.0f, factor);
-            vec3_lerp(
-                keyframes[left_idx].value, keyframes[left_idx + 1].value, s, out_value);
+            float s = math_smoothstep(0.0f, 1.0f, factor);
+            vec3_lerp(keyframes[left_idx].value, keyframes[left_idx + 1].value, s, out_value);
         }
     }
 
+    mat4_identity(out);
     if (channel_type == TE_ACT_SCALE) {
-        glm_scale_make(out, out_value);
+        mat4_set_scaling_part(out, out_value);
     } else {
-        glm_translate_make(out, out_value);
+        mat4_set_translation_part(out, out_value);
     }
 }
 
 static void
 skeleton_bone_interpolate_rotation(
-    float curr_time_sec, te_skeleton_bone_animation* bone_anim, mat4 out) {
+    float curr_time_sec, te_skeleton_bone_animation* bone_anim, te_mat4 out) {
     const unsigned int keyframe_count = bone_anim->keyframe_count[TE_ACT_ROTATION];
     te_skeleton_animation_keyframe* keyframes = bone_anim->keyframes[TE_ACT_ROTATION];
+    te_mat4 mat;
+    te_vec4 from;
+    te_vec4 to;
+    te_vec4 result;
+    te_vec3 rot;
+    float factor;
+    unsigned int left_idx;
 
 #if defined(DEBUG)
     if (keyframe_count == 0) {
@@ -315,7 +330,7 @@ skeleton_bone_interpolate_rotation(
     }
 #endif
 
-    unsigned int left_idx = 0;
+    left_idx = 0;
     for (; left_idx < keyframe_count;) {
         if (curr_time_sec > keyframes[left_idx].time) {
             left_idx += 1;
@@ -330,72 +345,71 @@ skeleton_bone_interpolate_rotation(
         left_idx = keyframe_count - 1;
     }
 
-    te_vec4 from;
     vec4_copy(keyframes[left_idx].value, from);
 
     if (left_idx == keyframe_count - 1
         || keyframes[left_idx].interpolation_type == TE_KIT_STEP) {
-        mat4 mat;
-        glm_quat_mat4(from, mat);
-
+        te_mat4 mat;
         te_vec3 rot;
-        glm_euler_angles(mat, rot);
-        rot[0] = glm_deg(rot[0]);
-        rot[1] = glm_deg(rot[1]);
-        rot[2] = glm_deg(rot[2]);
+
+        mat4_from_quat(from, mat);
+
+        mat4_extract_euler_angles_rad(mat, rot);
+        rot[0] = math_deg(rot[0]);
+        rot[1] = math_deg(rot[1]);
+        rot[2] = math_deg(rot[2]);
 
         math_make_rotation_mat(rot, out);
         return;
     }
 
-    const float factor = (curr_time_sec - keyframes[left_idx].time)
-                         / (keyframes[left_idx + 1].time - keyframes[left_idx].time);
+    factor = (curr_time_sec - keyframes[left_idx].time)
+             / (keyframes[left_idx + 1].time - keyframes[left_idx].time);
 
-    te_vec4 to;
     vec4_copy(keyframes[left_idx + 1].value, to);
 
-    te_vec4 result;
-
     if (keyframes[left_idx].interpolation_type == TE_KIT_LINEAR) {
-        glm_quat_slerp(from, to, factor, result);
+        vec4_slerp(from, to, factor, result);
     } else {
-        float s = glm_smoothstep(0.0f, 1.0f, factor);
-        glm_quat_slerp(from, to, s, result);
+        float s = math_smoothstep(0.0f, 1.0f, factor);
+        vec4_slerp(from, to, s, result);
     }
 
-    mat4 mat;
-    glm_quat_mat4(result, mat);
+    mat4_from_quat(result, mat);
 
-    te_vec3 rot;
-    glm_euler_angles(mat, rot);
-    rot[0] = glm_deg(rot[0]);
-    rot[1] = glm_deg(rot[1]);
-    rot[2] = glm_deg(rot[2]);
+    mat4_extract_euler_angles_rad(mat, rot);
+    rot[0] = math_deg(rot[0]);
+    rot[1] = math_deg(rot[1]);
+    rot[2] = math_deg(rot[2]);
 
     math_make_rotation_mat(rot, out);
 }
 
 static void
 update_skeleton_bone_skinning_mat(
-    te_skeleton* skeleton, unsigned int* bone_idx, mat4 parent_transform) {
+    te_skeleton* skeleton, unsigned int* bone_idx, te_mat4 parent_transform) {
+    te_mat4 global_transform;
+    te_mat4 mat1;
+    te_mat4 mat2;
+    unsigned int i;
+
     te_skeleton_bone* bone = &skeleton->bones[*bone_idx];
-
-    mat4 global_transform;
-    glm_mat4_identity(global_transform);
-
-    mat4 mat1;
-    mat4 mat2;
+    mat4_identity(global_transform);
 
     if (skeleton->playing_anim != NULL
         && skeleton->playing_anim->bone_anim_indices[*bone_idx] != 0xFFFFFFFF) {
-        /* apply base scale and rotation (in case they were changed/adjusted using the code) */
-        glm_scale_make(mat1, bone->scale);
-        math_make_rotation_mat(bone->rotation, mat2);
-        glm_mat4_mul(mat2, mat1, global_transform);
+        te_skeleton_bone_animation* bone_anim;
 
-        te_skeleton_bone_animation* bone_anim =
-            &skeleton->playing_anim
-                 ->bone_anims[skeleton->playing_anim->bone_anim_indices[*bone_idx]];
+        /* apply base scale and rotation (in case they were changed/adjusted using the code) */
+        mat4_identity(mat1);
+        mat4_set_scaling_part(mat1, bone->scale);
+
+        math_make_rotation_mat(bone->rotation, mat2);
+
+        mat4_mul(mat2, mat1, global_transform);
+
+        bone_anim = &skeleton->playing_anim
+                         ->bone_anims[skeleton->playing_anim->bone_anim_indices[*bone_idx]];
 
         skeleton_bone_interpolate_pos_scale(
             skeleton->playing_anim->current_time_sec, bone_anim, TE_ACT_SCALE, mat1);
@@ -404,36 +418,38 @@ update_skeleton_bone_skinning_mat(
             skeleton->playing_anim->current_time_sec, bone_anim, mat2);
 
         /* scale, rotate */
-        glm_mat4_mul(mat2, mat1, mat1);
+        mat4_mul(mat2, mat1, mat1);
 
         /* translate */
         skeleton_bone_interpolate_pos_scale(
             skeleton->playing_anim->current_time_sec, bone_anim, TE_ACT_POSITION, mat2);
-        glm_mat4_mul(mat2, mat1, mat1);
+        mat4_mul(mat2, mat1, mat1);
 
-        glm_mat4_mul(mat1, global_transform, global_transform);
+        mat4_mul(mat1, global_transform, global_transform);
     } else {
-        glm_scale_make(mat1, bone->scale);
+        mat4_identity(mat1);
+        mat4_set_scaling_part(mat1, bone->scale);
 
         math_make_rotation_mat(bone->rotation, mat2);
 
         /* scale, rotate and then translate */
-        glm_mat4_mul(mat2, mat1, global_transform);
-        glm_translate_make(mat2, bone->position);
-        glm_mat4_mul(mat2, global_transform, global_transform);
+        mat4_mul(mat2, mat1, global_transform);
+        mat4_identity(mat2);
+        mat4_set_translation_part(mat2, bone->position);
+        mat4_mul(mat2, global_transform, global_transform);
     }
 
-    glm_mat4_mul(parent_transform, global_transform, global_transform);
+    mat4_mul(parent_transform, global_transform, global_transform);
     if (skeleton->prev_anim == NULL) {
-        glm_mat4_mul(
+        mat4_mul(
             global_transform, bone->inverse_bind_pose_mat, skeleton->skinning_mats[*bone_idx]);
     } else {
-        glm_mat4_mul(global_transform, bone->inverse_bind_pose_mat, mat1);
+        float factor;
+        mat4_mul(global_transform, bone->inverse_bind_pose_mat, mat1);
 
         /* skinning_mats already has prev_anim matrices for this frame, we need to blend animations now */
-        const float factor =
-            skeleton->curr_anim_blend_time_sec / skeleton->anim_blend_time_sec;
-        for (unsigned int i = 0; i < 4; i++) {
+        factor = skeleton->curr_anim_blend_time_sec / skeleton->anim_blend_time_sec;
+        for (i = 0; i < 4; i++) {
             vec4_lerp(
                 skeleton->skinning_mats[*bone_idx][i], mat1[i], factor,
                 skeleton->skinning_mats[*bone_idx][i]);
@@ -441,23 +457,26 @@ update_skeleton_bone_skinning_mat(
     }
 
     (*bone_idx) += 1;
-    for (unsigned int i = 0; i < bone->child_count; i++) {
+    for (i = 0; i < bone->child_count; i++) {
         update_skeleton_bone_skinning_mat(skeleton, bone_idx, global_transform);
     }
 }
 
 void
 prv_skeleton_update(te_skeleton* skeleton, float delta_time_sec) {
+    te_mat4 identity;
+    unsigned int bone_idx;
+
     if (skeleton->playing_anim != NULL) {
         te_skeleton_animation* anim = skeleton->playing_anim;
 
         anim->current_time_sec += delta_time_sec;
 
         if (anim->loop) {
-            anim->current_time_sec = fmodf(anim->current_time_sec, anim->duration_sec);
+            anim->current_time_sec = (float)fmod(anim->current_time_sec, anim->duration_sec);
         } else {
             anim->current_time_sec =
-                glm_clamp(anim->current_time_sec, 0.0f, anim->duration_sec);
+                math_clamp(anim->current_time_sec, 0.0f, anim->duration_sec);
         }
 
         if (skeleton->prev_anim != NULL) {
@@ -467,15 +486,16 @@ prv_skeleton_update(te_skeleton* skeleton, float delta_time_sec) {
                 skeleton->curr_anim_blend_time_sec = 0.0f;
                 skeleton->anim_blend_time_sec = 0.0f;
             } else {
-                mat4 identity;
-                glm_mat4_identity(identity);
+                te_skeleton_animation* temp;
+
+                mat4_identity(identity);
 
                 /* fully sample previous animation to later blend with the current one */
-                te_skeleton_animation* temp = skeleton->playing_anim;
+                temp = skeleton->playing_anim;
                 skeleton->playing_anim = skeleton->prev_anim;
                 skeleton->prev_anim = NULL;
 
-                unsigned int bone_idx = 0;
+                bone_idx = 0;
                 update_skeleton_bone_skinning_mat(skeleton, &bone_idx, identity);
 
                 skeleton->prev_anim = skeleton->playing_anim;
@@ -484,10 +504,9 @@ prv_skeleton_update(te_skeleton* skeleton, float delta_time_sec) {
         }
     }
 
-    mat4 identity;
-    glm_mat4_identity(identity);
+    mat4_identity(identity);
 
-    unsigned int bone_idx = 0;
+    bone_idx = 0;
     update_skeleton_bone_skinning_mat(skeleton, &bone_idx, identity);
 
     prv_model_on_after_skeleton_updated(skeleton->model);
@@ -498,14 +517,17 @@ skeleton_get_bone_count(te_skeleton* skeleton) {
     return skeleton->bone_count;
 }
 
-mat4*
+te_mat4*
 skeleton_get_skinning_mats(te_skeleton* skeleton) {
     return skeleton->skinning_mats;
 }
 
 static bool
 load_bone_anim(te_skeleton_animation* skel_anim, unsigned int bone_anim_idx, FILE* fp) {
+    te_skeleton_bone_animation* bone_anim;
     unsigned int bone_idx;
+    unsigned int i;
+
     fread(&bone_idx, sizeof(bone_idx), 1, fp);
 
     if (bone_idx == 0xFFFFFFFF) {
@@ -515,23 +537,27 @@ load_bone_anim(te_skeleton_animation* skel_anim, unsigned int bone_anim_idx, FIL
 
     /* init bone anim */
     skel_anim->bone_anim_indices[bone_idx] = bone_anim_idx;
-    te_skeleton_bone_animation* bone_anim = &skel_anim->bone_anims[bone_anim_idx];
-    for (unsigned int i = 0; i < TE_ACT_COUNT; i++) {
+    bone_anim = &skel_anim->bone_anims[bone_anim_idx];
+    for (i = 0; i < TE_ACT_COUNT; i++) {
         bone_anim->keyframe_count[i] = 0;
         bone_anim->keyframes[i] = NULL;
     }
 
     while (1) {
+        te_skeleton_animation_keyframe* keyframes;
+        te_vec4 value;
         unsigned char channel_type;
-        fread(&channel_type, sizeof(channel_type), 1, fp);
-
         unsigned char interpolation_type;
+        unsigned int keyframe_count;
+        unsigned int end_mark;
+        float timestamp;
+
+        fread(&channel_type, sizeof(channel_type), 1, fp);
         fread(&interpolation_type, sizeof(interpolation_type), 1, fp);
 
         /* count keyframes */
-        unsigned int keyframe_count = 0;
-        float timestamp = 0.0f;
-        te_vec4 value;
+        keyframe_count = 0;
+        timestamp = 0.0f;
         while (1) {
             fread(&timestamp, sizeof(timestamp), 1, fp);
             if (timestamp < -0.5f) {
@@ -557,8 +583,7 @@ load_bone_anim(te_skeleton_animation* skel_anim, unsigned int bone_anim_idx, FIL
         }
 
         bone_anim->keyframe_count[channel_type] = keyframe_count;
-        te_skeleton_animation_keyframe* keyframes =
-            malloc(sizeof(te_skeleton_animation_keyframe) * keyframe_count);
+        keyframes = malloc(sizeof(te_skeleton_animation_keyframe) * keyframe_count);
         if (bone_anim->keyframes[channel_type] != NULL) {
             log_error_fmt(
                 __FILE__, __LINE__,
@@ -568,7 +593,7 @@ load_bone_anim(te_skeleton_animation* skel_anim, unsigned int bone_anim_idx, FIL
         }
         bone_anim->keyframes[channel_type] = keyframes;
 
-        for (unsigned int i = 0; i < keyframe_count; i++) {
+        for (i = 0; i < keyframe_count; i++) {
             keyframes[i].interpolation_type = interpolation_type;
 
             fread(&keyframes[i].time, sizeof(keyframes[i].time), 1, fp);
@@ -578,7 +603,6 @@ load_bone_anim(te_skeleton_animation* skel_anim, unsigned int bone_anim_idx, FIL
         /* read keyframe end mark (-1.0f) */
         fread(&timestamp, sizeof(timestamp), 1, fp);
 
-        unsigned int end_mark;
         fread(&end_mark, sizeof(end_mark), 1, fp);
         if (end_mark == 0xFFFFFFFF) {
             /* bone info ended */
@@ -600,25 +624,31 @@ static void
 prv_skeleton_preload_animation_file(
     te_skeleton* skeleton, const char* path_to_anim_file, const char* name,
     unsigned int name_len) {
+    FILE* fp;
+    te_skeleton_animation* anim;
+    unsigned int i;
+
     /* check if already loaded */
     {
+        te_skeleton_animation* lookup_ptr;
+        const te_skeleton_animation* const* found;
+
         te_skeleton_animation lookup;
         lookup.name = (char*)name; /* only for lookup */
-        te_skeleton_animation* lookup_ptr = &lookup;
-        const te_skeleton_animation* const* found =
-            hashmap_get(skeleton->preloaded_anims, &lookup_ptr);
+        lookup_ptr = &lookup;
+        found = hashmap_get(skeleton->preloaded_anims, &lookup_ptr);
         if (found != NULL) {
             return;
         }
     }
 
-    FILE* fp = fopen(path_to_anim_file, "rb");
+    fp = fopen(path_to_anim_file, "rb");
     if (fp == NULL) {
         log_error_fmt(__FILE__, __LINE__, "failed to open file %s", path_to_anim_file);
         abort();
     }
 
-    te_skeleton_animation* anim = malloc(sizeof(te_skeleton_animation));
+    anim = malloc(sizeof(te_skeleton_animation));
     anim->current_time_sec = 0.0f;
     anim->loop = false;
 
@@ -627,7 +657,7 @@ prv_skeleton_preload_animation_file(
     anim->name[name_len] = 0;
 
     anim->bone_anim_indices = malloc(sizeof(unsigned int) * skeleton->bone_count);
-    for (unsigned int i = 0; i < skeleton->bone_count; i++) {
+    for (i = 0; i < skeleton->bone_count; i++) {
         anim->bone_anim_indices[i] = 0xFFFFFFFF;
     }
 
@@ -635,7 +665,7 @@ prv_skeleton_preload_animation_file(
     fread(&anim->bone_anim_count, sizeof(anim->bone_anim_count), 1, fp);
     anim->bone_anims = malloc(sizeof(te_skeleton_bone_animation) * anim->bone_anim_count);
 
-    for (unsigned int i = 0; i < anim->bone_anim_count; i++) {
+    for (i = 0; i < anim->bone_anim_count; i++) {
         if (!load_bone_anim(anim, i, fp)) {
             log_error_fmt(
                 __FILE__, __LINE__, "unable to find a single bone animation info in file %s",
@@ -663,11 +693,13 @@ skeleton_load_animations(te_skeleton* skeleton, const char* relative_path) {
     }
 
     if (filesystem_path_is_directory(anim_path)) {
-        /* load all anim files from this directory */
+        unsigned int entry_idx;
         unsigned int entry_count;
+
+        /* load all anim files from this directory */
         te_filesystem_entry* entries = filesystem_list_directory(anim_path, &entry_count);
 
-        for (unsigned int entry_idx = 0; entry_idx < entry_count; entry_idx++) {
+        for (entry_idx = 0; entry_idx < entry_count; entry_idx++) {
             te_filesystem_entry* entry = &entries[entry_idx];
             if (!entry->is_dir) {
                 if (entry->name_len >= 6
@@ -707,10 +739,13 @@ skeleton_load_animations(te_skeleton* skeleton, const char* relative_path) {
 void
 skeleton_play_animation(
     te_skeleton* skeleton, const char* anim_name, bool loop, float blend_time_sec) {
+    te_skeleton_animation* lookup_ptr;
+    te_skeleton_animation* const* found;
+
     te_skeleton_animation lookup;
     lookup.name = (char*)anim_name; /* only for lookup */
-    te_skeleton_animation* lookup_ptr = &lookup;
-    te_skeleton_animation* const* found = hashmap_get(skeleton->preloaded_anims, &lookup_ptr);
+    lookup_ptr = &lookup;
+    found = hashmap_get(skeleton->preloaded_anims, &lookup_ptr);
     if (found == NULL) {
         log_error_fmt(
             __FILE__, __LINE__, "unable to find animation %s (was it loaded previously?)",
@@ -759,10 +794,12 @@ skeleton_stop_animation(te_skeleton* skeleton) {
 
 void
 skeleton_unload_animations(te_skeleton* skeleton) {
+    void* item;
+    size_t iter;
+
     skeleton_stop_animation(skeleton);
 
-    size_t iter = 0;
-    void* item;
+    iter = 0;
     while (hashmap_iter(skeleton->preloaded_anims, &iter, &item)) {
         const te_skeleton_animation** ptr = item;
         te_skeleton_animation* anim = (te_skeleton_animation*)*ptr;

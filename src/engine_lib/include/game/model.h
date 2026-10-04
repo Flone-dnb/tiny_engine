@@ -1,8 +1,8 @@
 #pragma once
 
-#include <cglm/mat4.h>
+#include <stdbool.h>
+#include <math/mat4.h>
 #include <math/vec2.h>
-#include <math/vec3.h>
 
 typedef struct te_model te_model;
 struct te_world;
@@ -236,7 +236,7 @@ void model_register_type(void);
  * ------------------------------------------------------------------------------------------------ */
 
 /* returns model's world matrix (includes parent if has any) */
-mat4* prv_model_get_world_mat_tmp(te_model* model);
+te_mat4* prv_model_get_world_mat_tmp(te_model* model);
 
 /* returns NULL if not spawned */
 struct te_aabb_shape* prv_model_get_world_aabb(te_model* model);

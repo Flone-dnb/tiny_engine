@@ -1,5 +1,6 @@
 #include <game/particle_emitter.h>
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <world.h>
 #include <type_database.h>
@@ -8,6 +9,7 @@
 #include <render/particle_renderer.h>
 #include <render/texture_manager.h>
 #include <render/renderer.h>
+#include <math/math_funcs.h>
 #include <io/filesystem.h>
 #include <io/log.h>
 #include <time.h>
@@ -242,7 +244,11 @@ particle_emitter_set_texture(te_particle_emitter* emitter, const char* relative_
         emitter->tex_relative_path[len] = 0;
 
         if (emitter->world != NULL) {
-            te_texture_manager* texture_manager = renderer_get_texture_manager(
+            te_texture_manager* texture_manager;
+            te_particle_renderer* particle_renderer;
+            te_particle_emitter_render_data* data;
+
+            texture_manager = renderer_get_texture_manager(
                 game_manager_get_renderer(world_get_game_manager(emitter->world)));
             if (emitter->tex_id > 0) {
                 texture_manager_mark_unused_texture(texture_manager, emitter->tex_id);
@@ -251,11 +257,9 @@ particle_emitter_set_texture(te_particle_emitter* emitter, const char* relative_
                 texture_manager, relative_path, PARTICLE_EMITTER_TEX_LOAD_OPTION);
 
             /* update render data */
-            te_particle_renderer* particle_renderer =
-                world_get_particle_renderer(emitter->world);
-            te_particle_emitter_render_data* data =
-                particle_renderer_get_emitter_render_data_tmp(
-                    particle_renderer, emitter->render_data_handle);
+            particle_renderer = world_get_particle_renderer(emitter->world);
+            data = particle_renderer_get_emitter_render_data_tmp(
+                particle_renderer, emitter->render_data_handle);
             data->tex_id = emitter->tex_id;
         }
     }
@@ -308,7 +312,9 @@ particle_emitter_get_spawn_velocity(te_particle_emitter* emitter, te_vec3 out) {
 
 void
 particle_emitter_set_spawn_velocity_rand(te_particle_emitter* emitter, te_vec3 rand) {
-    glm_vec3_abs(rand, rand);
+    rand[0] = math_abs(rand[0]);
+    rand[1] = math_abs(rand[1]);
+    rand[2] = math_abs(rand[2]);
     vec3_copy(rand, emitter->spawn_velocity_rand);
 }
 
@@ -319,7 +325,9 @@ particle_emitter_get_spawn_velocity_rand(te_particle_emitter* emitter, te_vec3 o
 
 void
 particle_emitter_set_spawn_offset_rand(te_particle_emitter* emitter, te_vec3 rand) {
-    glm_vec3_abs(rand, rand);
+    rand[0] = math_abs(rand[0]);
+    rand[1] = math_abs(rand[1]);
+    rand[2] = math_abs(rand[2]);
     vec3_copy(rand, emitter->spawn_offset_rand);
 }
 
@@ -373,7 +381,7 @@ static void remove_from_renderer(te_particle_emitter* emitter);
 
 void
 particle_emitter_set_time_to_live_sec(te_particle_emitter* emitter, float time_sec) {
-    emitter->time_to_live_sec = glm_max(time_sec, 0.001f);
+    emitter->time_to_live_sec = math_max(time_sec, 0.001f);
 
     if (emitter->world != NULL) {
         remove_from_renderer(emitter);
@@ -388,7 +396,7 @@ particle_emitter_get_time_to_live_sec(te_particle_emitter* emitter) {
 
 void
 particle_emitter_set_delay_between_spawns(te_particle_emitter* emitter, float time_sec) {
-    emitter->delay_between_spawns = glm_max(time_sec, 0.001f);
+    emitter->delay_between_spawns = math_max(time_sec, 0.001f);
 
     if (emitter->world != NULL) {
         remove_from_renderer(emitter);
@@ -403,7 +411,7 @@ particle_emitter_get_delay_between_spawns(te_particle_emitter* emitter) {
 
 void
 particle_emitter_set_fade_in_life_portion(te_particle_emitter* emitter, float portion) {
-    emitter->fade_in_life_portion = glm_clamp(portion, 0.0f, 1.0f);
+    emitter->fade_in_life_portion = math_clamp(portion, 0.0f, 1.0f);
 }
 
 float
@@ -413,7 +421,7 @@ particle_emitter_get_fade_in_life_portion(te_particle_emitter* emitter) {
 
 void
 particle_emitter_set_fade_out_life_portion(te_particle_emitter* emitter, float portion) {
-    emitter->fade_out_life_portion = glm_clamp(portion, 0.0f, 1.0f);
+    emitter->fade_out_life_portion = math_clamp(portion, 0.0f, 1.0f);
 }
 
 float
@@ -570,16 +578,24 @@ get_vec3_with_rand(te_vec3 base, te_vec3 rnd, te_vec3 out) {
     float x = ((((float)rand() / (float)(RAND_MAX)) - 0.5f) * 2.0f) * rnd[0];
     float y = ((((float)rand() / (float)(RAND_MAX)) - 0.5f) * 2.0f) * rnd[1];
     float z = ((((float)rand() / (float)(RAND_MAX)) - 0.5f) * 2.0f) * rnd[2];
-    vec3_add(base, (vec3){x, y, z}, out);
+
+    out[0] = base[0] + x;
+    out[1] = base[1] + y;
+    out[2] = base[2] + z;
 }
 
 static void
 emitter_tick(te_particle_emitter* emitter, float delta_time_sec) {
     te_particle_data* from = NULL;
     te_particle_data* to = NULL;
+    te_particle_renderer* particle_renderer;
+    te_particle_emitter_render_data* data;
     te_vec3 temp3;
     unsigned int i;
     unsigned int new_particle_count;
+    float life_portion;
+    float fade_in_portion;
+    float fade_out_portion;
 
     if (emitter->is_paused) {
         return;
@@ -604,20 +620,17 @@ emitter_tick(te_particle_emitter* emitter, float delta_time_sec) {
         }
 
         /* update position */
-        vec3_mul(
-            data->velocity, (vec3){delta_time_sec, delta_time_sec, delta_time_sec}, temp3);
+        vec3_muls(data->velocity, delta_time_sec, temp3);
         vec3_add(data->pos, temp3, data->pos);
 
         /* update velocity */
-        vec3_mul(
-            emitter->gravity, (vec3){delta_time_sec, delta_time_sec, delta_time_sec}, temp3);
+        vec3_muls(emitter->gravity, delta_time_sec, temp3);
         vec3_add(data->velocity, temp3, data->velocity);
 
-        float life_portion = 1.0f - (data->left_time_to_live_sec / emitter->time_to_live_sec);
-        float fade_in_portion =
-            1.0f - glm_smoothstep(0.0f, emitter->fade_in_life_portion, life_portion);
-        float fade_out_portion =
-            glm_smoothstep(emitter->fade_out_life_portion, 1.0f, life_portion);
+        life_portion = 1.0f - (data->left_time_to_live_sec / emitter->time_to_live_sec);
+        fade_in_portion =
+            1.0f - math_smoothstep(0.0f, emitter->fade_in_life_portion, life_portion);
+        fade_out_portion = math_smoothstep(emitter->fade_out_life_portion, 1.0f, life_portion);
 
         /* update color */
         vec4_copy(emitter->color, data->color);
@@ -626,8 +639,8 @@ emitter_tick(te_particle_emitter* emitter, float delta_time_sec) {
 
         /* update size */
         data->size = emitter->size;
-        data->size = glm_lerp(data->size, emitter->size_fade_in, fade_in_portion);
-        data->size = glm_lerp(data->size, emitter->size_fade_out, fade_out_portion);
+        data->size = math_lerp(data->size, emitter->size_fade_in, fade_in_portion);
+        data->size = math_lerp(data->size, emitter->size_fade_out, fade_out_portion);
 
         memcpy(&to[new_particle_count], data, sizeof(te_particle_data));
         new_particle_count += 1;
@@ -663,8 +676,8 @@ emitter_tick(te_particle_emitter* emitter, float delta_time_sec) {
     emitter->is_buf_a = !emitter->is_buf_a;
 
     /* update render data */
-    te_particle_renderer* particle_renderer = world_get_particle_renderer(emitter->world);
-    te_particle_emitter_render_data* data = particle_renderer_get_emitter_render_data_tmp(
+    particle_renderer = world_get_particle_renderer(emitter->world);
+    data = particle_renderer_get_emitter_render_data_tmp(
         particle_renderer, emitter->render_data_handle);
 
     data->particle_count = emitter->transient_alive_particle_count;
@@ -680,6 +693,9 @@ emitter_tick(te_particle_emitter* emitter, float delta_time_sec) {
 
 static void
 add_to_renderer(te_particle_emitter* emitter) {
+    te_particle_renderer* particle_renderer;
+    te_particle_emitter_render_data* data;
+
     if (emitter->tex_relative_path != NULL) {
         te_texture_manager* texture_manager = renderer_get_texture_manager(
             game_manager_get_renderer(world_get_game_manager(emitter->world)));
@@ -688,18 +704,18 @@ add_to_renderer(te_particle_emitter* emitter) {
             texture_manager, emitter->tex_relative_path, PARTICLE_EMITTER_TEX_LOAD_OPTION);
     }
 
-    te_particle_renderer* particle_renderer = world_get_particle_renderer(emitter->world);
+    particle_renderer = world_get_particle_renderer(emitter->world);
     emitter->render_data_handle = particle_renderer_add_emitter(particle_renderer);
 
-    te_particle_emitter_render_data* data = particle_renderer_get_emitter_render_data_tmp(
+    data = particle_renderer_get_emitter_render_data_tmp(
         particle_renderer, emitter->render_data_handle);
     data->tex_id = emitter->tex_id;
     data->particle_count = 0;
     data->particles = NULL;
 
     /* estimate max particle count for GPU data */
-    emitter->transient_max_particle_count = (unsigned int)ceilf(
-        ceilf(emitter->time_to_live_sec + 0.1f) / emitter->delay_between_spawns);
+    emitter->transient_max_particle_count = (unsigned int)((float)ceil(
+        (float)ceil(emitter->time_to_live_sec + 0.1f) / emitter->delay_between_spawns));
     data->particles =
         malloc(sizeof(te_particle_render_data) * emitter->transient_max_particle_count);
 

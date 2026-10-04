@@ -28,9 +28,9 @@ enum te_scene_animation_interpolation_type {
 SCENE_ANIM_KEYFRAME_TYPE(bool, bool)
 SCENE_ANIM_KEYFRAME_TYPE(unsigned, uint)
 SCENE_ANIM_KEYFRAME_TYPE(float, float)
-SCENE_ANIM_KEYFRAME_TYPE(vec2, vec2)
-SCENE_ANIM_KEYFRAME_TYPE(vec3, vec3)
-SCENE_ANIM_KEYFRAME_TYPE(vec4, vec4)
+SCENE_ANIM_KEYFRAME_TYPE(te_vec2, vec2)
+SCENE_ANIM_KEYFRAME_TYPE(te_vec3, vec3)
+SCENE_ANIM_KEYFRAME_TYPE(te_vec4, vec4)
 
 void scene_animation_set_is_looping(te_scene_animation* scene_animation, bool loop);
 void scene_animation_play(te_scene_animation* scene_animation);
@@ -74,9 +74,9 @@ char** scene_animation_get_vec4_variable_names(
 SCENE_ANIM_ADD_KEYFRAME_FUNC(bool, bool)
 SCENE_ANIM_ADD_KEYFRAME_FUNC(unsigned int, uint)
 SCENE_ANIM_ADD_KEYFRAME_FUNC(float, float)
-SCENE_ANIM_ADD_KEYFRAME_FUNC(vec2, vec2)
-SCENE_ANIM_ADD_KEYFRAME_FUNC(vec3, vec3)
-SCENE_ANIM_ADD_KEYFRAME_FUNC(vec4, vec4)
+SCENE_ANIM_ADD_KEYFRAME_FUNC(te_vec2, vec2)
+SCENE_ANIM_ADD_KEYFRAME_FUNC(te_vec3, vec3)
+SCENE_ANIM_ADD_KEYFRAME_FUNC(te_vec4, vec4)
 
 /* do not delete returned pointer, valid until keyframes are not added/changed/removed from the animation
  * do not modify properties of the returned keyframes (such as time) instead to modify a keyframe's time

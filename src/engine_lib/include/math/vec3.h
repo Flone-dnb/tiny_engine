@@ -13,9 +13,11 @@ void vec3_sub(te_vec3 a, te_vec3 b, te_vec3 dst);
 void vec3_div(te_vec3 a, te_vec3 b, te_vec3 dst);
 void vec3_mul(te_vec3 a, te_vec3 b, te_vec3 dst);
 
-/* component-wise multiplication/addition with a scalar */
-void vec3_muls(te_vec3 a, float b, te_vec3 dst);
+/* component-wise operation with a scalar */
 void vec3_adds(te_vec3 a, float b, te_vec3 dst);
+void vec3_subs(te_vec3 a, float b, te_vec3 dst);
+void vec3_muls(te_vec3 a, float b, te_vec3 dst);
+void vec3_divs(te_vec3 a, float b, te_vec3 dst);
 
 /* linear interpolation [from + t * (to - from)] based on [0.0; 1.0] factor */
 void vec3_lerp(te_vec3 from, te_vec3 to, float t, te_vec3 dst);

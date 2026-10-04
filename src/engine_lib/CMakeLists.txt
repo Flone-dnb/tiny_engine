@@ -35,6 +35,8 @@ set(PROJECT_SOURCES
     src/math/vec2.c
     src/math/vec3.c
     src/math/vec4.c
+    src/math/mat3.c
+    src/math/mat4.c
     src/render/renderer.c
     src/render/model_renderer.c
     src/render/shader_manager.c
@@ -69,6 +71,8 @@ set(PROJECT_SOURCES
     include/math/vec2.h
     include/math/vec3.h
     include/math/vec4.h
+    include/math/mat3.h
+    include/math/mat4.h
     include/window.h
     include/debug_console.h
     include/type_database.h

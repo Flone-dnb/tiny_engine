@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <cglm/mat4.h>
+#include <math/mat4.h>
 #include <game/camera.h>
 #include <game/skeleton.h>
 #include <game/game_object_info.h>
@@ -276,14 +276,14 @@ model_create(void) {
     model->disable_backface_culling = false;
     model->is_serialization_allowed = true;
 
-    glm_vec2_one(model->tex_tiling);
+    vec2_set(1.0f, 1.0f, model->tex_tiling);
     vec2_zero(model->uv_offset);
 
-    glm_vec4_one(model->color);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, model->color);
 
     vec3_zero(model->position);
     vec3_zero(model->rotation);
-    glm_vec3_one(model->scale);
+    vec3_set(1.0f, 1.0f, 1.0f, model->scale);
 
     return model;
 }
@@ -296,20 +296,26 @@ model_create_from_file(const char* relative_path) {
     unsigned int section_idx = 0;
 
     while (section_idx < section_count) {
+        const te_type_info* type_info;
+        te_model* model;
+        te_model* child_model;
+        unsigned int child_model_count;
+        unsigned int child_idx;
+
         if (strcmp(config_section_get_name(config, section_idx), model_get_type_id()) != 0) {
             section_idx += 1;
             continue;
         }
 
-        const te_type_info* type_info = type_database_get_type_info(model_get_type_id());
-        te_model* model = model_create();
+        type_info = type_database_get_type_info(model_get_type_id());
+        model = model_create();
         type_info_load_from_config(type_info, config, section_idx, model);
 
-        const unsigned int child_model_count =
+        child_model_count =
             config_section_get_uint(config, section_idx, "child_model_count", 0);
         section_idx += 1;
 
-        for (unsigned int child_idx = 0; child_idx < child_model_count; child_idx++) {
+        for (child_idx = 0; child_idx < child_model_count; child_idx++) {
             if (section_idx >= section_count) {
                 log_error_fmt(
                     __FILE__, __LINE__,
@@ -318,7 +324,7 @@ model_create_from_file(const char* relative_path) {
                     relative_path, section_count);
                 abort();
             }
-            te_model* child_model = model_create();
+            child_model = model_create();
             type_info_load_from_config(type_info, config, section_idx, child_model);
             model_set_parent(child_model, model, model_get_parent_bone_idx(child_model));
             section_idx += 1;
@@ -334,12 +340,14 @@ model_create_from_file(const char* relative_path) {
 
 void
 model_destroy(te_model* model) {
+    unsigned int i;
+
     if (model->custom_on_before_destroyed != NULL) {
         model->custom_on_before_destroyed(model);
     }
 
     /* destroy models */
-    for (unsigned int i = 0; i < model->child_model_count; i++) {
+    for (i = 0; i < model->child_model_count; i++) {
         if (model->child_models[i]->world != NULL) {
             /* we should have despawned it in our despawn callback */
             log_error(__FILE__, __LINE__, "expected the child model to be despawned already");
@@ -363,7 +371,7 @@ model_destroy(te_model* model) {
     }
 
     /* destroy sounds */
-    for (unsigned int i = 0; i < model->attached_sound_count; i++) {
+    for (i = 0; i < model->attached_sound_count; i++) {
         sound_destroy(model->attached_sounds[i]);
     }
     free(model->attached_sounds);
@@ -452,7 +460,9 @@ static void prv_model_calc_world_normal_matrices(te_model* model, mat4 world, ma
 
 static void
 prv_model_update_child_model_mats(te_model* model) {
-    for (unsigned int i = 0; i < model->child_model_count; i++) {
+    unsigned int i;
+
+    for (i = 0; i < model->child_model_count; i++) {
         te_model* child_model = model->child_models[i];
 
         if (child_model->render_data_handle != 0xffffffff) {
@@ -480,12 +490,16 @@ prv_model_calc_world_normal_matrices(te_model* model, mat4 out_world, mat3 out_n
 
     math_make_rotation_mat(model->rotation, mat2);
 
-    glm_scale_make(mat1, model->scale);
+    mat4_identity(mat1);
+    mat4_set_scaling_part(mat1, model->scale);
 
-    /* scale, rotate and then translate */
-    glm_mat4_mul(mat2, mat1, out_world);
-    glm_translate_make(mat1, model->position);
-    glm_mat4_mul(mat1, out_world, out_world);
+    /* scale, rotate */
+    mat4_mul(mat2, mat1, out_world);
+
+    /* translate */
+    mat4_identity(mat1);
+    mat4_set_translation_part(mat1, model->position);
+    mat4_mul(mat1, out_world, out_world);
 
     if (model->parent_model != NULL && model->parent_model->render_data_handle != 0xffffffff) {
         if (model->parent_bone_idx != 0xFFFFFFFF) {
@@ -494,27 +508,27 @@ prv_model_calc_world_normal_matrices(te_model* model, mat4 out_world, mat3 out_n
                 log_error(__FILE__, __LINE__, "expected parent model to have a skeleton");
                 abort();
             }
-            glm_mat4_copy(skeleton_get_skinning_mats(skeleton)[model->parent_bone_idx], mat1);
+            mat4_copy(skeleton_get_skinning_mats(skeleton)[model->parent_bone_idx], mat1);
         } else {
             te_model_renderer* renderer = prv_model_get_renderer(model->parent_model);
             te_model_render_data* data = model_renderer_get_render_data_tmp(
                 renderer, model->parent_model->render_data_handle);
 
-            glm_mat4_copy(data->world_mat, mat1);
+            mat4_copy(data->world_mat, mat1);
         }
 
         /* ignore parent's scale */
-        math_normalize_safely(mat1[0]);
-        math_normalize_safely(mat1[1]);
-        math_normalize_safely(mat1[2]);
+        vec3_normalize(mat1[0]);
+        vec3_normalize(mat1[1]);
+        vec3_normalize(mat1[2]);
 
-        glm_mat4_mul(mat1, out_world, out_world);
+        mat4_mul(mat1, out_world, out_world);
     }
 
     /* calculate normal matrix */
-    glm_mat4_inv(out_world, mat1);
-    glm_mat4_transpose(mat1);
-    glm_mat4_pick3(mat1, out_normal);
+    mat4_inv(out_world, mat1);
+    mat4_transpose(mat1, mat1);
+    mat3_from_mat4(mat1, out_normal);
 
     prv_model_update_child_model_mats(model);
 
@@ -603,7 +617,7 @@ model_set_texture(te_model* model, const char* relative_path) {
             }
 
             data->tex_id = 0;
-            vec2_set((vec2){-1.0f, -1.0f}, data->tex_tiling);
+            vec2_set(-1.0f, -1.0f, data->tex_tiling);
         }
     } else {
         /* set new texture */
@@ -685,12 +699,14 @@ model_get_scale(te_model* model, te_vec3 out) {
 
 void
 model_get_world_position(te_model* model, te_vec3 out) {
+    te_model_render_data* target_data;
+
     if (model->render_data_handle == 0xFFFFFFFF) {
         model_get_position(model, out);
         return;
     }
 
-    te_model_render_data* target_data = model_renderer_get_render_data_tmp(
+    target_data = model_renderer_get_render_data_tmp(
         prv_model_get_model_renderer(model), prv_model_get_render_data_handle(model));
 
     vec3_copy(target_data->world_mat[3], out);
@@ -774,13 +790,15 @@ model_get_disable_backface_culling(te_model* model) {
 
 void
 model_set_parent(te_model* model, te_model* new_parent, unsigned int parent_bone_idx) {
+    unsigned int i;
+
     if (model->parent_model == new_parent) {
         return;
     }
 
     if (model->parent_model != NULL) {
         /* remove from old parent */
-        for (unsigned int i = 0; i < model->parent_model->child_model_count; i++) {
+        for (i = 0; i < model->parent_model->child_model_count; i++) {
             if (model != model->parent_model->child_models[i]) {
                 continue;
             }
@@ -886,6 +904,8 @@ model_get_parent_bone_idx(te_model* model) {
 
 void
 model_attach_camera(te_model* model, te_camera* camera) {
+    te_camera* old_camera;
+
     if (model->attached_camera == camera) {
         return;
     }
@@ -905,7 +925,7 @@ model_attach_camera(te_model* model, te_camera* camera) {
     if (model->attached_camera != NULL) {
         prv_camera_on_parent_model_world_mat_changed(model->attached_camera, NULL);
     }
-    te_camera* old_camera = model->attached_camera;
+    old_camera = model->attached_camera;
     model->attached_camera = camera;
     if (camera != NULL) {
         prv_camera_on_parent_model_world_mat_changed(camera, model);
@@ -1041,6 +1061,10 @@ static te_aabb_shape prv_model_calc_aabb(te_vertex_pack* vertices);
 
 static void
 prv_model_add_to_model_renderer(te_model* model) {
+    te_game_manager* game_manager;
+    te_model_renderer* model_renderer;
+    unsigned int index_count;
+
 #if defined(DEBUG)
     if (model->world == NULL) {
         log_error(__FILE__, __LINE__, "expected world to be valid");
@@ -1064,7 +1088,7 @@ prv_model_add_to_model_renderer(te_model* model) {
     }
 
     /* load geometry */
-    unsigned int index_count = 0;
+    index_count = 0;
     {
         te_vertex_pack* vertices;
         unsigned short* indices;
@@ -1118,7 +1142,7 @@ prv_model_add_to_model_renderer(te_model* model) {
         }
     }
 
-    te_game_manager* game_manager = world_get_game_manager(model->world);
+    game_manager = world_get_game_manager(model->world);
 
     if (model->skeleton_relative_path != NULL) {
         model->skeleton =
@@ -1126,7 +1150,7 @@ prv_model_add_to_model_renderer(te_model* model) {
     }
 
     /* add to rendering */
-    te_model_renderer* model_renderer = prv_model_get_renderer(model);
+    model_renderer = prv_model_get_renderer(model);
     model->render_data_handle = model_renderer_add_model(
         model_renderer, model->shader_prog_id, model->disable_backface_culling);
 
@@ -1147,7 +1171,7 @@ prv_model_add_to_model_renderer(te_model* model) {
         data->index_count = (int)index_count;
 
         data->tex_id = 0;
-        vec2_copy((vec2){-1.0f, -1.0f}, data->tex_tiling);
+        vec2_set(-1.0f, -1.0f, data->tex_tiling);
         vec2_copy(model->uv_offset, data->uv_offset);
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
 
@@ -1171,6 +1195,12 @@ prv_model_add_to_model_renderer(te_model* model) {
 
 static void
 prv_model_remove_from_model_renderer(te_model* model) {
+    te_renderer* renderer;
+    te_texture_manager* texture_manager;
+    te_shader_manager* shader_manager;
+    te_model_renderer* model_renderer;
+    unsigned int tex_id;
+
 #if defined(DEBUG)
     if (model->world == NULL) {
         log_error(__FILE__, __LINE__, "expected world to be valid");
@@ -1178,12 +1208,12 @@ prv_model_remove_from_model_renderer(te_model* model) {
     }
 #endif
 
-    te_renderer* renderer = game_manager_get_renderer(world_get_game_manager(model->world));
-    te_texture_manager* texture_manager = renderer_get_texture_manager(renderer);
-    te_shader_manager* shader_manager = renderer_get_shader_manager(renderer);
-    te_model_renderer* model_renderer = prv_model_get_renderer(model);
+    renderer = game_manager_get_renderer(world_get_game_manager(model->world));
+    texture_manager = renderer_get_texture_manager(renderer);
+    shader_manager = renderer_get_shader_manager(renderer);
+    model_renderer = prv_model_get_renderer(model);
 
-    unsigned int tex_id = 0;
+    tex_id = 0;
     {
         te_model_render_data* data =
             model_renderer_get_render_data_tmp(model_renderer, model->render_data_handle);
@@ -1219,23 +1249,27 @@ prv_model_remove_from_model_renderer(te_model* model) {
 
 mat4*
 prv_model_get_world_mat_tmp(te_model* model) {
+    te_model_render_data* data;
+
     if (model->render_data_handle == 0xffffffff) {
         log_error(__FILE__, __LINE__, "expected the model to be spawned and visible");
         abort();
     }
 
-    te_model_render_data* data = model_renderer_get_render_data_tmp(
+    data = model_renderer_get_render_data_tmp(
         prv_model_get_renderer(model), model->render_data_handle);
     return &data->world_mat;
 }
 
 te_aabb_shape*
 prv_model_get_world_aabb(te_model* model) {
+    te_model_render_data* data;
+
     if (model->render_data_handle == 0xffffffff) {
         return NULL;
     }
 
-    te_model_render_data* data = model_renderer_get_render_data_tmp(
+    data = model_renderer_get_render_data_tmp(
         prv_model_get_renderer(model), model->render_data_handle);
     return &data->aabb_world;
 }
@@ -1371,26 +1405,34 @@ prv_model_get_model_renderer(te_model* model) {
 
 static te_aabb_shape
 prv_model_calc_aabb(te_vertex_pack* vertices) {
+    te_aabb_shape aabb;
     te_vec3 min;
     te_vec3 max;
-    vec3_copy((vec3){FLT_MAX, FLT_MAX, FLT_MAX}, min);
-    vec3_copy((vec3){FLT_MIN, FLT_MIN, FLT_MIN}, max);
+    unsigned int i;
+    float delta;
 
-    for (unsigned int i = 0; i < vertices->vertex_count; i++) {
+    vec3_set(FLT_MAX, FLT_MAX, FLT_MAX, min);
+    vec3_set(FLT_MIN, FLT_MIN, FLT_MIN, max);
+
+    for (i = 0; i < vertices->vertex_count; i++) {
         unsigned char* data =
             &vertices->data
                  [vertices->vertex_sizeof * i + vertices->attribute_offsets[TE_VA_POSITION]];
-        glm_vec3_minv(min, (float*)data, min);
-        glm_vec3_maxv(max, (float*)data, max);
+        min[0] = math_min(min[0], *((float*)data + 0));
+        min[1] = math_min(min[1], *((float*)data + 1));
+        min[2] = math_min(min[2], *((float*)data + 2));
+
+        max[0] = math_max(max[0], *((float*)data + 0));
+        max[1] = math_max(max[1], *((float*)data + 1));
+        max[2] = math_max(max[2], *((float*)data + 2));
     }
 
-    te_aabb_shape aabb;
     aabb.center[0] = (min[0] + max[0]) * 0.5f;
     aabb.center[1] = (min[1] + max[1]) * 0.5f;
     aabb.center[2] = (min[2] + max[2]) * 0.5f;
 
     /* to avoid thin sides */
-    const float delta = 0.001f;
+    delta = 0.001f;
 
     aabb.extents[0] = glm_max(max[0] - aabb.center[0], delta);
     aabb.extents[1] = glm_max(max[1] - aabb.center[1], delta);
@@ -1401,11 +1443,13 @@ prv_model_calc_aabb(te_vertex_pack* vertices) {
 
 static void
 on_spawned(te_model* model, te_world* world) {
+    unsigned int i;
+
     model->world = world;
     prv_model_add_to_model_renderer(model);
 
     /* spawn child models */
-    for (unsigned int i = 0; i < model->child_model_count; i++) {
+    for (i = 0; i < model->child_model_count; i++) {
         te_model* child_model = model->child_models[i];
 
         if (child_model->world != NULL) {
@@ -1429,7 +1473,7 @@ on_spawned(te_model* model, te_world* world) {
     if (model->attached_sound_count > 0) {
         te_vec3 pos;
         model_get_world_position(model, pos);
-        for (unsigned int i = 0; i < model->attached_sound_count; i++) {
+        for (i = 0; i < model->attached_sound_count; i++) {
             sound_set_3d_position(model->attached_sounds[i], pos);
         }
 
@@ -1445,6 +1489,8 @@ on_spawned(te_model* model, te_world* world) {
 
 static void
 on_despawned(te_model* model) {
+    unsigned int i;
+
     if (model->custom_on_before_despawned != NULL) {
         model->custom_on_before_despawned(model);
     }
@@ -1456,7 +1502,7 @@ on_despawned(te_model* model) {
     }
 
     /* despawn child models */
-    for (unsigned int i = 0; i < model->child_model_count; i++) {
+    for (i = 0; i < model->child_model_count; i++) {
         te_model* child_model = model->child_models[i];
 
         if (child_model->world != NULL) {
@@ -1470,7 +1516,7 @@ on_despawned(te_model* model) {
     }
 
     /* stop sounds */
-    for (unsigned int i = 0; i < model->attached_sound_count; i++) {
+    for (i = 0; i < model->attached_sound_count; i++) {
         sound_stop(model->attached_sounds[i]);
     }
 
@@ -1502,10 +1548,10 @@ type_despawn(te_world* world, te_model* model) {
 
     if (model->parent_model != NULL) {
         model_set_parent(
-            model, NULL, 0xFFFFFFFF); // make model to be in the array of root world objects
+            model, NULL, 0xFFFFFFFF); /* make model to be in the array of root world objects */
     }
     world_despawn_game_object(
-        model->world, model, model_get_game_object_info()); // despawn root world object
+        model->world, model, model_get_game_object_info()); /* despawn root world object */
 }
 
 static void
@@ -1519,6 +1565,8 @@ get_parent_bone_idx(te_model* model) {
 
 void
 model_register_type(void) {
+    te_type_info* info;
+
     te_game_object_info* game_object_info = malloc(sizeof(te_game_object_info));
     game_object_info->type_id = model_get_type_id();
     game_object_info->type = TE_GOT_MODEL;
@@ -1530,7 +1578,7 @@ model_register_type(void) {
     game_object_info->on_despawned = on_despawned;
     game_object_info->destroy = model_destroy;
 
-    te_type_info* info = type_info_create(
+    info = type_info_create(
         model_get_type_id(), model_create, model_destroy, type_spawn, type_despawn, NULL,
         game_object_info, model_is_serialization_allowed);
     type_info_add_vec3_variable(info, "position", model_set_position, model_get_position);
@@ -1568,6 +1616,10 @@ static void
 prv_model_load_geo(
     const char* path_to_geo, te_vertex_pack** vertices, unsigned short** indices,
     unsigned int* index_count) {
+    unsigned int vertex_count;
+    unsigned char id;
+    bool is_skinned;
+
     char* res_path = filesystem_prepend_res_to_path(path_to_geo, NULL);
 
     FILE* fp = fopen(res_path, "rb");
@@ -1578,7 +1630,7 @@ prv_model_load_geo(
         abort();
     }
 
-    unsigned char id = 0;
+    id = 0;
     fread(&id, sizeof(id), 1, fp);
     if (id != 0 && id != 100) { /* unskinned || skinned vertex format ID (see import.c) */
         log_error_fmt(
@@ -1587,9 +1639,9 @@ prv_model_load_geo(
             path_to_geo, (unsigned int)id);
         abort();
     }
-    const bool is_skinned = id == 100;
+    is_skinned = id == 100;
 
-    unsigned int vertex_count = 0;
+    vertex_count = 0;
     fread(&vertex_count, sizeof(vertex_count), 1, fp);
 
     (*vertices) = vertex_pack_create(vertex_count, is_skinned);

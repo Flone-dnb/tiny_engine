@@ -45,15 +45,27 @@ vec2_mul(te_vec2 a, te_vec2 b, te_vec2 dst) {
 }
 
 void
+vec2_adds(te_vec2 a, float b, te_vec2 dst) {
+    dst[0] = a[0] + b;
+    dst[1] = a[1] + b;
+}
+
+void
+vec2_subs(te_vec2 a, float b, te_vec2 dst) {
+    dst[0] = a[0] - b;
+    dst[1] = a[1] - b;
+}
+
+void
 vec2_muls(te_vec2 a, float b, te_vec2 dst) {
     dst[0] = a[0] * b;
     dst[1] = a[1] * b;
 }
 
 void
-vec2_adds(te_vec2 a, float b, te_vec2 dst) {
-    dst[0] = a[0] + b;
-    dst[1] = a[1] + b;
+vec2_divs(te_vec2 a, float b, te_vec2 dst) {
+    dst[0] = a[0] / b;
+    dst[1] = a[1] / b;
 }
 
 void

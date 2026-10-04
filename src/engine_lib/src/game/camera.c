@@ -1,6 +1,5 @@
 #include <game/camera.h>
 
-#include <cglm/cam.h>
 #include <stdlib.h>
 #include <string.h>
 #include <game/model.h>
@@ -38,9 +37,9 @@ struct te_camera {
 #endif
 
     /* may be outdated, see @ref is_view_mat_outdated and @ref is_proj_mat_outdated */
-    mat4 view_mat;
-    mat4 proj_mat;
-    mat4 view_proj_mat;
+    te_mat4 view_mat;
+    te_mat4 proj_mat;
+    te_mat4 view_proj_mat;
 
     /* position of the top-left corner of the viewport rectangle in XY and size in ZW (in range [0; 1]) */
     te_vec4 viewport;
@@ -321,14 +320,18 @@ camera_set_near_clip(te_camera* camera, float near_clip) {
 
 void
 camera_set_far_clip(te_camera* camera, float far_clip) {
-    camera->far_clip = glm_max(camera->near_clip + 1.0f, far_clip);
+    camera->far_clip = math_max(camera->near_clip + 1.0f, far_clip);
     camera->is_proj_mat_outdated = true;
 }
 
 void
 camera_set_viewport(te_camera* camera, te_vec4 viewport) {
-    glm_vec4_clamp(viewport, 0.0f, 1.0f);
     vec4_copy(viewport, camera->viewport);
+
+    camera->viewport[0] = math_clamp(camera->viewport[0], 0.0f, 1.0f);
+    camera->viewport[1] = math_clamp(camera->viewport[1], 0.0f, 1.0f);
+    camera->viewport[2] = math_clamp(camera->viewport[2], 0.0f, 1.0f);
+    camera->viewport[3] = math_clamp(camera->viewport[3], 0.0f, 1.0f);
 }
 
 void
@@ -343,16 +346,16 @@ camera_get_world_position(te_camera* camera, te_vec3 out) {
     camera_pos[3] = 1.0f;
     vec3_copy(camera->position, camera_pos);
     if (camera->parent_model != NULL) {
-        mat4* world_mat = prv_model_get_world_mat_tmp(camera->parent_model);
+        te_mat4* world_mat = prv_model_get_world_mat_tmp(camera->parent_model);
 
         /* ignore scale */
-        mat4 world;
-        glm_mat4_copy(*world_mat, world);
-        math_normalize_safely(world[0]);
-        math_normalize_safely(world[1]);
-        math_normalize_safely(world[2]);
+        te_mat4 world;
+        mat4_copy(*world_mat, world);
+        vec3_normalize(world[0]);
+        vec3_normalize(world[1]);
+        vec3_normalize(world[2]);
 
-        glm_mat4_mulv(world, camera_pos, camera_pos);
+        mat4_mulv(world, camera_pos, camera_pos);
     }
 
     vec3_copy(camera_pos, out);
@@ -385,38 +388,39 @@ camera_get_viewport(te_camera* camera, te_vec4 out) {
 
 static void
 recalculate_directions(te_camera* camera) {
-    mat4 rot_mat;
+    te_vec4 global_forward;
+    te_vec4 global_right;
+    te_vec4 global_up;
+    te_vec4 forward, right, up;
+
+    te_mat4 rot_mat;
     math_make_rotation_mat(camera->rotation, rot_mat);
 
     if (camera->parent_model != NULL) {
-        mat4* world_mat = prv_model_get_world_mat_tmp(camera->parent_model);
+        te_mat4* world_mat = prv_model_get_world_mat_tmp(camera->parent_model);
 
         /* ignore scale */
-        mat4 world;
-        glm_mat4_copy(*world_mat, world);
-        math_normalize_safely(world[0]);
-        math_normalize_safely(world[1]);
-        math_normalize_safely(world[2]);
+        te_mat4 world;
+        mat4_copy(*world_mat, world);
+        vec3_normalize(world[0]);
+        vec3_normalize(world[1]);
+        vec3_normalize(world[2]);
 
-        glm_mat4_mul(world, rot_mat, rot_mat);
+        mat4_mul(world, rot_mat, rot_mat);
     }
 
-    te_vec4 global_forward;
     globals_get_world_forward(global_forward);
     global_forward[3] = 0.0f;
 
-    te_vec4 global_right;
     globals_get_world_right(global_right);
     global_right[3] = 0.0f;
 
-    te_vec4 global_up;
     globals_get_world_up(global_up);
     global_up[3] = 0.0f;
 
-    te_vec4 forward, right, up;
-    glm_mat4_mulv(rot_mat, global_forward, forward);
-    glm_mat4_mulv(rot_mat, global_right, right);
-    glm_mat4_mulv(rot_mat, global_up, up);
+    mat4_mulv(rot_mat, global_forward, forward);
+    mat4_mulv(rot_mat, global_right, right);
+    mat4_mulv(rot_mat, global_up, up);
 
     vec3_copy(forward, camera->forward);
     vec3_copy(right, camera->right);
@@ -487,42 +491,45 @@ camera_calc_cursor_world_dir(te_camera* camera, te_vec2 cursor_relative_pos, te_
         /* outside of the game's viewport */
         vec3_zero(out);
         return false;
+    } else {
+        te_mat4* view_proj_mat;
+        te_mat4 inv_view_proj_mat;
+        te_vec4 camera_ray;
+        te_vec3 camera_pos;
+        te_vec2 ndc;
+
+        /* remap to viewport */
+        vec2_sub(cursor_relative_pos, camera->viewport, cursor_relative_pos);
+        vec2_div(cursor_relative_pos, &camera->viewport[2], cursor_relative_pos);
+
+        /* convert mouse pos to NDC [-1; 1] space */
+        ndc[0] = cursor_relative_pos[0] * 2.0f;
+        ndc[1] = 2.0f - cursor_relative_pos[1] * 2.0f; /* also flip Y */
+        ndc[0] -= 1.0f;
+        ndc[1] -= 1.0f;
+
+        /* construct a point in clip space */
+        camera_ray[0] = ndc[0];
+        camera_ray[1] = ndc[1];
+        camera_ray[2] = -1.0f; /* forward axis in clip space */
+        camera_ray[3] = 1.0f;
+
+        /* apply inverse view/proj matrix */
+        view_proj_mat = camera_get_view_proj_mat(camera);
+        mat4_inv(*view_proj_mat, inv_view_proj_mat);
+        mat4_mulv(inv_view_proj_mat, camera_ray, camera_ray);
+        vec3_divs(camera_ray, camera_ray[3], camera_ray);
+
+        camera_get_world_position(camera, camera_pos);
+
+        /* get direction from camera pos */
+        vec3_sub(camera_ray, camera_pos, camera_ray);
+        vec3_normalize(camera_ray);
+
+        vec3_copy(camera_ray, out);
+
+        return true;
     }
-
-    /* remap to viewport */
-    vec2_sub(cursor_relative_pos, camera->viewport, cursor_relative_pos);
-    vec2_div(cursor_relative_pos, &camera->viewport[2], cursor_relative_pos);
-
-    /* convert mouse pos to NDC [-1; 1] space */
-    te_vec2 ndc;
-    vec2_mul(cursor_relative_pos, (vec2){2.0f, 2.0f}, ndc);
-    ndc[1] = 2.0f - ndc[1]; /* flip Y */
-    vec2_sub(ndc, (vec2){1.0f, 1.0f}, ndc);
-
-    /* construct a point in clip space */
-    te_vec4 camera_ray;
-    camera_ray[0] = ndc[0];
-    camera_ray[1] = ndc[1];
-    camera_ray[2] = -1.0f; /* forward axis in clip space */
-    camera_ray[3] = 1.0f;
-
-    /* apply inverse view/proj matrix */
-    mat4* view_proj_mat = camera_get_view_proj_mat(camera);
-    mat4 inv_view_proj_mat;
-    glm_mat4_inv(*view_proj_mat, inv_view_proj_mat);
-    glm_mat4_mulv(inv_view_proj_mat, camera_ray, camera_ray);
-    glm_vec3_divs(camera_ray, camera_ray[3], camera_ray);
-
-    te_vec3 camera_pos;
-    camera_get_world_position(camera, camera_pos);
-
-    /* get direction from camera pos */
-    vec3_sub(camera_ray, camera_pos, camera_ray);
-    vec3_normalize(camera_ray);
-
-    vec3_copy(camera_ray, out);
-
-    return true;
 }
 
 void
@@ -537,6 +544,10 @@ camera_is_serialization_allowed(te_camera* camera) {
 
 void
 prv_camera_recalc_frustum(te_camera* camera) {
+    te_vec3 forward;
+    te_vec3 up;
+    te_vec3 pos;
+
 #if defined(DEBUG)
     if (camera->is_directions_outdated) {
         log_error(
@@ -545,12 +556,9 @@ prv_camera_recalc_frustum(te_camera* camera) {
         abort();
     }
 #endif
-    te_vec3 forward;
-    te_vec3 up;
     camera_get_forward(camera, forward);
     camera_get_up(camera, up);
 
-    te_vec3 pos;
     camera_get_world_position(camera, pos);
 
     camera->frustum = frustum_shape_create(
@@ -562,15 +570,16 @@ static void
 make_sure_view_proj_mat_updated(te_camera* camera) {
     if (camera->is_view_mat_outdated || camera->is_proj_mat_outdated) {
         if (camera->is_view_mat_outdated) {
-            te_vec3 forward;
-            te_vec3 up;
-            camera_get_forward(camera, forward);
-            camera_get_up(camera, up);
-
             te_vec3 pos;
+
+            if (camera->is_directions_outdated) {
+                recalculate_directions(camera);
+            }
+
             camera_get_world_position(camera, pos);
 
-            glm_look_rh(pos, forward, up, camera->view_mat);
+            mat4_make_view_mat_rh(
+                pos, camera->forward, camera->right, camera->up, camera->view_mat);
             camera->is_view_mat_outdated = false;
         }
 
@@ -583,31 +592,31 @@ make_sure_view_proj_mat_updated(te_camera* camera) {
         }
 #endif
         if (camera->is_proj_mat_outdated) {
-            glm_perspective_rh_no(
-                glm_rad(camera->vertical_fov),
+            mat4_make_proj_mat_rh(
+                math_rad(camera->vertical_fov),
                 (float)camera->render_width / (float)camera->render_height, camera->near_clip,
                 camera->far_clip, camera->proj_mat);
             camera->is_proj_mat_outdated = false;
         }
 
         prv_camera_recalc_frustum(camera);
-        glm_mat4_mul(camera->proj_mat, camera->view_mat, camera->view_proj_mat);
+        mat4_mul(camera->proj_mat, camera->view_mat, camera->view_proj_mat);
     }
 }
 
-mat4*
+te_mat4*
 camera_get_view_proj_mat(te_camera* camera) {
     make_sure_view_proj_mat_updated(camera);
     return &camera->view_proj_mat;
 }
 
-mat4*
+te_mat4*
 camera_get_view_mat(te_camera* camera) {
     make_sure_view_proj_mat_updated(camera);
     return &camera->view_mat;
 }
 
-mat4*
+te_mat4*
 camera_get_proj_mat(te_camera* camera) {
     make_sure_view_proj_mat_updated(camera);
     return &camera->proj_mat;

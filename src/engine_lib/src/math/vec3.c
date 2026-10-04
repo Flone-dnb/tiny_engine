@@ -52,6 +52,20 @@ vec3_mul(te_vec3 a, te_vec3 b, te_vec3 dst) {
 }
 
 void
+vec3_adds(te_vec3 a, float b, te_vec3 dst) {
+    dst[0] = a[0] + b;
+    dst[1] = a[1] + b;
+    dst[2] = a[2] + b;
+}
+
+void
+vec3_subs(te_vec3 a, float b, te_vec3 dst) {
+    dst[0] = a[0] - b;
+    dst[1] = a[1] - b;
+    dst[2] = a[2] - b;
+}
+
+void
 vec3_muls(te_vec3 a, float b, te_vec3 dst) {
     dst[0] = a[0] * b;
     dst[1] = a[1] * b;
@@ -59,10 +73,10 @@ vec3_muls(te_vec3 a, float b, te_vec3 dst) {
 }
 
 void
-vec3_adds(te_vec3 a, float b, te_vec3 dst) {
-    dst[0] = a[0] + b;
-    dst[1] = a[1] + b;
-    dst[2] = a[2] + b;
+vec3_divs(te_vec3 a, float b, te_vec3 dst) {
+    dst[0] = a[0] / b;
+    dst[1] = a[1] / b;
+    dst[2] = a[2] / b;
 }
 
 void

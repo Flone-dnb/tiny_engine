@@ -4,7 +4,7 @@
 
 #include <math/vec2.h>
 #include <math/vec3.h>
-#include <cglm/mat4.h>
+#include <math/mat4.h>
 
 struct te_renderer;
 struct te_aabb_shape;

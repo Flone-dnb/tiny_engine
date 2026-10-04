@@ -1,9 +1,8 @@
 #pragma once
 
 #include <stdbool.h>
-#include <cglm/mat4.h>
-#include <math/vec3.h>
-#include <math/vec4.h>
+#include <math/mat4.h>
+#include <math/vec2.h>
 
 typedef struct te_camera te_camera;
 struct te_model;
@@ -75,9 +74,9 @@ bool camera_is_serialization_allowed(te_camera* camera);
 
 /* returns camera's view projection matrix
  * do not free/destroy returned pointer, valid while the camera exists */
-mat4* camera_get_view_proj_mat(te_camera* camera);
-mat4* camera_get_view_mat(te_camera* camera);
-mat4* camera_get_proj_mat(te_camera* camera);
+te_mat4* camera_get_view_proj_mat(te_camera* camera);
+te_mat4* camera_get_view_mat(te_camera* camera);
+te_mat4* camera_get_proj_mat(te_camera* camera);
 
 /* returns NULL if the camera is not spawned in a world */
 struct te_world* camera_get_world(te_camera* camera);
