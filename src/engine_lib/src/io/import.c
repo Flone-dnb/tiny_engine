@@ -7,15 +7,13 @@
 #include <game/skeleton.h>
 #include <io/log.h>
 #include <io/filesystem.h>
+#include <math/mat4.h>
 #include <math/math_funcs.h>
 #define CGLTF_IMPLEMENTATION
 #include <cgltf/cgltf.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb/stb_image_write.h>
 #include <stb/stb_image.h>
-#include <cglm/affine.h>
-#include <cglm/euler.h>
-#include <cglm/quat.h>
 
 /* Returns absolute path to the destination texture (located in the "res" directory).
  * You must free returned pointer. */
@@ -124,10 +122,10 @@ save_texture(
 
 static void
 save_skeleton_node(cgltf_node* node, FILE* fp, cgltf_skin* skin) {
-    mat4 transform;
+    te_mat4 transform;
     te_vec3 rot;
     te_vec4 loc;
-    mat4 rot_mat;
+    te_mat4 rot_mat;
     te_vec3 scale;
     size_t i;
     unsigned int child_count;
@@ -145,49 +143,49 @@ save_skeleton_node(cgltf_node* node, FILE* fp, cgltf_skin* skin) {
     }
 
     /* prepare local transform */
-    glm_mat4_identity(transform);
+    mat4_identity(transform);
     if (node->has_matrix) {
         vec4_copy(&node->matrix[0], transform[0]);
         vec4_copy(&node->matrix[4], transform[1]);
         vec4_copy(&node->matrix[8], transform[2]);
         vec4_copy(&node->matrix[12], transform[3]);
     } else if (node->has_translation || node->has_rotation || node->has_scale) {
-        mat4 translate_mat;
-        mat4 rot_mat;
-        mat4 scale_mat;
+        te_mat4 translate_mat;
+        te_mat4 rot_mat;
+        te_mat4 scale_mat;
 
-        glm_mat4_identity(translate_mat);
-        glm_mat4_identity(rot_mat);
-        glm_mat4_identity(scale_mat);
+        mat4_identity(translate_mat);
+        mat4_identity(rot_mat);
+        mat4_identity(scale_mat);
 
         if (node->has_translation) {
-            glm_translate_make(translate_mat, node->translation);
+            mat4_set_translation_part(translate_mat, node->translation);
         }
         if (node->has_rotation) {
-            mat4 mat;
-            glm_quat_mat4(node->rotation, mat);
+            te_mat4 mat;
+            mat4_from_quat(node->rotation, mat);
 
-            glm_euler_angles(mat, rot);
-            rot[0] = glm_deg(rot[0]);
-            rot[1] = glm_deg(rot[1]);
-            rot[2] = glm_deg(rot[2]);
+            mat4_extract_euler_angles_rad(mat, rot);
+            rot[0] = math_deg(rot[0]);
+            rot[1] = math_deg(rot[1]);
+            rot[2] = math_deg(rot[2]);
 
             math_make_rotation_mat(rot, rot_mat);
         }
         if (node->has_scale) {
-            glm_scale_make(scale_mat, node->scale);
+            mat4_set_scaling_part(scale_mat, node->scale);
         }
 
         /* scale, rotate and then translate */
-        glm_mat4_mul(rot_mat, scale_mat, transform);
-        glm_mat4_mul(translate_mat, transform, transform);
+        mat4_mul(rot_mat, scale_mat, transform);
+        mat4_mul(translate_mat, transform, transform);
     }
 
-    glm_decompose(transform, loc, rot_mat, scale);
-    glm_euler_angles(rot_mat, rot);
-    rot[0] = glm_deg(rot[0]);
-    rot[1] = glm_deg(rot[1]);
-    rot[2] = glm_deg(rot[2]);
+    mat4_decompose(transform, loc, rot_mat, scale);
+    mat4_extract_euler_angles_rad(rot_mat, rot);
+    rot[0] = math_deg(rot[0]);
+    rot[1] = math_deg(rot[1]);
+    rot[2] = math_deg(rot[2]);
 
     /* save local transform */
     fwrite(&loc, sizeof(float), 3, fp);
@@ -195,20 +193,20 @@ save_skeleton_node(cgltf_node* node, FILE* fp, cgltf_skin* skin) {
     fwrite(&scale, sizeof(float), 3, fp);
 
     /* save inverse bind pose matrix */
-    glm_mat4_identity(transform);
+    mat4_identity(transform);
     if (skin->inverse_bind_matrices != NULL) {
         cgltf_accessor* accessor = skin->inverse_bind_matrices;
         cgltf_buffer_view* buffer_view = accessor->buffer_view;
 
-        mat4* data = (mat4*)((char*)buffer_view->buffer->data
-                             + (buffer_view->offset + accessor->offset));
+        te_mat4* data = (te_mat4*)((char*)buffer_view->buffer->data
+                                   + (buffer_view->offset + accessor->offset));
 
         for (i = 0; i < skin->joints_count; i++) {
             if (node != skin->joints[i]) {
                 continue;
             }
             data += i;
-            glm_mat4_copy(*data, transform);
+            mat4_copy(*data, transform);
             break;
         }
     }
@@ -266,15 +264,16 @@ import_skeleton(
 static bool
 keyframe_value_eps_cmp(te_vec4 a, te_vec4 b) {
     const float eps = 0.002f;
-    return math_abs(a[0] - b[0]) <= eps && math_abs(a[1] - b[1]) <= eps && math_abs(a[2] - b[2]) <= eps
-           && math_abs(a[3] - b[3]) <= eps;
+    return math_abs(a[0] - b[0]) <= eps && math_abs(a[1] - b[1]) <= eps
+           && math_abs(a[2] - b[2]) <= eps && math_abs(a[3] - b[3]) <= eps;
 }
 
 static void
-keyframe_value_to_vec4(enum te_animation_channel_type channel_type, float* values, te_vec4 dst) {
+keyframe_value_to_vec4(
+    enum te_animation_channel_type channel_type, float* values, te_vec4 dst) {
     if (channel_type == TE_ACT_ROTATION) {
-        glm_quat_copy(values, dst);
-        glm_quat_normalize(dst);
+        vec4_copy(values, dst);
+        vec4_normalize(dst);
     } else {
         vec3_copy(values, dst);
         dst[3] = 0.0f;
@@ -363,7 +362,7 @@ save_anim_channel(
                 "found an animation channel with an unexpected input type");
             abort();
         }
-        if (output->type != cgltf_type_te_vec3 && output->type != cgltf_type_vec4) {
+        if (output->type != cgltf_type_vec3 && output->type != cgltf_type_vec4) {
             log_error(
                 __FILE__, __LINE__,
                 "found an animation channel with an unexpected output type");
@@ -437,7 +436,7 @@ save_anim_channel(
             abort();
         }
         fwrite(timestamps, sizeof(float), 1, fp);
-        fwrite(first_value, sizeof(vec4), 1, fp);
+        fwrite(first_value, sizeof(te_vec4), 1, fp);
 
         timestamps += 1;
         values += value_comp_count;
@@ -459,7 +458,7 @@ save_anim_channel(
                 } else {
                     te_vec4 expected;
                     vec4_copy(prev_value, expected);
-                    glm_vec4_add(expected, step, expected);
+                    vec4_add(expected, step, expected);
 
                     if (keyframe_value_eps_cmp(value, expected)) {
                         write_keyframe = false;
@@ -467,7 +466,7 @@ save_anim_channel(
                         te_vec4 diff;
 
                         fwrite(&prev_timestamp, sizeof(float), 1, fp);
-                        fwrite(prev_value, sizeof(vec4), 1, fp);
+                        fwrite(prev_value, sizeof(te_vec4), 1, fp);
 
                         vec4_sub(value, prev_value, diff);
                         vec4_copy(diff, step);
@@ -479,7 +478,7 @@ save_anim_channel(
 
             if (write_keyframe) {
                 fwrite(timestamps, sizeof(float), 1, fp);
-                fwrite(value, sizeof(vec4), 1, fp);
+                fwrite(value, sizeof(te_vec4), 1, fp);
             }
 
             if (*timestamps < 0.0f) {
@@ -761,7 +760,7 @@ save_primitive(
             cgltf_buffer_view* buffer_view = accessor->buffer_view;
 
             const size_t stride =
-                buffer_view->stride == 0 ? sizeof(vec3) : buffer_view->stride;
+                buffer_view->stride == 0 ? sizeof(te_vec3) : buffer_view->stride;
             char* data =
                 (char*)buffer_view->buffer->data + (buffer_view->offset + accessor->offset);
 
@@ -769,7 +768,7 @@ save_primitive(
                 unsigned char* dst = &vertices->data
                                           [vertices->vertex_sizeof * i
                                            + vertices->attribute_offsets[TE_VA_POSITION]];
-                vec3_copy(*(vec3*)data, (float*)dst);
+                vec3_copy(*(te_vec3*)data, (float*)dst);
                 data += stride;
             }
         }
@@ -780,7 +779,7 @@ save_primitive(
             cgltf_buffer_view* buffer_view = accessor->buffer_view;
 
             const size_t stride =
-                buffer_view->stride == 0 ? sizeof(vec3) : buffer_view->stride;
+                buffer_view->stride == 0 ? sizeof(te_vec3) : buffer_view->stride;
             char* data =
                 (char*)buffer_view->buffer->data + (buffer_view->offset + accessor->offset);
 
@@ -788,7 +787,7 @@ save_primitive(
                 unsigned char* dst = &vertices->data
                                           [vertices->vertex_sizeof * i
                                            + vertices->attribute_offsets[TE_VA_NORMAL]];
-                vec3_copy(*(vec3*)data, (float*)dst);
+                vec3_copy(*(te_vec3*)data, (float*)dst);
                 data += stride;
             }
         }
@@ -799,7 +798,7 @@ save_primitive(
             cgltf_buffer_view* buffer_view = accessor->buffer_view;
 
             const size_t stride =
-                buffer_view->stride == 0 ? sizeof(vec2) : buffer_view->stride;
+                buffer_view->stride == 0 ? sizeof(te_vec2) : buffer_view->stride;
             char* data =
                 (char*)buffer_view->buffer->data + (buffer_view->offset + accessor->offset);
 
@@ -807,7 +806,7 @@ save_primitive(
                 unsigned char* dst =
                     &vertices->data
                          [vertices->vertex_sizeof * i + vertices->attribute_offsets[TE_VA_UV]];
-                vec2_copy(*(vec2*)data, (float*)dst);
+                vec2_copy(*(te_vec2*)data, (float*)dst);
                 data += stride;
             }
         }
@@ -848,7 +847,7 @@ save_primitive(
                 unsigned char* dst = &vertices->data
                                           [vertices->vertex_sizeof * i
                                            + vertices->attribute_offsets[TE_VA_BONE_WEIGHTS]];
-                vec4_copy(*(vec4*)data, (float*)dst);
+                vec4_copy(*(te_vec4*)data, (float*)dst);
                 data += stride;
             }
         }

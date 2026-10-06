@@ -34,3 +34,6 @@ void mat4_extract_euler_angles_rad(te_mat4 mat, te_vec3 dst);
 
 void mat4_to_quat(te_mat4 mat, te_vec4 dst);
 void mat4_from_quat(te_vec4 quat, te_mat4 dst);
+
+void
+mat4_decompose(te_mat4 mat, te_vec4 out_translation, te_mat4 out_rotation, te_vec3 out_scale);

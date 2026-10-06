@@ -1,5 +1,6 @@
 #include <io/config.h>
 
+#include <snprintf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

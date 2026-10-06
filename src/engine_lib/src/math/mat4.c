@@ -401,3 +401,31 @@ mat4_from_quat(te_vec4 quat, te_mat4 dst) {
     dst[3][2] = 0.0f;
     dst[3][3] = 1.0f;
 }
+
+void
+mat4_decompose(te_mat4 mat, te_vec4 out_translation, te_mat4 out_rotation, te_vec3 out_scale) {
+    te_vec3 cross;
+
+    vec4_copy(mat[3], out_translation);
+
+    vec4_copy(mat[0], out_rotation[0]);
+    vec4_copy(mat[1], out_rotation[1]);
+    vec4_copy(mat[2], out_rotation[2]);
+    vec4_set(0.0f, 0.0f, 0.0f, 1.0f, out_rotation[3]);
+
+    out_scale[0] = vec3_len(mat[0]);
+    out_scale[1] = vec3_len(mat[1]);
+    out_scale[2] = vec3_len(mat[2]);
+
+    vec4_muls(out_rotation[0], 1.0f / out_scale[0], out_rotation[0]);
+    vec4_muls(out_rotation[1], 1.0f / out_scale[1], out_rotation[1]);
+    vec4_muls(out_rotation[2], 1.0f / out_scale[2], out_rotation[2]);
+
+    vec3_cross(mat[0], mat[1], cross);
+    if (vec3_dot(cross, mat[2]) < 0.0f) {
+        vec4_muls(out_rotation[0], -1.0f, out_rotation[0]);
+        vec4_muls(out_rotation[1], -1.0f, out_rotation[1]);
+        vec4_muls(out_rotation[2], -1.0f, out_rotation[2]);
+        vec3_muls(out_scale, -1.0f, out_scale);
+    }
+}

@@ -1,5 +1,6 @@
 #include <io/log.h>
 
+#include <stdarg.h>
 #include <snprintf.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -8,6 +9,14 @@
 #include <time.h>
 #include <io/paths.h>
 #include <render/debug_drawer.h>
+
+#ifndef va_copy
+#ifdef __va_copy
+#define va_copy(dest, src) __va_copy((dest), (src))
+#else
+#define va_copy(dest, src) ((dest) = (src))
+#endif
+#endif
 
 static unsigned int error_count_logged = 0;
 static unsigned int warn_count_logged = 0;

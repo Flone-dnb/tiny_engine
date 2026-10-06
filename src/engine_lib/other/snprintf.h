@@ -7,15 +7,12 @@
 
 #ifndef HAS_SNPRINTF
 int
-snprintf(char* str, size_t size, const char* format, ...) {
-    va_list ap;
+vsnprintf(char* str, size_t size, const char* format, va_list ap) {
     int retval;
 
     if (str == NULL || size == 0) {
         return -1;
     }
-
-    va_start(ap, format);
 
 #if defined(_MSC_VER) && (_MSC_VER < 1900)
     /* old msvc does not guarantee null terminated when overflow */
@@ -30,7 +27,6 @@ snprintf(char* str, size_t size, const char* format, ...) {
         char* tmp_buf = (char*)malloc(alloc_size);
 
         if (tmp_buf == NULL) {
-            va_end(ap);
             return -1;
         }
 
@@ -49,7 +45,18 @@ snprintf(char* str, size_t size, const char* format, ...) {
     }
 #endif
 
+    return retval;
+}
+
+int
+snprintf(char* str, size_t size, const char* format, ...) {
+    va_list ap;
+    int retval;
+
+    va_start(ap, format);
+    retval = vsnprintf(str, size, format, ap);
     va_end(ap);
+
     return retval;
 }
 #endif

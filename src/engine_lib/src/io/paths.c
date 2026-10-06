@@ -21,7 +21,11 @@ const char*
 paths_get_config_dir(void) {
     if (cached_path_to_config_dir[0] == 0) {
 #if defined(WIN32)
+        char path_buff[256] = {0};
         PWSTR path_tmp = NULL;
+        size_t path_len;
+        size_t i;
+
         const HRESULT result =
             SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &path_tmp);
         if (result != S_OK) {
@@ -31,13 +35,12 @@ paths_get_config_dir(void) {
         }
 
         /* copy path and replace slashes */
-        char path_buff[256] = {0};
-        const size_t path_len = wcslen(path_tmp);
+        path_len = wcslen(path_tmp);
         if (path_len > 256) {
             log_error(__FILE__, __LINE__, "path to AppData folder is too long");
             abort();
         }
-        for (size_t i = 0; i < path_len; i++) {
+        for (i = 0; i < path_len; i++) {
             if (path_tmp[i] == '\\') {
                 path_buff[i] = '/';
             } else {
@@ -77,7 +80,10 @@ const char*
 paths_get_log_file(void) {
     if (cached_path_to_log_file[0] == 0) {
 #if defined(WIN32)
+        char path_buff[256] = {0};
         PWSTR path_tmp = NULL;
+        size_t path_len;
+        size_t i;
         const HRESULT result =
             SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &path_tmp);
         if (result != S_OK) {
@@ -87,13 +93,12 @@ paths_get_log_file(void) {
         }
 
         /* copy path and replace slashes */
-        char path_buff[256] = {0};
-        const size_t path_len = wcslen(path_tmp);
+        path_len = wcslen(path_tmp);
         if (path_len > 256) {
             log_error(__FILE__, __LINE__, "path to AppData folder is too long");
             abort();
         }
-        for (size_t i = 0; i < path_len; i++) {
+        for (i = 0; i < path_len; i++) {
             if (path_tmp[i] == '\\') {
                 path_buff[i] = '/';
             } else {
