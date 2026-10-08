@@ -57,6 +57,20 @@ math_deg(float rad) {
 }
 
 float
+math_tan(float value) {
+    return (float)tan(value);
+}
+
+float
+math_round(float value) {
+    if (value >= 0.0f) {
+        return (float)(int)(value + 0.5f);
+    } else {
+        return (float)(int)(value - 0.5f);
+    }
+}
+
+float
 math_smoothstep(float edge0, float edge1, float x) {
     x = math_clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
     return x * x * (3.0f - 2.0f * x);

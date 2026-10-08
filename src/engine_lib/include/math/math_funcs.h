@@ -10,6 +10,8 @@ float math_min(float a, float b);
 float math_clamp(float value, float min, float max);
 float math_rad(float deg);
 float math_deg(float rad);
+float math_tan(float value);
+float math_round(float value);
 
 /* returns value between 0 (if x < edge0) and 1 (if x > edge1) */
 float math_smoothstep(float edge0, float edge1, float x);

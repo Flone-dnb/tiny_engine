@@ -1,5 +1,6 @@
 #include <render/widget_renderer.h>
 
+#include <stdlib.h>
 #include <string.h>
 #include <io/log.h>
 #include <render/gpu_section.h>
@@ -10,7 +11,7 @@
 #include <glad/gl.h>
 
 #define WIDGET_QUAD_GL_VERT_ATTRIB_PTR                                                        \
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(vec4), NULL);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(te_vec4), NULL);
 
 /* groups data related to the text shader program */
 typedef struct te_text_shader_data {
@@ -55,6 +56,8 @@ struct te_widget_renderer {
 
 te_widget_renderer*
 widget_renderer_create(te_renderer* renderer) {
+    te_shader_manager* shader_manager;
+
     te_widget_renderer* widget_renderer = malloc(sizeof(te_widget_renderer));
 
     widget_renderer->text_widget_data =
@@ -64,7 +67,7 @@ widget_renderer_create(te_renderer* renderer) {
     widget_renderer->renderer = renderer;
 
     /* load text shader */
-    te_shader_manager* shader_manager = renderer_get_shader_manager(renderer);
+    shader_manager = renderer_get_shader_manager(renderer);
     {
         te_text_shader_data* shader = &widget_renderer->text_shader;
 
@@ -95,12 +98,12 @@ widget_renderer_create(te_renderer* renderer) {
 
     /* create quad geometry */
     {
-        te_vec4 vertices[4]; /* XY pos, ZW uv */
-        vec4_copy((vec4){0.0f, 0.0f, 0.0f, 0.0f}, &vertices[0][0]);
-        vec4_copy((vec4){0.0f, 1.0f, 0.0f, 1.0f}, &vertices[1][0]);
-        vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, &vertices[2][0]);
-        vec4_copy((vec4){1.0f, 0.0f, 1.0f, 0.0f}, &vertices[3][0]);
         const unsigned short indices[6] = {0, 1, 2, 0, 2, 3};
+        te_vec4 vertices[4]; /* XY pos, ZW uv */
+        vec4_set(0.0f, 0.0f, 0.0f, 0.0f, &vertices[0][0]);
+        vec4_set(0.0f, 1.0f, 0.0f, 1.0f, &vertices[1][0]);
+        vec4_set(1.0f, 1.0f, 1.0f, 1.0f, &vertices[2][0]);
+        vec4_set(1.0f, 0.0f, 1.0f, 0.0f, &vertices[3][0]);
 
 #if !defined(ENGINE_GLES)
         glGenVertexArrays(1, &widget_renderer->vao);
@@ -114,7 +117,8 @@ widget_renderer_create(te_renderer* renderer) {
         {
             /* vertex buffer */
             glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
-            glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(vec4), &vertices[0][0], GL_STATIC_DRAW);
+            glBufferData(
+                GL_ARRAY_BUFFER, 4 * sizeof(te_vec4), &vertices[0][0], GL_STATIC_DRAW);
 
             /* vertex layout */
             glEnableVertexAttribArray(0);
@@ -237,7 +241,7 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
     window_get_size(
         renderer_get_window(widget_renderer->renderer), &window_width, &window_height);
-    vec2_copy((vec2){(float)window_width, (float)window_height}, window_size);
+    vec2_set((float)window_width, (float)window_height, window_size);
 
     /* draw rect widgets */
     rect_widget_count = render_data_array_get_item_count(widget_renderer->rect_widget_data);
@@ -306,7 +310,7 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
         glActiveTexture(GL_TEXTURE0); /* glyph's bitmap */
 
-        vec4_copy((vec4){0.0f, 0.0f, 1.0f, 1.0f}, clip_rect);
+        vec4_set(0.0f, 0.0f, 1.0f, 1.0f, clip_rect);
         glUniform4fv(shader->uniform_clip_rect, 1, clip_rect);
 
         glUniform2fv(shader->uniform_window_size, 1, window_size);

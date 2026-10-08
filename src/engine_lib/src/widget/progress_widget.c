@@ -1,5 +1,6 @@
 #include <widget/progress_widget.h>
 
+#include <stdlib.h>
 #include <string.h>
 #include <io/log.h>
 #include <type_database.h>
@@ -34,6 +35,9 @@ static void prv_progress_widget_on_before_despawned(void* this);
 
 te_progress_widget*
 progress_widget_create(void) {
+    te_widget* widget;
+    te_vec2 tmp2;
+
     te_progress_widget* progress_widget = malloc(sizeof(te_progress_widget));
 
     progress_widget->widget = widget_create(
@@ -43,29 +47,37 @@ progress_widget_create(void) {
 
     progress_widget->background_tex_relative_path = NULL;
     progress_widget->foreground_tex_relative_path = NULL;
-    vec4_copy((vec4){0.5f, 0.5f, 0.5f, 1.0f}, progress_widget->background_color);
-    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, progress_widget->foreground_color);
+    vec4_set(0.5f, 0.5f, 0.5f, 1.0f, progress_widget->background_color);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, progress_widget->foreground_color);
     progress_widget->value = 0.5f;
     progress_widget->is_progress_widget_destroy = false;
 
     {
         progress_widget->background_rect = rect_widget_create();
-        te_widget* rect = rect_widget_get_widget(progress_widget->background_rect);
+        widget = rect_widget_get_widget(progress_widget->background_rect);
 
-        widget_set_is_serialization_allowed(rect, false);
-        widget_set_parent(rect, progress_widget->widget);
-        widget_set_relative_position(rect, (vec2){0.0f, 0.0f});
-        widget_set_relative_size(rect, (vec2){1.0f, 1.0f});
+        widget_set_is_serialization_allowed(widget, false);
+        widget_set_parent(widget, progress_widget->widget);
+
+        vec2_set(0.0f, 0.0f, tmp2);
+        widget_set_relative_position(widget, tmp2);
+
+        vec2_set(1.0f, 1.0f, tmp2);
+        widget_set_relative_size(widget, tmp2);
     }
 
     {
         progress_widget->foreground_rect = rect_widget_create();
-        te_widget* rect = rect_widget_get_widget(progress_widget->foreground_rect);
+        widget = rect_widget_get_widget(progress_widget->foreground_rect);
 
-        widget_set_is_serialization_allowed(rect, false);
-        widget_set_parent(rect, progress_widget->widget);
-        widget_set_relative_position(rect, (vec2){0.0f, 0.0f});
-        widget_set_relative_size(rect, (vec2){1.0f, 1.0f});
+        widget_set_is_serialization_allowed(widget, false);
+        widget_set_parent(widget, progress_widget->widget);
+
+        vec2_set(0.0f, 0.0f, tmp2);
+        widget_set_relative_position(widget, tmp2);
+
+        vec2_set(1.0f, 1.0f, tmp2);
+        widget_set_relative_size(widget, tmp2);
     }
 
     return progress_widget;
@@ -104,9 +116,12 @@ progress_widget_get_widget(te_progress_widget* progress_widget) {
 
 void
 progress_widget_set_value(te_progress_widget* progress_widget, float value) {
+    te_vec4 rect;
+
     progress_widget->value = value;
-    rect_widget_set_clip_rect(
-        progress_widget->foreground_rect, (vec4){0.0f, 0.0f, progress_widget->value, 1.0f});
+
+    vec4_set(0.0f, 0.0f, progress_widget->value, 1.0f, rect);
+    rect_widget_set_clip_rect(progress_widget->foreground_rect, rect);
 }
 
 float
@@ -139,6 +154,8 @@ progress_widget_get_foreground_color(te_progress_widget* progress_widget, te_vec
 void
 progress_widget_set_background_texture(
     te_progress_widget* progress_widget, const char* relative_path) {
+    size_t path_len;
+
     free(progress_widget->background_tex_relative_path);
     progress_widget->background_tex_relative_path = NULL;
 
@@ -147,7 +164,7 @@ progress_widget_set_background_texture(
         return;
     }
 
-    const size_t path_len = strlen(relative_path);
+    path_len = strlen(relative_path);
     progress_widget->background_tex_relative_path = malloc(sizeof(char) * (path_len + 1));
     memcpy(
         progress_widget->background_tex_relative_path, relative_path, sizeof(char) * path_len);
@@ -160,6 +177,8 @@ progress_widget_set_background_texture(
 void
 progress_widget_set_foreground_texture(
     te_progress_widget* progress_widget, const char* relative_path) {
+    size_t path_len;
+
     free(progress_widget->foreground_tex_relative_path);
     progress_widget->foreground_tex_relative_path = NULL;
 
@@ -168,7 +187,7 @@ progress_widget_set_foreground_texture(
         return;
     }
 
-    const size_t path_len = strlen(relative_path);
+    path_len = strlen(relative_path);
     progress_widget->foreground_tex_relative_path = malloc(sizeof(char) * (path_len + 1));
     memcpy(
         progress_widget->foreground_tex_relative_path, relative_path, sizeof(char) * path_len);
@@ -190,6 +209,7 @@ progress_widget_get_foreground_texture(te_progress_widget* progress_widget) {
 
 static void
 prv_progress_widget_on_after_spawned(void* this) {
+    te_vec4 rect;
     te_progress_widget* progress_widget = this;
 
     /* self check */
@@ -210,8 +230,8 @@ prv_progress_widget_on_after_spawned(void* this) {
             progress_widget->foreground_rect, progress_widget->foreground_tex_relative_path);
     }
 
-    rect_widget_set_clip_rect(
-        progress_widget->foreground_rect, (vec4){0.0f, 0.0f, progress_widget->value, 1.0f});
+    vec4_set(0.0f, 0.0f, progress_widget->value, 1.0f, rect);
+    rect_widget_set_clip_rect(progress_widget->foreground_rect, rect);
 }
 
 static void

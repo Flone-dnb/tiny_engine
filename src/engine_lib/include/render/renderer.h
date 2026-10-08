@@ -1,6 +1,8 @@
 #pragma once
 
+#include <math/vec2.h>
 #include <math/vec3.h>
+#include <math/vec4.h>
 
 typedef struct te_renderer te_renderer;
 

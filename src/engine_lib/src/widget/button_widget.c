@@ -1,5 +1,6 @@
 #include <widget/button_widget.h>
 
+#include <stdlib.h>
 #include <string.h>
 #include <game_manager.h>
 #include <io/log.h>
@@ -61,15 +62,17 @@ static void prv_button_widget_unregister_render_data(te_button_widget* button_wi
 
 te_button_widget*
 button_widget_create(void) {
+    te_vec2 tmp2;
+
     te_button_widget* button_widget = malloc(sizeof(te_button_widget));
 
     button_widget->widget = widget_create(
         button_widget, button_widget_get_type_id, prv_button_widget_on_pos_changed,
         prv_button_widget_on_size_changed, prv_button_widget_on_before_base_destroyed, NULL,
         NULL, prv_button_widget_on_after_spawned, prv_button_widget_on_before_despawned, NULL);
-    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color);
-    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color_hovered);
-    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color_pressed);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, button_widget->color);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, button_widget->color_hovered);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, button_widget->color_pressed);
 
     button_widget->on_clicked = NULL;
     button_widget->on_right_clicked = NULL;
@@ -91,10 +94,11 @@ button_widget_create(void) {
     widget_set_is_serialization_allowed(
         rect_widget_get_widget(button_widget->rect_widget), false);
 
-    widget_set_relative_position(
-        rect_widget_get_widget(button_widget->rect_widget), (vec2){0.0f, 0.0f});
-    widget_set_relative_size(
-        rect_widget_get_widget(button_widget->rect_widget), (vec2){1.0f, 1.0f});
+    vec2_set(0.0f, 0.0f, tmp2);
+    widget_set_relative_position(rect_widget_get_widget(button_widget->rect_widget), tmp2);
+
+    vec2_set(1.0f, 1.0f, tmp2);
+    widget_set_relative_size(rect_widget_get_widget(button_widget->rect_widget), tmp2);
 
     prv_widget_set_input_callbacks(
         button_widget->widget, prv_button_widget_on_cursor_entered,
@@ -152,13 +156,15 @@ prv_button_widget_on_before_despawned(void* this) {
 
 static void
 prv_button_widget_register_render_data(te_button_widget* button_widget) {
+    te_texture_manager* texture_manager;
+
     te_world* world = widget_get_world(button_widget->widget);
     if (world == NULL) {
         log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
 
-    te_texture_manager* texture_manager =
+    texture_manager =
         renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(world)));
     if (button_widget->tex_relative_path != NULL) {
         button_widget->tex_id = texture_manager_request_texture(
@@ -180,13 +186,15 @@ prv_button_widget_register_render_data(te_button_widget* button_widget) {
 
 static void
 prv_button_widget_unregister_render_data(te_button_widget* button_widget) {
+    te_texture_manager* texture_manager;
+
     te_world* world = widget_get_world(button_widget->widget);
     if (world == NULL) {
         log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
 
-    te_texture_manager* texture_manager =
+    texture_manager =
         renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(world)));
     if (button_widget->tex_id > 0) {
         texture_manager_mark_unused_texture(texture_manager, button_widget->tex_id);
@@ -352,6 +360,8 @@ button_widget_get_color_pressed(te_button_widget* button_widget, te_vec4 out) {
 
 void
 button_widget_set_texture(te_button_widget* button_widget, const char* relative_path) {
+    te_world* world;
+
     free(button_widget->tex_relative_path);
     button_widget->tex_relative_path = NULL;
 
@@ -362,7 +372,7 @@ button_widget_set_texture(te_button_widget* button_widget, const char* relative_
         button_widget->tex_relative_path[len] = 0;
     }
 
-    te_world* world = widget_get_world(button_widget->widget);
+    world = widget_get_world(button_widget->widget);
     if (world != NULL) {
         te_texture_manager* texture_manager = renderer_get_texture_manager(
             game_manager_get_renderer(world_get_game_manager(world)));
@@ -384,6 +394,8 @@ button_widget_set_texture(te_button_widget* button_widget, const char* relative_
 
 void
 button_widget_set_texture_hovered(te_button_widget* button_widget, const char* relative_path) {
+    te_world* world;
+
     free(button_widget->tex_hovered_relative_path);
     button_widget->tex_hovered_relative_path = NULL;
 
@@ -394,7 +406,7 @@ button_widget_set_texture_hovered(te_button_widget* button_widget, const char* r
         button_widget->tex_hovered_relative_path[len] = 0;
     }
 
-    te_world* world = widget_get_world(button_widget->widget);
+    world = widget_get_world(button_widget->widget);
     if (world != NULL) {
         te_texture_manager* texture_manager = renderer_get_texture_manager(
             game_manager_get_renderer(world_get_game_manager(world)));
@@ -417,6 +429,8 @@ button_widget_set_texture_hovered(te_button_widget* button_widget, const char* r
 
 void
 button_widget_set_texture_pressed(te_button_widget* button_widget, const char* relative_path) {
+    te_world* world;
+
     free(button_widget->tex_pressed_relative_path);
     button_widget->tex_pressed_relative_path = NULL;
 
@@ -427,7 +441,7 @@ button_widget_set_texture_pressed(te_button_widget* button_widget, const char* r
         button_widget->tex_pressed_relative_path[len] = 0;
     }
 
-    te_world* world = widget_get_world(button_widget->widget);
+    world = widget_get_world(button_widget->widget);
     if (world != NULL) {
         te_texture_manager* texture_manager = renderer_get_texture_manager(
             game_manager_get_renderer(world_get_game_manager(world)));
@@ -506,8 +520,8 @@ button_widget_enter_pressed_state(te_button_widget* button_widget) {
 static void
 prv_button_widget_on_mouse_button_pressed(
     void* this, enum te_mouse_button button, te_vec2 cursor_pos) {
-    (void)cursor_pos;
     te_button_widget* button_widget = this;
+    (void)cursor_pos;
 
     if ((button_widget->on_clicked != NULL && button == TE_MB_LEFT)
         || (button_widget->on_right_clicked != NULL && button == TE_MB_RIGHT)) {
@@ -518,8 +532,8 @@ prv_button_widget_on_mouse_button_pressed(
 static void
 prv_button_widget_on_mouse_button_released(
     void* this, enum te_mouse_button button, te_vec2 cursor_pos) {
-    (void)cursor_pos;
     te_button_widget* button_widget = this;
+    (void)cursor_pos;
 
     if ((button_widget->on_clicked != NULL && button == TE_MB_LEFT)
         || (button_widget->on_right_clicked != NULL && button == TE_MB_RIGHT)) {
@@ -539,8 +553,8 @@ prv_button_widget_on_mouse_button_released(
 
 static void
 prv_button_widget_on_cursor_entered(void* this, te_vec2 cursor_pos) {
-    (void)cursor_pos;
     te_button_widget* button_widget = this;
+    (void)cursor_pos;
 
     button_widget_enter_hovered_state(button_widget);
     button_widget->is_cursor_inside_widget = true;
@@ -548,8 +562,8 @@ prv_button_widget_on_cursor_entered(void* this, te_vec2 cursor_pos) {
 
 static void
 prv_button_widget_on_cursor_left(void* this, te_vec2 cursor_pos) {
-    (void)cursor_pos;
     te_button_widget* button_widget = this;
+    (void)cursor_pos;
 
     button_widget_enter_normal_state(button_widget);
     button_widget->is_cursor_inside_widget = false;

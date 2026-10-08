@@ -1,5 +1,6 @@
 #include <shape/frustum_shape.h>
 
+#include <math/math_funcs.h>
 #include <shape/aabb_shape.h>
 #include <shape/cone_shape.h>
 #include <shape/sphere_shape.h>
@@ -21,17 +22,17 @@ frustum_shape_create(
     te_vec3 neg_up_scaled;
     te_vec3 temp;
 
-    const float tan_half_fov = (float)tan(0.5f * vertical_fov);
+    const float tan_half_fov = math_tan(0.5f * vertical_fov);
     const float far_half_height = far_clip * tan_half_fov;
     const float far_half_width = far_half_height * aspect_ratio;
 
     /* right */
-    glm_vec3_cross(forward, up, right);
+    vec3_cross(forward, up, right);
     vec3_normalize(right);
 
     /* far normal */
     vec3_copy(forward, far_normal);
-    glm_vec3_negate(far_normal);
+    vec3_muls(far_normal, -1.0f, far_normal);
 
     /* to near */
     vec3_muls(forward, near_clip, to_near);
@@ -50,29 +51,29 @@ frustum_shape_create(
 
     vec3_muls(right, far_half_width, right_scaled);
     vec3_copy(right_scaled, neg_right_scaled);
-    glm_vec3_negate(neg_right_scaled);
+    vec3_muls(neg_right_scaled, -1.0f, neg_right_scaled);
 
     vec3_add(to_far, right_scaled, temp);
-    glm_vec3_cross(up, temp, temp);
+    vec3_cross(up, temp, temp);
     vec3_normalize(temp);
     frustum.right = plane_shape_create(temp, camera_pos);
 
     vec3_add(to_far, neg_right_scaled, temp);
-    glm_vec3_cross(temp, up, temp);
+    vec3_cross(temp, up, temp);
     vec3_normalize(temp);
     frustum.left = plane_shape_create(temp, camera_pos);
 
     vec3_muls(up, far_half_height, up_scaled);
     vec3_copy(up_scaled, neg_up_scaled);
-    glm_vec3_negate(neg_up_scaled);
+    vec3_muls(neg_up_scaled, -1.0f, neg_up_scaled);
 
     vec3_add(to_far, up_scaled, temp);
-    glm_vec3_cross(temp, right, temp);
+    vec3_cross(temp, right, temp);
     vec3_normalize(temp);
     frustum.top = plane_shape_create(temp, camera_pos);
 
     vec3_add(to_far, neg_up_scaled, temp);
-    glm_vec3_cross(right, temp, temp);
+    vec3_cross(right, temp, temp);
     vec3_normalize(temp);
     frustum.bottom = plane_shape_create(temp, camera_pos);
 

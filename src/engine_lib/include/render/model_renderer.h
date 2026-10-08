@@ -1,10 +1,8 @@
 #pragma once
 
-#include <cglm/ivec3.h>
 #include <math/mat3.h>
 #include <math/mat4.h>
 #include <math/vec2.h>
-#include <math/vec4.h>
 #include <shape/aabb_shape.h>
 
 typedef struct te_model_renderer te_model_renderer;
@@ -14,8 +12,8 @@ struct te_light_params;
 
 /* data used to submit a model for rendering */
 typedef struct te_model_render_data {
-    mat4 world_mat;
-    mat3 normal_mat;
+    te_mat4 world_mat;
+    te_mat3 normal_mat;
     te_vec4 color;
 
     /* texture tiling multiplier, must store -1 if @ref tex_id is 0 */
@@ -31,7 +29,7 @@ typedef struct te_model_render_data {
     te_vec2 uv_offset;
 
     /* NULL if not using skinning */
-    mat4* skinning_mats;
+    te_mat4* skinning_mats;
     unsigned int skinning_mats_count;
 
     int index_count;
@@ -74,5 +72,5 @@ model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int han
 /* draws models to the currently set framebuffer
  * returns the number of models drawn */
 unsigned int model_renderer_draw(
-    te_model_renderer* renderer, struct te_light_params* light_params, mat4* view_mat,
-    mat4* view_proj_mat, struct te_frustum_shape* camera_frustum);
+    te_model_renderer* renderer, struct te_light_params* light_params, te_mat4* view_mat,
+    te_mat4* view_proj_mat, struct te_frustum_shape* camera_frustum);

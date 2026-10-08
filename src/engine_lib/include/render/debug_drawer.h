@@ -18,7 +18,8 @@ struct te_aabb_shape;
  * otherwise specify a position (relative to the window's top-left corner) in range [0.0; 1.0] */
 void debug_drawer_draw_text_fmt(float time_sec, const char* fmt, ...);
 void debug_drawer_draw_text_color(const char* text, float time_sec, te_vec3 color);
-void debug_drawer_draw_text_color_pos(const char* text, float time_sec, te_vec3 color, te_vec2 pos);
+void
+debug_drawer_draw_text_color_pos(const char* text, float time_sec, te_vec3 color, te_vec2 pos);
 
 /* specify 0 as time to draw for just 1 frame */
 void debug_drawer_draw_aabb(struct te_aabb_shape* aabb, float time_sec, te_vec3 color);
@@ -38,7 +39,7 @@ void prv_debug_drawer_init(struct te_renderer* renderer);
 void prv_debug_drawer_deinit(struct te_renderer* renderer);
 
 /* must be called every frame to draw debug objects */
-void
-prv_debug_drawer_draw(struct te_renderer* renderer, float delta_time_sec, mat4* view_proj_mat);
+void prv_debug_drawer_draw(
+    struct te_renderer* renderer, float delta_time_sec, te_mat4* view_proj_mat);
 
 #endif

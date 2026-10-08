@@ -12,12 +12,14 @@
 #include <time.h>
 #include <errno.h>
 #endif
+#include <snprintf.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <debug_console.h>
 #include <game/camera.h>
 #include <game_manager.h>
+#include <math/math_funcs.h>
 #include <io/log.h>
 #include <misc/high_freq_timer.h>
 #include <render/debug_drawer.h>
@@ -155,6 +157,11 @@ LIGHT_PARAMS_FUNC(get_distance_fog_color, vec3_copy(params->distance_fog_color, 
 
 te_renderer*
 renderer_create(struct te_window* window) {
+#if defined(ENGINE_DEBUG_TOOLS)
+    te_debug_console_command fps_command = {0};
+#endif
+    unsigned int refresh_rate;
+
     te_renderer* renderer = malloc(sizeof(te_renderer));
 
     renderer->window = window;
@@ -170,18 +177,21 @@ renderer_create(struct te_window* window) {
 
     /* setup base lighting */
     {
+        te_light_params* data;
+
         renderer->light_params = malloc(sizeof(te_light_params));
         memset(renderer->light_params, 0, sizeof(te_light_params));
 
-        te_light_params* data = renderer->light_params;
+        data = renderer->light_params;
 
-        vec3_copy((vec3){0.5f, 0.5f, 0.5f}, data->ambient_light_color);
+        vec3_set(0.5f, 0.5f, 0.5f, data->ambient_light_color);
 
-        vec3_copy((vec3){1.0f, -1.0f, 1.0f}, data->directional_light_direction);
+        vec3_set(1.0f, -1.0f, 1.0f, data->directional_light_direction);
         vec3_normalize(data->directional_light_direction);
-        vec4_copy((vec4){1.0f, 1.0f, 1.0f, 0.0f}, data->directional_light_color);
 
-        vec2_copy((vec2){-1.0f, -1.0f}, data->distance_fog_range);
+        vec4_set(1.0f, 1.0f, 1.0f, 0.0f, data->directional_light_color);
+
+        vec2_set(-1.0f, -1.0f, data->distance_fog_range);
     }
 
 #if defined(__linux__)
@@ -242,13 +252,13 @@ renderer_create(struct te_window* window) {
     glDepthFunc(GL_LEQUAL);
 
     /* set FPS limit */
-    const unsigned int refresh_rate = window_get_display_refresh_rate(window);
+    refresh_rate = window_get_display_refresh_rate(window);
     log_info_fmt(
-        __FILE__, __LINE__, "setting FPS limit to %u (display's refresh rate)", refresh_rate);
+        __FILE__, __LINE__, "setting FPS limit to %u (display's refresh rate)",
+        window_get_display_refresh_rate(window));
     renderer_set_fps_limit(renderer, refresh_rate);
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    te_debug_console_command fps_command = {0};
     fps_command.name = "set_fps_limit";
     fps_command.arg_uint = debug_command_set_fps_limit;
     debug_console_register_command(fps_command);
@@ -354,6 +364,10 @@ renderer_get_fps_limit(te_renderer* renderer) {
 
 void
 prv_renderer_calc_frame_stats(te_renderer* renderer, float delta_time_sec) {
+#if defined(ENGINE_DEBUG_TOOLS)
+    te_debug_stats* stats;
+#endif
+
     /* update FPS stat */
     {
         te_renderer_frame_stats* stats = &renderer->frame_stats;
@@ -369,7 +383,7 @@ prv_renderer_calc_frame_stats(te_renderer* renderer, float delta_time_sec) {
     }
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    te_debug_stats* stats = prv_debug_console_get_stats();
+    stats = prv_debug_console_get_stats();
     stats->fps = renderer->frame_stats.fps;
 
     /* reset some stats to accumulate on the next frame */
@@ -388,16 +402,18 @@ prv_renderer_calc_frame_stats(te_renderer* renderer, float delta_time_sec) {
             timeEndPeriod(1);
         }
 #elif defined(__linux__)
+        long delta_ns;
+        long time_to_sleep_ns;
         const long target_time_ns = (long)(1000000000.0 / (double)renderer->fps_limit);
 
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
-        long delta_ns = now.tv_nsec - renderer->frame_end_time.tv_nsec;
+        delta_ns = now.tv_nsec - renderer->frame_end_time.tv_nsec;
         if (delta_ns < 0) {
             delta_ns += 1000000000;
         }
 
-        const long time_to_sleep_ns = target_time_ns - delta_ns;
+        time_to_sleep_ns = target_time_ns - delta_ns;
         if (time_to_sleep_ns > 0) {
             struct timespec requested;
             struct timespec remaining;
@@ -430,6 +446,20 @@ prv_renderer_get_query_time_ms(unsigned int query) {
 
 void
 prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
+#if defined(ENGINE_DEBUG_TOOLS)
+    te_camera* debug_camera;
+    te_debug_stats* debug_stats;
+    te_hft_t cpu_frame_start_counter;
+    te_hft_t cpu_swap_start_counter;
+    bool record_new_queries;
+#endif
+    te_world** worlds;
+    te_game_manager* game_manager;
+    unsigned int window_width;
+    unsigned int window_height;
+    unsigned int world_count;
+    unsigned int i;
+
     /* make sure there was no GL error during the last frame */
     GLenum gl_error = glGetError();
     if (gl_error != GL_NO_ERROR) {
@@ -460,8 +490,8 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     }
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    te_debug_stats* debug_stats = prv_debug_console_get_stats();
-    bool record_new_queries = true;
+    debug_stats = prv_debug_console_get_stats();
+    record_new_queries = true;
 
 #if defined(ENGINE_GLES)
     if (GLAD_GL_EXT_disjoint_timer_query != 1) {
@@ -514,12 +544,12 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     debug_stats->cpu_time_submit_particles_ms = 0.0f;
     debug_stats->cpu_time_submit_widgets_ms = 0.0f;
 
-    const te_hft_t cpu_frame_start_counter = high_freq_timer_now();
+    cpu_frame_start_counter = high_freq_timer_now();
 #endif
 
     /* get window size (for later) */
-    unsigned int window_width = 0;
-    unsigned int window_height = 0;
+    window_width = 0;
+    window_height = 0;
     window_get_size(renderer->window, &window_width, &window_height);
 
     /* rendering to window's framebuffer */
@@ -530,11 +560,23 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     /* get worlds */
-    te_game_manager* game_manager = window_get_game_manager(renderer->window);
-    unsigned int world_count = 0;
-    te_world** worlds = game_manager_get_worlds(game_manager, &world_count);
+    game_manager = window_get_game_manager(renderer->window);
+    world_count = 0;
+    worlds = game_manager_get_worlds(game_manager, &world_count);
 
-    for (unsigned int i = 0; i < world_count; i++) {
+    for (i = 0; i < world_count; i++) {
+        te_model_renderer* opaque_model_renderer;
+        te_model_renderer* transparent_model_renderer;
+        te_widget_renderer* widget_renderer;
+        te_particle_renderer* particle_renderer;
+        te_mat4* view_proj_mat;
+        te_mat4* view_mat;
+        te_mat4* proj_mat;
+        struct te_frustum_shape* camera_frustum;
+        te_vec4 viewport;
+        unsigned int viewport_width;
+        unsigned int viewport_height;
+
         te_camera* camera = world_get_active_camera(worlds[i]);
         if (camera == NULL) {
             continue;
@@ -542,7 +584,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 
 #if defined(ENGINE_DEBUG_TOOLS)
         if (record_new_queries) {
-            /* save results of the previous GPU metrics */
+            /* save results of the prevmious GPU metrics */
             debug_stats->gpu_time_draw_models_ms +=
                 prv_renderer_get_query_time_ms(prv_world_get_gl_query_draw_models(worlds[i]));
             debug_stats->gpu_time_draw_widgets_ms +=
@@ -552,33 +594,25 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         }
 #endif
 
-        te_model_renderer* opaque_model_renderer = world_get_opaque_model_renderer(worlds[i]);
-        te_model_renderer* transparent_model_renderer =
-            world_get_transparent_model_renderer(worlds[i]);
-        te_widget_renderer* widget_renderer = world_get_widget_renderer(worlds[i]);
-        te_particle_renderer* particle_renderer = world_get_particle_renderer(worlds[i]);
+        opaque_model_renderer = world_get_opaque_model_renderer(worlds[i]);
+        transparent_model_renderer = world_get_transparent_model_renderer(worlds[i]);
+        widget_renderer = world_get_widget_renderer(worlds[i]);
+        particle_renderer = world_get_particle_renderer(worlds[i]);
 
-        /* set camera's aspect ratio */
-        te_vec4 viewport;
-        camera_get_viewport(camera, viewport);
-        const unsigned int viewport_width = (unsigned int)((float)window_width * viewport[2]);
-        const unsigned int viewport_height =
-            (unsigned int)((float)window_height * viewport[3]);
+        /* set camera's aspect ratio */ camera_get_viewport(camera, viewport);
+        viewport_width = (unsigned int)((float)window_width * viewport[2]);
+        viewport_height = (unsigned int)((float)window_height * viewport[3]);
         prv_camera_set_render_target_size(camera, viewport_width, viewport_height);
 
-        mat4* view_proj_mat = camera_get_view_proj_mat(camera);
-        mat4* view_mat = camera_get_view_mat(camera);
-        mat4* proj_mat = camera_get_proj_mat(camera);
-        struct te_frustum_shape* camera_frustum = camera_get_frustum(camera);
+        view_proj_mat = camera_get_view_proj_mat(camera);
+        view_mat = camera_get_view_mat(camera);
+        proj_mat = camera_get_proj_mat(camera);
+        camera_frustum = camera_get_frustum(camera);
 
-        ite_vec4 gl_viewport;
-        gl_viewport[0] = (int)((float)window_width * viewport[0]);
-        gl_viewport[1] =
-            (int)((float)window_height * (1.0f - fmin(1.0f, viewport[1] + viewport[3])));
-        gl_viewport[2] = (int)viewport_width;
-        gl_viewport[3] = (int)viewport_height;
-
-        glViewport(gl_viewport[0], gl_viewport[1], gl_viewport[2], gl_viewport[3]);
+        glViewport(
+            (int)((float)window_width * viewport[0]),
+            (int)((float)window_height * (1.0f - math_min(1.0f, viewport[1] + viewport[3]))),
+            (int)viewport_width, (int)viewport_height);
 
         /* draw models */
         {
@@ -630,8 +664,9 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         /* draw particles */
         {
 #if defined(ENGINE_DEBUG_TOOLS)
+            te_hft_t cpu_start_counter;
             GPU_SECTION_BEGIN("particles");
-            const te_hft_t cpu_start_counter = high_freq_timer_now();
+            cpu_start_counter = high_freq_timer_now();
             if (record_new_queries) {
                 GPU_TIME_SECTION_BEGIN(prv_world_get_gl_query_draw_particles(worlds[i]));
             }
@@ -653,8 +688,9 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         /* draw widgets */
         {
 #if defined(ENGINE_DEBUG_TOOLS)
+            te_hft_t cpu_start_counter;
             GPU_SECTION_BEGIN("widgets");
-            const te_hft_t cpu_start_counter = high_freq_timer_now();
+            cpu_start_counter = high_freq_timer_now();
             if (record_new_queries) {
                 GPU_TIME_SECTION_BEGIN(prv_world_get_gl_query_draw_widgets(worlds[i]));
             }
@@ -674,8 +710,8 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     }
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    te_camera* debug_camera = NULL;
-    for (unsigned int i = 0; i < world_count; i++) {
+    debug_camera = NULL;
+    for (i = 0; i < world_count; i++) {
         debug_camera = world_get_active_camera(worlds[i]);
         if (debug_camera == NULL) {
             continue;
@@ -723,7 +759,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     /* get CPU time before swap as it might block the current thread */
     debug_stats->cpu_time_frame_ms = high_freq_timer_get_elapsed_ms(cpu_frame_start_counter);
 
-    const te_hft_t cpu_swap_start_counter = high_freq_timer_now();
+    cpu_swap_start_counter = high_freq_timer_now();
 #endif
 
     prv_window_swap_buffers(renderer->window);

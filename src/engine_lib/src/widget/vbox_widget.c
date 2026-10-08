@@ -1,5 +1,6 @@
 #include <widget/vbox_widget.h>
 
+#include <stdlib.h>
 #include <math/vec2.h>
 #include <widget/widget.h>
 #include <world.h>
@@ -75,6 +76,11 @@ vbox_widget_get_child_spacing(te_vbox_widget* vbox_widget) {
 
 static void
 prv_vbox_widget_update_children(te_vbox_widget* vbox_widget) {
+    te_vec2 screen_size;
+    te_vec2 relative_pos;
+    float relative_spacing;
+    unsigned int i;
+
     unsigned int child_count;
     te_widget** child_widgets = widget_get_child_widgets(vbox_widget->widget, &child_count);
     if (child_count == 0) {
@@ -83,13 +89,11 @@ prv_vbox_widget_update_children(te_vbox_widget* vbox_widget) {
     }
 
     /* recalculate child spacing to relative spacing */
-    te_vec2 screen_size;
     widget_get_screen_size(vbox_widget->widget, screen_size);
-    const float relative_spacing = vbox_widget->child_spacing / screen_size[1];
+    relative_spacing = vbox_widget->child_spacing / screen_size[1];
 
-    te_vec2 relative_pos;
-    vec2_copy((vec2){0.0f, 0.0f}, relative_pos);
-    for (unsigned int i = 0; i < child_count; i++) {
+    vec2_set(0.0f, 0.0f, relative_pos);
+    for (i = 0; i < child_count; i++) {
         te_vec2 child_relative_size;
         widget_get_relative_size(child_widgets[i], child_relative_size);
 

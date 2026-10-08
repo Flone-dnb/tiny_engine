@@ -1,5 +1,6 @@
 #include <widget/widget.h>
 
+#include <stdlib.h>
 #include <string.h>
 #include <io/log.h>
 #include <world.h>
@@ -36,7 +37,8 @@ struct te_widget {
     /* may be NULL, used by interactable widgets */
     void (*on_cursor_entered)(void* owner, te_vec2 cursor_pos);
     void (*on_cursor_left)(void* owner, te_vec2 cursor_pos);
-    void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, te_vec2 cursor_pos);
+    void (*on_mouse_button_pressed)(
+        void* owner, enum te_mouse_button button, te_vec2 cursor_pos);
     void (*on_mouse_button_released)(
         void* owner, enum te_mouse_button button, te_vec2 cursor_pos);
     void (*on_hovered_cursor_moved)(void* owner, te_vec2 cursor_pos);
@@ -107,8 +109,8 @@ widget_create(
     widget->on_keyboard_input_text = NULL;
     widget->on_keyboard_input = NULL;
 
-    vec2_copy((vec2){0.1f, 0.1f}, widget->relative_pos);
-    vec2_copy((vec2){0.1f, 0.05f}, widget->relative_size);
+    vec2_set(0.1f, 0.1f, widget->relative_pos);
+    vec2_set(0.1f, 0.05f, widget->relative_size);
 
     vec2_copy(widget->relative_pos, widget->screen_pos);
     vec2_copy(widget->relative_size, widget->screen_size);
@@ -118,6 +120,8 @@ widget_create(
 
 void
 widget_destroy(te_widget* widget) {
+    unsigned int i;
+
     if (widget->world != NULL) {
         log_error(__FILE__, __LINE__, "can't destroy a spawned widget, despawn it first");
         abort();
@@ -127,7 +131,7 @@ widget_destroy(te_widget* widget) {
         widget->on_before_base_destroyed(widget->owner);
     }
 
-    for (unsigned int i = 0; i < widget->child_widget_count; i++) {
+    for (i = 0; i < widget->child_widget_count; i++) {
         widget_destroy(widget->child_widgets[i]);
     }
     free(widget->child_widgets);
@@ -512,7 +516,8 @@ void
 prv_widget_set_input_callbacks(
     te_widget* widget, void (*on_cursor_entered)(void* owner, te_vec2 cursor_pos),
     void (*on_cursor_left)(void* owner, te_vec2 cursor_pos),
-    void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, te_vec2 cursor_pos),
+    void (*on_mouse_button_pressed)(
+        void* owner, enum te_mouse_button button, te_vec2 cursor_pos),
     void (*on_mouse_button_released)(
         void* owner, enum te_mouse_button button, te_vec2 cursor_pos),
     void (*on_hovered_cursor_moved)(void* owner, te_vec2 cursor_pos),

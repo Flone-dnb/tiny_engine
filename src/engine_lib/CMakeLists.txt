@@ -17,6 +17,7 @@ set(PROJECT_SOURCES
     src/misc/wchar_funcs.c
     src/misc/mesh_generator.c
     src/misc/high_freq_timer.c
+    src/misc/num_hashtable.c
     src/game_manager.c
     src/sound_manager.c
     src/world.c
@@ -94,6 +95,7 @@ set(PROJECT_SOURCES
     include/misc/wchar_funcs.h
     include/misc/mesh_generator.h
     include/misc/high_freq_timer.h
+    include/misc/num_hashtable.h
     include/game_manager.h
     include/sound_manager.h
     include/render/renderer.h
@@ -202,17 +204,6 @@ target_include_directories(${GLAD_TARGET_NAME} SYSTEM PUBLIC ${GLAD_PATH}/includ
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE ${GLAD_TARGET_NAME})
 add_dependencies(${ENGINE_LIB_DEPS_TARGET} ${GLAD_TARGET_NAME})
 
-# Add cglm.
-message(STATUS "${PROJECT_NAME}: adding dependency \"cglm\"...")
-set(CGLM_SHARED OFF CACHE BOOL "" FORCE)
-set(CGLM_STATIC ON CACHE BOOL "" FORCE)
-set(CGLM_USE_C99 ON CACHE BOOL "" FORCE)
-set(CGLM_USE_TEST OFF CACHE BOOL "" FORCE)
-set(CGLM_INSTALL OFF CACHE BOOL "" FORCE)
-add_subdirectory(${RELATIVE_EXT_PATH}/cglm ${DEPENDENCY_BUILD_DIR_NAME}/cglm)
-target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE cglm_headers)
-target_compile_definitions(cglm_headers INTERFACE CGLM_ALL_UNALIGNED)
-
 # Add FreeType.
 message(STATUS "${PROJECT_NAME}: adding external dependency \"FreeType\"...")
 set(FT_DISABLE_BROTLI ON CACHE BOOL "" FORCE)
@@ -220,11 +211,6 @@ set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
 set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
 add_subdirectory(${RELATIVE_EXT_PATH}/freetype ${DEPENDENCY_BUILD_DIR_NAME}/freetype)
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE freetype)
-
-# Add hashmap.c
-message(STATUS "${PROJECT_NAME}: adding external dependency \"hashmap.c\"...")
-add_library(hashmapc ${RELATIVE_EXT_PATH}/hashmap.c/hashmap.h ${RELATIVE_EXT_PATH}/hashmap.c/hashmap.c)
-target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE hashmapc)
 
 # Miniaudio.
 message(STATUS "${PROJECT_NAME}: adding external dependency \"miniaudio\"...")

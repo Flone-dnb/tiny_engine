@@ -2,6 +2,7 @@
 
 #if defined(ENGINE_DEBUG_TOOLS)
 
+#include <snprintf.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -12,6 +13,14 @@
 #include <window.h>
 #include <glad/gl.h>
 #include <io/log.h>
+
+#ifndef va_copy
+#ifdef __va_copy
+#define va_copy(dest, src) __va_copy((dest), (src))
+#else
+#define va_copy(dest, src) ((dest) = (src))
+#endif
+#endif
 
 #define TE_DEBUG_DRAWER_AABB_INDEX_COUNT 24
 
@@ -68,10 +77,15 @@ double_array_get_size(te_double_array* array) {
 
 static void
 double_array_add_item(te_double_array* array, void* item) {
+    uint8_t* data1;
+    uint8_t* data2;
+    uint8_t* data;
+    unsigned int* size;
+
     if (double_array_get_size(array) + 1 > array->capacity) {
         array->capacity += array->expand_size;
-        uint8_t* data1 = malloc(array->item_sizeof * array->capacity);
-        uint8_t* data2 = malloc(array->item_sizeof * array->capacity);
+        data1 = malloc(array->item_sizeof * array->capacity);
+        data2 = malloc(array->item_sizeof * array->capacity);
         memcpy(data1, array->data1, array->item_sizeof * array->size1);
         memcpy(data2, array->data2, array->item_sizeof * array->size2);
         free(array->data1);
@@ -80,8 +94,8 @@ double_array_add_item(te_double_array* array, void* item) {
         array->data2 = data2;
     }
 
-    uint8_t* data = array->curr_1 ? array->data1 : array->data2;
-    unsigned int* size = array->curr_1 ? &array->size1 : &array->size2;
+    data = array->curr_1 ? array->data1 : array->data2;
+    size = array->curr_1 ? &array->size1 : &array->size2;
 
     memcpy(data + (array->item_sizeof * (*size)), item, array->item_sizeof);
     (*size) += 1;
@@ -302,12 +316,12 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
 
     /* create quad geometry */
     {
-        te_vec4 vertices[4]; /* XY pos, ZW uv */
-        vec4_copy((vec4){0.0f, 0.0f, 0.0f, 0.0f}, &vertices[0][0]);
-        vec4_copy((vec4){0.0f, 1.0f, 0.0f, 1.0f}, &vertices[1][0]);
-        vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, &vertices[2][0]);
-        vec4_copy((vec4){1.0f, 0.0f, 1.0f, 0.0f}, &vertices[3][0]);
         const unsigned short indices[6] = {0, 1, 2, 0, 2, 3};
+        te_vec4 vertices[4]; /* XY pos, ZW uv */
+        vec4_set(0.0f, 0.0f, 0.0f, 0.0f, &vertices[0][0]);
+        vec4_set(0.0f, 1.0f, 0.0f, 1.0f, &vertices[1][0]);
+        vec4_set(1.0f, 1.0f, 1.0f, 1.0f, &vertices[2][0]);
+        vec4_set(1.0f, 0.0f, 1.0f, 0.0f, &vertices[3][0]);
 
 #if !defined(ENGINE_GLES)
         glGenVertexArrays(1, &drawer.vao_quad);
@@ -320,7 +334,7 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
 #endif
 
         glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_quad);
-        glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(vec4), &vertices[0][0], GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(te_vec4), &vertices[0][0], GL_STATIC_DRAW);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_quad);
         glBufferData(
@@ -330,7 +344,7 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
         glBindAttribLocation(drawer.text_shader.prog_id, 0, "vertex");
 #endif
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(vec4), NULL);
+        glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(te_vec4), NULL);
 
 #if !defined(ENGINE_GLES)
         glBindVertexArray(0);
@@ -341,26 +355,26 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
 
     /* create AABB geometry (using lines) */
     {
-        te_vec3 extents;
-        vec3_copy((vec3){1.0f, 1.0f, 1.0f}, extents);
-
         te_vec3 vertices[8];
-
-        vec3_copy((vec3){-extents[0], -extents[1], -extents[2]}, &vertices[0][0]);
-        vec3_copy((vec3){+extents[0], -extents[1], -extents[2]}, &vertices[1][0]);
-        vec3_copy((vec3){+extents[0], -extents[1], +extents[2]}, &vertices[2][0]);
-        vec3_copy((vec3){-extents[0], -extents[1], +extents[2]}, &vertices[3][0]);
-
-        vec3_copy((vec3){-extents[0], +extents[1], -extents[2]}, &vertices[4][0]);
-        vec3_copy((vec3){+extents[0], +extents[1], -extents[2]}, &vertices[5][0]);
-        vec3_copy((vec3){+extents[0], +extents[1], +extents[2]}, &vertices[6][0]);
-        vec3_copy((vec3){-extents[0], +extents[1], +extents[2]}, &vertices[7][0]);
 
         const unsigned short indices[TE_DEBUG_DRAWER_AABB_INDEX_COUNT] = {
             0, 1, 1, 2, 2, 3, 3, 0, // lower quad
             4, 5, 5, 6, 6, 7, 7, 4, // upper quad
             0, 4, 1, 5, 2, 6, 3, 7  // vertical lines
         };
+
+        te_vec3 extents;
+        vec3_set(1.0f, 1.0f, 1.0f, extents);
+
+        vec3_set(-extents[0], -extents[1], -extents[2], &vertices[0][0]);
+        vec3_set(+extents[0], -extents[1], -extents[2], &vertices[1][0]);
+        vec3_set(+extents[0], -extents[1], +extents[2], &vertices[2][0]);
+        vec3_set(-extents[0], -extents[1], +extents[2], &vertices[3][0]);
+
+        vec3_set(-extents[0], +extents[1], -extents[2], &vertices[4][0]);
+        vec3_set(+extents[0], +extents[1], -extents[2], &vertices[5][0]);
+        vec3_set(+extents[0], +extents[1], +extents[2], &vertices[6][0]);
+        vec3_set(-extents[0], +extents[1], +extents[2], &vertices[7][0]);
 
 #if !defined(ENGINE_GLES)
         glGenVertexArrays(1, &drawer.vao_aabb);
@@ -373,7 +387,7 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
 #endif
 
         glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_aabb);
-        glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(vec3), &vertices[0][0], GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(te_vec3), &vertices[0][0], GL_STATIC_DRAW);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_aabb);
         glBufferData(
@@ -383,7 +397,7 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
         glBindAttribLocation(drawer.aabb_shader.prog_id, 0, "local_pos");
 #endif
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), NULL);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_vec3), NULL);
 
 #if !defined(ENGINE_GLES)
         glBindVertexArray(0);
@@ -394,12 +408,11 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
 
     /* create line geometry */
     {
+        const unsigned short indices[2] = {0, 1};
         te_vec3 vertices[2];
 
-        vec3_copy((vec3){0.0f, 0.0f, 0.0f}, &vertices[0][0]);
-        vec3_copy((vec3){1.0f, 1.0f, 1.0f}, &vertices[1][0]);
-
-        const unsigned short indices[2] = {0, 1};
+        vec3_set(0.0f, 0.0f, 0.0f, &vertices[0][0]);
+        vec3_set(1.0f, 1.0f, 1.0f, &vertices[1][0]);
 
 #if !defined(ENGINE_GLES)
         glGenVertexArrays(1, &drawer.vao_line);
@@ -412,7 +425,7 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
 #endif
 
         glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_line);
-        glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(vec3), &vertices[0][0], GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(te_vec3), &vertices[0][0], GL_STATIC_DRAW);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_line);
         glBufferData(
@@ -422,7 +435,7 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
         glBindAttribLocation(drawer.line_shader.prog_id, 0, "local_pos");
 #endif
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), NULL);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_vec3), NULL);
 
 #if !defined(ENGINE_GLES)
         glBindVertexArray(0);
@@ -440,9 +453,12 @@ prv_debug_drawer_free_text(te_debug_drawer_text* text) {
 
 void
 prv_debug_drawer_deinit(struct te_renderer* renderer) {
+    te_shader_manager* shader_manager;
+    unsigned int i;
+
     /* free debug objects */
     te_debug_drawer_text* texts = double_array_get_data(drawer.texts);
-    for (unsigned int i = 0; i < double_array_get_size(drawer.texts); i++) {
+    for (i = 0; i < double_array_get_size(drawer.texts); i++) {
         prv_debug_drawer_free_text(&texts[i]);
     }
     double_array_destroy(drawer.texts);
@@ -455,7 +471,7 @@ prv_debug_drawer_deinit(struct te_renderer* renderer) {
     drawer.lines = NULL;
 
     /* free shaders */
-    te_shader_manager* shader_manager = renderer_get_shader_manager(renderer);
+    shader_manager = renderer_get_shader_manager(renderer);
     shader_manager_mark_unused_shader(shader_manager, drawer.text_shader.prog_id);
     shader_manager_mark_unused_shader(shader_manager, drawer.aabb_shader.prog_id);
     shader_manager_mark_unused_shader(shader_manager, drawer.line_shader.prog_id);
@@ -486,44 +502,49 @@ void
 debug_drawer_draw_aabb(te_aabb_shape* aabb, float time_sec, te_vec3 color) {
     if (drawer.renderer == NULL) {
         return;
+    } else {
+        te_debug_drawer_aabb new_item;
+        new_item.aabb = *aabb;
+        new_item.time_left_sec = time_sec;
+        vec3_copy(color, new_item.color);
+
+        double_array_add_item(drawer.aabbs, &new_item);
     }
-
-    te_debug_drawer_aabb new_item;
-    new_item.aabb = *aabb;
-    new_item.time_left_sec = time_sec;
-    vec3_copy(color, new_item.color);
-
-    double_array_add_item(drawer.aabbs, &new_item);
 }
 
 void
 debug_drawer_draw_line(te_vec3 from, te_vec3 to, float time_sec) {
     if (drawer.renderer == NULL) {
         return;
+    } else {
+        te_debug_drawer_line new_item;
+        new_item.time_left_sec = time_sec;
+        vec3_copy(from, new_item.from);
+        vec3_copy(to, new_item.to);
+
+        double_array_add_item(drawer.lines, &new_item);
     }
-
-    te_debug_drawer_line new_item;
-    new_item.time_left_sec = time_sec;
-    vec3_copy(from, new_item.from);
-    vec3_copy(to, new_item.to);
-
-    double_array_add_item(drawer.lines, &new_item);
 }
 
 void
 debug_drawer_draw_text_fmt(float time_sec, const char* fmt, ...) {
+    char* message;
+    te_vec3 color;
+    size_t size;
+    int test_size;
+
     va_list args;
-    va_start(args, fmt);
     va_list args_copy;
+    va_start(args, fmt);
     va_copy(args_copy, args);
 
-    int test_size = vsnprintf(NULL, 0, fmt, args);
+    test_size = vsnprintf(NULL, 0, fmt, args);
     if (test_size <= 0) {
         log_error(__FILE__, __LINE__, "failed to format last log message");
         abort();
     }
-    size_t size = (size_t)test_size;
-    char* message = malloc(size + 1);
+    size = (size_t)test_size;
+    message = malloc(size + 1);
     memset(message, 0, size + 1);
 
     vsprintf(message, fmt, args_copy);
@@ -531,64 +552,72 @@ debug_drawer_draw_text_fmt(float time_sec, const char* fmt, ...) {
     va_end(args_copy);
     va_end(args);
 
-    debug_drawer_draw_text_color(message, time_sec, (vec3){1.0f, 1.0f, 1.0f});
+    vec3_set(1.0f, 1.0f, 1.0f, color);
+    debug_drawer_draw_text_color(message, time_sec, color);
 
     free(message);
 }
 
 void
 debug_drawer_draw_text_color(const char* text, float time_sec, te_vec3 color) {
-    debug_drawer_draw_text_color_pos(text, time_sec, color, (vec2){-1.0f, -1.0f});
+    te_vec2 pos;
+    vec2_set(-1.0f, -1.0f, pos);
+    debug_drawer_draw_text_color_pos(text, time_sec, color, pos);
 }
 
 void
-debug_drawer_draw_text_color_pos(const char* text, float time_sec, te_vec3 color, te_vec2 pos) {
+debug_drawer_draw_text_color_pos(
+    const char* text, float time_sec, te_vec3 color, te_vec2 pos) {
     if (drawer.renderer == NULL) {
         return;
-    }
+    } else {
+        te_font_manager* font_manager;
+        size_t text_len;
+        float font_scale;
+        unsigned int i;
 
-    /* init data */
-    te_debug_drawer_text new_item;
-    vec3_copy(color, new_item.color);
-    new_item.color[3] = 1.0f;
-    vec2_copy(pos, new_item.pos);
-    new_item.time_left_sec = time_sec;
+        /* init data */
+        te_debug_drawer_text new_item;
+        vec3_copy(color, new_item.color);
+        new_item.color[3] = 1.0f;
+        vec2_copy(pos, new_item.pos);
+        new_item.time_left_sec = time_sec;
 
-    /* copy text */
-    const size_t text_len = strlen(text);
-    new_item.text = malloc(sizeof(char) * (text_len + 1));
-    memcpy(new_item.text, text, sizeof(char) * text_len);
-    new_item.text[text_len] = 0;
-    new_item.text_len = (unsigned int)text_len;
+        /* copy text */
+        text_len = strlen(text);
+        new_item.text = malloc(sizeof(char) * (text_len + 1));
+        memcpy(new_item.text, text, sizeof(char) * text_len);
+        new_item.text[text_len] = 0;
+        new_item.text_len = (unsigned int)text_len;
 
-    /* cache glyphs */
-    te_font_manager* font_manager = renderer_get_font_manager(drawer.renderer);
-    const float font_height = prv_font_manager_get_font_height_to_load();
-    const float font_scale = debug_drawer_default_text_height / font_height;
-    new_item.glyphs = malloc(sizeof(te_debug_drawer_glyph) * new_item.text_len);
-    for (unsigned int i = 0; i < new_item.text_len; i++) {
-        te_font_glyph src =
-            font_manager_get_glyph(font_manager, (unsigned long)new_item.text[i]);
-        te_debug_drawer_glyph* dst = &new_item.glyphs[i];
+        /* cache glyphs */
+        font_manager = renderer_get_font_manager(drawer.renderer);
+        font_scale =
+            debug_drawer_default_text_height / prv_font_manager_get_font_height_to_load();
+        new_item.glyphs = malloc(sizeof(te_debug_drawer_glyph) * new_item.text_len);
+        for (i = 0; i < new_item.text_len; i++) {
+            te_font_glyph src =
+                font_manager_get_glyph(font_manager, (unsigned long)new_item.text[i]);
+            te_debug_drawer_glyph* dst = &new_item.glyphs[i];
 
-        dst->distance_to_next_glyph =
-            (float)(src.advance >> 6) /* bitshift by 6 to get value in pixels (2^6 = 64) */
-            * font_scale;
+            dst->distance_to_next_glyph =
+                (float)(src.advance >> 6) /* bitshift by 6 to get value in pixels (2^6 = 64) */
+                * font_scale;
 
-        if (src.width == 0) {
-            dst->tex_id = 0;
-        } else {
-            dst->tex_id = src.tex_id;
-            vec2_copy(
-                (vec2){(float)src.bearing_x * font_scale, -(float)src.bearing_y * font_scale},
-                dst->pos_offset);
-            vec2_copy(
-                (vec2){(float)src.width * font_scale, (float)src.height * font_scale},
-                dst->size);
+            if (src.width == 0) {
+                dst->tex_id = 0;
+            } else {
+                dst->tex_id = src.tex_id;
+                vec2_set(
+                    (float)src.bearing_x * font_scale, -(float)src.bearing_y * font_scale,
+                    dst->pos_offset);
+                vec2_set(
+                    (float)src.width * font_scale, (float)src.height * font_scale, dst->size);
+            }
         }
-    }
 
-    double_array_add_item(drawer.texts, &new_item);
+        double_array_add_item(drawer.texts, &new_item);
+    }
 }
 
 float
@@ -598,17 +627,24 @@ debug_drawer_get_default_text_height(void) {
 
 void
 prv_debug_drawer_draw(
-    struct te_renderer* renderer, float delta_time_sec, mat4* view_proj_mat) {
+    struct te_renderer* renderer, float delta_time_sec, te_mat4* view_proj_mat) {
     unsigned int window_width;
     unsigned int window_height;
-    window_get_size(renderer_get_window(renderer), &window_width, &window_height);
+    unsigned int old_line_count;
+    unsigned int old_text_count;
+    unsigned int old_aabb_count;
+    unsigned int i;
+
     te_vec2 window_size;
-    vec2_copy((vec2){(float)window_width, (float)window_height}, window_size);
+    window_get_size(renderer_get_window(renderer), &window_width, &window_height);
+    vec2_set((float)window_width, (float)window_height, window_size);
 
     glDisable(GL_DEPTH_TEST);
 
-    const unsigned int old_line_count = double_array_get_size(drawer.lines);
+    old_line_count = double_array_get_size(drawer.lines);
     if (old_line_count > 0) {
+        te_debug_drawer_line* lines;
+
         glUseProgram(drawer.line_shader.prog_id);
 
 #if defined(ENGINE_GLES)
@@ -622,9 +658,9 @@ prv_debug_drawer_draw(
         glUniformMatrix4fv(
             drawer.line_shader.uniform_view_proj_mat, 1, GL_FALSE, (*view_proj_mat)[0]);
 
-        te_debug_drawer_line* lines = double_array_get_data(drawer.lines);
+        lines = double_array_get_data(drawer.lines);
         double_array_switch_to_empty(drawer.lines);
-        for (unsigned int i = 0; i < old_line_count; i++) {
+        for (i = 0; i < old_line_count; i++) {
             te_debug_drawer_line* line = &lines[i];
 
             glUniform3fv(drawer.line_shader.uniform_from, 1, line->from);
@@ -640,8 +676,10 @@ prv_debug_drawer_draw(
         }
     }
 
-    const unsigned int old_aabb_count = double_array_get_size(drawer.aabbs);
+    old_aabb_count = double_array_get_size(drawer.aabbs);
     if (old_aabb_count > 0) {
+        te_debug_drawer_aabb* aabbs;
+
         glUseProgram(drawer.aabb_shader.prog_id);
 
 #if defined(ENGINE_GLES)
@@ -655,9 +693,9 @@ prv_debug_drawer_draw(
         glUniformMatrix4fv(
             drawer.aabb_shader.uniform_view_proj_mat, 1, GL_FALSE, (*view_proj_mat)[0]);
 
-        te_debug_drawer_aabb* aabbs = double_array_get_data(drawer.aabbs);
+        aabbs = double_array_get_data(drawer.aabbs);
         double_array_switch_to_empty(drawer.aabbs);
-        for (unsigned int i = 0; i < old_aabb_count; i++) {
+        for (i = 0; i < old_aabb_count; i++) {
             te_debug_drawer_aabb* data = &aabbs[i];
 
             glUniform3fv(drawer.aabb_shader.uniform_pos_offset, 1, data->aabb.center);
@@ -675,8 +713,14 @@ prv_debug_drawer_draw(
         }
     }
 
-    const unsigned int old_text_count = double_array_get_size(drawer.texts);
+    old_text_count = double_array_get_size(drawer.texts);
     if (old_text_count > 0) {
+        te_debug_drawer_text* texts;
+        te_vec4 clip_rect;
+        te_vec2 screen_pos;
+        float text_height;
+        float auto_screen_y;
+        unsigned int text_idx;
         const float font_height = prv_font_manager_get_font_height_to_load();
         const float font_scale = debug_drawer_default_text_height / font_height;
 
@@ -692,33 +736,31 @@ prv_debug_drawer_draw(
 
         glActiveTexture(GL_TEXTURE0); /* glyph's bitmap */
 
-        te_vec4 clip_rect;
-        vec4_copy((vec4){0.0f, 0.0f, 1.0f, 1.0f}, clip_rect);
+        vec4_set(0.0f, 0.0f, 1.0f, 1.0f, clip_rect);
         glUniform4fv(drawer.text_shader.uniform_clip_rect, 1, clip_rect);
 
         glUniform2fv(drawer.text_shader.uniform_window_size, 1, window_size);
 
         /* prepare starting position for the first text (relative to screen's top-left corner)
          * x will be reset on every text so it's defined below */
-        te_vec2 screen_pos;
         screen_pos[1] = (float)window_height * 0.1f;
 
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        te_debug_drawer_text* texts = double_array_get_data(drawer.texts);
+        texts = double_array_get_data(drawer.texts);
         double_array_switch_to_empty(drawer.texts);
-        for (unsigned int i = 0; i < old_text_count; i++) {
-            te_debug_drawer_text* text = &texts[i];
+        for (text_idx = 0; text_idx < old_text_count; text_idx++) {
+            te_debug_drawer_text* text = &texts[text_idx];
 
             screen_pos[0] = window_size[0] * 0.025f;
             if (text->pos[0] >= 0.0f) {
                 screen_pos[0] = window_size[0] * text->pos[0];
             }
-            const float text_height = window_size[1] * font_height * font_scale;
+            text_height = window_size[1] * font_height * font_scale;
 
             /* switch to the first row of the text */
-            const float auto_screen_y = screen_pos[1]; /* save to restore later */
+            auto_screen_y = screen_pos[1]; /* save to restore later */
             if (text->pos[1] >= 0.0f) {
                 screen_pos[1] = window_size[1] * text->pos[1];
             }
@@ -727,7 +769,7 @@ prv_debug_drawer_draw(
             glUniform4fv(drawer.text_shader.uniform_text_color, 1, text->color);
 
             /* draw each glyph */
-            for (unsigned int i = 0; i < text->text_len; i++) {
+            for (i = 0; i < text->text_len; i++) {
                 if (text->glyphs[i].tex_id == 0) {
                     screen_pos[0] += text->glyphs[i].distance_to_next_glyph;
                 } else {

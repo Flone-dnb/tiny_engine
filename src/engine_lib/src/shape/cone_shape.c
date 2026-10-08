@@ -10,8 +10,8 @@ cone_shape_is_behind_plane(te_cone_shape* cone, te_plane_shape* plane) {
 
     /* source: Real-time collision detection, Christer Ericson (2005) */
 
-    glm_cross(plane->normal, cone->direction, intermediate);
-    glm_cross(intermediate, cone->direction, intermediate);
+    vec3_cross(plane->normal, cone->direction, intermediate);
+    vec3_cross(intermediate, cone->direction, intermediate);
 
     vec3_muls(cone->direction, cone->height, to_bottom);
 

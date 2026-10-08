@@ -1,12 +1,13 @@
 #include <debug_console.h>
 
 #if defined(ENGINE_DEBUG_TOOLS)
-#include <render/renderer.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <render/renderer.h>
 #include <game_manager.h>
-#include <hashmap.c/hashmap.h>
+#include <misc/num_hashtable.h>
 #include <io/log.h>
 #include <misc/memory_usage.h>
 #include <render/debug_drawer.h>
@@ -117,7 +118,7 @@ prv_debug_console_init(te_game_manager* game_manager) {
     memset(&console.stats, 0, sizeof(te_debug_stats));
     memset(&console.displayed_stats, 0, sizeof(te_debug_stats));
 
-    vec2_copy((vec2){0.01f, 0.95f}, console.screen_pos);
+    vec2_set(0.01f, 0.95f, console.screen_pos);
 
     {
         te_debug_console_command command = {0};

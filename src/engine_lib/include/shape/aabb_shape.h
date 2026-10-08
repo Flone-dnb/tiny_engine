@@ -25,4 +25,4 @@ bool aabb_shape_intersect_ray(
     te_aabb_shape* aabb, te_vec3 ray_origin, te_vec3 ray_dir, float* hit_dist_along_ray);
 
 /* transforms AABB from model space to world space */
-te_aabb_shape aabb_shape_convert_to_world(te_aabb_shape* aabb, mat4 world_mat);
+te_aabb_shape aabb_shape_convert_to_world(te_aabb_shape* aabb, te_mat4 world_mat);

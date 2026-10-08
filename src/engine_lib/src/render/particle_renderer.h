@@ -1,6 +1,6 @@
 #pragma once
 
-#include <math/vec4.h>
+#include <math/mat4.h>
 
 typedef struct te_particle_renderer te_particle_renderer;
 struct te_renderer;
@@ -33,5 +33,5 @@ te_particle_emitter_render_data* particle_renderer_get_emitter_render_data_tmp(
 
 /* draws particles on the currently set framebuffer */
 void particle_renderer_draw(
-    te_particle_renderer* renderer, struct te_light_params* light_params, mat4* view_mat,
-    mat4* proj_mat);
+    te_particle_renderer* renderer, struct te_light_params* light_params, te_mat4* view_mat,
+    te_mat4* proj_mat);

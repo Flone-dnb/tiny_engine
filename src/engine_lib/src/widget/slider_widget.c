@@ -1,6 +1,8 @@
 #include <widget/slider_widget.h>
 
+#include <stdlib.h>
 #include <io/log.h>
+#include <math/math_funcs.h>
 #include <type_database.h>
 #include <widget/rect_widget.h>
 #include <widget/widget.h>
@@ -50,10 +52,12 @@ static void prv_slider_widget_on_cursor_left(void* this, te_vec2 cursor_pos);
 
 te_slider_widget*
 slider_widget_create(void) {
+    te_widget* widget;
     te_slider_widget* slider_widget = malloc(sizeof(te_slider_widget));
+    te_vec2 tmp2;
 
-    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, slider_widget->background_color);
-    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, slider_widget->handle_color);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, slider_widget->background_color);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, slider_widget->handle_color);
     slider_widget->background_tex_relative_path = NULL;
     slider_widget->handle_tex_relative_path = NULL;
     slider_widget->value = 0.5f;
@@ -73,26 +77,33 @@ slider_widget_create(void) {
         prv_slider_widget_on_hovered_cursor_moved, NULL, NULL);
 
     {
-        slider_widget->background_rect = rect_widget_create();
-        te_widget* rect = rect_widget_get_widget(slider_widget->background_rect);
-        widget_set_is_serialization_allowed(rect, false);
-
         const float background_height = 0.2f;
 
-        widget_set_parent(rect, slider_widget->widget);
-        widget_set_relative_position(rect, (vec2){0.0f, 0.5f - background_height / 2.0f});
-        widget_set_relative_size(rect, (vec2){1.0f, background_height});
+        slider_widget->background_rect = rect_widget_create();
+        widget = rect_widget_get_widget(slider_widget->background_rect);
+        widget_set_is_serialization_allowed(widget, false);
+
+        widget_set_parent(widget, slider_widget->widget);
+
+        vec2_set(0.0f, 0.5f - background_height / 2.0f, tmp2);
+        widget_set_relative_position(widget, tmp2);
+
+        vec2_set(1.0f, background_height, tmp2);
+        widget_set_relative_size(widget, tmp2);
     }
 
     {
         slider_widget->handle_rect = rect_widget_create();
-        te_widget* rect = rect_widget_get_widget(slider_widget->handle_rect);
-        widget_set_is_serialization_allowed(rect, false);
+        widget = rect_widget_get_widget(slider_widget->handle_rect);
+        widget_set_is_serialization_allowed(widget, false);
 
-        widget_set_parent(rect, slider_widget->widget);
-        widget_set_relative_size(rect, (vec2){TE_SLIDER_HANDLE_WIDTH, 1.0f});
-        widget_set_relative_position(
-            rect, (vec2){slider_widget->value - TE_SLIDER_HANDLE_WIDTH / 2.0f, 0.0f});
+        widget_set_parent(widget, slider_widget->widget);
+
+        vec2_set(TE_SLIDER_HANDLE_WIDTH, 1.0f, tmp2);
+        widget_set_relative_size(widget, tmp2);
+
+        vec2_set(slider_widget->value - TE_SLIDER_HANDLE_WIDTH / 2.0f, 0.0f, tmp2);
+        widget_set_relative_position(widget, tmp2);
     }
 
     return slider_widget;
@@ -131,7 +142,7 @@ slider_widget_get_widget(te_slider_widget* slider_widget) {
 
 static float
 prv_slider_widget_snap_to_nearest(float value, float step_size) {
-    return roundf(value / step_size) * step_size;
+    return math_round(value / step_size) * step_size;
 }
 
 void
@@ -146,9 +157,9 @@ slider_widget_set_value(te_slider_widget* slider_widget, float value) {
     slider_widget->value = value; /* ignore step size here */
 
     if (widget_get_world(slider_widget->widget) != NULL) {
-        widget_set_relative_position(
-            rect_widget_get_widget(slider_widget->handle_rect),
-            (vec2){value - TE_SLIDER_HANDLE_WIDTH / 2.0f, 0.0f});
+        te_vec2 pos;
+        vec2_set(value - TE_SLIDER_HANDLE_WIDTH / 2.0f, 0.0f, pos);
+        widget_set_relative_position(rect_widget_get_widget(slider_widget->handle_rect), pos);
     }
 }
 
@@ -183,6 +194,8 @@ slider_widget_set_handle_color(te_slider_widget* slider_widget, te_vec4 color) {
 void
 slider_widget_set_background_texture(
     te_slider_widget* slider_widget, const char* relative_path) {
+    size_t path_len;
+
     free(slider_widget->background_tex_relative_path);
     slider_widget->background_tex_relative_path = NULL;
 
@@ -191,7 +204,7 @@ slider_widget_set_background_texture(
         return;
     }
 
-    const size_t path_len = strlen(relative_path);
+    path_len = strlen(relative_path);
     slider_widget->background_tex_relative_path = malloc(sizeof(char) * (path_len + 1));
     memcpy(
         slider_widget->background_tex_relative_path, relative_path, sizeof(char) * path_len);
@@ -203,6 +216,8 @@ slider_widget_set_background_texture(
 
 void
 slider_widget_set_handle_texture(te_slider_widget* slider_widget, const char* relative_path) {
+    size_t path_len;
+
     free(slider_widget->handle_tex_relative_path);
     slider_widget->handle_tex_relative_path = NULL;
 
@@ -211,7 +226,7 @@ slider_widget_set_handle_texture(te_slider_widget* slider_widget, const char* re
         return;
     }
 
-    const size_t path_len = strlen(relative_path);
+    path_len = strlen(relative_path);
     slider_widget->handle_tex_relative_path = malloc(sizeof(char) * (path_len + 1));
     memcpy(slider_widget->handle_tex_relative_path, relative_path, sizeof(char) * path_len);
     slider_widget->handle_tex_relative_path[path_len] = 0;
@@ -242,7 +257,9 @@ slider_widget_get_handle_texture(te_slider_widget* slider_widget) {
 
 static void
 prv_slider_widget_on_after_spawned(void* this) {
+    te_world* world;
     te_slider_widget* slider_widget = this;
+    te_vec2 pos;
 
     /* self check */
     if (widget_get_child_widget_count(slider_widget->widget) != 2) {
@@ -262,11 +279,10 @@ prv_slider_widget_on_after_spawned(void* this) {
             slider_widget->handle_rect, slider_widget->handle_tex_relative_path);
     }
 
-    widget_set_relative_position(
-        rect_widget_get_widget(slider_widget->handle_rect),
-        (vec2){slider_widget->value - TE_SLIDER_HANDLE_WIDTH / 2.0f, 0.0f});
+    vec2_set(slider_widget->value - TE_SLIDER_HANDLE_WIDTH / 2.0f, 0.0f, pos);
+    widget_set_relative_position(rect_widget_get_widget(slider_widget->handle_rect), pos);
 
-    te_world* world = widget_get_world(slider_widget->widget);
+    world = widget_get_world(slider_widget->widget);
     if (world == NULL) {
         log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
@@ -277,6 +293,7 @@ prv_slider_widget_on_after_spawned(void* this) {
 static void
 prv_slider_widget_on_before_despawned(void* this) {
     te_slider_widget* slider_widget = this;
+    te_world* world;
 
     /* self check */
     if (widget_get_child_widget_count(slider_widget->widget) != 2) {
@@ -284,7 +301,7 @@ prv_slider_widget_on_before_despawned(void* this) {
         abort();
     }
 
-    te_world* world = widget_get_world(slider_widget->widget);
+    world = widget_get_world(slider_widget->widget);
     if (world == NULL) {
         log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
@@ -296,10 +313,13 @@ static void
 prv_slider_widget_update_value(te_slider_widget* slider_widget, te_vec2 cursor_pos) {
     te_vec2 screen_pos;
     te_vec2 screen_size;
+    te_vec2 pos;
+    float new_value;
+
     widget_get_screen_position(slider_widget->widget, screen_pos);
     widget_get_screen_size(slider_widget->widget, screen_size);
 
-    float new_value = (cursor_pos[0] - screen_pos[0]) / screen_size[0];
+    new_value = (cursor_pos[0] - screen_pos[0]) / screen_size[0];
     if (new_value < 0.0f) {
         new_value = 0.0f;
     } else if (new_value > 1.0f) {
@@ -309,9 +329,9 @@ prv_slider_widget_update_value(te_slider_widget* slider_widget, te_vec2 cursor_p
     slider_widget->is_handle_grabbed = true;
     slider_widget->value =
         prv_slider_widget_snap_to_nearest(new_value, slider_widget->step_size);
-    widget_set_relative_position(
-        rect_widget_get_widget(slider_widget->handle_rect),
-        (vec2){slider_widget->value - TE_SLIDER_HANDLE_WIDTH / 2.0f, 0.0f});
+
+    vec2_set(slider_widget->value - TE_SLIDER_HANDLE_WIDTH / 2.0f, 0.0f, pos);
+    widget_set_relative_position(rect_widget_get_widget(slider_widget->handle_rect), pos);
 
     if (slider_widget->on_value_changed != NULL) {
         slider_widget->on_value_changed(slider_widget, slider_widget->value);
@@ -321,11 +341,12 @@ prv_slider_widget_update_value(te_slider_widget* slider_widget, te_vec2 cursor_p
 static void
 prv_slider_widget_on_mouse_button_pressed(
     void* this, enum te_mouse_button button, te_vec2 cursor_pos) {
+    te_slider_widget* slider_widget = this;
+
     if (button != TE_MB_LEFT) {
         return;
     }
 
-    te_slider_widget* slider_widget = this;
     prv_slider_widget_update_value(slider_widget, cursor_pos);
 }
 

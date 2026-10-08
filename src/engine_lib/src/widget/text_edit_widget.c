@@ -1,5 +1,6 @@
 #include <widget/text_edit_widget.h>
 
+#include <stdlib.h>
 #include <string.h>
 #include <game_manager.h>
 #include <io/log.h>
@@ -57,6 +58,8 @@ static void prv_text_edit_widget_on_keyboard_input(void* this, enum te_keyboard_
 
 te_text_edit_widget*
 text_edit_widget_create(void) {
+    te_vec2 tmp2;
+
     te_text_edit_widget* text_edit_widget = malloc(sizeof(te_text_edit_widget));
 
     text_edit_widget->widget = widget_create(
@@ -66,7 +69,7 @@ text_edit_widget_create(void) {
 
     text_edit_widget->rect_cursor_widget = NULL;
 
-    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, text_edit_widget->text_color);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, text_edit_widget->text_color);
     text_edit_widget->text_height = 0.03f;
 
     text_edit_widget->text_cursor_index = TE_INVALID_TEXT_CURSOR_INDEX;
@@ -78,10 +81,12 @@ text_edit_widget_create(void) {
         text_widget_get_widget(text_edit_widget->text_widget), false);
     widget_set_parent(
         text_widget_get_widget(text_edit_widget->text_widget), text_edit_widget->widget);
-    widget_set_relative_position(
-        text_widget_get_widget(text_edit_widget->text_widget), (vec2){0.0f, 0.0f});
-    widget_set_relative_size(
-        text_widget_get_widget(text_edit_widget->text_widget), (vec2){1.0f, 1.0f});
+
+    vec2_set(0.0f, 0.0f, tmp2);
+    widget_set_relative_position(text_widget_get_widget(text_edit_widget->text_widget), tmp2);
+
+    vec2_set(1.0f, 1.0f, tmp2);
+    widget_set_relative_size(text_widget_get_widget(text_edit_widget->text_widget), tmp2);
 
     prv_widget_set_input_callbacks(
         text_edit_widget->widget, NULL, prv_text_edit_widget_on_cursor_left,
@@ -136,6 +141,8 @@ text_edit_widget_set_on_text_accepted(
 
 void
 prv_text_edit_widget_on_after_spawned(void* this) {
+    te_world* world;
+
     te_text_edit_widget* text_edit_widget = this;
 
     text_widget_set_color(text_edit_widget->text_widget, text_edit_widget->text_color);
@@ -147,7 +154,7 @@ prv_text_edit_widget_on_after_spawned(void* this) {
         abort();
     }
 
-    te_world* world = widget_get_world(text_edit_widget->widget);
+    world = widget_get_world(text_edit_widget->widget);
     if (world == NULL) {
         log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
@@ -180,6 +187,8 @@ prv_text_edit_widget_despawn_destroy_cursor(te_text_edit_widget* text_edit_widge
 
 void
 prv_text_edit_widget_on_before_despawned(void* this) {
+    te_world* world;
+
     te_text_edit_widget* text_edit_widget = this;
 
     /* self check */
@@ -188,7 +197,7 @@ prv_text_edit_widget_on_before_despawned(void* this) {
         abort();
     }
 
-    te_world* world = widget_get_world(text_edit_widget->widget);
+    world = widget_get_world(text_edit_widget->widget);
     if (world == NULL) {
         log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
@@ -203,65 +212,82 @@ prv_text_edit_widget_on_before_despawned(void* this) {
 void
 prv_text_edit_widget_on_mouse_button_pressed(
     void* this, enum te_mouse_button button, te_vec2 cursor_pos) {
+    te_text_edit_widget* text_edit_widget = this;
+    te_world* world;
+    te_game_manager* game_manager;
+    te_font_manager* font_manager;
+    te_window* window;
+    wchar_t* text;
+    te_vec2 cursor_pos_pix;
+    te_vec2 window_size;
+    te_vec2 rect_pos;
+    te_vec2 rect_size;
+    te_vec2 text_widget_pos;
+    te_vec2 text_widget_size;
+    unsigned int text_len;
+    unsigned int window_width;
+    unsigned int window_height;
+    unsigned int text_render_data_handle;
+    te_text_widget_render_data* data;
+
     if (button != TE_MB_LEFT) {
         return;
     }
 
-    te_text_edit_widget* text_edit_widget = this;
-
     /* determine where to put the text cursor (snap to closest glyph start) */
 
-    te_world* world = widget_get_world(text_edit_widget->widget);
+    world = widget_get_world(text_edit_widget->widget);
     if (world == NULL) {
         log_error(__FILE__, __LINE__, "expected world to be valid");
         abort();
     }
-    te_game_manager* game_manager = world_get_game_manager(world);
-    te_font_manager* font_manager =
-        renderer_get_font_manager(game_manager_get_renderer(game_manager));
+    game_manager = world_get_game_manager(world);
+    font_manager = renderer_get_font_manager(game_manager_get_renderer(game_manager));
 
-    te_window* window = game_manager_get_window(game_manager);
-    unsigned int window_width;
-    unsigned int window_height;
+    window = game_manager_get_window(game_manager);
     window_get_size(window, &window_width, &window_height);
+    vec2_set((float)window_width, (float)window_height, window_size);
 
-    const unsigned int text_render_data_handle =
+    text_render_data_handle =
         prv_text_widget_get_render_data_handle(text_edit_widget->text_widget);
     if (text_render_data_handle == 0xffffffff) {
         log_error(__FILE__, __LINE__, "expected text render data handle to be valid");
         abort();
     }
-    te_text_widget_render_data* data = widget_renderer_get_text_widget_render_data_tmp(
+    data = widget_renderer_get_text_widget_render_data_tmp(
         world_get_widget_renderer(world), text_render_data_handle);
 
-    te_vec2 cursor_pos_pix;
-    vec2_mul(
-        cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos_pix);
+    vec2_mul(cursor_pos, window_size, cursor_pos_pix);
     if (data->pos_pix[0] > cursor_pos_pix[0]) {
         return;
     }
 
-    unsigned int text_len = 0;
-    wchar_t* text = text_widget_get_text(text_edit_widget->text_widget, &text_len);
+    text_len = 0;
+    text = text_widget_get_text(text_edit_widget->text_widget, &text_len);
 
     /* prepare cursor position */
-    te_vec2 rect_pos;
     vec2_copy(data->pos_pix, rect_pos);
     text_edit_widget->text_cursor_index = 0;
 
     if (text_len > 0) {
+        float x_start;
+        float glyph_scale;
+        unsigned int char_idx;
+        unsigned int glyph_idx;
+        bool found;
+
         /* put to end by default if have text */
         rect_pos[0] += data->glyphs[data->glyph_count - 1].offset_pix[0]
                        + data->glyphs[data->glyph_count - 1].size_pix[0];
 
         text_edit_widget->text_cursor_index = text_len;
 
-        float x_start = data->pos_pix[0];
-        bool found = false;
-        const float glyph_scale =
+        x_start = data->pos_pix[0];
+        found = false;
+        glyph_scale =
             text_edit_widget->text_height / prv_font_manager_get_font_height_to_load();
-        for (unsigned int char_idx = 0, glyph_idx = 0;
-             char_idx < text_len && glyph_idx < data->glyph_count; char_idx++) {
+        for (char_idx = 0, glyph_idx = 0; char_idx < text_len && glyph_idx < data->glyph_count;
+             char_idx++) {
             te_font_glyph glyph =
                 font_manager_get_glyph(font_manager, (unsigned long)text[char_idx]);
 
@@ -289,26 +315,25 @@ prv_text_edit_widget_on_mouse_button_pressed(
             text_edit_widget->text_cursor_index = text_len;
         }
     }
-    vec2_div(rect_pos, (vec2){(float)window_width, (float)window_height}, rect_pos);
+    vec2_div(rect_pos, window_size, rect_pos);
 
     if (text_edit_widget->rect_cursor_widget == NULL) {
+        te_widget* widget;
+
         /* create text cursor */
         text_edit_widget->rect_cursor_widget = rect_widget_create();
-        te_widget* rect = rect_widget_get_widget(text_edit_widget->rect_cursor_widget);
-        widget_set_is_serialization_allowed(rect, false);
+        widget = rect_widget_get_widget(text_edit_widget->rect_cursor_widget);
+        widget_set_is_serialization_allowed(widget, false);
 
         /* attach and spawn */
-        widget_set_parent(rect, text_edit_widget->widget);
+        widget_set_parent(widget, text_edit_widget->widget);
     }
 
     /* calculate rect pos/size to be relative to parent */
 
-    te_vec2 rect_size;
     rect_size[0] = 2.0f / (float)window_width;
     rect_size[1] = text_widget_get_text_height(text_edit_widget->text_widget);
 
-    te_vec2 text_widget_pos;
-    te_vec2 text_widget_size;
     widget_get_screen_position(
         text_widget_get_widget(text_edit_widget->text_widget), text_widget_pos);
     widget_get_screen_size(
@@ -328,8 +353,8 @@ prv_text_edit_widget_on_mouse_button_pressed(
 
 void
 prv_text_edit_widget_on_cursor_left(void* this, te_vec2 cursor_pos) {
-    (void)cursor_pos;
     te_text_edit_widget* text_edit_widget = this;
+    (void)cursor_pos;
 
     if (text_edit_widget->rect_cursor_widget != NULL) {
         prv_text_edit_widget_despawn_destroy_cursor(text_edit_widget);
@@ -338,41 +363,53 @@ prv_text_edit_widget_on_cursor_left(void* this, te_vec2 cursor_pos) {
 
 static void
 prv_text_edit_widget_update_cursor(te_text_edit_widget* text_edit_widget) {
+    te_game_manager* game_manager;
+    te_font_manager* font_manager;
+    te_text_widget_render_data* data;
+    te_world* world;
+    te_window* window;
+    te_vec2 window_size;
+    te_vec2 rect_pos;
+    te_vec2 text_widget_pos;
+    te_vec2 text_widget_size;
+    unsigned int window_width;
+    unsigned int window_height;
+    unsigned int text_render_data_handle;
     unsigned int text_len;
+    unsigned int char_idx;
+    unsigned int glyph_idx;
+
     wchar_t* text = text_widget_get_text(text_edit_widget->text_widget, &text_len);
 
-    te_world* world = widget_get_world(text_edit_widget->widget);
+    world = widget_get_world(text_edit_widget->widget);
     if (world == NULL) {
         log_error(__FILE__, __LINE__, "expected world to be valid");
         abort();
     }
-    te_game_manager* game_manager = world_get_game_manager(world);
-    te_font_manager* font_manager =
-        renderer_get_font_manager(game_manager_get_renderer(game_manager));
+    game_manager = world_get_game_manager(world);
+    font_manager = renderer_get_font_manager(game_manager_get_renderer(game_manager));
 
-    const unsigned int text_render_data_handle =
+    text_render_data_handle =
         prv_text_widget_get_render_data_handle(text_edit_widget->text_widget);
     if (text_render_data_handle == 0xffffffff) {
         log_error(__FILE__, __LINE__, "expected text render data handle to be valid");
         abort();
     }
-    te_text_widget_render_data* data = widget_renderer_get_text_widget_render_data_tmp(
+    data = widget_renderer_get_text_widget_render_data_tmp(
         world_get_widget_renderer(world), text_render_data_handle);
 
-    te_window* window = game_manager_get_window(game_manager);
-    unsigned int window_width;
-    unsigned int window_height;
+    window = game_manager_get_window(game_manager);
     window_get_size(window, &window_width, &window_height);
+    vec2_set((float)window_width, (float)window_height, window_size);
 
-    te_vec2 rect_pos;
     vec2_copy(data->pos_pix, rect_pos);
     if (text_edit_widget->text_cursor_index > 0) {
         float x_start = data->pos_pix[0];
         const float glyph_scale =
             text_edit_widget->text_height / prv_font_manager_get_font_height_to_load();
         bool found = false;
-        for (unsigned int char_idx = 0, glyph_idx = 0;
-             char_idx < text_len && glyph_idx < data->glyph_count; char_idx++) {
+        for (char_idx = 0, glyph_idx = 0; char_idx < text_len && glyph_idx < data->glyph_count;
+             char_idx++) {
             te_font_glyph glyph =
                 font_manager_get_glyph(font_manager, (unsigned long)text[char_idx]);
 
@@ -399,12 +436,10 @@ prv_text_edit_widget_update_cursor(te_text_edit_widget* text_edit_widget) {
         }
     }
 
-    vec2_div(rect_pos, (vec2){(float)window_width, (float)window_height}, rect_pos);
+    vec2_div(rect_pos, window_size, rect_pos);
 
     /* calculate rect pos to be relative to parent */
 
-    te_vec2 text_widget_pos;
-    te_vec2 text_widget_size;
     widget_get_screen_position(
         text_widget_get_widget(text_edit_widget->text_widget), text_widget_pos);
     widget_get_screen_size(
@@ -423,6 +458,11 @@ prv_text_edit_widget_update_cursor(te_text_edit_widget* text_edit_widget) {
 
 static void
 prv_text_edit_widget_on_keyboard_input_text(void* this, const char* input_text) {
+    wchar_t* old_text;
+    wchar_t* new_text;
+    unsigned int old_text_len;
+    unsigned int new_text_len;
+
     te_text_edit_widget* text_edit_widget = this;
 
     unsigned int added_text_len;
@@ -432,15 +472,14 @@ prv_text_edit_widget_on_keyboard_input_text(void* this, const char* input_text) 
         abort();
     }
 
-    unsigned int old_text_len;
-    wchar_t* old_text = text_widget_get_text(text_edit_widget->text_widget, &old_text_len);
+    old_text = text_widget_get_text(text_edit_widget->text_widget, &old_text_len);
 
     if (text_edit_widget->text_cursor_index > old_text_len) {
         log_error(__FILE__, __LINE__, "expected a valid text cursor index");
         abort();
     }
 
-    wchar_t* new_text = malloc(sizeof(wchar_t) * (old_text_len + added_text_len + 1));
+    new_text = malloc(sizeof(wchar_t) * (old_text_len + added_text_len + 1));
     memcpy(new_text, old_text, sizeof(wchar_t) * text_edit_widget->text_cursor_index);
     memcpy(
         new_text + text_edit_widget->text_cursor_index, added_text,
@@ -452,7 +491,7 @@ prv_text_edit_widget_on_keyboard_input_text(void* this, const char* input_text) 
     new_text[old_text_len + added_text_len] = 0;
 
     free(added_text);
-    const unsigned int new_text_len = old_text_len + added_text_len;
+    new_text_len = old_text_len + added_text_len;
 
     text_widget_set_text_own(text_edit_widget->text_widget, new_text, new_text_len);
 
@@ -473,7 +512,10 @@ prv_text_edit_widget_on_keyboard_input(void* this, enum te_keyboard_button butto
             text_edit_widget->on_text_accepted(text_edit_widget);
         }
     } else if (button == TE_KB_BACKSPACE) {
+        wchar_t* new_text;
         unsigned int old_text_len;
+        unsigned int new_text_len;
+
         wchar_t* old_text = text_widget_get_text(text_edit_widget->text_widget, &old_text_len);
 
         if (old_text_len == 0 || text_edit_widget->text_cursor_index > old_text_len
@@ -481,7 +523,7 @@ prv_text_edit_widget_on_keyboard_input(void* this, enum te_keyboard_button butto
             return;
         }
 
-        wchar_t* new_text = malloc(sizeof(wchar_t) * old_text_len);
+        new_text = malloc(sizeof(wchar_t) * old_text_len);
         memcpy(
             new_text, old_text, sizeof(wchar_t) * (text_edit_widget->text_cursor_index - 1));
         memcpy(
@@ -490,7 +532,7 @@ prv_text_edit_widget_on_keyboard_input(void* this, enum te_keyboard_button butto
             sizeof(wchar_t) * (old_text_len - text_edit_widget->text_cursor_index));
         new_text[old_text_len - 1] = 0;
 
-        const unsigned int new_text_len = old_text_len - 1;
+        new_text_len = old_text_len - 1;
         text_widget_set_text_own(text_edit_widget->text_widget, new_text, new_text_len);
 
         text_edit_widget->text_cursor_index -= 1;

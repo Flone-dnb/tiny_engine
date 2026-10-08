@@ -1,5 +1,6 @@
 #include <widget/rect_widget.h>
 
+#include <stdlib.h>
 #include <string.h>
 #include <game_manager.h>
 #include <io/log.h>
@@ -57,12 +58,12 @@ rect_widget_create(void) {
         prv_rect_widget_on_size_changed, prv_rect_widget_on_before_base_destroyed, NULL, NULL,
         prv_rect_widget_on_after_spawned, prv_rect_widget_on_before_despawned,
         prv_rect_widget_on_window_size_changed);
-    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, rect_widget->color);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, rect_widget->color);
     rect_widget->tex_relative_path = NULL;
     rect_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
     rect_widget->is_rect_widget_destroy = false;
 
-    vec4_copy((vec4){0.0f, 0.0f, 1.0f, 1.0f}, rect_widget->clip_rect);
+    vec4_set(0.0f, 0.0f, 1.0f, 1.0f, rect_widget->clip_rect);
 
     return rect_widget;
 }
@@ -109,13 +110,15 @@ rect_widget_set_color(te_rect_widget* rect_widget, te_vec4 color) {
     vec4_copy(color, rect_widget->color);
 
     if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        te_rect_widget_render_data* data;
+
         te_world* world = widget_get_world(rect_widget->widget);
         if (world == NULL) {
             log_error(__FILE__, __LINE__, "expected the widget to be spawned");
             abort();
         }
 
-        te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
+        data = widget_renderer_get_rect_widget_render_data_tmp(
             world_get_widget_renderer(world), rect_widget->render_data_handle);
         vec4_copy(rect_widget->color, data->color);
     }
@@ -150,13 +153,15 @@ rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) 
         /* remove current texture */
         rect_widget->tex_relative_path = NULL;
         if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+            te_rect_widget_render_data* data;
+
             te_world* world = widget_get_world(rect_widget->widget);
             if (world == NULL) {
                 log_error(__FILE__, __LINE__, "expected the widget to be spawned");
                 abort();
             }
 
-            te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
+            data = widget_renderer_get_rect_widget_render_data_tmp(
                 world_get_widget_renderer(world), rect_widget->render_data_handle);
 
             if (data->tex_id > 0) {
@@ -176,16 +181,19 @@ rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) 
         rect_widget->tex_relative_path[len] = 0;
 
         if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+            te_texture_manager* texture_manager;
+            te_rect_widget_render_data* data;
+
             te_world* world = widget_get_world(rect_widget->widget);
             if (world == NULL) {
                 log_error(__FILE__, __LINE__, "expected the widget to be spawned");
                 abort();
             }
 
-            te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
+            data = widget_renderer_get_rect_widget_render_data_tmp(
                 world_get_widget_renderer(world), rect_widget->render_data_handle);
 
-            te_texture_manager* texture_manager = renderer_get_texture_manager(
+            texture_manager = renderer_get_texture_manager(
                 game_manager_get_renderer(world_get_game_manager(world)));
             if (data->tex_id > 0) {
                 texture_manager_mark_unused_texture(texture_manager, data->tex_id);
@@ -208,13 +216,15 @@ rect_widget_set_clip_rect(te_rect_widget* rect_widget, te_vec4 clip_rect) {
     vec4_copy(clip_rect, rect_widget->clip_rect);
 
     if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
+        te_rect_widget_render_data* data;
+
         te_world* world = widget_get_world(rect_widget->widget);
         if (world == NULL) {
             log_error(__FILE__, __LINE__, "expected the widget to be spawned");
             abort();
         }
 
-        te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
+        data = widget_renderer_get_rect_widget_render_data_tmp(
             world_get_widget_renderer(world), rect_widget->render_data_handle);
         vec4_copy(clip_rect, data->clip_rect);
     }
@@ -227,6 +237,11 @@ rect_widget_get_clip_rect(te_rect_widget* rect_widget, te_vec4 out) {
 
 static void
 prv_rect_widget_register_for_rendering(te_rect_widget* rect_widget) {
+    te_world* world;
+    te_game_manager* game_manager;
+    te_widget_renderer* widget_renderer;
+    te_rect_widget_render_data* data;
+
 #if defined(DEBUG)
     if (rect_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
         log_error(__FILE__, __LINE__, "expected the render data handle to be invalid");
@@ -234,17 +249,17 @@ prv_rect_widget_register_for_rendering(te_rect_widget* rect_widget) {
     }
 #endif
 
-    te_world* world = widget_get_world(rect_widget->widget);
+    world = widget_get_world(rect_widget->widget);
     if (world == NULL) {
         log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
-    te_game_manager* game_manager = world_get_game_manager(world);
-    te_widget_renderer* widget_renderer = world_get_widget_renderer(world);
+    game_manager = world_get_game_manager(world);
+    widget_renderer = world_get_widget_renderer(world);
 
     rect_widget->render_data_handle = widget_renderer_add_rect_widget(widget_renderer);
 
-    te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
+    data = widget_renderer_get_rect_widget_render_data_tmp(
         widget_renderer, rect_widget->render_data_handle);
 
     /* setup texture */
@@ -261,6 +276,10 @@ prv_rect_widget_register_for_rendering(te_rect_widget* rect_widget) {
 
 static void
 prv_rect_widget_unregister_from_rendering(te_rect_widget* rect_widget) {
+    te_world* world;
+    te_widget_renderer* widget_renderer;
+    te_rect_widget_render_data* data;
+
 #if defined(DEBUG)
     if (rect_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
         log_error(__FILE__, __LINE__, "expected the render data handle to be valid");
@@ -268,15 +287,15 @@ prv_rect_widget_unregister_from_rendering(te_rect_widget* rect_widget) {
     }
 #endif
 
-    te_world* world = widget_get_world(rect_widget->widget);
+    world = widget_get_world(rect_widget->widget);
     if (world == NULL) {
         log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
-    te_widget_renderer* widget_renderer = world_get_widget_renderer(world);
+    widget_renderer = world_get_widget_renderer(world);
 
     /* cleanup data */
-    te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
+    data = widget_renderer_get_rect_widget_render_data_tmp(
         widget_renderer, rect_widget->render_data_handle);
     if (data->tex_id > 0) {
         te_texture_manager* texture_manager = renderer_get_texture_manager(
@@ -290,6 +309,13 @@ prv_rect_widget_unregister_from_rendering(te_rect_widget* rect_widget) {
 
 static void
 prv_rect_widget_update_non_tex_render_data(te_rect_widget* rect_widget) {
+    te_world* world;
+    te_game_manager* game_manager;
+    te_rect_widget_render_data* data;
+    te_vec2 window_size;
+    unsigned int window_width;
+    unsigned int window_height;
+
 #if defined(DEBUG)
     if (rect_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
         log_error(__FILE__, __LINE__, "expected the render data handle to be valid");
@@ -297,28 +323,25 @@ prv_rect_widget_update_non_tex_render_data(te_rect_widget* rect_widget) {
     }
 #endif
 
-    te_world* world = widget_get_world(rect_widget->widget);
+    world = widget_get_world(rect_widget->widget);
     if (world == NULL) {
         log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
-    te_game_manager* game_manager = world_get_game_manager(world);
+    game_manager = world_get_game_manager(world);
 
-    te_rect_widget_render_data* data = widget_renderer_get_rect_widget_render_data_tmp(
+    data = widget_renderer_get_rect_widget_render_data_tmp(
         world_get_widget_renderer(world), rect_widget->render_data_handle);
 
     vec4_copy(rect_widget->color, data->color);
 
-    unsigned int window_width;
-    unsigned int window_height;
     window_get_size(game_manager_get_window(game_manager), &window_width, &window_height);
+    vec2_set((float)window_width, (float)window_height, window_size);
 
     widget_get_screen_position(rect_widget->widget, data->pos_pix);
     widget_get_screen_size(rect_widget->widget, data->size_pix);
-    vec2_mul(
-        data->pos_pix, (vec2){(float)window_width, (float)window_height}, data->pos_pix);
-    vec2_mul(
-        data->size_pix, (vec2){(float)window_width, (float)window_height}, data->size_pix);
+    vec2_mul(data->pos_pix, window_size, data->pos_pix);
+    vec2_mul(data->size_pix, window_size, data->size_pix);
 
     vec4_copy(rect_widget->clip_rect, data->clip_rect);
 }

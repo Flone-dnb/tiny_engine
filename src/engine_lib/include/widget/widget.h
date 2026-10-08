@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stddef.h>
 #include <stdbool.h>
 #include <math/vec2.h>
 #include <input/keyboard_button.h>
@@ -94,7 +95,8 @@ void prv_widget_on_window_size_changed(te_widget* widget);
 void prv_widget_set_input_callbacks(
     te_widget* widget, void (*on_cursor_entered)(void* owner, te_vec2 cursor_pos),
     void (*on_cursor_left)(void* owner, te_vec2 cursor_pos),
-    void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, te_vec2 cursor_pos),
+    void (*on_mouse_button_pressed)(
+        void* owner, enum te_mouse_button button, te_vec2 cursor_pos),
     void (*on_mouse_button_released)(
         void* owner, enum te_mouse_button button, te_vec2 cursor_pos),
     void (*on_hovered_cursor_moved)(void* owner, te_vec2 cursor_pos),

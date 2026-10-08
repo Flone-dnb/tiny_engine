@@ -1,5 +1,7 @@
 #include <shape/plane_shape.h>
 
+#include <math/math_funcs.h>
+
 te_plane_shape
 plane_shape_create(te_vec3 normal, te_vec3 position) {
     te_plane_shape plane;
@@ -16,7 +18,8 @@ plane_shape_test_point(te_plane_shape* shape, te_vec3 point) {
 }
 
 bool
-plane_shape_ray_intersection(te_plane_shape* shape, te_vec3 ray_origin, te_vec3 ray, te_vec3 out_pos) {
+plane_shape_ray_intersection(
+    te_plane_shape* shape, te_vec3 ray_origin, te_vec3 ray, te_vec3 out_pos) {
     te_vec3 temp;
     float t;
 

@@ -1,6 +1,8 @@
 #include <widget/text_widget.h>
 
+#include <stdlib.h>
 #include <string.h>
+#include <math/math_funcs.h>
 #include <game_manager.h>
 #include <io/log.h>
 #include <misc/wchar_funcs.h>
@@ -60,7 +62,7 @@ text_widget_create(void) {
     text_widget->text_height = 0.03f;
     text_widget->line_spacing = 0.1f;
     text_widget->is_multiline = false;
-    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, text_widget->color);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, text_widget->color);
 
     text_widget->widget = widget_create(
         text_widget, text_widget_get_type_id, prv_text_widget_on_pos_changed,
@@ -131,6 +133,8 @@ text_widget_set_text_own(te_text_widget* text_widget, wchar_t* text, unsigned in
 
 void
 text_widget_set_text(te_text_widget* text_widget, const wchar_t* text) {
+    unsigned int text_len;
+
     if (text == NULL) {
         log_error(__FILE__, __LINE__, "text pointer must not be NULL");
         abort();
@@ -138,7 +142,7 @@ text_widget_set_text(te_text_widget* text_widget, const wchar_t* text) {
 
     free(text_widget->text);
 
-    const unsigned int text_len = (unsigned int)wcslen(text);
+    text_len = (unsigned int)wcslen(text);
     text_widget->text = malloc(sizeof(wchar_t) * (text_len + 1));
     memcpy(text_widget->text, text, sizeof(wchar_t) * text_len);
     text_widget->text[text_len] = 0;
@@ -163,19 +167,22 @@ text_widget_get_text(te_text_widget* text_widget, unsigned int* text_len) {
 
 void
 text_widget_set_color(te_text_widget* text_widget, te_vec4 color) {
+    te_world* world;
+    te_text_widget_render_data* data;
+
     vec4_copy(color, text_widget->color);
 
     if (text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
         return;
     }
 
-    te_world* world = widget_get_world(text_widget->widget);
+    world = widget_get_world(text_widget->widget);
     if (world == NULL) {
         log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
 
-    te_text_widget_render_data* data = widget_renderer_get_text_widget_render_data_tmp(
+    data = widget_renderer_get_text_widget_render_data_tmp(
         world_get_widget_renderer(world), text_widget->render_data_handle);
 
     vec4_copy(text_widget->color, data->color);
@@ -188,7 +195,7 @@ text_widget_get_color(te_text_widget* text_widget, te_vec4 out) {
 
 void
 text_widget_set_text_height(te_text_widget* text_widget, float height) {
-    text_widget->text_height = glm_clamp(height, 0.001f, 1.0f);
+    text_widget->text_height = math_clamp(height, 0.001f, 1.0f);
 
     if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
         prv_text_widget_update_all_render_data(text_widget);
@@ -239,6 +246,8 @@ text_widget_get_line_spacing(te_text_widget* text_widget) {
 
 static void
 prv_text_widget_register_for_rendering(te_text_widget* text_widget) {
+    te_world* world;
+
 #if defined(DEBUG)
     if (text_widget->render_data_handle != INVALID_RENDER_DATA_HANDLE) {
         log_error(__FILE__, __LINE__, "expected the render data handle to be invalid");
@@ -246,7 +255,7 @@ prv_text_widget_register_for_rendering(te_text_widget* text_widget) {
     }
 #endif
 
-    te_world* world = widget_get_world(text_widget->widget);
+    world = widget_get_world(text_widget->widget);
     if (world == NULL) {
         log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
@@ -259,6 +268,9 @@ prv_text_widget_register_for_rendering(te_text_widget* text_widget) {
 
 static void
 prv_text_widget_unregister_from_rendering(te_text_widget* text_widget) {
+    te_world* world;
+    te_widget_renderer* widget_renderer;
+
 #if defined(DEBUG)
     if (text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
         log_error(__FILE__, __LINE__, "expected the render data handle to be valid");
@@ -266,12 +278,12 @@ prv_text_widget_unregister_from_rendering(te_text_widget* text_widget) {
     }
 #endif
 
-    te_world* world = widget_get_world(text_widget->widget);
+    world = widget_get_world(text_widget->widget);
     if (world == NULL) {
         log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
-    te_widget_renderer* widget_renderer = world_get_widget_renderer(world);
+    widget_renderer = world_get_widget_renderer(world);
 
     widget_renderer_remove_text_widget(widget_renderer, text_widget->render_data_handle);
     text_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
@@ -279,29 +291,32 @@ prv_text_widget_unregister_from_rendering(te_text_widget* text_widget) {
 
 static void
 prv_text_widget_on_pos_changed(void* this) {
+    te_world* world;
     te_text_widget* text_widget = this;
+    te_text_widget_render_data* data;
+    te_vec2 window_size;
+    unsigned int window_width;
+    unsigned int window_height;
 
     if (text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
         return;
     }
 
-    te_world* world = widget_get_world(text_widget->widget);
+    world = widget_get_world(text_widget->widget);
     if (world == NULL) {
         log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
 
-    unsigned int window_width;
-    unsigned int window_height;
     window_get_size(
         game_manager_get_window(world_get_game_manager(world)), &window_width, &window_height);
+    vec2_set((float)window_width, (float)window_height, window_size);
 
-    te_text_widget_render_data* data = widget_renderer_get_text_widget_render_data_tmp(
+    data = widget_renderer_get_text_widget_render_data_tmp(
         world_get_widget_renderer(world), text_widget->render_data_handle);
 
     widget_get_screen_position(text_widget->widget, data->pos_pix);
-    vec2_mul(
-        data->pos_pix, (vec2){(float)window_width, (float)window_height}, data->pos_pix);
+    vec2_mul(data->pos_pix, window_size, data->pos_pix);
 }
 
 static void
@@ -344,6 +359,10 @@ static unsigned int
 collect_glyphs(
     te_text_widget* text_widget, unsigned int window_width, unsigned int window_height,
     te_font_manager* font_manager, te_text_widget_glyph* glyphs) {
+    te_vec2 offset;
+    unsigned int char_idx;
+    unsigned int glyph_count;
+
     /* in pixels */
     const float glyph_scale =
         text_widget->text_height / prv_font_manager_get_font_height_to_load();
@@ -352,17 +371,19 @@ collect_glyphs(
 
     te_vec2 size;
     widget_get_screen_size(text_widget->widget, size);
-    vec2_mul(size, (vec2){(float)window_width, (float)window_height}, size);
+    size[0] *= (float)window_width;
+    size[1] *= (float)window_height;
 
     /* offset from the widget's pivot */
-    te_vec2 offset;
-    vec2_copy((vec2){0.0f, 0.0f}, offset);
+    vec2_set(0.0f, 0.0f, offset);
 
     /* switch to the first row of the text */
     offset[1] += glyph_height;
 
-    unsigned int glyph_count = 0;
-    for (unsigned int char_idx = 0; char_idx < text_widget->text_len; char_idx++) {
+    glyph_count = 0;
+    for (char_idx = 0; char_idx < text_widget->text_len; char_idx++) {
+        float distance_to_next_glyph;
+
         te_font_glyph src_glyph =
             font_manager_get_glyph(font_manager, (unsigned long)text_widget->text[char_idx]);
         glyph_count += src_glyph.width > 0 && text_widget->text[char_idx] != '\n';
@@ -380,7 +401,7 @@ collect_glyphs(
             continue; /* don't render \n */
         }
 
-        const float distance_to_next_glyph = (float)(src_glyph.advance >> 6) * glyph_scale;
+        distance_to_next_glyph = (float)(src_glyph.advance >> 6) * glyph_scale;
 
         if (offset[0] + distance_to_next_glyph > size[0]) {
             if (text_widget->is_multiline) {
@@ -405,17 +426,14 @@ collect_glyphs(
 
             dst_glyph->tex_id = src_glyph.tex_id;
 
-            vec2_copy(
-                (vec2){(float)src_glyph.width * glyph_scale,
-                       (float)src_glyph.height * glyph_scale},
+            vec2_set(
+                (float)src_glyph.width * glyph_scale, (float)src_glyph.height * glyph_scale,
                 dst_glyph->size_pix);
 
             vec2_copy(offset, dst_glyph->offset_pix);
-            vec2_add(
-                dst_glyph->offset_pix,
-                (vec2){(float)src_glyph.bearing_x * glyph_scale,
-                       -(float)src_glyph.bearing_y * glyph_scale},
-                dst_glyph->offset_pix);
+
+            dst_glyph->offset_pix[0] += (float)src_glyph.bearing_x * glyph_scale;
+            dst_glyph->offset_pix[1] += -(float)src_glyph.bearing_y * glyph_scale;
         }
 
         /* switch to the next glyph */
@@ -427,6 +445,13 @@ collect_glyphs(
 
 static void
 prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
+    te_world* world;
+    te_game_manager* game_manager;
+    te_font_manager* font_manager;
+    te_text_widget_render_data* data;
+    unsigned int window_width;
+    unsigned int window_height;
+
 #if defined(DEBUG)
     if (text_widget->render_data_handle == INVALID_RENDER_DATA_HANDLE) {
         log_error(__FILE__, __LINE__, "expected the render data handle to be valid");
@@ -434,27 +459,24 @@ prv_text_widget_update_all_render_data(te_text_widget* text_widget) {
     }
 #endif
 
-    te_world* world = widget_get_world(text_widget->widget);
+    world = widget_get_world(text_widget->widget);
     if (world == NULL) {
         log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
-    te_game_manager* game_manager = world_get_game_manager(world);
-    te_font_manager* font_manager =
-        renderer_get_font_manager(game_manager_get_renderer(game_manager));
+    game_manager = world_get_game_manager(world);
+    font_manager = renderer_get_font_manager(game_manager_get_renderer(game_manager));
 
-    te_text_widget_render_data* data = widget_renderer_get_text_widget_render_data_tmp(
+    data = widget_renderer_get_text_widget_render_data_tmp(
         world_get_widget_renderer(world), text_widget->render_data_handle);
 
     vec4_copy(text_widget->color, data->color);
 
-    unsigned int window_width;
-    unsigned int window_height;
     window_get_size(game_manager_get_window(game_manager), &window_width, &window_height);
 
     widget_get_screen_position(text_widget->widget, data->pos_pix);
-    vec2_mul(
-        data->pos_pix, (vec2){(float)window_width, (float)window_height}, data->pos_pix);
+    data->pos_pix[0] *= (float)window_width;
+    data->pos_pix[1] *= (float)window_height;
 
     data->glyph_count = 0;
     free(data->glyphs);

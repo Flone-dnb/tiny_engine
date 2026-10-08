@@ -1,5 +1,6 @@
 #include <render/particle_renderer.h>
 
+#include <stdlib.h>
 #include <render/renderer.h>
 #include <render/render_data_array.h>
 #include <render/shader_manager.h>
@@ -7,7 +8,7 @@
 #include <math/vec2.h>
 
 #define PARTICLE_QUAD_GL_VERT_ATTRIB_PTR                                                      \
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vec2), NULL);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(te_vec2), NULL);
 
 typedef struct te_particle_shader_data {
     unsigned int prog_id;
@@ -67,12 +68,12 @@ particle_renderer_create(te_renderer* renderer) {
 
     /* create quad geometry */
     {
-        te_vec2 vertices[4]; /* XY pos, ZW uv */
-        vec2_copy((vec2){0.0f, 0.0f}, &vertices[0][0]);
-        vec2_copy((vec2){0.0f, 1.0f}, &vertices[1][0]);
-        vec2_copy((vec2){1.0f, 1.0f}, &vertices[2][0]);
-        vec2_copy((vec2){1.0f, 0.0f}, &vertices[3][0]);
         const unsigned short indices[6] = {0, 2, 1, 0, 3, 2};
+        te_vec2 vertices[4]; /* XY pos, ZW uv */
+        vec2_set(0.0f, 0.0f, &vertices[0][0]);
+        vec2_set(0.0f, 1.0f, &vertices[1][0]);
+        vec2_set(1.0f, 1.0f, &vertices[2][0]);
+        vec2_set(1.0f, 0.0f, &vertices[3][0]);
 
 #if !defined(ENGINE_GLES)
         glGenVertexArrays(1, &particle_renderer->vao);
@@ -86,7 +87,8 @@ particle_renderer_create(te_renderer* renderer) {
         {
             /* vertex buffer */
             glBindBuffer(GL_ARRAY_BUFFER, particle_renderer->vbo);
-            glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(vec2), &vertices[0][0], GL_STATIC_DRAW);
+            glBufferData(
+                GL_ARRAY_BUFFER, 4 * sizeof(te_vec2), &vertices[0][0], GL_STATIC_DRAW);
 
             /* vertex layout */
             glEnableVertexAttribArray(0);
@@ -137,8 +139,8 @@ particle_renderer_get_emitter_render_data_tmp(
 
 void
 particle_renderer_draw(
-    te_particle_renderer* renderer, te_light_params* light_params, mat4* view_mat,
-    mat4* proj_mat) {
+    te_particle_renderer* renderer, te_light_params* light_params, te_mat4* view_mat,
+    te_mat4* proj_mat) {
     unsigned int emitter_count;
 
     glEnable(GL_BLEND);

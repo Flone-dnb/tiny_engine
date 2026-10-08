@@ -1,5 +1,6 @@
 #include <render/model_renderer.h>
 
+#include <stdlib.h>
 #include <string.h>
 #include <debug_console.h>
 #include <game/model.h>
@@ -363,7 +364,7 @@ model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle) {
 
 te_model_render_data*
 model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int handle) {
-    if (CGLM_UNLIKELY(handle >= renderer->render_handle_arrays_size)) {
+    if (handle >= renderer->render_handle_arrays_size) {
         log_error(__FILE__, __LINE__, "the specified model render data handle is invalid");
         abort();
     }
@@ -373,8 +374,8 @@ model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int han
 
 unsigned int
 model_renderer_draw(
-    te_model_renderer* renderer, te_light_params* light_params, mat4* view_mat,
-    mat4* view_proj_mat, te_frustum_shape* camera_frustum) {
+    te_model_renderer* renderer, te_light_params* light_params, te_mat4* view_mat,
+    te_mat4* view_proj_mat, te_frustum_shape* camera_frustum) {
     unsigned int model_count = 0;
     unsigned int render_data_idx = 0;
     unsigned int group_idx = 0;
