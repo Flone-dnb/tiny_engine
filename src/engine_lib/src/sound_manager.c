@@ -44,14 +44,17 @@ sound_manager_set_volume(te_sound_manager* sound_manager, float volume) {
 
 te_sound*
 sound_create(te_sound_manager* sound_manager, const char* relative_path) {
+    char* path_to_sound;
+    ma_result result;
+
     te_sound* sound = malloc(sizeof(te_sound));
 
     sound->on_finished = NULL;
     sound->user_data = NULL;
 
-    char* path_to_sound = filesystem_prepend_res_to_path(relative_path, NULL);
+    path_to_sound = filesystem_prepend_res_to_path(relative_path, NULL);
 
-    ma_result result = ma_sound_init_from_file(
+    result = ma_sound_init_from_file(
         &sound_manager->ma_engine, path_to_sound,
         MA_SOUND_FLAG_STREAM | MA_SOUND_FLAG_NO_SPATIALIZATION, NULL, NULL, &sound->ma_sound);
     if (result != MA_SUCCESS) {
@@ -149,18 +152,20 @@ prv_sound_manager_set_listener(
 
 static void
 on_sound_end(void* user_data, ma_sound* ma_sound) {
-    (void)ma_sound;
-
     te_sound* sound = user_data;
+    (void)ma_sound;
 
     sound->on_finished(sound->user_data, sound);
 }
 void
 prv_sound_set_on_finished_callback_audio_thread(
     te_sound* sound, void* user_data, void (*on_finished)(void* user_data, te_sound* sound)) {
+    ma_result result;
+
     sound->user_data = user_data;
     sound->on_finished = on_finished;
-    ma_result result = ma_sound_set_end_callback(&sound->ma_sound, on_sound_end, sound);
+
+    result = ma_sound_set_end_callback(&sound->ma_sound, on_sound_end, sound);
     if (result != MA_SUCCESS) {
         log_error_fmt(
             __FILE__, __LINE__, "failed to set sound end callback, error: %i", result);

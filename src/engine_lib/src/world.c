@@ -104,6 +104,7 @@ struct te_world {
 te_world*
 prv_world_create(struct te_game_manager* game_manager, const char* name) {
     te_world* world;
+    size_t name_len;
 
     if (name == NULL) {
         log_error(__FILE__, __LINE__, "world name must not be NULL");
@@ -143,7 +144,7 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
     world->is_being_destroyed = false;
 
     /* copy name */
-    const size_t name_len = strlen(name);
+    name_len = strlen(name);
     world->name = malloc(sizeof(char) * (name_len + 1));
     memcpy(world->name, name, name_len);
     world->name[name_len] = 0;
@@ -389,6 +390,8 @@ prv_world_remove_root_widget_no_notify(
         world->spawned_widgets = NULL;
         world->spawned_widget_count = 0;
     } else {
+        te_widget** new_widgets;
+
         unsigned int i = 0;
         bool found = false;
         for (; i < world->spawned_widget_count; i++) {
@@ -414,8 +417,7 @@ prv_world_remove_root_widget_no_notify(
             }
         }
 
-        te_widget** new_widgets =
-            malloc(sizeof(te_widget*) * (world->spawned_widget_count - 1));
+        new_widgets = malloc(sizeof(te_widget*) * (world->spawned_widget_count - 1));
         memcpy(new_widgets, world->spawned_widgets, sizeof(te_widget*) * i);
         memcpy(
             new_widgets + i, world->spawned_widgets + (i + 1),
@@ -555,19 +557,20 @@ world_play_fire_and_forget_sound_3d(
 
 static void
 prv_save_widget_recursive(te_config* config, te_widget* widget) {
+    const te_type_info* type_info;
+    te_widget** child_widgets;
     unsigned int i;
+    unsigned int section_idx;
+    unsigned int count;
 
     if (!widget_is_serialization_allowed(widget)) {
         return;
     }
 
-    const te_type_info* type_info =
-        type_database_get_type_info(widget_get_owner_type_id(widget));
-    const unsigned int section_idx =
-        type_info_save_to_config(type_info, config, widget_get_owner(widget));
+    type_info = type_database_get_type_info(widget_get_owner_type_id(widget));
+    section_idx = type_info_save_to_config(type_info, config, widget_get_owner(widget));
 
-    unsigned int count;
-    te_widget** child_widgets = widget_get_child_widgets(widget, &count);
+    child_widgets = widget_get_child_widgets(widget, &count);
     if (count == 0) {
         return;
     }
@@ -590,17 +593,22 @@ prv_save_widget_recursive(te_config* config, te_widget* widget) {
 
 void
 world_save_to_file(te_world* world, const char* relative_path, bool write_light_params) {
+    const te_type_info* camera_type_info;
+    te_config* config;
+
     if (world->scene_animation != NULL) {
         const char* anim_path = scene_animation_get_relative_path(world->scene_animation);
         if (anim_path != NULL) {
             scene_animation_save(world->scene_animation, anim_path);
         } else {
+            char* path;
+
             int len = snprintf(NULL, 0, "%s.scene_anim.txt", relative_path);
             if (len < 0) {
                 log_error(__FILE__, __LINE__, "snprintf error");
                 abort();
             }
-            char* path = malloc(sizeof(char) * ((size_t)len + 1));
+            path = malloc(sizeof(char) * ((size_t)len + 1));
             snprintf(path, (size_t)len + 1, "%s.scene_anim.txt", relative_path);
 
             scene_animation_save(world->scene_animation, path);
@@ -608,7 +616,7 @@ world_save_to_file(te_world* world, const char* relative_path, bool write_light_
         }
     }
 
-    te_config* config = config_create(NULL);
+    config = config_create(NULL);
 
     if (write_light_params) {
         te_light_params* light_params =
@@ -635,7 +643,7 @@ world_save_to_file(te_world* world, const char* relative_path, bool write_light_
             config, section_idx, "distance_fog_range", light_params->distance_fog_range, 2);
     }
 
-    const te_type_info* camera_type_info = type_database_get_type_info(camera_get_type_id());
+    camera_type_info = type_database_get_type_info(camera_get_type_id());
     if (camera_type_info == NULL) {
         log_error(__FILE__, __LINE__, "expected camera type info to be valid");
         abort();
@@ -643,7 +651,10 @@ world_save_to_file(te_world* world, const char* relative_path, bool write_light_
 
     /* save game objects */
     if (world->spawned_root_game_object_count > 0) {
-        for (unsigned int idx = 0; idx < world->spawned_root_game_object_count; idx++) {
+        unsigned int idx;
+        unsigned int section_idx;
+
+        for (idx = 0; idx < world->spawned_root_game_object_count; idx++) {
             te_game_object_data* data = &world->spawned_root_game_objects[idx];
 
             const te_type_info* type_info = type_database_get_type_info(data->info->type_id);
@@ -655,25 +666,26 @@ world_save_to_file(te_world* world, const char* relative_path, bool write_light_
                 continue;
             }
 
-            const unsigned int section_idx =
-                type_info_save_to_config(type_info, config, data->object);
+            section_idx = type_info_save_to_config(type_info, config, data->object);
 
             if (data->info->type == TE_GOT_MODEL) {
                 /* special case for models */
                 te_model* model = data->object;
+                te_camera* attached_camera;
+                unsigned int child_idx;
 
                 const unsigned int child_model_count = model_get_child_model_count(model);
                 config_section_set_uint(
                     config, section_idx, CONFIG_VAR_NAME_CHILD_MODEL_COUNT, child_model_count);
 
-                te_camera* attached_camera = model_get_attached_camera(model);
+                attached_camera = model_get_attached_camera(model);
                 if (attached_camera != NULL) {
                     config_section_set_bool(
                         config, section_idx, CONFIG_VAR_NAME_HAS_ATTACHED_CAMERA, true);
                     (void)type_info_save_to_config(camera_type_info, config, attached_camera);
                 }
 
-                for (unsigned int child_idx = 0; child_idx < child_model_count; child_idx++) {
+                for (child_idx = 0; child_idx < child_model_count; child_idx++) {
                     (void)type_info_save_to_config(
                         type_info, config, model_get_child_model(model, child_idx));
                 }
@@ -683,8 +695,8 @@ world_save_to_file(te_world* world, const char* relative_path, bool write_light_
 
     /* spawn widgets */
     if (world->spawned_widget_count > 0) {
-        for (unsigned int widget_idx = 0; widget_idx < world->spawned_widget_count;
-             widget_idx++) {
+        unsigned int widget_idx;
+        for (widget_idx = 0; widget_idx < world->spawned_widget_count; widget_idx++) {
             te_widget* widget = world->spawned_widgets[widget_idx];
             prv_save_widget_recursive(config, widget);
         }
@@ -698,7 +710,13 @@ static void
 prv_load_child_widgets_recursive(
     const char* relative_path, te_config* config, unsigned int section_count,
     te_widget* parent_widget, unsigned int parent_child_count, unsigned int* section_idx) {
-    for (unsigned int child_idx = 0; child_idx < parent_child_count; child_idx++) {
+    const char* id;
+    const te_type_info* type_info;
+    te_widget* child_widget;
+    void* widget_owner;
+    unsigned int count;
+    unsigned int child_idx;
+    for (child_idx = 0; child_idx < parent_child_count; child_idx++) {
         if ((*section_idx) >= section_count) {
             log_error_fmt(
                 __FILE__, __LINE__,
@@ -708,19 +726,19 @@ prv_load_child_widgets_recursive(
             abort();
         }
 
-        const char* id = config_section_get_name(config, (*section_idx));
-        const te_type_info* type_info = type_database_get_type_info(id);
-        void* widget_owner = type_info->create();
+        id = config_section_get_name(config, (*section_idx));
+        type_info = type_database_get_type_info(id);
+        widget_owner = type_info->create();
 
         type_info_load_from_config(type_info, config, (*section_idx), widget_owner);
         if (type_info->get_widget == NULL) {
             log_error(__FILE__, __LINE__, "expected a child object to be a widget");
             abort();
         }
-        te_widget* child_widget = type_info->get_widget(widget_owner);
+        child_widget = type_info->get_widget(widget_owner);
         widget_set_parent(child_widget, parent_widget);
 
-        const unsigned int count = config_section_get_uint(
+        count = config_section_get_uint(
             config, (*section_idx), CONFIG_VAR_NAME_CHILD_WIDGET_COUNT, 0);
 
         (*section_idx) += 1;
@@ -734,14 +752,16 @@ prv_load_child_widgets_recursive(
 
 void
 world_add_from_file(te_world* world, const char* relative_path, bool load_light_params) {
-    world_add_from_file_with_offset(
-        world, relative_path, load_light_params, (vec3){0.0f, 0.0f, 0.0f});
+    te_vec3 offset;
+    vec3_zero(offset);
+    world_add_from_file_with_offset(world, relative_path, load_light_params, offset);
 }
 
 static void
 load_vec_from_config(
     te_config* config, unsigned int section_idx, const char* key, unsigned int comp_count,
     float* target) {
+    unsigned int i;
     unsigned int count;
     float* array = config_section_get_float_array(config, section_idx, key, &count);
     if (count == 0) {
@@ -756,14 +776,15 @@ load_vec_from_config(
         abort();
     }
 
-    for (unsigned int i = 0; i < comp_count; i++) {
+    for (i = 0; i < comp_count; i++) {
         target[i] = array[i];
     }
 }
 
 void
 world_add_from_file_with_offset(
-    te_world* world, const char* relative_path, bool load_light_params, te_vec3 location_offset) {
+    te_world* world, const char* relative_path, bool load_light_params,
+    te_vec3 location_offset) {
     const te_type_info* model_type_info = type_database_get_type_info(model_get_type_id());
     const te_type_info* camera_type_info = type_database_get_type_info(camera_get_type_id());
 
@@ -813,15 +834,18 @@ world_add_from_file_with_offset(
     for (; section_idx < section_count;) {
         const char* id = config_section_get_name(config, section_idx);
         const te_type_info* type_info = type_database_get_type_info(id);
+        unsigned int child_model_count;
+        unsigned int child_widget_count;
+        bool has_attached_camera;
 
         void* obj = type_info->create();
         type_info_load_from_config(type_info, config, section_idx, obj);
 
-        const unsigned int child_model_count =
+        child_model_count =
             config_section_get_uint(config, section_idx, CONFIG_VAR_NAME_CHILD_MODEL_COUNT, 0);
-        const bool has_attached_camera = config_section_get_bool(
+        has_attached_camera = config_section_get_bool(
             config, section_idx, CONFIG_VAR_NAME_HAS_ATTACHED_CAMERA, false);
-        const unsigned int child_widget_count = config_section_get_uint(
+        child_widget_count = config_section_get_uint(
             config, section_idx, CONFIG_VAR_NAME_CHILD_WIDGET_COUNT, 0);
         section_idx += 1;
 
@@ -838,9 +862,13 @@ world_add_from_file_with_offset(
 
         if (type_info->game_object_info != NULL
             && type_info->game_object_info->type == TE_GOT_MODEL) {
+            unsigned int child_idx;
+            te_model* child_model;
             te_model* model = obj;
 
             if (has_attached_camera) {
+                te_camera* camera;
+
                 if (section_idx >= section_count) {
                     log_error_fmt(
                         __FILE__, __LINE__,
@@ -849,13 +877,13 @@ world_add_from_file_with_offset(
                         relative_path, section_count);
                     abort();
                 }
-                te_camera* camera = camera_create();
+                camera = camera_create();
                 type_info_load_from_config(camera_type_info, config, section_idx, camera);
                 model_attach_camera(model, camera);
                 section_idx += 1;
             }
 
-            for (unsigned int child_idx = 0; child_idx < child_model_count; child_idx++) {
+            for (child_idx = 0; child_idx < child_model_count; child_idx++) {
                 if (section_idx >= section_count) {
                     log_error_fmt(
                         __FILE__, __LINE__,
@@ -864,12 +892,13 @@ world_add_from_file_with_offset(
                         relative_path, section_count);
                     abort();
                 }
-                te_model* child_model = model_create();
+                child_model = model_create();
                 type_info_load_from_config(model_type_info, config, section_idx, child_model);
                 model_set_parent(child_model, model, model_get_parent_bone_idx(child_model));
                 section_idx += 1;
             }
         } else if (child_widget_count > 0) {
+            te_widget* widget;
             if (type_info->get_widget == NULL) {
                 log_error(
                     __FILE__, __LINE__,
@@ -877,7 +906,7 @@ world_add_from_file_with_offset(
                     "not have widget conversion function set");
                 abort();
             }
-            te_widget* widget = type_info->get_widget(obj);
+            widget = type_info->get_widget(obj);
             prv_load_child_widgets_recursive(
                 relative_path, config, section_count, widget, child_widget_count,
                 &section_idx);
@@ -896,22 +925,25 @@ world_get_active_camera(te_world* world) {
 
 bool
 world_get_cursor_relative_pos(te_world* world, te_vec2 cursor_pos) {
+    te_camera* camera;
+    te_vec4 viewport;
+    unsigned int window_width;
+    unsigned int window_height;
+
     te_window* window = game_manager_get_window(world_get_game_manager(world));
 
     window_get_cursor_position(window, &cursor_pos[0], &cursor_pos[1]);
 
-    unsigned int window_width;
-    unsigned int window_height;
     window_get_size(window, &window_width, &window_height);
 
-    vec2_div(cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
+    cursor_pos[0] /= (float)window_width;
+    cursor_pos[1] /= (float)window_height;
 
-    te_camera* camera = world_get_active_camera(world);
+    camera = world_get_active_camera(world);
     if (camera == NULL) {
         return false;
     }
 
-    te_vec4 viewport;
     camera_get_viewport(camera, viewport);
 
     if (cursor_pos[0] < viewport[0] || cursor_pos[1] < viewport[1]
@@ -930,16 +962,20 @@ world_get_cursor_relative_pos(te_world* world, te_vec2 cursor_pos) {
 
 te_game_object_data*
 world_get_root_game_objects(te_world* world, unsigned int* count) {
+    te_game_object_data* out;
+
     (*count) = world->spawned_root_game_object_count;
-    te_game_object_data* out = malloc(sizeof(te_game_object_data) * (*count));
+    out = malloc(sizeof(te_game_object_data) * (*count));
     memcpy(out, world->spawned_root_game_objects, sizeof(te_game_object_data) * (*count));
     return out;
 }
 
 te_widget**
 world_get_widgets(te_world* world, unsigned int* count) {
+    te_widget** out;
+
     (*count) = world->spawned_widget_count;
-    te_widget** out = malloc(sizeof(te_widget*) * (*count));
+    out = malloc(sizeof(te_widget*) * (*count));
     memcpy(out, world->spawned_widgets, sizeof(te_widget*) * (*count));
     return out;
 }
@@ -971,11 +1007,13 @@ world_get_game_manager(te_world* world) {
 
 void
 world_spawn_game_object(te_world* world, void* game_object, te_game_object_info* info) {
+    te_world* old_obj_world;
+
     if (world->is_being_destroyed) {
         return;
     }
 
-    te_world* old_obj_world = info->get_world(game_object);
+    old_obj_world = info->get_world(game_object);
     if (old_obj_world != NULL) {
         if (old_obj_world == world) {
             log_error(__FILE__, __LINE__, "the game object is already spawned in this world");
@@ -1017,11 +1055,13 @@ world_despawn_game_object(te_world* world, void* game_object, te_game_object_inf
 
 void
 world_spawn_widget(te_world* world, struct te_widget* widget) {
+    te_world* old_widget_world;
+
     if (world->is_being_destroyed) {
         return;
     }
 
-    te_world* old_widget_world = widget_get_world(widget);
+    old_widget_world = widget_get_world(widget);
     if (old_widget_world != NULL) {
         if (old_widget_world == world) {
             log_error(__FILE__, __LINE__, "the widget is already spawned in this world");
@@ -1083,6 +1123,7 @@ prv_world_remove_interactable_widget(te_world* world, te_widget* widget) {
         world->interactable_widgets = NULL;
         world->interactable_widget_count = 0;
     } else {
+        te_widget** new_widgets;
         unsigned int i = 0;
         bool found = false;
         for (; i < world->interactable_widget_count; i++) {
@@ -1098,8 +1139,7 @@ prv_world_remove_interactable_widget(te_world* world, te_widget* widget) {
             abort();
         }
 
-        te_widget** new_widgets =
-            malloc(sizeof(te_widget*) * (world->interactable_widget_count - 1));
+        new_widgets = malloc(sizeof(te_widget*) * (world->interactable_widget_count - 1));
         memcpy(new_widgets, world->interactable_widgets, sizeof(te_widget*) * i);
         memcpy(
             new_widgets + i, world->interactable_widgets + (i + 1),
@@ -1135,15 +1175,17 @@ prv_world_on_mouse_cursor_captured(te_world* world, bool captured, float cursor_
 
 void
 prv_world_on_mouse_moved(te_world* world, float cursor_pos[2]) {
+    te_vec2 pos;
+    te_vec2 size;
+    unsigned int i;
+
     /* notify widgets */
     te_window* window = game_manager_get_window(world->game_manager);
     if (window_is_mouse_captured(window)) {
         return;
     }
 
-    te_vec2 pos;
-    te_vec2 size;
-    for (unsigned int i = 0; i < world->interactable_widget_count; i++) {
+    for (i = 0; i < world->interactable_widget_count; i++) {
         widget_get_screen_position(world->interactable_widgets[i], pos);
         if (pos[0] > cursor_pos[0] || pos[1] > cursor_pos[1]) {
             continue;
@@ -1181,15 +1223,17 @@ prv_world_on_mouse_moved(te_world* world, float cursor_pos[2]) {
 bool
 prv_world_on_mouse_button_pressed(
     te_world* world, enum te_mouse_button button, float cursor_pos[2]) {
+    te_vec2 pos;
+    te_vec2 size;
+    unsigned int i;
+
     /* notify widgets */
     te_window* window = game_manager_get_window(world->game_manager);
     if (window_is_mouse_captured(window)) {
         return false;
     }
 
-    te_vec2 pos;
-    te_vec2 size;
-    for (unsigned int i = 0; i < world->interactable_widget_count; i++) {
+    for (i = 0; i < world->interactable_widget_count; i++) {
         widget_get_screen_position(world->interactable_widgets[i], pos);
         if (pos[0] > cursor_pos[0] || pos[1] > cursor_pos[1]) {
             continue;
@@ -1210,15 +1254,17 @@ prv_world_on_mouse_button_pressed(
 bool
 prv_world_on_mouse_button_released(
     te_world* world, enum te_mouse_button button, float cursor_pos[2]) {
+    te_vec2 pos;
+    te_vec2 size;
+    unsigned int i;
+
     /* notify widgets */
     te_window* window = game_manager_get_window(world->game_manager);
     if (window_is_mouse_captured(window)) {
         return false;
     }
 
-    te_vec2 pos;
-    te_vec2 size;
-    for (unsigned int i = 0; i < world->interactable_widget_count; i++) {
+    for (i = 0; i < world->interactable_widget_count; i++) {
         widget_get_screen_position(world->interactable_widgets[i], pos);
         if (pos[0] > cursor_pos[0] || pos[1] > cursor_pos[1]) {
             continue;
@@ -1261,17 +1307,18 @@ prv_world_on_keyboard_input(te_world* world, enum te_keyboard_button button, boo
 void
 prv_world_on_input_source_changed(te_world* world) {
     if (world->hovered_interactable_widget != NULL) {
-        te_window* window = game_manager_get_window(world->game_manager);
-
         te_vec2 cursor_pos;
-        window_get_cursor_position(window, &cursor_pos[0], &cursor_pos[1]);
-
         unsigned int window_width;
         unsigned int window_height;
+
+        te_window* window = game_manager_get_window(world->game_manager);
+
+        window_get_cursor_position(window, &cursor_pos[0], &cursor_pos[1]);
+
         window_get_size(window, &window_width, &window_height);
 
-        vec2_div(
-            cursor_pos, (vec2){(float)window_width, (float)window_height}, cursor_pos);
+        cursor_pos[0] /= (float)window_width;
+        cursor_pos[1] /= (float)window_height;
 
         prv_widget_on_cursor_left(world->hovered_interactable_widget, cursor_pos);
         world->hovered_interactable_widget = NULL;

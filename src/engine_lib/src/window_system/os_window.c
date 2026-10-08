@@ -1,19 +1,5 @@
 #include <window_system/os_window.h>
 
-/* configurable options */
-#if !defined(ENGINE_GLES)
-int TE_OS_WINDOW_GL_MAJOR_VERSION = 4; /* same as GLAD version */
-int TE_OS_WINDOW_GL_MINOR_VERSION = 5; /* same as GLAD version */
-int TE_OS_WINDOW_MSAA = 1; /* set to 2 or 4 to require os to support msaa backbuffers */
-#else
-int TE_OS_WINDOW_GL_MAJOR_VERSION = 2; /* same as GLAD version */
-int TE_OS_WINDOW_GL_MINOR_VERSION = 0; /* same as GLAD version */
-int TE_OS_WINDOW_MSAA = 1;             /* no MSAA under GLES */
-#endif
-int TE_OS_WINDOW_DEPTH_BITS = 24;
-int TE_OS_WINDOW_STENCIL_BITS = 8;
-float TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE = 0.05f;
-
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>

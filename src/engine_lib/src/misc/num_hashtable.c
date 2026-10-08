@@ -93,6 +93,7 @@ num_hashtable_destroy(te_num_hashtable* ht) {
             ht->free_value(entry->items[j].value);
         }
         free(entry->items);
+        free(entry);
     }
     free(ht->entries);
 

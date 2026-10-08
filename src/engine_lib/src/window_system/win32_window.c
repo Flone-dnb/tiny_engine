@@ -58,13 +58,15 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
             case WM_INPUT: {
                 static BYTE buffer[sizeof(RAWINPUT)];
                 UINT size = sizeof(buffer);
+                RAWINPUT* raw;
+
                 if (GetRawInputData(
                         (HRAWINPUT)lparam, RID_INPUT, buffer, &size, sizeof(RAWINPUTHEADER))
                     != size) {
                     return 0;
                 }
 
-                RAWINPUT* raw = (RAWINPUT*)buffer;
+                raw = (RAWINPUT*)buffer;
                 if (raw->header.dwType == RIM_TYPEMOUSE) {
                     RAWMOUSE* mouse = &raw->data.mouse;
                     te_win32_window* win32_window =
@@ -122,6 +124,8 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                 break;
             }
             case WM_KEYDOWN: {
+                enum te_keyboard_button button;
+
                 UINT scancode = (lparam >> 16) & 0xFF;
                 bool is_extended = (lparam & (1 << 24)) != 0;
                 UINT code = is_extended ? (0xE000u | scancode) : scancode;
@@ -131,7 +135,7 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                 /* update keyboard modifiers */
                 te_win32_window* win32_window =
                     (te_win32_window*)prv_os_window_get_impl(os_window);
-                enum te_keyboard_button button = (enum te_keyboard_button)(code);
+                button = (enum te_keyboard_button)(code);
                 if (button == TE_KB_LEFT_ALT) {
                     win32_window->keyboard_mods.bitmask |= 0b1;
                 } else if (button == TE_KB_LEFT_CONTROL) {
@@ -145,6 +149,8 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                 break;
             }
             case WM_KEYUP: {
+                enum te_keyboard_button button;
+
                 UINT scancode = (lparam >> 16) & 0xFF;
                 bool is_extended = (lparam & (1 << 24)) != 0;
                 UINT code = is_extended ? (0xE000u | scancode) : scancode;
@@ -152,7 +158,7 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                 /* update keyboard modifiers */
                 te_win32_window* win32_window =
                     (te_win32_window*)prv_os_window_get_impl(os_window);
-                enum te_keyboard_button button = (enum te_keyboard_button)(code);
+                button = (enum te_keyboard_button)(code);
                 if (button == TE_KB_LEFT_ALT) {
                     win32_window->keyboard_mods.bitmask &= ~0b1;
                 } else if (button == TE_KB_LEFT_CONTROL) {
@@ -222,6 +228,12 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 
 static void
 load_wgl_extensions(void) {
+    HWND dummy;
+    HDC dummy_dc;
+    HGLRC dummy_rc;
+    PIXELFORMATDESCRIPTOR pfd;
+    int pf;
+
     WNDCLASSW wc = {0};
     wc.lpfnWndProc = DefWindowProcA;
     wc.hInstance = GetModuleHandleA(NULL);
@@ -231,29 +243,27 @@ load_wgl_extensions(void) {
         abort();
     }
 
-    HWND dummy = CreateWindowExW(
+    dummy = CreateWindowExW(
         0, L"DummyWindowClass", L"", WS_OVERLAPPEDWINDOW, 0, 0, 1, 1, NULL, NULL, wc.hInstance,
         NULL);
     if (!dummy) {
         log_error(__FILE__, __LINE__, "failed to create a dummy window");
         abort();
     }
-    HDC dummy_dc = GetDC(dummy);
+    dummy_dc = GetDC(dummy);
 
-    PIXELFORMATDESCRIPTOR pfd = {
-        .nSize = sizeof(pfd),
-        .nVersion = 1,
-        .dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
-        .iPixelType = PFD_TYPE_RGBA,
-        .cColorBits = 32,
-        .cDepthBits = 24,
-        .cStencilBits = 8,
-        .iLayerType = PFD_MAIN_PLANE,
-    };
-    int pf = ChoosePixelFormat(dummy_dc, &pfd);
+    pfd.nSize = sizeof(pfd);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.cColorBits = 32;
+    pfd.cDepthBits = 8;
+    pfd.cStencilBits = 8;
+    pfd.iLayerType = PFD_MAIN_PLANE;
+    pf = ChoosePixelFormat(dummy_dc, &pfd);
     SetPixelFormat(dummy_dc, pf, &pfd);
 
-    HGLRC dummy_rc = wglCreateContext(dummy_dc);
+    dummy_rc = wglCreateContext(dummy_dc);
     wglMakeCurrent(dummy_dc, dummy_rc);
 
     wglChoosePixelFormatARB =
@@ -305,51 +315,19 @@ gladloadproc(const char* name) {
 
 void
 win32_window_create(te_os_window* os_window, const char* title) {
-    SetProcessDPIAware();
-    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-
-    load_wgl_extensions();
-
-    te_win32_window* win32_window = malloc(sizeof(te_win32_window));
-    memset(win32_window, 0, sizeof(te_win32_window));
-    prv_os_window_set_impl(os_window, win32_window);
-
-    HINSTANCE hinstance = GetModuleHandle(NULL);
-
+    wchar_t* titlew;
+    HINSTANCE hinstance;
+    PIXELFORMATDESCRIPTOR pfd;
     WNDCLASSW wc = {0};
-    wc.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
-    wc.lpfnWndProc = wnd_proc;
-    wc.hInstance = hinstance;
-    wc.hCursor = NULL;
-    wc.lpszClassName = window_class;
-    if (!RegisterClassW(&wc)) {
-        log_error(__FILE__, __LINE__, "failed to register window class");
-        abort();
-    }
-
-    int screen_w = GetSystemMetrics(SM_CXSCREEN);
-    int screen_h = GetSystemMetrics(SM_CYSCREEN);
-
-    wchar_t* titlew = wchar_from_char(title, NULL);
-
-    /* fullscreen borderless window */
-    win32_window->hwnd = CreateWindowExW(
-        WS_EX_APPWINDOW, window_class, titlew, WS_POPUP | WS_VISIBLE | WS_MAXIMIZE, 0, 0,
-        screen_w, screen_h, NULL, NULL, hinstance, NULL);
-    if (!win32_window->hwnd) {
-        log_error(__FILE__, __LINE__, "failed to create window");
-        abort();
-    }
-    free(titlew);
-
-    SetWindowLongPtr(win32_window->hwnd, GWLP_USERDATA, (LONG_PTR)os_window);
-    SetWindowPos(
-        win32_window->hwnd, HWND_TOP, 0, 0, screen_w, screen_h,
-        SWP_FRAMECHANGED | SWP_NOACTIVATE);
-    ShowWindow(win32_window->hwnd, SW_SHOWMAXIMIZED);
-    SetForegroundWindow(win32_window->hwnd);
-
-    win32_window->hdc = GetDC(win32_window->hwnd);
+    RAWINPUTDEVICE rid = {0};
+    RECT rect;
+    UINT num_formats;
+    DWORD i;
+    int screen_w;
+    int screen_h;
+    int width;
+    int height;
+    int pixel_format;
 
     const int pixel_attribs[] = {
         WGL_DRAW_TO_WINDOW_ARB,
@@ -372,22 +350,6 @@ win32_window_create(te_os_window* os_window, const char* title) {
         TE_OS_WINDOW_MSAA > 1 ? TE_OS_WINDOW_MSAA : 0,
         0};
 
-    int pixel_format;
-    UINT num_formats;
-    if (!wglChoosePixelFormatARB(
-            win32_window->hdc, pixel_attribs, NULL, 1, &pixel_format, &num_formats)
-        || num_formats == 0) {
-        log_error(__FILE__, __LINE__, "the system failed to meet required pixel format");
-        abort();
-    }
-
-    PIXELFORMATDESCRIPTOR pfd;
-    DescribePixelFormat(win32_window->hdc, pixel_format, sizeof(pfd), &pfd);
-    if (!SetPixelFormat(win32_window->hdc, pixel_format, &pfd)) {
-        log_error(__FILE__, __LINE__, "failed to set pixel format");
-        abort();
-    }
-
     const int context_attribs[] = {
         WGL_CONTEXT_MAJOR_VERSION_ARB,
         TE_OS_WINDOW_GL_MAJOR_VERSION,
@@ -404,6 +366,64 @@ win32_window_create(te_os_window* os_window, const char* title) {
         WGL_CONTEXT_DEBUG_BIT_ARB,
 #endif
         0};
+
+    SetProcessDPIAware();
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
+    load_wgl_extensions();
+
+    te_win32_window* win32_window = malloc(sizeof(te_win32_window));
+    memset(win32_window, 0, sizeof(te_win32_window));
+    prv_os_window_set_impl(os_window, win32_window);
+
+    hinstance = GetModuleHandle(NULL);
+
+    wc.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc = wnd_proc;
+    wc.hInstance = hinstance;
+    wc.hCursor = NULL;
+    wc.lpszClassName = window_class;
+    if (!RegisterClassW(&wc)) {
+        log_error(__FILE__, __LINE__, "failed to register window class");
+        abort();
+    }
+
+    screen_w = GetSystemMetrics(SM_CXSCREEN);
+    screen_h = GetSystemMetrics(SM_CYSCREEN);
+
+    titlew = wchar_from_char(title, NULL);
+
+    /* fullscreen borderless window */
+    win32_window->hwnd = CreateWindowExW(
+        WS_EX_APPWINDOW, window_class, titlew, WS_POPUP | WS_VISIBLE | WS_MAXIMIZE, 0, 0,
+        screen_w, screen_h, NULL, NULL, hinstance, NULL);
+    if (!win32_window->hwnd) {
+        log_error(__FILE__, __LINE__, "failed to create window");
+        abort();
+    }
+    free(titlew);
+
+    SetWindowLongPtr(win32_window->hwnd, GWLP_USERDATA, (LONG_PTR)os_window);
+    SetWindowPos(
+        win32_window->hwnd, HWND_TOP, 0, 0, screen_w, screen_h,
+        SWP_FRAMECHANGED | SWP_NOACTIVATE);
+    ShowWindow(win32_window->hwnd, SW_SHOWMAXIMIZED);
+    SetForegroundWindow(win32_window->hwnd);
+
+    win32_window->hdc = GetDC(win32_window->hwnd);
+
+    if (!wglChoosePixelFormatARB(
+            win32_window->hdc, pixel_attribs, NULL, 1, &pixel_format, &num_formats)
+        || num_formats == 0) {
+        log_error(__FILE__, __LINE__, "the system failed to meet required pixel format");
+        abort();
+    }
+
+    DescribePixelFormat(win32_window->hdc, pixel_format, sizeof(pfd), &pfd);
+    if (!SetPixelFormat(win32_window->hdc, pixel_format, &pfd)) {
+        log_error(__FILE__, __LINE__, "failed to set pixel format");
+        abort();
+    }
 
     win32_window->hglrc = wglCreateContextAttribsARB(win32_window->hdc, NULL, context_attribs);
     if (win32_window->hglrc == NULL) {
@@ -435,7 +455,6 @@ win32_window_create(te_os_window* os_window, const char* title) {
 
     /* NOTE: RIDEV_NOLEGACY should only be used for fullscreen apps
      * because it disables lots of window events that are needed for windowed apps */
-    RAWINPUTDEVICE rid = {0};
     rid.usUsagePage = 0x01;
     rid.usUsage = 0x02; /* mouse */
     rid.dwFlags =
@@ -449,10 +468,9 @@ win32_window_create(te_os_window* os_window, const char* title) {
 
     /* should return the actual pixel count
      * not affected by the DPI because we set DPI awareness */
-    RECT rect;
     GetClientRect(win32_window->hwnd, &rect);
-    int width = rect.right - rect.left;
-    int height = rect.bottom - rect.top;
+    width = rect.right - rect.left;
+    height = rect.bottom - rect.top;
     /* set initial size */
     prv_os_window_on_size_changed(os_window, (unsigned int)width, (unsigned int)height);
 
@@ -460,7 +478,7 @@ win32_window_create(te_os_window* os_window, const char* title) {
 
     /* check controller */
     win32_window->controller_id = 255;
-    for (DWORD i = 0; i < XUSER_MAX_COUNT; i++) {
+    for (i = 0; i < XUSER_MAX_COUNT; i++) {
         memset(&win32_window->xinput_state, 0, sizeof(XINPUT_STATE));
         if (XInputGetState(i, &win32_window->xinput_state) == ERROR_SUCCESS) {
             win32_window->controller_id = (unsigned char)i;
@@ -530,9 +548,9 @@ check_thumbstick_changes(
     XINPUT_GAMEPAD* new_state) {
 #define CHECK_GAMEPAD_AXIS(xaxis, engine_axis, sign)                                          \
     if (prev_state->xaxis != new_state->xaxis) {                                              \
-        float prev_abs_norm = math_abs(fmaxf(-1, (float)prev_state->xaxis / 32767));             \
+        float prev_abs_norm = math_abs(fmaxf(-1, (float)prev_state->xaxis / 32767));          \
         float norm = fmaxf(-1, (float)new_state->xaxis / 32767);                              \
-        float abs_norm = math_abs(norm);                                                         \
+        float abs_norm = math_abs(norm);                                                      \
         if (prev_abs_norm > TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE                                \
             || abs_norm > TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE) {                               \
             float pos = abs_norm < TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE                         \
@@ -552,10 +570,11 @@ check_thumbstick_changes(
 
 void
 win32_window_poll_event(te_os_window* os_window) {
+    MSG msg;
+
     te_win32_window* win32_window = prv_os_window_get_impl(os_window);
     win32_window->is_cached_cursor_pos_valid = false;
 
-    MSG msg;
     while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) {
         if (msg.message == WM_QUIT) {
             os_window_should_close(os_window);

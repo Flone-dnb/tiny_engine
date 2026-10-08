@@ -3,6 +3,7 @@
 #include <input/keyboard_button.h>
 #include <input/mouse_button.h>
 #include <math/vec3.h>
+#include <math/vec2.h>
 
 typedef struct te_world te_world;
 
@@ -71,7 +72,8 @@ void world_save_to_file(te_world* world, const char* relative_path, bool write_l
  * - additionally can add a location offset to 3D game objects */
 void world_add_from_file(te_world* world, const char* relative_path, bool load_light_params);
 void world_add_from_file_with_offset(
-    te_world* world, const char* relative_path, bool load_light_params, te_vec3 location_offset);
+    te_world* world, const char* relative_path, bool load_light_params,
+    te_vec3 location_offset);
 
 /* returns NULL if the world has no active camera
  * do not free/destroy returned pointer, valid until the camera is not destroyed */

@@ -6,9 +6,9 @@
 #include <game_manager.h>
 #include <io/filesystem.h>
 #include <io/log.h>
+#include <math/math_funcs.h>
 #include <window_system/os_window.h>
 #include <io/paths.h>
-#include <cglm/util.h>
 #include <misc/high_freq_timer.h>
 #if defined(ENGINE_DEBUG_TOOLS)
 #include <render/renderer.h>
@@ -147,6 +147,11 @@ window_destroy(te_window* window) {
 void
 window_process_events(
     te_window* window, te_window_callbacks* window_callbacks, void* game_instance) {
+    te_hft_t current_time_counter;
+    te_hft_t prev_time_counter;
+    float delta_time_sec;
+    float delta_time_ms;
+
     window->user_callbacks = window_callbacks;
     window->game_instance = game_instance;
     window->game_manager = prv_game_manager_create(window);
@@ -162,9 +167,9 @@ window_process_events(
     }
 
     /* used to calculate delta time */
-    te_hft_t current_time_counter = high_freq_timer_now();
-    te_hft_t prev_time_counter = 0;
-    float delta_time_sec = 0.0f;
+    current_time_counter = high_freq_timer_now();
+    prev_time_counter = 0;
+    delta_time_sec = 0.0f;
 
     while (!os_window_should_close(window->os_window)) {
         /* process available window events */
@@ -180,11 +185,11 @@ window_process_events(
         /* calculate delta time */
         prev_time_counter = current_time_counter;
         current_time_counter = high_freq_timer_now();
-        const float delta_time_ms =
+        delta_time_ms =
             high_freq_timer_get_elapsed_ms_range(prev_time_counter, current_time_counter);
         delta_time_sec = delta_time_ms * 0.001f;
         /* avoid huge dt as it can cause exceptional situations */
-        delta_time_sec = glm_min(delta_time_sec, 1.0f);
+        delta_time_sec = math_min(delta_time_sec, 1.0f);
 
         /* tick */
         {
@@ -495,10 +500,9 @@ on_lost_focus(te_os_window* os_window) {
 
 static void
 on_resized(te_os_window* os_window, unsigned int width, unsigned int height) {
+    te_window* window = os_window_get_user_data(os_window);
     (void)width;
     (void)height;
-
-    te_window* window = os_window_get_user_data(os_window);
 
     prv_game_manager_on_window_size_changed(window->game_manager);
 }

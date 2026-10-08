@@ -10,17 +10,17 @@ typedef struct te_os_window te_os_window;
 
 /* configurable options */
 #if !defined(ENGINE_GLES)
-extern int TE_OS_WINDOW_GL_MAJOR_VERSION;
-extern int TE_OS_WINDOW_GL_MINOR_VERSION;
-extern int TE_OS_WINDOW_MSAA;
+#define TE_OS_WINDOW_GL_MAJOR_VERSION 4 /* same as GLAD version */
+#define TE_OS_WINDOW_GL_MINOR_VERSION 5 /* same as GLAD version */
+#define TE_OS_WINDOW_MSAA 1 /* set to 2 or 4 to require os to support msaa backbuffers */
 #else
-extern int TE_OS_WINDOW_GL_MAJOR_VERSION;
-extern int TE_OS_WINDOW_GL_MINOR_VERSION;
-extern int TE_OS_WINDOW_MSAA;
+#define TE_OS_WINDOW_GL_MAJOR_VERSION 2 /* same as GLAD version */
+#define TE_OS_WINDOW_GL_MINOR_VERSION 0 /* same as GLAD version */
+#define TE_OS_WINDOW_MSAA 1             /* no MSAA under GLES */
 #endif
-extern int TE_OS_WINDOW_DEPTH_BITS;
-extern int TE_OS_WINDOW_STENCIL_BITS;
-extern float TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE;
+#define TE_OS_WINDOW_DEPTH_BITS 24
+#define TE_OS_WINDOW_STENCIL_BITS 8
+#define TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE 0.05f
 
 /* all callbacks must be valid (specified as non-NULL value) */
 typedef struct te_os_window_callbacks {

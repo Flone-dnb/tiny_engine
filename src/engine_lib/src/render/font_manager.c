@@ -37,6 +37,8 @@ static void
 free_glyph(void* data) {
     te_font_glyph* glyph = data;
     glDeleteTextures(1, &glyph->tex_id);
+
+    free(glyph);
 }
 
 te_font_manager*

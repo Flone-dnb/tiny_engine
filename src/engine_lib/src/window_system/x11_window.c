@@ -1,10 +1,12 @@
 #include <window_system/x11_window.h>
 #if defined(__linux__) && !defined(__ANDROID__)
 
+#include <snprintf.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
 #include <io/log.h>
+#include <math/math_funcs.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -210,12 +212,14 @@ x11_gamepad_find_and_open(te_x11_gamepad* gamepad) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-conversion"
         if (x11_gamepad_is_gamepad_device(path)) {
+            char name[128] = "Unknown Gamepad";
+            int i;
+
             int fd = open(path, O_RDONLY | O_NONBLOCK);
             if (fd < 0) {
                 continue;
             }
 
-            char name[128] = "Unknown Gamepad";
             if (ioctl(fd, EVIOCGNAME(sizeof(name)), name) < 0) {
                 strncpy(name, "Unknown Gamepad", sizeof(name) - 1);
             }
@@ -225,7 +229,7 @@ x11_gamepad_find_and_open(te_x11_gamepad* gamepad) {
             gamepad->connected = true;
 
             /* get axis info */
-            for (int i = 0; i < MAX_GAMEPAD_AXES; i++) {
+            for (i = 0; i < MAX_GAMEPAD_AXES; i++) {
                 struct input_absinfo abs_info;
                 if (ioctl(fd, EVIOCGABS(i), &abs_info) == 0) {
                     gamepad->abs_info[i] = abs_info;
@@ -263,6 +267,10 @@ x11_gamepad_is_trigger_axis(int axis) {
 
 static float
 x11_gamepad_normalize_axis(te_x11_gamepad* gamepad, int axis, int value) {
+    float center;
+    float range;
+    float normalized;
+
     struct input_absinfo* info = &gamepad->abs_info[axis];
 
     if (x11_gamepad_is_trigger_axis(axis)) {
@@ -271,7 +279,8 @@ x11_gamepad_normalize_axis(te_x11_gamepad* gamepad, int axis, int value) {
         if (max == min) {
             return 0.0f;
         }
-        float normalized = ((float)value - min) / (max - min);
+
+        normalized = ((float)value - min) / (max - min);
         if (normalized < 0.0f)
             normalized = 0.0f;
         if (normalized > 1.0f)
@@ -279,14 +288,14 @@ x11_gamepad_normalize_axis(te_x11_gamepad* gamepad, int axis, int value) {
         return normalized;
     }
 
-    float center = (float)(info->maximum + info->minimum) / 2.0f;
-    float range = (float)(info->maximum - info->minimum) / 2.0f;
+    center = (float)(info->maximum + info->minimum) / 2.0f;
+    range = (float)(info->maximum - info->minimum) / 2.0f;
 
     if (range == 0.0f) {
         return 0.0f;
     }
 
-    float normalized = ((float)value - center) / range;
+    normalized = ((float)value - center) / range;
 
     if (normalized < -1.0f)
         normalized = -1.0f;
@@ -298,20 +307,24 @@ x11_gamepad_normalize_axis(te_x11_gamepad* gamepad, int axis, int value) {
 
 static bool
 x11_gamepad_axis_in_deadzone(te_x11_gamepad* gamepad, int axis, int value) {
+    float center;
+    float range;
+    float normalized;
+
     struct input_absinfo* info = &gamepad->abs_info[axis];
 
     if (x11_gamepad_is_trigger_axis(axis)) {
         return false;
     }
 
-    float center = (float)(info->maximum + info->minimum) / 2.0f;
-    float range = (float)(info->maximum - info->minimum) / 2.0f;
+    center = (float)(info->maximum + info->minimum) / 2.0f;
+    range = (float)(info->maximum - info->minimum) / 2.0f;
 
     if (range == 0.0f) {
         return true;
     }
 
-    float normalized = ((float)value - center) / range;
+    normalized = ((float)value - center) / range;
     return math_abs(normalized) < TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE;
 }
 
@@ -372,6 +385,12 @@ x11_gamepad_process_event(
 
         gamepad->prev_buttons[engine_button] = (unsigned char)(ev->value != 0);
     } else if (ev->type == EV_ABS) {
+        int prev_value;
+        int new_value;
+        float normalized;
+        bool prev_in_deadzone;
+        bool new_in_deadzone;
+
         int axis = ev->code;
         enum te_gamepad_axis engine_axis = x11_gamepad_axis_to_engine(axis);
 
@@ -379,18 +398,18 @@ x11_gamepad_process_event(
             return;
         }
 
-        int prev_value = gamepad->prev_axes[axis];
-        int new_value = ev->value;
+        prev_value = gamepad->prev_axes[axis];
+        new_value = ev->value;
         gamepad->prev_axes[axis] = new_value;
 
-        bool prev_in_deadzone = x11_gamepad_axis_in_deadzone(gamepad, axis, prev_value);
-        bool new_in_deadzone = x11_gamepad_axis_in_deadzone(gamepad, axis, new_value);
+        prev_in_deadzone = x11_gamepad_axis_in_deadzone(gamepad, axis, prev_value);
+        new_in_deadzone = x11_gamepad_axis_in_deadzone(gamepad, axis, new_value);
 
         if (prev_in_deadzone && new_in_deadzone) {
             return;
         }
 
-        float normalized = x11_gamepad_normalize_axis(gamepad, axis, new_value);
+        normalized = x11_gamepad_normalize_axis(gamepad, axis, new_value);
 
         if (!x11_gamepad_is_trigger_axis(axis)) {
             if (!new_in_deadzone) {
@@ -415,6 +434,10 @@ x11_gamepad_process_event(
 
 static void
 x11_gamepad_poll(te_os_window* os_window, te_x11_window* x11_window) {
+    struct input_event ev;
+    ssize_t bytes_read;
+    bool read_error = false;
+
     te_x11_gamepad* gamepad = &x11_window->gamepad;
     te_os_window_callbacks* callbacks = prv_os_window_get_callbacks(os_window);
 
@@ -442,10 +465,6 @@ x11_gamepad_poll(te_os_window* os_window, te_x11_window* x11_window) {
     }
 
     /* read events from gamepad */
-    struct input_event ev;
-    ssize_t bytes_read;
-    bool read_error = false;
-
     while ((bytes_read = read(gamepad->fd, &ev, sizeof(ev))) == sizeof(ev)) {
         if (ev.type == EV_SYN) {
             continue;
@@ -469,6 +488,8 @@ static void
 x11_handle_key_event(
     te_os_window* os_window, te_x11_window* x11_window, XKeyEvent* key_event, bool is_press,
     bool is_repeat) {
+    te_os_window_callbacks* callbacks;
+
     enum te_keyboard_button button = (enum te_keyboard_button)(key_event->keycode - 8);
 
     /* update keyboard modifiers */
@@ -495,7 +516,7 @@ x11_handle_key_event(
     }
 #pragma GCC diagnostic pop
 
-    te_os_window_callbacks* callbacks = prv_os_window_get_callbacks(os_window);
+    callbacks = prv_os_window_get_callbacks(os_window);
 
     if (is_press) {
         callbacks->on_keyboard_button_pressed(
@@ -538,6 +559,10 @@ x11_process_event(te_os_window* os_window, te_x11_window* x11_window, XEvent* ev
             break;
         }
         case KeyPress: {
+            char buf[8];
+            KeySym keysym;
+            int len;
+
             /* check if this is a repeat by peeking at the next event */
             bool is_repeat = false;
             if (XEventsQueued(x11_window->display, QueuedAfterReading) > 0) {
@@ -550,9 +575,7 @@ x11_process_event(te_os_window* os_window, te_x11_window* x11_window, XEvent* ev
             }
 
             /* send text input */
-            char buf[8];
-            KeySym keysym;
-            int len = XLookupString(&event->xkey, buf, sizeof(buf), &keysym, NULL);
+            len = XLookupString(&event->xkey, buf, sizeof(buf), &keysym, NULL);
             if (len > 0 && keysym != XK_BackSpace && keysym != XK_Return && keysym != XK_Tab
                 && keysym != XK_Escape) {
                 callbacks->on_text_input(os_window, buf);
@@ -627,22 +650,18 @@ x11_process_event(te_os_window* os_window, te_x11_window* x11_window, XEvent* ev
 
 void
 x11_window_create(te_os_window* os_window, const char* title) {
-    XSetErrorHandler(x11_error_handler);
-
-    te_x11_window* x11_window = malloc(sizeof(te_x11_window));
-    memset(x11_window, 0, sizeof(te_x11_window));
-    prv_os_window_set_impl(os_window, x11_window);
-
-    x11_window->display = XOpenDisplay(NULL);
-    if (x11_window->display == NULL) {
-        log_error(__FILE__, __LINE__, "failed to open X display");
-        abort();
-    }
-
-    x11_window->screen = DefaultScreen(x11_window->display);
-    Window root = RootWindow(x11_window->display, x11_window->screen);
-
-    x11_load_glx_extensions(x11_window->display, x11_window->screen);
+    te_x11_window* x11_window;
+    Window root;
+    int fb_count;
+    int i;
+    int screen_w;
+    int screen_h;
+    GLXFBConfig* fb_configs;
+    XVisualInfo* visual_info;
+    XClassHint* class_hint;
+    te_x11_gamepad* gamepad;
+    GLXFBConfig fb_config;
+    XSetWindowAttributes window_attribs;
 
     int visual_attribs[] = {
         GLX_X_RENDERABLE,
@@ -673,8 +692,42 @@ x11_window_create(te_os_window* os_window, const char* title) {
         TE_OS_WINDOW_MSAA > 1 ? TE_OS_WINDOW_MSAA : None,
         None};
 
-    int fb_count = 0;
-    GLXFBConfig* fb_configs =
+    const int context_attribs[] = {
+        GLX_CONTEXT_MAJOR_VERSION_ARB,
+        TE_OS_WINDOW_GL_MAJOR_VERSION,
+        GLX_CONTEXT_MINOR_VERSION_ARB,
+        TE_OS_WINDOW_GL_MINOR_VERSION,
+        GLX_CONTEXT_PROFILE_MASK_ARB,
+#if !defined(ENGINE_GLES)
+        GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
+#else
+        GLX_CONTEXT_ES2_PROFILE_BIT_EXT,
+#endif
+#if defined(DEBUG)
+        GLX_CONTEXT_FLAGS_ARB,
+        GLX_CONTEXT_DEBUG_BIT_ARB,
+#endif
+        None};
+
+    XSetErrorHandler(x11_error_handler);
+
+    x11_window = malloc(sizeof(te_x11_window));
+    memset(x11_window, 0, sizeof(te_x11_window));
+    prv_os_window_set_impl(os_window, x11_window);
+
+    x11_window->display = XOpenDisplay(NULL);
+    if (x11_window->display == NULL) {
+        log_error(__FILE__, __LINE__, "failed to open X display");
+        abort();
+    }
+
+    x11_window->screen = DefaultScreen(x11_window->display);
+    root = RootWindow(x11_window->display, x11_window->screen);
+
+    x11_load_glx_extensions(x11_window->display, x11_window->screen);
+
+    fb_count = 0;
+    fb_configs =
         glXChooseFBConfig(x11_window->display, x11_window->screen, visual_attribs, &fb_count);
 
     if (fb_configs == NULL || fb_count == 0) {
@@ -683,15 +736,16 @@ x11_window_create(te_os_window* os_window, const char* title) {
     }
 
     /* pick the best FBConfig */
-    GLXFBConfig fb_config = fb_configs[0];
+    fb_config = fb_configs[0];
     if (TE_OS_WINDOW_MSAA > 1) {
         /* find the FBConfig with exactly required samples (or closest) */
         int best_diff = 0x7FFFFFFF;
-        for (int i = 0; i < fb_count; i++) {
+        for (i = 0; i < fb_count; i++) {
             int samples = 0;
+            int diff;
             glXGetFBConfigAttrib_ptr(
                 x11_window->display, fb_configs[i], GLX_SAMPLES, &samples);
-            int diff = abs(samples - TE_OS_WINDOW_MSAA);
+            diff = abs(samples - TE_OS_WINDOW_MSAA);
             if (diff < best_diff) {
                 best_diff = diff;
                 fb_config = fb_configs[i];
@@ -702,7 +756,7 @@ x11_window_create(te_os_window* os_window, const char* title) {
         }
     } else {
         /* MSAA disabled: pick an FBConfig with no multisampling */
-        for (int i = 0; i < fb_count; i++) {
+        for (i = 0; i < fb_count; i++) {
             int samples = 0;
             glXGetFBConfigAttrib_ptr(
                 x11_window->display, fb_configs[i], GLX_SAMPLES, &samples);
@@ -714,7 +768,7 @@ x11_window_create(te_os_window* os_window, const char* title) {
     }
     XFree(fb_configs);
 
-    XVisualInfo* visual_info = glXGetVisualFromFBConfig(x11_window->display, fb_config);
+    visual_info = glXGetVisualFromFBConfig(x11_window->display, fb_config);
     if (visual_info == NULL) {
         log_error(__FILE__, __LINE__, "failed to get XVisualInfo from FBConfig");
         abort();
@@ -723,11 +777,10 @@ x11_window_create(te_os_window* os_window, const char* title) {
     x11_window->colormap =
         XCreateColormap(x11_window->display, root, visual_info->visual, AllocNone);
 
-    int screen_w = DisplayWidth(x11_window->display, x11_window->screen);
-    int screen_h = DisplayHeight(x11_window->display, x11_window->screen);
+    screen_w = DisplayWidth(x11_window->display, x11_window->screen);
+    screen_h = DisplayHeight(x11_window->display, x11_window->screen);
 
     /* create window */
-    XSetWindowAttributes window_attribs;
     memset(&window_attribs, 0, sizeof(window_attribs));
     window_attribs.colormap = x11_window->colormap;
     window_attribs.background_pixmap = None;
@@ -748,7 +801,7 @@ x11_window_create(te_os_window* os_window, const char* title) {
 
     /* set window title */
     XStoreName(x11_window->display, x11_window->window, title);
-    XClassHint* class_hint = XAllocClassHint();
+    class_hint = XAllocClassHint();
     if (class_hint != NULL) {
         class_hint->res_name = (char*)title;
         class_hint->res_class = (char*)"X11WindowClass";
@@ -768,7 +821,8 @@ x11_window_create(te_os_window* os_window, const char* title) {
 
     /* try to set fullscreen via EWMH */
     if (x11_window->wm_state != None && x11_window->wm_state_fullscreen != None) {
-        Atom fullscreen_atoms[] = {x11_window->wm_state_fullscreen};
+        Atom fullscreen_atoms[1];
+        fullscreen_atoms[0] = x11_window->wm_state_fullscreen;
         XChangeProperty(
             x11_window->display, x11_window->window, x11_window->wm_state, XA_ATOM, 32,
             PropModeReplace, (unsigned char*)fullscreen_atoms, 1);
@@ -778,22 +832,6 @@ x11_window_create(te_os_window* os_window, const char* title) {
     XFlush(x11_window->display);
 
     /* create opengl context */
-    const int context_attribs[] = {
-        GLX_CONTEXT_MAJOR_VERSION_ARB,
-        TE_OS_WINDOW_GL_MAJOR_VERSION,
-        GLX_CONTEXT_MINOR_VERSION_ARB,
-        TE_OS_WINDOW_GL_MINOR_VERSION,
-        GLX_CONTEXT_PROFILE_MASK_ARB,
-#if !defined(ENGINE_GLES)
-        GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
-#else
-        GLX_CONTEXT_ES2_PROFILE_BIT_EXT,
-#endif
-#if defined(DEBUG)
-        GLX_CONTEXT_FLAGS_ARB,
-        GLX_CONTEXT_DEBUG_BIT_ARB,
-#endif
-        None};
 
     if (glXCreateContextAttribsARB_ptr != NULL) {
         x11_window->gl_context = glXCreateContextAttribsARB_ptr(
@@ -862,7 +900,7 @@ x11_window_create(te_os_window* os_window, const char* title) {
         x11_window->inotify_wd = inotify_add_watch(
             x11_window->inotify_fd, "/dev/input", IN_CREATE | IN_DELETE | IN_ATTRIB);
     }
-    te_x11_gamepad* gamepad = &x11_window->gamepad;
+    gamepad = &x11_window->gamepad;
     memset(gamepad, 0, sizeof(te_x11_gamepad));
     gamepad->fd = -1;
     gamepad->connected = false;
@@ -942,6 +980,10 @@ x11_window_get_cursor_position(te_os_window* os_window, float* x, float* y) {
 
 unsigned int
 x11_window_get_refresh_rate(te_os_window* os_window) {
+    unsigned int refresh_rate;
+    int i;
+    int j;
+
     te_x11_window* x11_window = prv_os_window_get_impl(os_window);
 
     Window root = RootWindow(x11_window->display, x11_window->screen);
@@ -951,16 +993,16 @@ x11_window_get_refresh_rate(te_os_window* os_window) {
         return 60;
     }
 
-    unsigned int refresh_rate = 0;
+    refresh_rate = 0;
 
-    for (int i = 0; i < res->ncrtc; i++) {
+    for (i = 0; i < res->ncrtc; i++) {
         XRRCrtcInfo* crtc_info = XRRGetCrtcInfo(x11_window->display, res, res->crtcs[i]);
         if (crtc_info == NULL) {
             continue;
         }
 
         if (crtc_info->mode != None) {
-            for (int j = 0; j < res->nmode; j++) {
+            for (j = 0; j < res->nmode; j++) {
                 if (res->modes[j].id == crtc_info->mode) {
                     XRRModeInfo* mode = &res->modes[j];
 

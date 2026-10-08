@@ -1,6 +1,7 @@
 #include <debug_console.h>
 
 #if defined(ENGINE_DEBUG_TOOLS)
+#include <snprintf.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -13,27 +14,37 @@
 #include <render/debug_drawer.h>
 #include <glad/gl.h>
 
-/* command hash for hashmap */
-uint64_t
-debug_console_command_hash(const void* item, uint64_t seed0, uint64_t seed1) {
-    const te_debug_console_command* command = item;
-    return hashmap_sip(command->name, strlen(command->name), seed0, seed1);
-}
+size_t
+calc_string_hash(const char* str) {
+    size_t hash;
+    size_t prime;
+    int c;
 
-/* command compare for hashmap */
-int
-debug_console_command_compare(const void* a, const void* b, void* udata) {
-    const te_debug_console_command* command1 = a;
-    const te_debug_console_command* command2 = b;
-    (void)udata;
-    return strcmp(command1->name, command2->name);
+    if (sizeof(size_t) >= 8) {
+        /* 64-bit FNV offset basis: 14695981039346656037 */
+        hash = ((size_t)0xCBF29CE4UL << 32) | (size_t)0x428A2F98UL;
+
+        /* 64-bit FNV prime: 1099511628211 */
+        prime = ((size_t)0x00000100UL << 32) | (size_t)0x000001B3UL;
+    } else {
+        /* 32-bit constants */
+        hash = (size_t)2166136261UL;
+        prime = (size_t)16777619UL;
+    }
+
+    while ((c = (unsigned char)*str++)) {
+        hash ^= (size_t)c;
+        hash *= prime;
+    }
+
+    return hash;
 }
 
 /* groups debug console data */
 struct te_debug_console {
     te_game_manager* game_manager;
 
-    struct hashmap* commands;
+    te_num_hashtable* commands;
 
     /* current user input, non-NULL because preallocated
      * actually valid char count is @ref input_valid_len
@@ -103,9 +114,9 @@ prv_debug_console_hide_fps(struct te_game_manager* game_manager) {
 void
 prv_debug_console_init(te_game_manager* game_manager) {
     console.game_manager = game_manager;
-    console.commands = hashmap_new(
-        sizeof(te_debug_console_command), 4, 0, 0, debug_console_command_hash,
-        debug_console_command_compare, NULL, NULL);
+
+    console.commands = num_hashtable_create(64, sizeof(te_debug_console_command), NULL);
+
     console.input_total_len = 65;
     console.input = malloc(sizeof(char) * console.input_total_len);
     console.input_valid_len = 0;
@@ -149,7 +160,7 @@ prv_debug_console_init(te_game_manager* game_manager) {
 
 void
 prv_debug_console_deinit(void) {
-    hashmap_free(console.commands);
+    num_hashtable_destroy(console.commands);
     console.commands = NULL;
 
     free(console.input);
@@ -161,7 +172,7 @@ prv_debug_console_deinit(void) {
 
 void
 debug_console_register_command(te_debug_console_command command) {
-    hashmap_set(console.commands, &command);
+    num_hashtable_insert(console.commands, calc_string_hash(command.name), &command);
 }
 
 void
@@ -206,10 +217,17 @@ prv_debug_console_on_keyboard_input(
     }
 
     if (button == TE_KB_ENTER && console.input_valid_len > 0) {
+        te_debug_console_command* found_command;
+        te_debug_console_command target_command;
+        unsigned int arg_pos;
+        unsigned int i;
+        unsigned int command_len;
+        bool found_arg;
+
         /* check if arguments are specified */
-        unsigned int arg_pos = 0;
-        bool found_arg = false;
-        for (unsigned int i = 0; i < console.input_valid_len; i++) {
+        arg_pos = 0;
+        found_arg = false;
+        for (i = 0; i < console.input_valid_len; i++) {
             if (console.input[i] == ' ') {
                 found_arg = true;
                 arg_pos = i;
@@ -217,14 +235,13 @@ prv_debug_console_on_keyboard_input(
             }
         }
 
-        const unsigned int command_len = found_arg ? arg_pos : console.input_valid_len;
-        te_debug_console_command target_command;
+        command_len = found_arg ? arg_pos : console.input_valid_len;
+
         target_command.name = malloc(sizeof(char) * (command_len + 1));
         memcpy((char*)target_command.name, console.input, sizeof(char) * command_len);
         ((char*)target_command.name)[command_len] = 0;
 
-        const te_debug_console_command* found_command =
-            hashmap_get(console.commands, &target_command);
+        found_command = num_hashtable_find(console.commands, calc_string_hash(console.input));
         if (found_command == NULL) {
             console.message = "command not found";
             console.message_sec_left = 1.0f;
@@ -255,9 +272,11 @@ void
 prv_debug_console_on_keyboard_input_text(const char* text) {
     const unsigned int text_len = (unsigned int)strlen(text);
     if (console.input_valid_len + text_len > console.input_total_len) {
+        char* new_input;
+
         console.input_total_len = console.input_valid_len + text_len + 64;
 
-        char* new_input = malloc(sizeof(char) * (console.input_total_len + 1));
+        new_input = malloc(sizeof(char) * (console.input_total_len + 1));
         memcpy(new_input, console.input, sizeof(char) * console.input_valid_len);
 
         free(console.input);
@@ -272,21 +291,27 @@ prv_debug_console_on_keyboard_input_text(const char* text) {
 void
 prv_debug_console_draw_stat(te_vec2 screen_pos, const char* fmt, ...) {
     va_list args;
-    va_start(args, fmt);
     va_list args_copy;
+    te_vec3 color;
+    char* text;
+    int len;
+
+    va_start(args, fmt);
     va_start(args_copy, fmt);
 
-    int len = vsnprintf(NULL, 0, fmt, args);
+    len = vsnprintf(NULL, 0, fmt, args);
     if (len <= 0) {
         log_error(__FILE__, __LINE__, "snprintf error");
         abort();
     }
 
-    char* text = malloc(sizeof(char) * ((unsigned int)len + 1));
+    text = malloc(sizeof(char) * ((unsigned int)len + 1));
     vsnprintf(text, (unsigned int)len + 1, fmt, args_copy);
 
+    vec3_set(1.0f, 1.0f, 1.0f, color);
     debug_drawer_draw_text_color_pos(
-        text, console.time_sec_to_update_stats, (vec3){1.0f, 1.0f, 1.0f}, screen_pos);
+        text, console.time_sec_to_update_stats, color, screen_pos);
+
     screen_pos[1] += debug_drawer_get_default_text_height();
 
     free(text);
@@ -296,14 +321,21 @@ prv_debug_console_draw_stat(te_vec2 screen_pos, const char* fmt, ...) {
 
 void
 prv_debug_console_draw(float delta_time_sec) {
+    te_vec3 color;
+    bool update_stats;
+
+    vec3_set(1.0f, 1.0f, 1.0f, color);
+
     console.time_sec_to_update_stats -= delta_time_sec;
 
-    const bool update_stats = console.time_sec_to_update_stats <= 0.0f;
+    update_stats = console.time_sec_to_update_stats <= 0.0f;
     if (update_stats) {
+        te_debug_stats* stats;
+
         console.displayed_stats = console.stats;
         console.time_sec_to_update_stats = 2.0f;
 
-        te_debug_stats* stats = &console.displayed_stats;
+        stats = &console.displayed_stats;
         stats->process_mem =
             (unsigned int)(memory_usage_get_process_used_memory() / 1024 / 1024);
         stats->total_used_mem =
@@ -314,11 +346,12 @@ prv_debug_console_draw(float delta_time_sec) {
     if ((console.show_stats || console.show_fps) && update_stats) {
         te_debug_stats* stats = &console.displayed_stats;
         te_vec2 screen_pos;
-        vec2_copy((vec2){0.01f, 0.45f}, screen_pos);
+        unsigned int fps_limit;
+
+        vec2_set(0.01f, 0.45f, screen_pos);
 
         /* FPS */
-        const unsigned int fps_limit =
-            renderer_get_fps_limit(game_manager_get_renderer(console.game_manager));
+        fps_limit = renderer_get_fps_limit(game_manager_get_renderer(console.game_manager));
         if (console.show_fps) {
             prv_debug_console_draw_stat(screen_pos, "FPS: %u", stats->fps);
         } else {
@@ -403,17 +436,14 @@ prv_debug_console_draw(float delta_time_sec) {
 
     if (console.message_sec_left > 0.0f) {
         console.message_sec_left -= delta_time_sec;
-        debug_drawer_draw_text_color_pos(
-            console.message, 0.0f, (vec3){1.0f, 1.0f, 1.0f}, console.screen_pos);
+        debug_drawer_draw_text_color_pos(console.message, 0.0f, color, console.screen_pos);
         return;
     }
 
     if (console.input_valid_len == 0) {
-        debug_drawer_draw_text_color_pos(
-            "type a command...", 0.0f, (vec3){1.0f, 1.0f, 1.0f}, console.screen_pos);
+        debug_drawer_draw_text_color_pos("type a command...", 0.0f, color, console.screen_pos);
     } else {
-        debug_drawer_draw_text_color_pos(
-            console.input, 0.0f, (vec3){1.0f, 1.0f, 1.0f}, console.screen_pos);
+        debug_drawer_draw_text_color_pos(console.input, 0.0f, color, console.screen_pos);
     }
 }
 

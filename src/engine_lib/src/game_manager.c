@@ -55,6 +55,8 @@ struct te_game_manager {
 
 te_game_manager*
 prv_game_manager_create(struct te_window* window) {
+    te_game_manager* game_manager;
+
     srand((unsigned int)time(NULL));
 
     /* make sure "res" directory exists */
@@ -64,7 +66,7 @@ prv_game_manager_create(struct te_window* window) {
         abort();
     }
 
-    te_game_manager* game_manager = malloc(sizeof(te_game_manager));
+    game_manager = malloc(sizeof(te_game_manager));
 
     game_manager->window = window;
     game_manager->worlds = NULL;
@@ -328,12 +330,13 @@ game_manager_get_tick_callback_count(te_game_manager* game_manager) {
 
 void
 prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
+    te_camera* active_camera;
     unsigned int i;
 
     (void)delta_time_sec;
 
     /* get active camera to update sound listener */
-    te_camera* active_camera = NULL;
+    active_camera = NULL;
     for (i = 0; i < game_manager->world_count; i++) {
         active_camera = world_get_active_camera(game_manager->worlds[i]);
         if (active_camera == NULL) {
@@ -355,10 +358,10 @@ prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
 
     if (active_camera != NULL) {
         te_vec3 pos;
-        camera_get_world_position(active_camera, pos);
-
         te_vec3 forward;
         te_vec3 up;
+
+        camera_get_world_position(active_camera, pos);
         camera_get_forward(active_camera, forward);
         camera_get_up(active_camera, up);
 
@@ -372,19 +375,23 @@ prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
 
     /* tick custom callbacks */
     {
+        unsigned int* notified_ids;
+        unsigned int notified_count;
+        unsigned int callback_idx;
+
 #if defined(ENGINE_DEBUG_TOOLS)
+        te_hft_t cpu_start_counter;
         te_debug_stats* debug_stats = prv_debug_console_get_stats();
         debug_stats->cpu_time_tick_callbacks_ms = 0.0f;
-        const te_hft_t cpu_start_counter = high_freq_timer_now();
+        cpu_start_counter = high_freq_timer_now();
 #endif
 
         game_manager->is_processing_tick_callbacks = true;
 
         /* because logic inside a callback can add/remove tick callbacks (array we are iterating)
          * we track which callbacks we triggered and recheck if needed */
-        unsigned int* notified_ids =
-            malloc(sizeof(unsigned int) * game_manager->tick_callback_count);
-        unsigned int notified_count = 0;
+        notified_ids = malloc(sizeof(unsigned int) * game_manager->tick_callback_count);
+        notified_count = 0;
 
         while (true) {
             bool check_if_notified = false;
@@ -402,13 +409,14 @@ prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
                 check_if_notified = true;
             }
 
-            for (unsigned int callback_idx = 0;
-                 callback_idx < game_manager->tick_callback_count; callback_idx++) {
+            for (callback_idx = 0; callback_idx < game_manager->tick_callback_count;
+                 callback_idx++) {
                 te_game_tick_callback* callback = &game_manager->tick_callbacks[callback_idx];
 
                 if (check_if_notified) {
+                    unsigned int i;
                     bool notified = false;
-                    for (unsigned int i = 0; i < notified_count; i++) {
+                    for (i = 0; i < notified_count; i++) {
                         if (notified_ids[i] == callback->id) {
                             notified = true;
                             break;
@@ -454,9 +462,11 @@ prv_game_manager_draw_frame(te_game_manager* game_manager, float delta_time_sec)
 
 void
 prv_game_manager_on_window_size_changed(te_game_manager* game_manager) {
+    unsigned int i;
+
     prv_renderer_on_window_size_changed(game_manager->renderer);
 
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    for (i = 0; i < game_manager->world_count; i++) {
         prv_world_on_window_size_changed(game_manager->worlds[i]);
     }
 }
@@ -465,8 +475,9 @@ bool
 prv_game_manager_on_mouse_button_pressed(
     te_game_manager* game_manager, enum te_mouse_button button) {
     te_vec2 cursor_pos;
+    unsigned int i;
     bool is_handled = false;
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    for (i = 0; i < game_manager->world_count; i++) {
         if (!world_get_cursor_relative_pos(game_manager->worlds[i], cursor_pos)) {
             continue;
         }
@@ -481,8 +492,9 @@ bool
 prv_game_manager_on_mouse_button_released(
     te_game_manager* game_manager, enum te_mouse_button button) {
     te_vec2 cursor_pos;
+    unsigned int i;
     bool is_handled = false;
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    for (i = 0; i < game_manager->world_count; i++) {
         if (!world_get_cursor_relative_pos(game_manager->worlds[i], cursor_pos)) {
             continue;
         }
@@ -496,7 +508,8 @@ prv_game_manager_on_mouse_button_released(
 void
 prv_game_manager_on_mouse_moved(te_game_manager* game_manager) {
     te_vec2 cursor_pos;
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    unsigned int i;
+    for (i = 0; i < game_manager->world_count; i++) {
         if (!world_get_cursor_relative_pos(game_manager->worlds[i], cursor_pos)) {
             continue;
         }
@@ -507,7 +520,8 @@ prv_game_manager_on_mouse_moved(te_game_manager* game_manager) {
 void
 prv_game_manager_on_mouse_cursor_captured(te_game_manager* game_manager, bool captured) {
     te_vec2 cursor_pos;
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    unsigned int i;
+    for (i = 0; i < game_manager->world_count; i++) {
         if (!world_get_cursor_relative_pos(game_manager->worlds[i], cursor_pos)) {
             continue;
         }
@@ -517,7 +531,8 @@ prv_game_manager_on_mouse_cursor_captured(te_game_manager* game_manager, bool ca
 
 void
 prv_game_manager_on_keyboard_input_text(te_game_manager* game_manager, const char* text) {
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    unsigned int i;
+    for (i = 0; i < game_manager->world_count; i++) {
         prv_world_on_keyboard_input_text(game_manager->worlds[i], text);
     }
 }
@@ -525,14 +540,16 @@ prv_game_manager_on_keyboard_input_text(te_game_manager* game_manager, const cha
 void
 prv_game_manager_on_keyboard_input(
     te_game_manager* game_manager, enum te_keyboard_button button, bool is_repeat) {
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    unsigned int i;
+    for (i = 0; i < game_manager->world_count; i++) {
         prv_world_on_keyboard_input(game_manager->worlds[i], button, is_repeat);
     }
 }
 
 void
 prv_game_manager_on_input_source_changed(te_game_manager* game_manager) {
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    unsigned int i;
+    for (i = 0; i < game_manager->world_count; i++) {
         prv_world_on_input_source_changed(game_manager->worlds[i]);
     }
 }
