@@ -71,6 +71,16 @@ math_round(float value) {
 }
 
 float
+math_ceil(float value) {
+    return (float)ceil(value);
+}
+
+float
+math_mod(float a, float b) {
+    return (float)fmod(a, b);
+}
+
+float
 math_smoothstep(float edge0, float edge1, float x) {
     x = math_clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
     return x * x * (3.0f - 2.0f * x);

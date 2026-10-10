@@ -65,7 +65,7 @@ float particle_emitter_get_size(te_particle_emitter* emitter);
 void particle_emitter_set_size_fade_in(te_particle_emitter* emitter, float size);
 float particle_emitter_get_size_fade_in(te_particle_emitter* emitter);
 
-// Sets size of particles during fade out (see @ref particle_emitter_set_fade_out_life_portion).
+/* sets size of particles during fade out (see @ref particle_emitter_set_fade_out_life_portion) */
 void particle_emitter_set_size_fade_out(te_particle_emitter* emitter, float size);
 float particle_emitter_get_size_fade_out(te_particle_emitter* emitter);
 

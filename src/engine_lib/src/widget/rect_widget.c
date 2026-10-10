@@ -131,6 +131,10 @@ rect_widget_get_color(te_rect_widget* rect_widget, te_vec4 out) {
 
 void
 rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) {
+#if defined(ENGINE_EDITOR)
+    char* res_path;
+#endif
+
     if (rect_widget->tex_relative_path == NULL && relative_path == NULL) {
         return;
     }
@@ -140,7 +144,7 @@ rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) 
 
 #if defined(ENGINE_EDITOR)
     /* check if path exists */
-    char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
+    res_path = filesystem_prepend_res_to_path(relative_path, NULL);
     if (!filesystem_does_path_exists(res_path)) {
         /* do nothing, probably user typing the path */
         free(res_path);

@@ -1,5 +1,6 @@
 #include <gizmo.h>
 
+#include <stdlib.h>
 #include <game/model.h>
 #include <world.h>
 #include <game/camera.h>
@@ -64,6 +65,7 @@ update_gizmo_rotation(te_gizmo* gizmo) {
 
 static void
 spawn_gizmo_models(te_gizmo* gizmo, te_world* world) {
+    te_vec4 color;
     te_vec3 target_pos;
 
     /* only 1 model should call this */
@@ -79,9 +81,14 @@ spawn_gizmo_models(te_gizmo* gizmo, te_world* world) {
     model_set_position(gizmo->model_y, target_pos);
     model_set_position(gizmo->model_z, target_pos);
 
-    model_set_color(gizmo->model_x, (vec4){1.0f, 0.0f, 0.0f, 1.0f});
-    model_set_color(gizmo->model_y, (vec4){0.0f, 1.0f, 0.0f, 1.0f});
-    model_set_color(gizmo->model_z, (vec4){0.0f, 0.0f, 1.0f, 1.0f});
+    vec4_set(1.0f, 0.0f, 0.0f, 1.0f, color);
+    model_set_color(gizmo->model_x, color);
+
+    vec4_set(0.0f, 1.0f, 0.0f, 1.0f, color);
+    model_set_color(gizmo->model_y, color);
+
+    vec4_set(0.0f, 0.0f, 1.0f, 1.0f, color);
+    model_set_color(gizmo->model_z, color);
 
     update_gizmo_rotation(gizmo);
 }
@@ -111,7 +118,7 @@ gizmo_destroy_in_world_now(te_gizmo* gizmo, te_world* world) {
 
     model_destroy(gizmo->model_x);
     model_destroy(gizmo->model_y);
-    model_destroy(gizmo->model_z); // <- triggers gizmo destroy
+    model_destroy(gizmo->model_z); /* triggers gizmo destroy */
 }
 
 void*
@@ -186,7 +193,7 @@ gizmo_move(te_gizmo* gizmo, te_camera* camera, float x_offset, float y_offset) {
     te_vec3 up;
     te_vec3 dir;
     te_vec3 gizmo_offset;
-    mat4* world_mat;
+    te_mat4* world_mat;
 
     y_offset *= -1.0f;
 
@@ -300,7 +307,7 @@ get_geometry(
             unsigned char* data = (*vertices)->data
                                   + ((*vertices)->vertex_sizeof * k
                                      + (*vertices)->attribute_offsets[TE_VA_POSITION]);
-            vec3_add((float*)data, (vec3){half * 2.0f, 0.0f, 0.0f}, (float*)data);
+            *(float*)data += half * 2.0f; /* changing X of a vec3 */
         }
     } else if (gizmo->mode == TE_GM_SCALE) {
         /* add new shape */
@@ -310,18 +317,21 @@ get_geometry(
             unsigned char* data = (*vertices)->data
                                   + ((*vertices)->vertex_sizeof * k
                                      + (*vertices)->attribute_offsets[TE_VA_POSITION]);
-            vec3_add((float*)data, (vec3){half_width * 2.0f + half, 0.0f, 0.0f}, (float*)data);
+            *(float*)data += half_width * 2.0f + half; /* changing X of a vec3 */
         }
     }
 
     /* rotate according to the axis */
     axis_idx = model_get_custom_value(model);
     if (axis_idx > 0) {
-        mat4 rot_mat;
+        te_mat4 rot_mat;
+        te_vec3 rotation_deg;
         if (axis_idx == 1) {
-            math_make_rotation_mat((vec3){0.0f, 0.0f, 90.0f}, rot_mat);
+            vec3_set(0.0f, 0.0f, 90.0f, rotation_deg);
+            math_make_rotation_mat(rotation_deg, rot_mat);
         } else {
-            math_make_rotation_mat((vec3){0.0f, -90.0f, 0.0f}, rot_mat);
+            vec3_set(0.0f, -90.0f, 0.0f, rotation_deg);
+            math_make_rotation_mat(rotation_deg, rot_mat);
         }
 
         for (k = 0; k < vert_count; k++) {
@@ -333,7 +343,7 @@ get_geometry(
             vec3_copy((float*)data, pos);
             pos[3] = 1.0f;
 
-            glm_mat4_mulv(rot_mat, pos, pos);
+            mat4_mulv(rot_mat, pos, pos);
 
             vec3_copy(pos, (float*)data);
         }
@@ -345,173 +355,175 @@ generate_base(
     float half_width, float half, te_vertex_pack* vertices, unsigned short* indices,
     unsigned int start_vertex, unsigned int start_index, unsigned short index_offset) {
     unsigned int i;
+    unsigned int normal_i;
+    unsigned char offset;
 
     const unsigned int vert_size = vertices->vertex_sizeof;
 
     /* init UVs */
-    const unsigned char uv_offset = vertices->attribute_offsets[TE_VA_UV];
+    offset = vertices->attribute_offsets[TE_VA_UV];
     for (i = 0; i < 24; i += 4) {
         vec2_set(
-            1.0f, 1.0f, (float*)(vertices->data + vert_size * (start_vertex + i) + uv_offset));
+            1.0f, 1.0f, (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
         vec2_set(
             0.0f, 1.0f,
-            (float*)(vertices->data + vert_size * (start_vertex + i + 1) + uv_offset));
+            (float*)(vertices->data + vert_size * (start_vertex + i + 1) + offset));
         vec2_set(
             1.0f, 0.0f,
-            (float*)(vertices->data + vert_size * (start_vertex + i + 2) + uv_offset));
+            (float*)(vertices->data + vert_size * (start_vertex + i + 2) + offset));
         vec2_set(
             0.0f, 0.0f,
-            (float*)(vertices->data + vert_size * (start_vertex + i + 3) + uv_offset));
+            (float*)(vertices->data + vert_size * (start_vertex + i + 3) + offset));
     }
 
     /* init normals */
-    const unsigned char normal_offset = vertices->attribute_offsets[TE_VA_NORMAL];
-    unsigned int normal_i = 0;
+    offset = vertices->attribute_offsets[TE_VA_NORMAL];
+    normal_i = 0;
     for (i = normal_i; normal_i < i + 4; normal_i++) {
         vec3_set(
             1.0f, 0.0f, 0.0f,
-            (float*)(vertices->data + vert_size * (start_vertex + normal_i) + normal_offset));
+            (float*)(vertices->data + vert_size * (start_vertex + normal_i) + offset));
     }
     for (i = normal_i; normal_i < i + 4; normal_i++) {
         vec3_set(
             -1.0f, 0.0f, 0.0f,
-            (float*)(vertices->data + vert_size * (start_vertex + normal_i) + normal_offset));
+            (float*)(vertices->data + vert_size * (start_vertex + normal_i) + offset));
     }
     for (i = normal_i; normal_i < i + 4; normal_i++) {
         vec3_set(
             0.0f, 1.0f, 0.0f,
-            (float*)(vertices->data + vert_size * (start_vertex + normal_i) + normal_offset));
+            (float*)(vertices->data + vert_size * (start_vertex + normal_i) + offset));
     }
     for (i = normal_i; normal_i < i + 4; normal_i++) {
         vec3_set(
             0.0f, -1.0f, 0.0f,
-            (float*)(vertices->data + vert_size * (start_vertex + normal_i) + normal_offset));
+            (float*)(vertices->data + vert_size * (start_vertex + normal_i) + offset));
     }
     for (i = normal_i; normal_i < i + 4; normal_i++) {
         vec3_set(
             0.0f, 0.0f, 1.0f,
-            (float*)(vertices->data + vert_size * (start_vertex + normal_i) + normal_offset));
+            (float*)(vertices->data + vert_size * (start_vertex + normal_i) + offset));
     }
     for (i = normal_i; normal_i < i + 4; normal_i++) {
         vec3_set(
             0.0f, 0.0f, -1.0f,
-            (float*)(vertices->data + vert_size * (start_vertex + normal_i) + normal_offset));
+            (float*)(vertices->data + vert_size * (start_vertex + normal_i) + offset));
     }
 
     /* init positions */
-    const unsigned int pos_offset = vertices->attribute_offsets[TE_VA_POSITION];
+    offset = vertices->attribute_offsets[TE_VA_POSITION];
     /* +X face */
     i = 0;
     vec3_set(
         half_width, -half, -half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
     vec3_set(
         half_width, half, -half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
     vec3_set(
         half_width, -half, half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
     vec3_set(
         half_width, half, half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
 
     /* -X face */
     vec3_set(
         -half_width, half, -half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
     vec3_set(
         -half_width, -half, -half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
     vec3_set(
         -half_width, half, half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
     vec3_set(
         -half_width, -half, half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
 
     /* +Y face */
     vec3_set(
         half_width, half, -half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
     vec3_set(
         -half_width, half, -half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
     vec3_set(
         half_width, half, half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
     vec3_set(
         -half_width, half, half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
 
     /* -Y face */
     vec3_set(
         -half_width, -half, -half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
     vec3_set(
         half_width, -half, -half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
     vec3_set(
         -half_width, -half, half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
     vec3_set(
         half_width, -half, half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
 
     /* +Z face */
     vec3_set(
         -half_width, -half, half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
     vec3_set(
         half_width, -half, half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
     vec3_set(
         -half_width, half, half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
     vec3_set(
         half_width, half, half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
 
     /* -Z face */
     vec3_set(
         -half_width, half, -half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
     vec3_set(
         half_width, half, -half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
     vec3_set(
         -half_width, -half, -half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
     vec3_set(
         half_width, -half, -half,
-        (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset));
+        (float*)(vertices->data + vert_size * (start_vertex + i) + offset));
     i += 1;
 
     /* make origin around 0 */
     for (i = 0; i < 24; i++) {
-        float* data = (float*)(vertices->data + vert_size * (start_vertex + i) + pos_offset);
+        float* data = (float*)(vertices->data + vert_size * (start_vertex + i) + offset);
         (*data) += half_width + half_width / 4.0f; /* modify X (pos[0]) */
     }
 

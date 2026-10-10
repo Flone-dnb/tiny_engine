@@ -1,5 +1,6 @@
 #include <camera_controller.h>
 
+#include <stdlib.h>
 #include <stdbool.h>
 #include <math/vec2.h>
 #include <game/camera.h>
@@ -204,7 +205,7 @@ camera_controller_on_game_tick(te_camera_controller* controller, float delta_tim
         return;
     }
 
-    vec3_set(controller->movement_input, movement);
+    vec3_copy(controller->movement_input, movement);
     math_fix_diagonal_movement_speedup(movement);
 
     vec3_muls(movement, controller->speed * delta_time_sec, movement);

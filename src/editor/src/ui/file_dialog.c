@@ -446,6 +446,7 @@ te_file_dialog*
 file_dialog_create(
     te_world* world, void* custom, void (*on_selected)(void* custom, const char* path),
     void (*on_cancel)(void* custom), enum te_file_dialog_mode mode) {
+    te_rect_widget* top_widget;
     te_vec2 tmp2;
 
     te_file_dialog* file_dialog = malloc(sizeof(te_file_dialog));
@@ -464,7 +465,7 @@ file_dialog_create(
         filesystem_list_directory(file_dialog->current_path, &file_dialog->dir_entry_count);
 
     /* dark full screen background */
-    te_rect_widget* top_widget = rect_widget_create();
+    top_widget = rect_widget_create();
     {
         te_vec4 tmp4;
 
@@ -482,6 +483,9 @@ file_dialog_create(
     }
 
     {
+        te_vec4 color;
+        te_vec2 pos;
+
         const float button_height = editor_theme_get_button_height() / DIALOG_HEIGHT;
         const float hpadding = editor_theme_get_horizontal_padding() / DIALOG_WIDTH;
         const float vpadding = editor_theme_get_vertical_padding() / DIALOG_HEIGHT;
@@ -501,11 +505,9 @@ file_dialog_create(
 
             widget_set_parent(widget, rect_widget_get_widget(top_widget));
         }
-        te_vec4 color;
         editor_theme_get_background_panel_color(color);
         rect_widget_set_color(back_rect, color);
 
-        te_vec2 pos;
         pos[0] = hpadding;
         pos[1] = vpadding;
 

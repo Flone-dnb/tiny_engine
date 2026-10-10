@@ -358,9 +358,9 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
         te_vec3 vertices[8];
 
         const unsigned short indices[TE_DEBUG_DRAWER_AABB_INDEX_COUNT] = {
-            0, 1, 1, 2, 2, 3, 3, 0, // lower quad
-            4, 5, 5, 6, 6, 7, 7, 4, // upper quad
-            0, 4, 1, 5, 2, 6, 3, 7  // vertical lines
+            0, 1, 1, 2, 2, 3, 3, 0, /* lower quad */
+            4, 5, 5, 6, 6, 7, 7, 4, /* upper quad */
+            0, 4, 1, 5, 2, 6, 3, 7  /* vertical lines */
         };
 
         te_vec3 extents;

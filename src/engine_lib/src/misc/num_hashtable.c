@@ -102,7 +102,7 @@ num_hashtable_destroy(te_num_hashtable* ht) {
 
 static size_t
 get_entry_idx(te_num_hashtable* ht, size_t key) {
-    // Knuth's multiplicative hash
+    /* Knuth's multiplicative hash */
 #if ((size_t)-1) == 0xFFFFFFFF
     size_t fractional_part = key * 2654435769U;
     return fractional_part >> (32 - ht->entry_count_msb_idx);
@@ -339,4 +339,30 @@ num_hashtable_iterator_next(te_num_hashtable_iterator* it) {
     }
 
     return value;
+}
+
+size_t
+calc_string_hash(const char* str) {
+    size_t hash;
+    size_t prime;
+    int c;
+
+    if (sizeof(size_t) >= 8) {
+        /* 64-bit FNV offset basis: 14695981039346656037 */
+        hash = ((size_t)0xCBF29CE4UL << 32) | (size_t)0x428A2F98UL;
+
+        /* 64-bit FNV prime: 1099511628211 */
+        prime = ((size_t)0x00000100UL << 32) | (size_t)0x000001B3UL;
+    } else {
+        /* 32-bit constants */
+        hash = (size_t)2166136261UL;
+        prime = (size_t)16777619UL;
+    }
+
+    while ((c = (unsigned char)*str++)) {
+        hash ^= (size_t)c;
+        hash *= prime;
+    }
+
+    return hash;
 }

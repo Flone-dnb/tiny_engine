@@ -256,6 +256,7 @@ static void on_load_clicked(te_button_widget* button);
 te_scene_animation_editor*
 scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
     wchar_t* wtext;
+    te_rect_widget* root_background;
     te_vec4 separator_color;
     te_vec4 color;
     te_vec2 pos;
@@ -263,6 +264,13 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
     te_vec2 tmp2;
     unsigned int text_len;
     unsigned int i;
+    float padding_x;
+    float padding_y;
+    float text_padding_x;
+    float vspacing;
+    float button_height;
+    float button_width;
+    float separator_width;
 
     te_scene_animation_editor* editor = malloc(sizeof(te_scene_animation_editor));
     editor->engine_editor = engine_editor;
@@ -280,22 +288,28 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
 
     vec2_set(1.0f - pos[0] * 2.0f, 0.99f - pos[1], size);
 
-    const float padding_x = editor_theme_get_horizontal_padding() / size[0];
-    const float padding_y = editor_theme_get_vertical_padding() / size[1];
-    const float text_padding_x = padding_x * 10.0f;
-    const float vspacing = editor_theme_get_vertical_spacing() / size[1];
-    const float button_height = editor_theme_get_button_height() / size[1];
-    const float button_width = TE_SCENE_ANIM_MENU_WIDTH - padding_x * 2.0f;
-    const float separator_width = 0.0028f;
+    padding_x = editor_theme_get_horizontal_padding() / size[0];
+    padding_y = editor_theme_get_vertical_padding() / size[1];
+    text_padding_x = padding_x * 10.0f;
+    vspacing = editor_theme_get_vertical_spacing() / size[1];
+    button_height = editor_theme_get_button_height() / size[1];
+    button_width = TE_SCENE_ANIM_MENU_WIDTH - padding_x * 2.0f;
+    separator_width = 0.0028f;
 
     editor->button_height = button_height;
 
     editor_theme_get_background_panel_color(separator_color);
     vec3_muls(separator_color, 1.5f, separator_color);
 
-    te_rect_widget* root_background = rect_widget_create();
+    root_background = rect_widget_create();
     editor->root_widget = rect_widget_get_widget(root_background);
     {
+        float y_pos;
+        float timeline_x;
+        float timeline_top_height;
+        float section_size;
+        unsigned int section_count;
+
         {
             te_widget* widget = editor->root_widget;
 
@@ -310,7 +324,7 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
         editor_theme_get_background_panel_color(color);
         rect_widget_set_color(root_background, color);
 
-        float y_pos = padding_y;
+        y_pos = padding_y;
 
         /* play/pause button */
         {
@@ -554,7 +568,8 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
                         widget_set_custom_ptr(widget, editor);
                     }
 
-                    text_edit_widget_set_text_height(text_edit, editor_theme_get_text_height());
+                    text_edit_widget_set_text_height(
+                        text_edit, editor_theme_get_text_height());
                     text_edit_widget_set_on_text_accepted(text_edit, on_keyframe_time_changed);
                 }
             }
@@ -921,10 +936,10 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
             rect_widget_set_color(separator, separator_color);
         }
 
-        float timeline_x =
+        timeline_x =
             TE_SCENE_ANIM_MENU_WIDTH + padding_x + TE_SCENE_ANIM_TRACK_NAME_WIDTH + padding_x;
         editor->timeline_x_pos = timeline_x;
-        float timeline_top_height = button_height;
+        timeline_top_height = button_height;
 
         /* track names */
         {
@@ -1078,8 +1093,8 @@ scene_animation_editor_create(te_world* world, te_editor* engine_editor) {
         }
 
         /* split timeline into N sections */
-        const unsigned int section_count = 16;
-        const float section_size = (1.0f - timeline_x) / (float)section_count;
+        section_count = 16;
+        section_size = (1.0f - timeline_x) / (float)section_count;
 
         for (i = 0; i < section_count; i++) {
             float x = timeline_x + section_size * (float)i;
@@ -1370,8 +1385,9 @@ hide_selected_keyframe_menu(te_scene_animation_editor* editor) {
 
     /* keyframe time edit */
     {
-        te_widget* rect = widget_get_parent( // taking parent rect (background of text edit)
-            text_edit_widget_get_widget(editor->keyframe_time_edit_widget));
+        te_widget* rect =
+            widget_get_parent(/* taking parent rect (background of text edit) */
+                              text_edit_widget_get_widget(editor->keyframe_time_edit_widget));
         widget_get_relative_position(rect, tmp2);
 
         tmp2[0] = BUTTON_HIDDEN_X_POS;
@@ -1442,8 +1458,12 @@ hide_selected_keyframe_menu(te_scene_animation_editor* editor) {
 static void
 redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
     wchar_t* wtext;
+    char* timestr;
+    const char* selected_obj_name;
     te_vec2 tmp2;
     unsigned int text_len;
+    unsigned int total_track_count;
+    unsigned int track_button_idx;
     unsigned int i;
 
     te_scene_animation* animation = world_get_scene_animation(editor->world);
@@ -1504,7 +1524,7 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
     }
 
     /* update left border time */
-    char* timestr = time_to_border_str(editor->left_border_time);
+    timestr = time_to_border_str(editor->left_border_time);
     wtext = wchar_from_char(timestr, &text_len);
     text_widget_set_text_own(editor->left_border_time_text, wtext, text_len);
     free(timestr);
@@ -1553,7 +1573,7 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
         return;
     }
 
-    const char* selected_obj_name = get_selected_obj_name(editor);
+    selected_obj_name = get_selected_obj_name(editor);
 
 #define DISPLAY_ANIMATION_TRACKS(type)                                                        \
     {                                                                                         \
@@ -1618,8 +1638,8 @@ redraw_timeline(te_scene_animation_editor* editor, bool update_keyframes) {
     }
 
     /* show already animated variables */
-    unsigned int total_track_count = 0;
-    unsigned int track_button_idx = 0;
+    total_track_count = 0;
+    track_button_idx = 0;
     if (animation != NULL) {
         DISPLAY_ANIMATION_TRACKS(vec4)
         DISPLAY_ANIMATION_TRACKS(vec3)

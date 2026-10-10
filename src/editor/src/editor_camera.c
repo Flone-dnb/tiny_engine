@@ -1,5 +1,6 @@
 #include <editor_camera.h>
 
+#include <stdlib.h>
 #include <stdbool.h>
 #include <math/vec2.h>
 #include <game/camera.h>

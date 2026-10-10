@@ -190,21 +190,22 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
     if (relative_path_to_world == NULL) {
         te_model* box;
         te_model* floor;
-        te_vec3 scale;
+        te_vec3 tmp3;
         te_vec4 color;
 
         /* prepare a sample scene */
         floor = model_create();
         model_set_name(floor, "floor");
-        vec3_set(4.0f, 1.0f, 4.0f, scale);
-        model_set_scale(floor, scale);
+        vec3_set(4.0f, 1.0f, 4.0f, tmp3);
+        model_set_scale(floor, tmp3);
         vec4_set(1.0f, 0.5f, 0.0f, 1.0f, color);
         model_set_color(floor, color);
         world_spawn_game_object(editor->game_world, floor, model_get_game_object_info());
 
         box = model_create();
         model_set_name(box, "box");
-        model_set_position(box, (vec3){0.0f, 1.0f, -1.0f});
+        vec3_set(0.0f, 1.0f, -1.0f, tmp3);
+        model_set_position(box, tmp3);
         world_spawn_game_object(editor->game_world, box, model_get_game_object_info());
     } else {
         size_t len;
@@ -292,7 +293,7 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
         editor_ui_get_world_inspector(editor->ui), editor->game_world);
 }
 
-// ------------------------------------------------------------------------------------------------
+/* ------------------------------------------------------------------------------------------------ */
 static void* file_dialog_custom = NULL;
 static void (*file_dialog_on_selected)(void* custom, const char* path) = NULL;
 static void (*file_dialog_on_cancel)(void* custom) = NULL;
@@ -342,7 +343,7 @@ editor_show_file_dialog(
         editor->dialog_world, editor, prv_file_dialog_on_selected, prv_file_dialog_on_cancel,
         mode);
 }
-// ------------------------------------------------------------------------------------------------
+/* ------------------------------------------------------------------------------------------------ */
 
 void
 editor_refresh_filesystem_view(te_editor* editor) {

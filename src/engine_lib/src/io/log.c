@@ -170,7 +170,7 @@ prv_log_fmt(
 
     size = vsnprintf(NULL, 0, fmt, args);
     if (size <= 0) {
-        log_error("failed to format last log message");
+        log_error(__FILE__, __LINE__, "failed to format last log message");
         abort();
     }
     message = malloc((unsigned long)size + 1);

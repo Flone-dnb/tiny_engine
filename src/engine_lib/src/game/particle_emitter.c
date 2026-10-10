@@ -92,17 +92,17 @@ te_particle_emitter*
 particle_emitter_create(void) {
     te_particle_emitter* emitter = malloc(sizeof(te_particle_emitter));
 
-    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, emitter->color);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, emitter->color);
     vec4_copy(emitter->color, emitter->color_fade_in);
     vec4_copy(emitter->color, emitter->color_fade_out);
 
-    vec3_copy((vec3){0.0f, 2.0f, 0.0f}, emitter->spawn_velocity);
-    vec3_copy((vec3){0.5f, 0.0f, 0.5f}, emitter->spawn_velocity_rand);
-    vec3_copy((vec3){0.0f, 0.0f, 0.0f}, emitter->spawn_offset_rand);
+    vec3_set(0.0f, 2.0f, 0.0f, emitter->spawn_velocity);
+    vec3_set(0.5f, 0.0f, 0.5f, emitter->spawn_velocity_rand);
+    vec3_set(0.0f, 0.0f, 0.0f, emitter->spawn_offset_rand);
 
-    vec3_copy((vec3){0.0f, -1.0f, 0.0f}, emitter->gravity);
+    vec3_set(0.0f, -1.0f, 0.0f, emitter->gravity);
 
-    vec3_copy((vec3){0.0f, 0.0f, 0.0f}, emitter->position);
+    vec3_set(0.0f, 0.0f, 0.0f, emitter->position);
 
     emitter->size = 0.25f;
     emitter->size_fade_in = emitter->size;
@@ -184,13 +184,14 @@ check_file_path(const char* relative_path) {
 
     if (relative_path != NULL) {
         /* check if path exists */
+        FILE* fp;
         char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
         if (!filesystem_does_path_exists(res_path)) {
             /* do nothing, probably user typing the path */
             free(res_path);
             return false;
         }
-        FILE* fp = fopen(res_path, "rb");
+        fp = fopen(res_path, "rb");
         if (fp == NULL) {
             /* not a file */
             free(res_path);
@@ -714,8 +715,8 @@ add_to_renderer(te_particle_emitter* emitter) {
     data->particles = NULL;
 
     /* estimate max particle count for GPU data */
-    emitter->transient_max_particle_count = (unsigned int)((float)ceil(
-        (float)ceil(emitter->time_to_live_sec + 0.1f) / emitter->delay_between_spawns));
+    emitter->transient_max_particle_count = (unsigned int)(math_ceil(
+        math_ceil(emitter->time_to_live_sec + 0.1f) / emitter->delay_between_spawns));
     data->particles =
         malloc(sizeof(te_particle_render_data) * emitter->transient_max_particle_count);
 
@@ -725,7 +726,7 @@ add_to_renderer(te_particle_emitter* emitter) {
         malloc(sizeof(te_particle_data) * emitter->transient_max_particle_count);
 
     emitter->transient_alive_particle_count = 0;
-    emitter->transient_time_before_new_spawn = 0.0f; // ignore spawn delay on first tick
+    emitter->transient_time_before_new_spawn = 0.0f; /* ignore spawn delay on first tick */
     emitter->is_buf_a = true;
 }
 

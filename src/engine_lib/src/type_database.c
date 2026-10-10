@@ -25,32 +25,6 @@ typedef struct te_type_database {
 /* static for ease of access */
 static te_type_database type_database;
 
-size_t
-calc_string_hash(const char* str) {
-    size_t hash;
-    size_t prime;
-    int c;
-
-    if (sizeof(size_t) >= 8) {
-        /* 64-bit FNV offset basis: 14695981039346656037 */
-        hash = ((size_t)0xCBF29CE4UL << 32) | (size_t)0x428A2F98UL;
-
-        /* 64-bit FNV prime: 1099511628211 */
-        prime = ((size_t)0x00000100UL << 32) | (size_t)0x000001B3UL;
-    } else {
-        /* 32-bit constants */
-        hash = (size_t)2166136261UL;
-        prime = (size_t)16777619UL;
-    }
-
-    while ((c = (unsigned char)*str++)) {
-        hash ^= (size_t)c;
-        hash *= prime;
-    }
-
-    return hash;
-}
-
 static void
 free_type_info(void* ptr) {
     te_type_info* info = ptr;

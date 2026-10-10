@@ -35,3 +35,5 @@ te_num_hashtable_iterator* num_hashtable_iterator_create(te_num_hashtable* ht);
 void num_hashtable_iterator_destroy(te_num_hashtable_iterator* it);
 /* returns NULL if reached end */
 void* num_hashtable_iterator_next(te_num_hashtable_iterator* it);
+
+size_t calc_string_hash(const char* str);

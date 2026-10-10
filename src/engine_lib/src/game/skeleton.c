@@ -8,7 +8,7 @@
 #include <io/log.h>
 #include <io/filesystem.h>
 #include <math/math_funcs.h>
-#include <hashmap.c/hashmap.h>
+#include <misc/num_hashtable.h>
 
 struct te_skeleton_bone;
 typedef struct te_skeleton_bone {
@@ -31,7 +31,7 @@ struct te_skeleton {
     /* do not free/destroy, model that uses this skeleton */
     te_model* model;
 
-    struct hashmap* preloaded_anims;
+    te_num_hashtable* preloaded_anims;
 
     /* the number of items in this array is @ref bone_count
      * stores root bone at index 0, then child nodes, example:
@@ -107,22 +107,7 @@ struct te_skeleton_animation {
     bool loop;
 };
 
-/* command hash for hashmap */
-static uint64_t
-anim_hash(const void* item, uint64_t seed0, uint64_t seed1) {
-    const te_skeleton_animation* const* info = item;
-    return hashmap_sip((*info)->name, strlen((*info)->name), seed0, seed1);
-}
-
-/* command compare for hashmap */
-static int
-anim_compare(const void* a, const void* b, void* udata) {
-    const te_skeleton_animation* const* info1 = a;
-    const te_skeleton_animation* const* info2 = b;
-    (void)udata;
-    return strcmp((*info1)->name, (*info2)->name);
-}
-
+static void free_anim(void* ptr);
 static void load_skeleton_bone(
     te_skeleton* skeleton, FILE* fp, unsigned int* bone_idx, unsigned int parent_bone_idx);
 
@@ -142,8 +127,8 @@ prv_skeleton_create(
     skeleton->curr_anim_blend_time_sec = 0.0f;
     skeleton->tick_callback_id = 0xFFFFFFFF;
 
-    skeleton->preloaded_anims = hashmap_new(
-        sizeof(te_skeleton_animation*), 8, 0, 0, anim_hash, anim_compare, NULL, NULL);
+    skeleton->preloaded_anims =
+        num_hashtable_create(64, sizeof(te_skeleton_animation), free_anim);
 
     res_path = filesystem_prepend_res_to_path(relative_path, NULL);
     fp = fopen(res_path, "rb");
@@ -192,21 +177,20 @@ skeleton_animation_destroy(te_skeleton_animation* anim) {
     free(anim);
 }
 
+static void
+free_anim(void* ptr) {
+    te_skeleton_animation* anim = ptr;
+    skeleton_animation_destroy(anim);
+    free(anim);
+}
+
 void
 prv_skeleton_destroy(te_skeleton* skeleton) {
-    void* item;
     unsigned int i;
-    size_t iter;
 
     skeleton_stop_animation(skeleton);
 
-    iter = 0;
-    while (hashmap_iter(skeleton->preloaded_anims, &iter, &item)) {
-        const te_skeleton_animation** ptr = item;
-        te_skeleton_animation* anim = (te_skeleton_animation*)*ptr;
-        skeleton_animation_destroy(anim);
-    }
-    hashmap_free(skeleton->preloaded_anims);
+    num_hashtable_destroy(skeleton->preloaded_anims);
 
     free(skeleton->skinning_mats);
 
@@ -473,7 +457,7 @@ prv_skeleton_update(te_skeleton* skeleton, float delta_time_sec) {
         anim->current_time_sec += delta_time_sec;
 
         if (anim->loop) {
-            anim->current_time_sec = (float)fmod(anim->current_time_sec, anim->duration_sec);
+            anim->current_time_sec = math_mod(anim->current_time_sec, anim->duration_sec);
         } else {
             anim->current_time_sec =
                 math_clamp(anim->current_time_sec, 0.0f, anim->duration_sec);
@@ -626,20 +610,14 @@ prv_skeleton_preload_animation_file(
     unsigned int name_len) {
     FILE* fp;
     te_skeleton_animation* anim;
+    size_t name_hash;
     unsigned int i;
 
-    /* check if already loaded */
-    {
-        te_skeleton_animation* lookup_ptr;
-        const te_skeleton_animation* const* found;
+    name_hash = calc_string_hash(name);
 
-        te_skeleton_animation lookup;
-        lookup.name = (char*)name; /* only for lookup */
-        lookup_ptr = &lookup;
-        found = hashmap_get(skeleton->preloaded_anims, &lookup_ptr);
-        if (found != NULL) {
-            return;
-        }
+    /* check if already loaded */
+    if (num_hashtable_find(skeleton->preloaded_anims, name_hash) != NULL) {
+        return;
     }
 
     fp = fopen(path_to_anim_file, "rb");
@@ -679,7 +657,7 @@ prv_skeleton_preload_animation_file(
     fclose(fp);
 
     /* add to cache */
-    hashmap_set(skeleton->preloaded_anims, &anim);
+    num_hashtable_insert(skeleton->preloaded_anims, name_hash, anim);
 }
 
 void
@@ -739,13 +717,11 @@ skeleton_load_animations(te_skeleton* skeleton, const char* relative_path) {
 void
 skeleton_play_animation(
     te_skeleton* skeleton, const char* anim_name, bool loop, float blend_time_sec) {
-    te_skeleton_animation* lookup_ptr;
-    te_skeleton_animation* const* found;
+    te_skeleton_animation* found;
+    size_t name_hash;
 
-    te_skeleton_animation lookup;
-    lookup.name = (char*)anim_name; /* only for lookup */
-    lookup_ptr = &lookup;
-    found = hashmap_get(skeleton->preloaded_anims, &lookup_ptr);
+    name_hash = calc_string_hash(anim_name);
+    found = num_hashtable_find(skeleton->preloaded_anims, name_hash);
     if (found == NULL) {
         log_error_fmt(
             __FILE__, __LINE__, "unable to find animation %s (was it loaded previously?)",
@@ -759,7 +735,7 @@ skeleton_play_animation(
         skeleton->curr_anim_blend_time_sec = 0.0f;
     }
 
-    skeleton->playing_anim = *found;
+    skeleton->playing_anim = found;
     skeleton->playing_anim->loop = loop;
     skeleton->playing_anim->current_time_sec = 0.0f;
 
@@ -794,16 +770,6 @@ skeleton_stop_animation(te_skeleton* skeleton) {
 
 void
 skeleton_unload_animations(te_skeleton* skeleton) {
-    void* item;
-    size_t iter;
-
     skeleton_stop_animation(skeleton);
-
-    iter = 0;
-    while (hashmap_iter(skeleton->preloaded_anims, &iter, &item)) {
-        const te_skeleton_animation** ptr = item;
-        te_skeleton_animation* anim = (te_skeleton_animation*)*ptr;
-        skeleton_animation_destroy(anim);
-    }
-    hashmap_clear(skeleton->preloaded_anims, false);
+    num_hashtable_clear(skeleton->preloaded_anims);
 }

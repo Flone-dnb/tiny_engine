@@ -95,8 +95,8 @@ camera_create(void) {
     camera->near_clip = 0.2f;
     camera->far_clip = 150.0f;
     camera->vertical_fov = 90;
-    camera->render_width = 0;  // not set yet
-    camera->render_height = 0; // not set yet
+    camera->render_width = 0;  /* not set yet */
+    camera->render_height = 0; /* not set yet */
     camera->custom_value = 0;
     camera->is_view_mat_outdated = true;
     camera->is_proj_mat_outdated = true;
@@ -132,21 +132,27 @@ get_editor_camera_model_geometry(
 
 static void
 create_editor_model(te_camera* camera) {
+    te_vec4 color;
+    te_vec3 scale;
+    te_vec3 pos;
+
     if (camera->world == NULL || camera->editor_model != NULL) {
         return;
     }
 
     camera->editor_model = model_create();
 
+    vec4_set(0.5f, 0.5f, 0.5f, 1.0f, color);
+    vec3_set(0.25f, 0.25f, 0.25f, scale);
+
     model_set_is_serialization_allowed(camera->editor_model, false);
-    model_set_color(camera->editor_model, (vec4){0.5f, 0.5f, 0.5f, 1.0f});
-    model_set_scale(camera->editor_model, (vec3){0.25f, 0.25f, 0.25f});
+    model_set_color(camera->editor_model, color);
+    model_set_scale(camera->editor_model, scale);
     model_set_custom_geometry_provider(camera->editor_model, get_editor_camera_model_geometry);
     model_set_custom_ptr(camera->editor_model, camera);
 
     world_spawn_game_object(camera->world, camera->editor_model, model_get_game_object_info());
 
-    te_vec3 pos;
     camera_get_world_position(camera, pos);
     model_set_position(camera->editor_model, pos);
 }

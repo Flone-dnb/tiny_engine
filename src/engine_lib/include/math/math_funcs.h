@@ -12,6 +12,8 @@ float math_rad(float deg);
 float math_deg(float rad);
 float math_tan(float value);
 float math_round(float value);
+float math_ceil(float value);
+float math_mod(float a, float b);
 
 /* returns value between 0 (if x < edge0) and 1 (if x > edge1) */
 float math_smoothstep(float edge0, float edge1, float x);

@@ -1,5 +1,6 @@
 #include <game/model.h>
 
+#include <float.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -67,12 +68,12 @@ prv_model_set_attribute_pointers_model_vertex(void) {
     /* normal */
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(
-        1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)sizeof(vec3));
+        1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)sizeof(te_vec3));
 
     /* UV */
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(
-        2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)(sizeof(vec3) * 2));
+        2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)(sizeof(te_vec3) * 2));
 }
 
 void
@@ -84,12 +85,13 @@ prv_model_set_attribute_pointers_model_vertex_skinned(void) {
     /* normal */
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(
-        1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned), (void*)sizeof(vec3));
+        1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned), (void*)sizeof(te_vec3));
 
     /* UV */
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(
-        2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned), (void*)(sizeof(vec3) * 2));
+        2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned),
+        (void*)(sizeof(te_vec3) * 2));
 
     /* bone indices */
     glEnableVertexAttribArray(3);
@@ -100,14 +102,14 @@ prv_model_set_attribute_pointers_model_vertex_skinned(void) {
 #else
     glVertexAttribIPointer(/* note `I` here, passing array of integers */
                            3, 4, GL_UNSIGNED_BYTE, sizeof(te_model_vertex_skinned),
-                           (void*)(sizeof(vec3) * 2 + sizeof(vec2)));
+                           (void*)(sizeof(te_vec3) * 2 + sizeof(te_vec2)));
 #endif
 
     /* bone weights */
     glEnableVertexAttribArray(4);
     glVertexAttribPointer(
         4, 4, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned),
-        (void*)(sizeof(vec3) * 2 + sizeof(vec2) + 4 * sizeof(te_bone_index_t)));
+        (void*)(sizeof(te_vec3) * 2 + sizeof(te_vec2) + 4 * sizeof(te_bone_index_t)));
 }
 
 te_vertex_pack*
@@ -120,9 +122,9 @@ vertex_pack_create(unsigned int vertex_count, bool is_skinned) {
         pack->vertex_sizeof = sizeof(te_model_vertex);
 
         pack->attribute_offsets[TE_VA_POSITION] = offset;
-        offset += sizeof(vec3);
+        offset += sizeof(te_vec3);
         pack->attribute_offsets[TE_VA_NORMAL] = offset;
-        offset += sizeof(vec3);
+        offset += sizeof(te_vec3);
         pack->attribute_offsets[TE_VA_UV] = offset;
 
 #if defined(ENGINE_GLES)
@@ -134,11 +136,11 @@ vertex_pack_create(unsigned int vertex_count, bool is_skinned) {
         pack->vertex_sizeof = sizeof(te_model_vertex_skinned);
 
         pack->attribute_offsets[TE_VA_POSITION] = offset;
-        offset += sizeof(vec3);
+        offset += sizeof(te_vec3);
         pack->attribute_offsets[TE_VA_NORMAL] = offset;
-        offset += sizeof(vec3);
+        offset += sizeof(te_vec3);
         pack->attribute_offsets[TE_VA_UV] = offset;
-        offset += sizeof(vec2);
+        offset += sizeof(te_vec2);
         pack->attribute_offsets[TE_VA_BONE_INDICES] = offset;
         offset += sizeof(te_bone_index_t) * 4;
         pack->attribute_offsets[TE_VA_BONE_WEIGHTS] = offset;
@@ -396,6 +398,8 @@ check_file_path(const char* relative_path) {
     }
 
     if (relative_path != NULL) {
+        FILE* fp;
+
         /* check if path exists */
         char* res_path = filesystem_prepend_res_to_path(relative_path, NULL);
         if (!filesystem_does_path_exists(res_path)) {
@@ -403,7 +407,7 @@ check_file_path(const char* relative_path) {
             free(res_path);
             return false;
         }
-        FILE* fp = fopen(res_path, "rb");
+        fp = fopen(res_path, "rb");
         if (fp == NULL) {
             /* not a file */
             free(res_path);
@@ -456,7 +460,8 @@ prv_model_get_renderer(te_model* model) {
     }
 }
 
-static void prv_model_calc_world_normal_matrices(te_model* model, mat4 world, mat3 normal);
+static void
+prv_model_calc_world_normal_matrices(te_model* model, te_mat4 world, te_mat3 normal);
 
 static void
 prv_model_update_child_model_mats(te_model* model) {
@@ -484,9 +489,9 @@ prv_model_on_after_skeleton_updated(te_model* model) {
 }
 
 static void
-prv_model_calc_world_normal_matrices(te_model* model, mat4 out_world, mat3 out_normal) {
-    mat4 mat1;
-    mat4 mat2;
+prv_model_calc_world_normal_matrices(te_model* model, te_mat4 out_world, te_mat3 out_normal) {
+    te_mat4 mat1;
+    te_mat4 mat2;
 
     math_make_rotation_mat(model->rotation, mat2);
 
@@ -1247,7 +1252,7 @@ prv_model_remove_from_model_renderer(te_model* model) {
     /* DO NOT: set NULL to world in this function, the caller is expected to do it if needed */
 }
 
-mat4*
+te_mat4*
 prv_model_get_world_mat_tmp(te_model* model) {
     te_model_render_data* data;
 
@@ -1412,7 +1417,7 @@ prv_model_calc_aabb(te_vertex_pack* vertices) {
     float delta;
 
     vec3_set(FLT_MAX, FLT_MAX, FLT_MAX, min);
-    vec3_set(FLT_MIN, FLT_MIN, FLT_MIN, max);
+    vec3_set(-FLT_MAX, -FLT_MAX, -FLT_MAX, max);
 
     for (i = 0; i < vertices->vertex_count; i++) {
         unsigned char* data =
@@ -1434,9 +1439,9 @@ prv_model_calc_aabb(te_vertex_pack* vertices) {
     /* to avoid thin sides */
     delta = 0.001f;
 
-    aabb.extents[0] = glm_max(max[0] - aabb.center[0], delta);
-    aabb.extents[1] = glm_max(max[1] - aabb.center[1], delta);
-    aabb.extents[2] = glm_max(max[2] - aabb.center[2], delta);
+    aabb.extents[0] = math_max(max[0] - aabb.center[0], delta);
+    aabb.extents[1] = math_max(max[1] - aabb.center[1], delta);
+    aabb.extents[2] = math_max(max[2] - aabb.center[2], delta);
 
     return aabb;
 }

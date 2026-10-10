@@ -1,5 +1,6 @@
 #include <obj_picking.h>
 
+#include <stdlib.h>
 #include <world.h>
 #include <game/game_object_info.h>
 #include <game/camera.h>
@@ -50,7 +51,7 @@ test_model_hit(
     if (gizmo != NULL) {
         if (model == gizmo_get_model_x(gizmo) || model == gizmo_get_model_y(gizmo)
             || model == gizmo_get_model_z(gizmo)) {
-            // Always prioritize gizmo.
+            /* always prioritize gizmo */
             closest_info->model = model;
             return true;
         }

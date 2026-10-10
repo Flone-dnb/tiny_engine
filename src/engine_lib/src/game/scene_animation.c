@@ -1183,10 +1183,10 @@ interpolate_uint(
         unsigned int out_value;
 
         if (var->keyframes[left_idx].interpolation == TE_SAIT_LINEAR) {
-            out_value = from + (unsigned int)(float)round(factor * (float)(to - from));
+            out_value = from + (unsigned int)math_round(factor * (float)(to - from));
         } else {
             float s = math_smoothstep(0.0f, 1.0f, factor);
-            out_value = from + (unsigned int)(float)round(s * (float)(to - from));
+            out_value = from + (unsigned int)math_round(s * (float)(to - from));
         }
 
         obj->transient_obj_type_info->uint_setters[var->transient_var_info->set_get_index](
@@ -1362,7 +1362,7 @@ scene_animation_tick(te_scene_animation* anim, float delta_time_sec) {
             anim->current_time_sec
             > anim->transient_duration_sec) { /* to allow ticking on the last anim frame */
             anim->current_time_sec =
-                (float)fmod(anim->current_time_sec, anim->transient_duration_sec);
+                math_mod(anim->current_time_sec, anim->transient_duration_sec);
         }
     } else {
         if (anim->current_time_sec > anim->transient_duration_sec) {

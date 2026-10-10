@@ -79,7 +79,7 @@ struct te_world_inspector {
     te_text_widget* top_button_text;
 
     /* valid while spawned, buttons that fill all available space (moved outside of the viewport if should not be visible)
-    /* number of items in this array is @ref item_buttons_count */
+     * number of items in this array is @ref item_buttons_count */
     te_button_widget** item_buttons;
 
     /* number of items in this array is @ref item_list_count
@@ -228,7 +228,8 @@ refresh_item_names(te_world_inspector* inspector) {
     unsigned int i;
     unsigned int text_len;
 
-    const float hpadding = editor_theme_get_horizontal_padding() / editor_theme_get_left_panel_width();
+    const float hpadding =
+        editor_theme_get_horizontal_padding() / editor_theme_get_left_panel_width();
     const float button_width = 1.0f - hpadding * 2.0f;
     const float indent_size = hpadding * 2.0f;
 
@@ -1241,20 +1242,17 @@ on_button_add_world_clicked(te_button_widget* button) {
 
 void
 world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
-    if (inspector->left_panel != NULL) {
-        log_error(__FILE__, __LINE__, "world inspector is already displayed");
-        abort();
-    }
-
-    inspector->left_panel = left_panel;
-
     /* relative to the left panel */
-    const float hspacing = editor_theme_get_horizontal_spacing() / editor_theme_get_left_panel_width();
+    const float hspacing =
+        editor_theme_get_horizontal_spacing() / editor_theme_get_left_panel_width();
     const float vspacing = editor_theme_get_vertical_spacing();
-    const float hpadding = editor_theme_get_horizontal_padding() / editor_theme_get_left_panel_width();
+    const float hpadding =
+        editor_theme_get_horizontal_padding() / editor_theme_get_left_panel_width();
     const float hpadding_in_button = hpadding;
     const float vpadding_in_button = 0.0f;
     const float total_width = 1.0f - hpadding * 2.0f;
+    float nav_menu_height;
+    float world_item_list_y_pos;
 
     unsigned int text_len;
     wchar_t* wtext;
@@ -1262,6 +1260,12 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
     te_vec2 tmp2;
 
     float y_pos = vspacing;
+
+    if (inspector->left_panel != NULL) {
+        log_error(__FILE__, __LINE__, "world inspector is already displayed");
+        abort();
+    }
+    inspector->left_panel = left_panel;
 
     /* world settings button */
     {
@@ -1273,8 +1277,12 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
             te_widget* widget = button_widget_get_widget(button);
             widget_set_custom_ptr(widget, inspector);
             widget_set_parent(widget, left_panel);
-            widget_set_relative_position(widget, (vec2){hpadding, y_pos});
-            widget_set_relative_size(widget, (vec2){total_width, editor_theme_get_button_height()});
+
+            vec2_set(hpadding, y_pos, tmp2);
+            widget_set_relative_position(widget, tmp2);
+
+            vec2_set(total_width, editor_theme_get_button_height(), tmp2);
+            widget_set_relative_size(widget, tmp2);
         }
 
         editor_theme_get_button_color(color);
@@ -1318,8 +1326,12 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
             te_widget* widget = button_widget_get_widget(button);
             widget_set_custom_ptr(widget, inspector);
             widget_set_parent(widget, left_panel);
-            widget_set_relative_position(widget, (vec2){hpadding, y_pos});
-            widget_set_relative_size(widget, (vec2){total_width, editor_theme_get_button_height()});
+
+            vec2_set(hpadding, y_pos, tmp2);
+            widget_set_relative_position(widget, tmp2);
+
+            vec2_set(total_width, editor_theme_get_button_height(), tmp2);
+            widget_set_relative_size(widget, tmp2);
         }
         inspector->scene_animation_button = button;
 
@@ -1364,8 +1376,12 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
             te_widget* widget = button_widget_get_widget(button);
             widget_set_custom_ptr(widget, inspector);
             widget_set_parent(widget, left_panel);
-            widget_set_relative_position(widget, (vec2){hpadding, y_pos});
-            widget_set_relative_size(widget, (vec2){total_width, editor_theme_get_button_height()});
+
+            vec2_set(hpadding, y_pos, tmp2);
+            widget_set_relative_position(widget, tmp2);
+
+            vec2_set(total_width, editor_theme_get_button_height(), tmp2);
+            widget_set_relative_size(widget, tmp2);
         }
 
         editor_theme_get_button_color(color);
@@ -1416,8 +1432,12 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
             te_widget* widget = button_widget_get_widget(button_3dobj);
             widget_set_custom_ptr(widget, inspector);
             widget_set_parent(widget, left_panel);
-            widget_set_relative_position(widget, (vec2){hpadding, y_pos});
-            widget_set_relative_size(widget, (vec2){button_width, editor_theme_get_button_height()});
+
+            vec2_set(hpadding, y_pos, tmp2);
+            widget_set_relative_position(widget, tmp2);
+
+            vec2_set(button_width, editor_theme_get_button_height(), tmp2);
+            widget_set_relative_size(widget, tmp2);
         }
 
         if (inspector->is_3dobj_mode_selected) {
@@ -1555,8 +1575,8 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
     }
     y_pos += editor_theme_get_button_height();
 
-    const float world_item_list_y_pos = y_pos;
-    const float nav_menu_height = editor_theme_get_button_height();
+    world_item_list_y_pos = y_pos;
+    nav_menu_height = editor_theme_get_button_height();
 
     /* world item list */
     {
@@ -1565,8 +1585,8 @@ world_inspector_add(te_world_inspector* inspector, te_widget* left_panel) {
         unsigned int i;
 
         /* count how much buttons for world items we can fit in the list */
-        const float list_and_nav_menu_height =
-            editor_theme_get_world_inspector_height() - world_item_list_y_pos - nav_menu_height;
+        const float list_and_nav_menu_height = editor_theme_get_world_inspector_height()
+                                               - world_item_list_y_pos - nav_menu_height;
         const float list_item_spacing = vspacing;
         unsigned int button_count = 0;
         {

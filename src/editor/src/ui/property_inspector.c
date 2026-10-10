@@ -112,7 +112,7 @@ on_variable_text_edit_changed(te_text_edit_widget* text_edit) {
         comp_idx = (unsigned int)widget_name[0];
     }
 
-    wchar_to_char(src_text, &text_len);
+    text = wchar_to_char(src_text, &text_len);
 
     info = type_database_get_type_info(inspector->obj_type_id);
     if (info == NULL) {
@@ -293,6 +293,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
     const te_type_info* type_info;
     te_text_widget* text_widget;
     wchar_t* wtext;
+    te_scene_animation_editor* anim_editor;
     te_vec4 text_edit_background_color;
     te_vec4 checkbox_checked_color;
     te_vec4 color;
@@ -425,7 +426,7 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
         }
     }
 
-    te_scene_animation_editor* anim_editor = world_inspector_get_scene_animation_editor(
+    anim_editor = world_inspector_get_scene_animation_editor(
         editor_ui_get_world_inspector(inspector->ui));
     if (anim_editor != NULL) {
         scene_animation_editor_show_tracks(anim_editor, obj, type_info);
@@ -481,8 +482,12 @@ property_inspector_show(te_property_inspector* inspector, void* obj, const char*
                 {
                     te_widget* widget = text_edit_widget_get_widget(text_edit);
                     widget_set_parent(widget, rect_widget_get_widget(rect));
-                    widget_set_relative_position(widget, (vec2){hpadding, 0.0f});
-                    widget_set_relative_size(widget, (vec2){1.0f - hpadding, 1.0f});
+
+                    vec2_set(hpadding, 0.0f, tmp2);
+                    widget_set_relative_position(widget, tmp2);
+
+                    vec2_set(1.0f - hpadding, 1.0f, tmp2);
+                    widget_set_relative_size(widget, tmp2);
 
                     widget_set_custom_ptr(widget, inspector);
                     widget_set_custom_value(widget, var_idx);

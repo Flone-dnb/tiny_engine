@@ -1,5 +1,6 @@
 #include <game.h>
 
+#include <stdlib.h>
 #include <render/renderer.h>
 #include <render/font_manager.h>
 #include <game_manager.h>
@@ -69,30 +70,49 @@ game_on_game_started(void* game_instance, te_game_manager* game_manager) {
     camera_controller_set_camera(game->camera_controller, camera);
     window_capture_mouse_cursor(game_manager_get_window(game_manager), true);
 
-    /* set initial camera position/rotation */
-    camera_set_position(camera, (vec3){0.0f, 2.0f, 4.0f});
-    camera_set_rotation(camera, (vec3){0.0f, 0.0f, 0.0f});
+    {
+        /* set initial camera position/rotation */
+        te_vec3 tmp3;
+
+        vec3_set(0.0f, 2.0f, 4.0f, tmp3);
+        camera_set_position(camera, tmp3);
+
+        vec3_set(0.0f, 0.0f, 0.0f, tmp3);
+        camera_set_rotation(camera, tmp3);
+    }
 
     /* setup light */
     light_params = renderer_get_light_params(game_manager_get_renderer(game_manager));
-    vec3_copy((vec3){1.0f, -1.0f, 1.0f}, light_params->directional_light_direction);
+    vec3_set(1.0f, -1.0f, 1.0f, light_params->directional_light_direction);
     vec3_normalize(light_params->directional_light_direction);
-    vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, light_params->directional_light_color);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, light_params->directional_light_color);
 
     {
         /* prepare a sample scene */
         te_model* floor;
         te_model* box;
+        te_vec3 tmp3;
+        te_vec4 tmp4;
 
         floor = model_create();
         model_set_name(floor, "floor");
-        model_set_scale(floor, (vec3){4.0f, 1.0f, 4.0f});
-        model_set_color(floor, (vec4){1.0f, 0.5f, 0.0f, 1.0f});
+
+        vec3_set(4.0f, 1.0f, 4.0f, tmp3);
+        model_set_scale(floor, tmp3);
+
+        vec4_set(1.0f, 0.5f, 0.0f, 1.0f, tmp4);
+        model_set_color(floor, tmp4);
+
         world_spawn_game_object(world, floor, model_get_game_object_info());
+
+        /* --------------- */
 
         box = model_create();
         model_set_name(box, "box");
-        model_set_position(box, (vec3){0.0f, 1.0f, -1.0f});
+
+        vec3_set(0.0f, 1.0f, -1.0f, tmp3);
+        model_set_position(box, tmp3);
+
         world_spawn_game_object(world, box, model_get_game_object_info());
     }
 }
