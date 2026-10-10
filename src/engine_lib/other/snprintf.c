@@ -1,6 +1,6 @@
 #include <snprintf.h>
 
-#if !defined(_MSC_VER) || (_MSC_VER < 1900)
+#if defined(HAVE_SNPRINTF)
 
 #include <stdlib.h>
 #include <string.h>
@@ -58,4 +58,5 @@ snprintf(char* str, size_t size, const char* format, ...) {
 
     return retval;
 }
+
 #endif
