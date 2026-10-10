@@ -100,9 +100,11 @@ vec3_len(te_vec3 v) {
 
 void
 vec3_cross(te_vec3 a, te_vec3 b, te_vec3 dst) {
-    dst[0] = a[1] * b[2] - a[2] * b[1];
-    dst[1] = a[2] * b[0] - a[0] * b[2];
-    dst[2] = a[0] * b[1] - a[1] * b[0];
+    te_vec3 out; /* need a copy in case dst is input */
+    out[0] = a[1] * b[2] - a[2] * b[1];
+    out[1] = a[2] * b[0] - a[0] * b[2];
+    out[2] = a[0] * b[1] - a[1] * b[0];
+    vec3_copy(out, dst);
 }
 
 void
