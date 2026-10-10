@@ -447,7 +447,9 @@ config_section_set_float_array(
     te_config_section* section;
     te_config_item* new_item;
     size_t key_len;
+#if defined(DEBUG)
     unsigned int i;
+#endif
 
 #if defined(DEBUG)
     if (section_idx >= config->section_count) {
