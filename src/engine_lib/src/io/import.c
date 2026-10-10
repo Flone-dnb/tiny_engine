@@ -598,7 +598,7 @@ save_primitive(
 
     /* check index count */
     if (primitive->indices->count
-        > 0xFFFFFFFFu) { // because we store index count as unsigned int
+        > 0xFFFFFFFFu) { /* because we store index count as unsigned int */
         log_error_fmt(
             __FILE__, __LINE__, "GLTF mesh index count exceeds limit of %u", 0xFFFFFFFFu);
         abort();
@@ -840,7 +840,7 @@ save_primitive(
             cgltf_accessor* accessor = primitive->attributes[weights_attribute_idx].data;
             cgltf_buffer_view* buffer_view = accessor->buffer_view;
 
-            stride = buffer_view->stride == 0 ? sizeof(vec4) : buffer_view->stride;
+            stride = buffer_view->stride == 0 ? sizeof(te_vec4) : buffer_view->stride;
             data = (char*)buffer_view->buffer->data + (buffer_view->offset + accessor->offset);
 
             for (i = 0; i < vertex_count; i++) {
