@@ -3,7 +3,7 @@
 	url = https://github.com/nothings/stb.git
 [submodule "ext/freetype"]
 	path = ext/freetype
-	url = https://gitlab.freedesktop.org/freetype/freetype.git
+	url = https://github.com/Flone-dnb/freetype.git
 [submodule "ext/memcheck"]
 	path = ext/memcheck
 	url = https://github.com/Flone-dnb/memcheck.git
