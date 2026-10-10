@@ -234,10 +234,10 @@ num_hashtable_clear(te_num_hashtable* ht) {
     size_t i;
 
     for (entry_idx = 0; entry_idx < ht->entry_count; entry_idx++) {
-        if (ht->entries[i] == NULL) {
+        if (ht->entries[entry_idx] == NULL) {
             continue;
         }
-        entry = ht->entries[i];
+        entry = ht->entries[entry_idx];
 
         for (i = 0; i < entry->items_count; i++) {
             item = &entry->items[i];
