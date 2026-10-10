@@ -68,6 +68,12 @@ function(tiny_engine_configure_target TARGET_NAME)
 	    target_compile_definitions(${TARGET_NAME} PUBLIC DEBUG)
     endif()
 
+    # Add 32-bit macro.
+    if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+        message(STATUS "${PROJECT_NAME}: adding 32-bit macro")
+        target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_32BIT)
+    endif()
+
     # Debug tools.
     if(NOT IS_RELEASE_BUILD)
 	    target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_DEBUG_TOOLS)

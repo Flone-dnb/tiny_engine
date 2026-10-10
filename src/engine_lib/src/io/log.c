@@ -91,7 +91,7 @@ prv_log(enum te_log_category category, const char* message, const char* filepath
         }
     }
 
-    for (i = strlen(filepath) - 1; i > 0; i--) {
+    for (i = (unsigned long)(strlen(filepath) - 1); i > 0; i--) {
         if (filepath[i] == '/' || filepath[i] == '\\') {
             filename_start = i + 1;
             break;

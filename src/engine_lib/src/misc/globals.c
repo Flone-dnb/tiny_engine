@@ -65,7 +65,7 @@ globals_get_app_name(void) {
         /** save app name */
         for (i = last_slash_pos + 1, j = 0; i < path_len && j < max_app_name_len; i++, j++) {
 #if defined(WIN32)
-            if (buffer[src] == '.') {
+            if (buffer[i] == '.') {
                 /** don't copy ".exe" */
                 break;
             }

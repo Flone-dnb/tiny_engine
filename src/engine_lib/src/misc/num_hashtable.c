@@ -103,7 +103,7 @@ num_hashtable_destroy(te_num_hashtable* ht) {
 static size_t
 get_entry_idx(te_num_hashtable* ht, size_t key) {
     /* Knuth's multiplicative hash */
-#if ULONG_MAX == 0xFFFFFFFFUL
+#if defined(ENGINE_32BIT)
     size_t fractional_part = key * 2654435769U;
     return fractional_part >> (32 - ht->entry_count_msb_idx);
 #else

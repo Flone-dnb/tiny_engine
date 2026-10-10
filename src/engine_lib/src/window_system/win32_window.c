@@ -5,6 +5,7 @@
 #include <math.h>
 #include <io/log.h>
 #include <misc/wchar_funcs.h>
+#include <math/math_funcs.h>
 #include <window_system/os_window.h>
 #define NOMINMAX
 #include <Windows.h>
@@ -517,8 +518,8 @@ trigger_gamepad_button_events(
     bool was_pressed, now_pressed;
 
 #define CHECK_GAMEPAD_BUTTON(xbutton, engine_button)                                          \
-    was_pressed = prev_state & xbutton;                                                       \
-    now_pressed = new_state & xbutton;                                                        \
+    was_pressed = (bool)(prev_state & xbutton);                                               \
+    now_pressed = (bool)(new_state & xbutton);                                                \
     if (!was_pressed && now_pressed) {                                                        \
         callbacks->on_gamepad_button_pressed(os_window, engine_button);                       \
     } else if (was_pressed && !now_pressed) {                                                 \

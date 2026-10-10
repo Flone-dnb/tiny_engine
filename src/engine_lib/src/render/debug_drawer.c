@@ -28,8 +28,8 @@
 static float debug_drawer_default_text_height = 0.0275f;
 
 typedef struct te_double_array {
-    uint8_t* data1;
-    uint8_t* data2;
+    unsigned char* data1;
+    unsigned char* data2;
     unsigned int item_sizeof;
     unsigned int size1;
     unsigned int size2;
@@ -77,9 +77,9 @@ double_array_get_size(te_double_array* array) {
 
 static void
 double_array_add_item(te_double_array* array, void* item) {
-    uint8_t* data1;
-    uint8_t* data2;
-    uint8_t* data;
+    unsigned char* data1;
+    unsigned char* data2;
+    unsigned char* data;
     unsigned int* size;
 
     if (double_array_get_size(array) + 1 > array->capacity) {

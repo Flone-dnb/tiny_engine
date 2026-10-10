@@ -1,6 +1,6 @@
 #include <snprintf.h>
 
-#if defined(HAVE_SNPRINTF)
+#if !defined(HAVE_SNPRINTF)
 
 #include <stdlib.h>
 #include <string.h>
