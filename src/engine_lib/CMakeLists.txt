@@ -6,6 +6,7 @@ project(engine_lib C)
 
 # Sources.
 set(PROJECT_SOURCES
+    other/snprintf.c
     src/window.c
     src/io/log.c
     src/io/paths.c
