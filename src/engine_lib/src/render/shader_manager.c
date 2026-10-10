@@ -106,7 +106,7 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
                  "precision highp float;\n"
                  "precision highp int;\n"
                  "#define ATTRIBUTE_IN in\n"
-                 "out te_vec4 out_color;\n"
+                 "out vec4 out_color;\n"
                  "\n";
     } else {
         prefix = "#version 450\n"
