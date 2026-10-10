@@ -302,7 +302,9 @@ config_section_set_bool_array(
     te_config_item* new_item;
     bool* new_bools;
     size_t key_len;
+#if defined(DEBUG)
     unsigned int i;
+#endif
 
 #if defined(DEBUG)
     if (section_idx >= config->section_count) {
@@ -372,7 +374,9 @@ config_section_set_uint_array(
     te_config_section* section;
     te_config_item* new_item;
     size_t key_len;
+#if defined(DEBUG)
     unsigned int i;
+#endif
 
 #if defined(DEBUG)
     if (section_idx >= config->section_count) {
@@ -946,7 +950,8 @@ config_save(te_config* config, const char* relative_path, bool create_backup) {
                     }
                 }
 
-                if (item->value_count > 1 && ((unsigned int)(i + 1) != item->value_count)) {
+                if (item->value_count > 1
+                    && ((unsigned int)(v_idx + 1) != item->value_count)) {
                     fprintf(fp, "%s", ", ");
                 }
             }
