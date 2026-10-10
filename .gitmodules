@@ -9,7 +9,7 @@
 	url = https://github.com/Flone-dnb/memcheck.git
 [submodule "ext/cgltf"]
 	path = ext/cgltf
-	url = https://github.com/jkuhlmann/cgltf.git
+	url = https://github.com/Flone-dnb/cgltf.git
 [submodule "ext/miniaudio"]
 	path = ext/miniaudio
 	url = https://github.com/mackron/miniaudio.git
