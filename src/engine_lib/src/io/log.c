@@ -159,13 +159,11 @@ log_error_fmt(const char* filepath, int line, const char* fmt, ...) {
 
 void
 prv_log_fmt(
-    enum te_log_category category, const char* filepath, int line, const char* fmt, ...) {
-    va_list args;
+    enum te_log_category category, const char* filepath, int line, const char* fmt, va_list args) {
     va_list args_copy;
     int size;
     char* message;
 
-    va_start(args, fmt);
     va_copy(args_copy, args);
 
     size = vsnprintf(NULL, 0, fmt, args);
@@ -177,9 +175,7 @@ prv_log_fmt(
     memset(message, 0, (unsigned long)size + 1);
 
     vsprintf(message, fmt, args_copy);
-
     va_end(args_copy);
-    va_end(args);
 
     prv_log(category, message, filepath, line);
 

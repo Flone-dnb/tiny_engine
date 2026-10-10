@@ -25,4 +25,4 @@ unsigned int log_get_error_count_logged(void);
 void
 prv_log(enum te_log_category category, const char* message, const char* filepath, int line);
 void prv_log_fmt(
-    enum te_log_category category, const char* filepath, int line, const char* fmt, ...);
+    enum te_log_category category, const char* filepath, int line, const char* fmt, va_list args);
