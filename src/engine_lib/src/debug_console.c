@@ -215,7 +215,8 @@ prv_debug_console_on_keyboard_input(
         memcpy((char*)target_command.name, console.input, sizeof(char) * command_len);
         ((char*)target_command.name)[command_len] = 0;
 
-        found_command = num_hashtable_find(console.commands, calc_string_hash(console.input));
+        found_command =
+            num_hashtable_find(console.commands, calc_string_hash(target_command.name));
         if (found_command == NULL) {
             console.message = "command not found";
             console.message_sec_left = 1.0f;

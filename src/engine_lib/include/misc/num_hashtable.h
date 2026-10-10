@@ -13,7 +13,9 @@ te_num_hashtable* num_hashtable_create(
     size_t max_item_count, size_t sizeof_value, void (*free_value)(void* value));
 void num_hashtable_destroy(te_num_hashtable* ht);
 
-/* copies data from pointers to hashmap entry
+/* copies data from the value pointer to a newly allocated space with sizeof_value
+ * so if you specified a pointer to a heap allocated value free the pointer you specified
+ * after this function returns (the data is copied to a different pointer now)
  * returns 1 if newly inserted, 0 if already existed previously (overwrote value) */
 unsigned char num_hashtable_insert(te_num_hashtable* ht, size_t key, const void* value);
 
