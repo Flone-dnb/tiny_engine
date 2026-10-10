@@ -1,6 +1,6 @@
 #include <snprintf.h>
 
-#ifndef HAS_SNPRINTF
+#if !defined(_MSC_VER) || (_MSC_VER < 1900)
 
 #include <stdlib.h>
 #include <string.h>

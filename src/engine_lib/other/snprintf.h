@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#ifndef HAS_SNPRINTF
+#if !defined(_MSC_VER) || (_MSC_VER < 1900)
 int
 vsnprintf(char* str, size_t size, const char* format, va_list ap);
 int
