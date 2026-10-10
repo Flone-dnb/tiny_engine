@@ -4,13 +4,24 @@
 #include <math/vec2.h>
 
 float math_pi(void);
+
 float math_abs(float value);
+
 float math_max(float a, float b);
 float math_min(float a, float b);
 float math_clamp(float value, float min, float max);
+
 float math_rad(float deg);
 float math_deg(float rad);
+
+float math_cos(float value);
+float math_sin(float value);
 float math_tan(float value);
+
+float math_asin(float value);
+float math_atan2(float y, float x);
+
+float math_sqrt(float value);
 float math_round(float value);
 float math_ceil(float value);
 float math_mod(float a, float b);

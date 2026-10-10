@@ -790,7 +790,7 @@ file_dialog_create(
 
             /* page text */
             {
-                const float adjust = size[0] / 3.0f; // adjust text to be somewhat centered
+                const float adjust = size[0] / 3.0f; /* adjust text to be somewhat centered */
 
                 te_text_widget* text_widget = text_widget_create();
                 file_dialog->page_text = text_widget;

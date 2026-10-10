@@ -1,8 +1,8 @@
 #include <math/mat4.h>
 
-#if defined(DEBUG)
 #include <stdlib.h>
-#include <math.h>
+#include <math/math_funcs.h>
+#if defined(DEBUG)
 #include <io/log.h>
 #endif
 
@@ -161,7 +161,7 @@ void
 mat4_make_rotate_from_norm_axis(te_mat4 mat, float angle, te_vec3 normalized_axis) {
     te_vec3 axis_cos;
     te_vec3 axis_sin;
-    float cos_angle = (float)cos(angle);
+    float cos_angle = math_cos(angle);
 
 #if defined(DEBUG)
     {
@@ -176,7 +176,7 @@ mat4_make_rotate_from_norm_axis(te_mat4 mat, float angle, te_vec3 normalized_axi
 #endif
 
     vec3_muls(normalized_axis, 1.0f - cos_angle, axis_cos);
-    vec3_muls(normalized_axis, (float)sin(angle), axis_sin);
+    vec3_muls(normalized_axis, math_sin(angle), axis_sin);
 
     vec3_muls(normalized_axis, axis_cos[0], mat[0]);
     vec3_muls(normalized_axis, axis_cos[1], mat[1]);
@@ -261,7 +261,7 @@ mat4_make_view_mat_rh(
 void
 mat4_make_proj_mat_rh(
     float fov_y_rad, float aspect_ratio, float near_z, float far_z, te_mat4 dst) {
-    float fov_tan = 1.0f / (float)tan(fov_y_rad * 0.5f);
+    float fov_tan = 1.0f / math_tan(fov_y_rad * 0.5f);
     float inv_z = 1.0f / (near_z - far_z);
 
     dst[0][0] = fov_tan / aspect_ratio;
@@ -300,17 +300,17 @@ mat4_extract_euler_angles_rad(te_mat4 mat, te_vec3 dst) {
 
     if (m20 < 1.0f) {
         if (m20 > -1.0f) {
-            theta_y = (float)asin(m20);
-            theta_x = (float)atan2(-m21, m22);
-            theta_z = (float)atan2(-m10, m00);
+            theta_y = math_asin(m20);
+            theta_x = math_atan2(-m21, m22);
+            theta_z = math_atan2(-m10, m00);
         } else {
             theta_y = -1.57079632f;
-            theta_x = (float)-atan2(m01, m11);
+            theta_x = -math_atan2(m01, m11);
             theta_z = 0.0f;
         }
     } else {
         theta_y = 1.57079632f;
-        theta_x = (float)atan2(m01, m11);
+        theta_x = math_atan2(m01, m11);
         theta_z = 0.0f;
     }
 
@@ -325,7 +325,7 @@ mat4_to_quat(te_mat4 mat, te_vec4 dst) {
 
     trace = mat[0][0] + mat[1][1] + mat[2][2];
     if (trace >= 0.0f) {
-        s = (float)sqrt(1.0f + trace);
+        s = math_sqrt(1.0f + trace);
         sinv = 0.5f / s;
 
         dst[0] = sinv * (mat[1][2] - mat[2][1]);
@@ -333,7 +333,7 @@ mat4_to_quat(te_mat4 mat, te_vec4 dst) {
         dst[2] = sinv * (mat[0][1] - mat[1][0]);
         dst[3] = s * 0.5f;
     } else if (mat[0][0] >= mat[1][1] && mat[0][0] >= mat[2][2]) {
-        s = (float)sqrt(1.0f - mat[1][1] - mat[2][2] + mat[0][0]);
+        s = math_sqrt(1.0f - mat[1][1] - mat[2][2] + mat[0][0]);
         sinv = 0.5f / s;
 
         dst[0] = s * 0.5f;
@@ -341,7 +341,7 @@ mat4_to_quat(te_mat4 mat, te_vec4 dst) {
         dst[2] = sinv * (mat[0][2] + mat[2][0]);
         dst[3] = sinv * (mat[1][2] - mat[2][1]);
     } else if (mat[1][1] >= mat[2][2]) {
-        s = (float)sqrt(1.0f - mat[0][0] - mat[2][2] + mat[1][1]);
+        s = math_sqrt(1.0f - mat[0][0] - mat[2][2] + mat[1][1]);
         sinv = 0.5f / s;
 
         dst[0] = sinv * (mat[0][1] + mat[1][0]);
@@ -349,7 +349,7 @@ mat4_to_quat(te_mat4 mat, te_vec4 dst) {
         dst[2] = sinv * (mat[1][2] + mat[2][1]);
         dst[3] = sinv * (mat[2][0] - mat[0][2]);
     } else {
-        s = (float)sqrt(1.0f - mat[0][0] - mat[1][1] + mat[2][2]);
+        s = math_sqrt(1.0f - mat[0][0] - mat[1][1] + mat[2][2]);
         sinv = 0.5f / s;
 
         dst[0] = sinv * (mat[0][2] + mat[2][0]);

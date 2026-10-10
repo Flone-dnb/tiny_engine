@@ -180,8 +180,7 @@ skeleton_animation_destroy(te_skeleton_animation* anim) {
 static void
 free_anim(void* ptr) {
     te_skeleton_animation* anim = ptr;
-    skeleton_animation_destroy(anim);
-    free(anim);
+    skeleton_animation_destroy(anim); /* does free ptr */
 }
 
 void

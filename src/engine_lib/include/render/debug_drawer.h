@@ -42,4 +42,8 @@ void prv_debug_drawer_deinit(struct te_renderer* renderer);
 void prv_debug_drawer_draw(
     struct te_renderer* renderer, float delta_time_sec, te_mat4* view_proj_mat);
 
+#else
+/* dummy code to avoid compile error ISO C forbids an empty translation unit
+ * (because we include this file without ifdefs a lot) */
+typedef int debug_drawer_dummy_translation_unit_error_preventer;
 #endif

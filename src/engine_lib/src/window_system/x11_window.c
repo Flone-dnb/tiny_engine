@@ -142,12 +142,12 @@ x11_load_glx_extensions(Display* display, int screen) {
         (PFNGLXGETFBCONFIGATTRIBPROC)glXGetProcAddress((const GLubyte*)"glXGetFBConfigAttrib");
 }
 
-static void*
+static GLADuserptrloadfunc
 glad_load_proc(const char* name) {
-    void* func = (void*)glXGetProcAddress((const GLubyte*)name);
+    GLADuserptrloadfunc func = (GLADuserptrloadfunc)glXGetProcAddress((const GLubyte*)name);
     if (func == NULL) {
         /* try dlsym as fallback */
-        func = (void*)glXGetProcAddress((const GLubyte*)name);
+        func = (GLADuserptrloadfunc)glXGetProcAddress((const GLubyte*)name);
     }
     return func;
 }

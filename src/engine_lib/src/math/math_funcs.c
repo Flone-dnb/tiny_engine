@@ -62,6 +62,31 @@ math_tan(float value) {
 }
 
 float
+math_asin(float value) {
+    return (float)asin(value);
+}
+
+float
+math_atan2(float y, float x) {
+    return (float)atan2(y, x);
+}
+
+float
+math_sqrt(float value) {
+    return (float)sqrt(value);
+}
+
+float
+math_cos(float value) {
+    return (float)cos(value);
+}
+
+float
+math_sin(float value) {
+    return (float)sin(value);
+}
+
+float
 math_round(float value) {
     if (value >= 0.0f) {
         return (float)(int)(value + 0.5f);

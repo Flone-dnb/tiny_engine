@@ -294,11 +294,10 @@ load_wgl_extensions(void) {
     UnregisterClassA("DummyWindowClass", wc.hInstance);
 }
 
-static void*
+static GLADloadfunc
 gladloadproc(const char* name) {
-    void* func = (void*)wglGetProcAddress(name);
-    if (func == NULL || (func == (void*)0x1) || (func == (void*)0x2) || (func == (void*)0x3)
-        || (func == (void*)-1)) {
+    GLADloadfunc func = (GLADloadfunc)wglGetProcAddress(name);
+    if (func == NULL) {
         if (opengl32dll == NULL) {
             opengl32dll = LoadLibraryA("opengl32.dll");
             if (opengl32dll == NULL) {
@@ -306,7 +305,7 @@ gladloadproc(const char* name) {
                 abort();
             }
         }
-        func = (void*)GetProcAddress(opengl32dll, name);
+        func = (GLADloadfunc)GetProcAddress(opengl32dll, name);
         /* note: don't check if this one is NULL, it can be a valid NULL */
     }
 

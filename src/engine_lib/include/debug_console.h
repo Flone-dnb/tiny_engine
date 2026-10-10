@@ -78,4 +78,8 @@ typedef struct te_debug_stats {
 /* returns always valid pointer to update debug stats */
 te_debug_stats* prv_debug_console_get_stats(void);
 
+#else
+/* dummy code to avoid compile error ISO C forbids an empty translation unit
+ * (because we include this file without ifdefs a lot) */
+typedef int debug_console_dummy_translation_unit_error_preventer;
 #endif
