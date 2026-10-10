@@ -420,6 +420,7 @@ type_database_register_type(te_type_info* info) {
         log_error(__FILE__, __LINE__, "a type with the specified ID is already registered");
         abort();
     }
+    free(info); /* no longer need this pointer, data of the ptr was copied to hashtable */
 }
 
 const te_type_info*
