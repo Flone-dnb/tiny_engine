@@ -6,6 +6,8 @@ project(engine_lib C)
 
 # Sources.
 set(PROJECT_SOURCES
+    other/snprintf.c
+    other/snprintf.h
     src/window.c
     src/io/log.c
     src/io/paths.c
@@ -17,6 +19,7 @@ set(PROJECT_SOURCES
     src/misc/wchar_funcs.c
     src/misc/mesh_generator.c
     src/misc/high_freq_timer.c
+    src/misc/num_hashtable.c
     src/game_manager.c
     src/sound_manager.c
     src/world.c
@@ -24,10 +27,19 @@ set(PROJECT_SOURCES
     src/type_database.c
     src/window_system/os_window.h
     src/window_system/os_window.c
-    src/window_system/win32_window.c
-    src/window_system/win32_window.h
     src/window_system/x11_window.c
     src/window_system/x11_window.h
+    src/shape/aabb_shape.c
+    src/shape/cone_shape.c
+    src/shape/frustum_shape.c
+    src/shape/plane_shape.c
+    src/shape/sphere_shape.c
+    src/math/math_funcs.c
+    src/math/vec2.c
+    src/math/vec3.c
+    src/math/vec4.c
+    src/math/mat3.c
+    src/math/mat4.c
     src/render/renderer.c
     src/render/model_renderer.c
     src/render/shader_manager.c
@@ -42,6 +54,8 @@ set(PROJECT_SOURCES
     src/render/render_data_array.h
     src/render/gpu_section.h
     src/render/gpu_time_section.h
+    src/input/mouse_button.c
+    src/input/keyboard_button.c
     src/game/camera.c
     src/game/model.c
     src/game/skeleton.c
@@ -56,7 +70,12 @@ set(PROJECT_SOURCES
     src/widget/checkbox_widget.c
     src/widget/progress_widget.c
     src/widget/vbox_widget.c
-    include/math_funcs.h
+    include/math/math_funcs.h
+    include/math/vec2.h
+    include/math/vec3.h
+    include/math/vec4.h
+    include/math/mat3.h
+    include/math/mat4.h
     include/window.h
     include/debug_console.h
     include/type_database.h
@@ -78,6 +97,7 @@ set(PROJECT_SOURCES
     include/misc/wchar_funcs.h
     include/misc/mesh_generator.h
     include/misc/high_freq_timer.h
+    include/misc/num_hashtable.h
     include/game_manager.h
     include/sound_manager.h
     include/render/renderer.h
@@ -103,6 +123,13 @@ set(PROJECT_SOURCES
     include/widget/progress_widget.h
     include/widget/vbox_widget.h
 )
+set(WIN32_SOURCES
+    src/window_system/win32_window.c
+    src/window_system/win32_window.h
+)
+if (WIN32)
+    list(APPEND PROJECT_SOURCES ${WIN32_SOURCES})
+endif()
 
 # Define targets (one without any specific macros and another for compilation with editor).
 set(ENGINE_LIB_TARGET engine_lib)
@@ -116,6 +143,9 @@ add_library(${ENGINE_LIB_TARGET_FOR_EDITOR} STATIC ${PROJECT_SOURCES})
 
 tiny_engine_configure_target(${ENGINE_LIB_TARGET})
 tiny_engine_configure_target(${ENGINE_LIB_TARGET_FOR_EDITOR})
+
+target_include_directories(${ENGINE_LIB_TARGET} PUBLIC other)
+target_include_directories(${ENGINE_LIB_TARGET_FOR_EDITOR} PUBLIC other)
 
 # Define editor macros for editor's version of the engine_lib.
 target_compile_definitions(${ENGINE_LIB_TARGET_FOR_EDITOR} PUBLIC ENGINE_EDITOR)
@@ -153,7 +183,7 @@ set(GLAD_TARGET_NAME glad)
 if(ENGINE_GLES)
     set(GLAD_PATH ${RELATIVE_EXT_PATH}/glad_gles20)
 else()
-    set(GLAD_PATH ${RELATIVE_EXT_PATH}/glad_gl45)
+    set(GLAD_PATH ${RELATIVE_EXT_PATH}/glad_gl20)
 endif()
 add_library(${GLAD_TARGET_NAME} STATIC
     ${GLAD_PATH}/src/gl.c
@@ -176,17 +206,6 @@ target_include_directories(${GLAD_TARGET_NAME} SYSTEM PUBLIC ${GLAD_PATH}/includ
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE ${GLAD_TARGET_NAME})
 add_dependencies(${ENGINE_LIB_DEPS_TARGET} ${GLAD_TARGET_NAME})
 
-# Add cglm.
-message(STATUS "${PROJECT_NAME}: adding dependency \"cglm\"...")
-set(CGLM_SHARED OFF CACHE BOOL "" FORCE)
-set(CGLM_STATIC ON CACHE BOOL "" FORCE)
-set(CGLM_USE_C99 ON CACHE BOOL "" FORCE)
-set(CGLM_USE_TEST OFF CACHE BOOL "" FORCE)
-set(CGLM_INSTALL OFF CACHE BOOL "" FORCE)
-add_subdirectory(${RELATIVE_EXT_PATH}/cglm ${DEPENDENCY_BUILD_DIR_NAME}/cglm)
-target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE cglm_headers)
-target_compile_definitions(cglm_headers INTERFACE CGLM_ALL_UNALIGNED)
-
 # Add FreeType.
 message(STATUS "${PROJECT_NAME}: adding external dependency \"FreeType\"...")
 set(FT_DISABLE_BROTLI ON CACHE BOOL "" FORCE)
@@ -194,11 +213,6 @@ set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
 set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
 add_subdirectory(${RELATIVE_EXT_PATH}/freetype ${DEPENDENCY_BUILD_DIR_NAME}/freetype)
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE freetype)
-
-# Add hashmap.c
-message(STATUS "${PROJECT_NAME}: adding external dependency \"hashmap.c\"...")
-add_library(hashmapc ${RELATIVE_EXT_PATH}/hashmap.c/hashmap.h ${RELATIVE_EXT_PATH}/hashmap.c/hashmap.c)
-target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE hashmapc)
 
 # Miniaudio.
 message(STATUS "${PROJECT_NAME}: adding external dependency \"miniaudio\"...")

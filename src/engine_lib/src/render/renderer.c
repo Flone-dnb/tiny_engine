@@ -1,3 +1,8 @@
+#if defined(__linux__)
+/* for timespec */
+#define _POSIX_C_SOURCE 199309L
+#endif
+
 #include <render/renderer.h>
 
 #if defined(WIN32)
@@ -7,12 +12,14 @@
 #include <time.h>
 #include <errno.h>
 #endif
+#include <snprintf.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <debug_console.h>
 #include <game/camera.h>
 #include <game_manager.h>
+#include <math/math_funcs.h>
 #include <io/log.h>
 #include <misc/high_freq_timer.h>
 #include <render/debug_drawer.h>
@@ -49,12 +56,12 @@
 #endif
 
 #if defined(WIN32)
-#pragma comment(lib, "Winmm.lib") // for timeBeginPeriod and timeEndPeriod
+#pragma comment(lib, "Winmm.lib") /* for timeBeginPeriod and timeEndPeriod */
 #endif
 
-// Stuff needed to calculate FPS and keep frame limit.
+/* stuff needed to calculate FPS and keep frame limit */
 typedef struct te_renderer_frame_stats {
-    // Stats collected for the last second.
+    /* stats collected for the last second */
     unsigned int frame_count;
     float time_sec_since_update;
 
@@ -62,10 +69,10 @@ typedef struct te_renderer_frame_stats {
 } te_renderer_frame_stats;
 
 struct te_renderer {
-    // Always valid pointer, window that owns the renderer. This pointer should not be freed.
-    struct te_window* window;
+    /* always valid pointer, window that owns the renderer, this pointer should not be freed */
+    te_window* window;
 
-    // Created by the renderer.
+    /* created by the renderer */
     te_shader_manager* shader_manager;
     te_texture_manager* texture_manager;
     te_font_manager* font_manager;
@@ -81,7 +88,7 @@ struct te_renderer {
 #endif
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    // GPU time query IDs.
+    /* GPU time query IDs */
     unsigned int gl_timestamp_frame_start;
     unsigned int gl_timestamp_frame_end;
     unsigned int gl_query_draw_debug;
@@ -98,7 +105,7 @@ debugMessageCallback(
     (void)userParam;
 
     if (source == GL_DEBUG_SOURCE_SHADER_COMPILER) {
-        // We display shader compilation errors using shader manager.
+        /* we display shader compilation errors using shader manager */
         return;
     }
 
@@ -107,14 +114,14 @@ debugMessageCallback(
     }
 
     if (severity != GL_DEBUG_SEVERITY_NOTIFICATION) {
-        log_error(message);
+        log_error(__FILE__, __LINE__, message);
         abort();
     }
 }
 #endif
 
 #if defined(ENGINE_DEBUG_TOOLS)
-// Callback for the renderer's debug console command.
+/* callback for the renderer's debug console command */
 void
 debug_command_set_fps_limit(te_game_manager* game_manager, unsigned int new_limit) {
     te_renderer* renderer = game_manager_get_renderer(game_manager);
@@ -122,35 +129,44 @@ debug_command_set_fps_limit(te_game_manager* game_manager, unsigned int new_limi
 }
 #endif
 
-// Getters/setters for light params for reflection.
+/* getters/setters for light params for reflection */
 #define LIGHT_PARAMS_FUNC(name, body)                                                         \
     static void light_params_##name(void* obj, float* arg) {                                  \
         te_light_params* params = ((te_light_params*)obj);                                    \
         body;                                                                                 \
     }
-LIGHT_PARAMS_FUNC(set_clear_color, glm_vec3_copy(arg, params->clear_color));
-LIGHT_PARAMS_FUNC(get_clear_color, glm_vec3_copy(params->clear_color, arg));
-LIGHT_PARAMS_FUNC(set_ambient_light_color, glm_vec3_copy(arg, params->ambient_light_color));
-LIGHT_PARAMS_FUNC(get_ambient_light_color, glm_vec3_copy(params->ambient_light_color, arg));
-LIGHT_PARAMS_FUNC(set_dir_light_color, glm_vec4_copy(arg, params->directional_light_color));
-LIGHT_PARAMS_FUNC(get_dir_light_color, glm_vec4_copy(params->directional_light_color, arg));
-LIGHT_PARAMS_FUNC(set_dir_light_dir, glm_vec3_normalize(arg);
-                  glm_vec3_copy(arg, params->directional_light_direction));
-LIGHT_PARAMS_FUNC(get_dir_light_dir, glm_vec3_copy(params->directional_light_direction, arg));
-LIGHT_PARAMS_FUNC(set_point_light_color, glm_vec4_copy(arg, params->point_light_color));
-LIGHT_PARAMS_FUNC(get_point_light_color, glm_vec4_copy(params->point_light_color, arg));
+LIGHT_PARAMS_FUNC(set_clear_color, vec3_copy(arg, params->clear_color))
+LIGHT_PARAMS_FUNC(get_clear_color, vec3_copy(params->clear_color, arg))
+LIGHT_PARAMS_FUNC(set_ambient_light_color, vec3_copy(arg, params->ambient_light_color))
+LIGHT_PARAMS_FUNC(get_ambient_light_color, vec3_copy(params->ambient_light_color, arg))
+LIGHT_PARAMS_FUNC(set_dir_light_color, vec4_copy(arg, params->directional_light_color))
+LIGHT_PARAMS_FUNC(get_dir_light_color, vec4_copy(params->directional_light_color, arg))
+LIGHT_PARAMS_FUNC(set_dir_light_dir, vec3_normalize(arg);
+                  vec3_copy(arg, params->directional_light_direction))
+LIGHT_PARAMS_FUNC(get_dir_light_dir, vec3_copy(params->directional_light_direction, arg))
+LIGHT_PARAMS_FUNC(set_point_light_color, vec4_copy(arg, params->point_light_color))
+LIGHT_PARAMS_FUNC(get_point_light_color, vec4_copy(params->point_light_color, arg))
 LIGHT_PARAMS_FUNC(
-    set_point_light_pos_and_dist, glm_vec4_copy(arg, params->point_light_pos_and_dist));
+    set_point_light_pos_and_dist, vec4_copy(arg, params->point_light_pos_and_dist))
 LIGHT_PARAMS_FUNC(
-    get_point_light_pos_and_dist, glm_vec4_copy(params->point_light_pos_and_dist, arg));
-LIGHT_PARAMS_FUNC(set_distance_fog_range, glm_vec2_copy(arg, params->distance_fog_range));
-LIGHT_PARAMS_FUNC(get_distance_fog_range, glm_vec2_copy(params->distance_fog_range, arg));
-LIGHT_PARAMS_FUNC(set_distance_fog_color, glm_vec3_copy(arg, params->distance_fog_color));
-LIGHT_PARAMS_FUNC(get_distance_fog_color, glm_vec3_copy(params->distance_fog_color, arg));
+    get_point_light_pos_and_dist, vec4_copy(params->point_light_pos_and_dist, arg))
+LIGHT_PARAMS_FUNC(set_distance_fog_range, vec2_copy(arg, params->distance_fog_range))
+LIGHT_PARAMS_FUNC(get_distance_fog_range, vec2_copy(params->distance_fog_range, arg))
+LIGHT_PARAMS_FUNC(set_distance_fog_color, vec3_copy(arg, params->distance_fog_color))
+LIGHT_PARAMS_FUNC(get_distance_fog_color, vec3_copy(params->distance_fog_color, arg))
 
 te_renderer*
 renderer_create(struct te_window* window) {
-    te_renderer* renderer = malloc(sizeof(te_renderer));
+#if defined(ENGINE_DEBUG_TOOLS)
+    te_debug_console_command fps_command = {0};
+#endif
+    te_renderer* renderer;
+    unsigned int refresh_rate;
+
+    const GLubyte* gl_version = glGetString(GL_VERSION);
+    log_info_fmt(__FILE__, __LINE__, "GL_VERSION: %s", (char*)gl_version);
+
+    renderer = malloc(sizeof(te_renderer));
 
     renderer->window = window;
     renderer->shader_manager = prv_shader_manager_create();
@@ -163,20 +179,23 @@ renderer_create(struct te_window* window) {
 
     renderer->fps_limit = 0;
 
-    // Setup base lighting.
+    /* setup base lighting */
     {
+        te_light_params* data;
+
         renderer->light_params = malloc(sizeof(te_light_params));
         memset(renderer->light_params, 0, sizeof(te_light_params));
 
-        te_light_params* data = renderer->light_params;
+        data = renderer->light_params;
 
-        glm_vec3_copy((vec3){0.5f, 0.5f, 0.5f}, data->ambient_light_color);
+        vec3_set(0.5f, 0.5f, 0.5f, data->ambient_light_color);
 
-        glm_vec3_copy((vec3){1.0f, -1.0f, 1.0f}, data->directional_light_direction);
-        glm_vec3_normalize(data->directional_light_direction);
-        glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 0.0f}, data->directional_light_color);
+        vec3_set(1.0f, -1.0f, 1.0f, data->directional_light_direction);
+        vec3_normalize(data->directional_light_direction);
 
-        glm_vec2_copy((vec2){-1.0f, -1.0f}, data->distance_fog_range);
+        vec4_set(1.0f, 1.0f, 1.0f, 0.0f, data->directional_light_color);
+
+        vec2_set(-1.0f, -1.0f, data->distance_fog_range);
     }
 
 #if defined(__linux__)
@@ -186,65 +205,80 @@ renderer_create(struct te_window* window) {
 #if defined(ENGINE_DEBUG_TOOLS)
 #if defined(ENGINE_GLES)
     if (GLAD_GL_EXT_disjoint_timer_query != 1) {
-        log_info("the GPU does not support GL_EXT_disjoint_timer_query extension, GPU time "
-                 "metrics are disabled");
-    } else {
+        log_info(
+            __FILE__, __LINE__,
+            "the GPU does not support GL_EXT_disjoint_timer_query extension, GPU time "
+            "metrics are disabled");
+    } else
+#else
+    if (GLAD_GL_ARB_timer_query != 1) {
+        log_info(
+            __FILE__, __LINE__,
+            "the GPU does not support GL_ARB_timer_query extension, GPU time "
+            "metrics are disabled");
+    } else
 #endif
+    {
         glGenQueries(1, &renderer->gl_timestamp_frame_start);
         glGenQueries(1, &renderer->gl_timestamp_frame_end);
         glGenQueries(1, &renderer->gl_query_draw_debug);
 
-        // Init timers.
+        /* init timers */
         glQueryCounter(renderer->gl_timestamp_frame_start, GL_TIMESTAMP);
         glQueryCounter(renderer->gl_timestamp_frame_end, GL_TIMESTAMP);
 
         GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_debug);
         GPU_TIME_SECTION_END;
-#if defined(ENGINE_GLES)
     }
-#endif
 #endif
 
 #if defined(DEBUG)
     if (GLAD_GL_KHR_debug != 1) {
-        log_info("the GPU does not support GL_KHR_DEBUG extension, some debugging features "
-                 "are disabled");
+        log_info(
+            __FILE__, __LINE__,
+            "the GPU does not support GL_KHR_DEBUG extension, some debugging features "
+            "are disabled");
     } else {
         glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         glDebugMessageCallback(debugMessageCallback, NULL);
 
-        // Enable all error messages
+        /* enable all error messages */
         glDebugMessageControl(
             GL_DONT_CARE, GL_DEBUG_TYPE_ERROR, GL_DONT_CARE, 0, NULL, GL_TRUE);
     }
 #endif
 
-    // Enable back face culling.
+    /* enable back face culling */
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
-    // Setup clear values.
+    /* setup clear values */
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+#if defined(ENGINE_GLES)
     glClearDepthf(1.0f);
+#else
+    glClearDepth(1.0);
+#endif
 
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
 
-    // Set FPS limit.
-    const unsigned int refresh_rate = window_get_display_refresh_rate(window);
-    log_info_fmt("setting FPS limit to %u (display's refresh rate)", refresh_rate);
+    /* set FPS limit */
+    refresh_rate = window_get_display_refresh_rate(window);
+    log_info_fmt(
+        __FILE__, __LINE__, "setting FPS limit to %u (display's refresh rate)",
+        window_get_display_refresh_rate(window));
     renderer_set_fps_limit(renderer, refresh_rate);
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    te_debug_console_command fps_command = {0};
     fps_command.name = "set_fps_limit";
     fps_command.arg_uint = debug_command_set_fps_limit;
     debug_console_register_command(fps_command);
 #endif
 
-    // Add light params to type database to be able to display them in the property inspector.
+    /* add light params to type database to be able to display them in the property inspector */
     {
         te_type_info* info =
             type_info_create("light_params", NULL, NULL, NULL, NULL, NULL, NULL, NULL);
@@ -289,14 +323,15 @@ renderer_destroy(te_renderer* renderer) {
 
 #if defined(ENGINE_DEBUG_TOOLS)
 #if defined(ENGINE_GLES)
-    if (GLAD_GL_EXT_disjoint_timer_query == 1) {
+    if (GLAD_GL_EXT_disjoint_timer_query == 1)
+#else
+    if (GLAD_GL_ARB_timer_query == 1)
 #endif
+    {
         glDeleteQueries(1, &renderer->gl_timestamp_frame_start);
         glDeleteQueries(1, &renderer->gl_timestamp_frame_end);
         glDeleteQueries(1, &renderer->gl_query_draw_debug);
-#if defined(ENGINE_GLES)
     }
-#endif
 #endif
 
     free(renderer);
@@ -344,7 +379,11 @@ renderer_get_fps_limit(te_renderer* renderer) {
 
 void
 prv_renderer_calc_frame_stats(te_renderer* renderer, float delta_time_sec) {
-    // Update FPS stat.
+#if defined(ENGINE_DEBUG_TOOLS)
+    te_debug_stats* stats;
+#endif
+
+    /* update FPS stat */
     {
         te_renderer_frame_stats* stats = &renderer->frame_stats;
 
@@ -359,15 +398,15 @@ prv_renderer_calc_frame_stats(te_renderer* renderer, float delta_time_sec) {
     }
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    te_debug_stats* stats = prv_debug_console_get_stats();
+    stats = prv_debug_console_get_stats();
     stats->fps = renderer->frame_stats.fps;
 
-    // Reset some stats to accumulate on the next frame.
+    /* reset some stats to accumulate on the next frame */
     stats->rendered_opaque_model_count = 0;
     stats->rendered_transparent_model_count = 0;
 #endif
 
-    // FPS limit.
+    /* FPS limit */
     if (renderer->fps_limit > 0) {
 #if defined(WIN32)
         const float target_time_ms = 1000.0f / (float)renderer->fps_limit;
@@ -378,16 +417,18 @@ prv_renderer_calc_frame_stats(te_renderer* renderer, float delta_time_sec) {
             timeEndPeriod(1);
         }
 #elif defined(__linux__)
+        long delta_ns;
+        long time_to_sleep_ns;
         const long target_time_ns = (long)(1000000000.0 / (double)renderer->fps_limit);
 
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
-        long delta_ns = now.tv_nsec - renderer->frame_end_time.tv_nsec;
+        delta_ns = now.tv_nsec - renderer->frame_end_time.tv_nsec;
         if (delta_ns < 0) {
             delta_ns += 1000000000;
         }
 
-        const long time_to_sleep_ns = target_time_ns - delta_ns;
+        time_to_sleep_ns = target_time_ns - delta_ns;
         if (time_to_sleep_ns > 0) {
             struct timespec requested;
             struct timespec remaining;
@@ -414,27 +455,46 @@ static float
 prv_renderer_get_query_time_ms(unsigned int query) {
     GLuint64 time_elapsed = 0;
     glGetQueryObjectui64v(query, GL_QUERY_RESULT, &time_elapsed);
-    return (float)(time_elapsed) / 1000000.0f; // nanoseconds to milliseconds
+    return (float)(time_elapsed) / 1000000.0f; /* nanoseconds to milliseconds */
 }
 #endif
 
 void
 prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
-    // Make sure there was no GL error during the last frame.
+#if defined(ENGINE_DEBUG_TOOLS)
+    te_camera* debug_camera;
+    te_debug_stats* debug_stats;
+    te_hft_t cpu_frame_start_counter;
+    te_hft_t cpu_swap_start_counter;
+    bool record_new_queries;
+#endif
+    te_world** worlds;
+    te_game_manager* game_manager;
+    unsigned int window_width;
+    unsigned int window_height;
+    unsigned int world_count;
+    unsigned int i;
+
+    /* make sure there was no GL error during the last frame */
     GLenum gl_error = glGetError();
     if (gl_error != GL_NO_ERROR) {
         switch (gl_error) {
-            case GL_INVALID_ENUM: log_error("GL error: INVALID_ENUM"); break;
-            case GL_INVALID_VALUE: log_error("GL error: INVALID_VALUE"); break;
-            case GL_INVALID_OPERATION: log_error("GL error: INVALID_OPERATION"); break;
-            case GL_OUT_OF_MEMORY: log_error("GL error: OUT_OF_MEMORY"); break;
-            case GL_INVALID_FRAMEBUFFER_OPERATION:
-                log_error("GL error: INVALID_FRAMEBUFFER_OPERATION");
+            case GL_INVALID_ENUM:
+                log_error(__FILE__, __LINE__, "GL error: INVALID_ENUM");
+                break;
+            case GL_INVALID_VALUE:
+                log_error(__FILE__, __LINE__, "GL error: INVALID_VALUE");
+                break;
+            case GL_INVALID_OPERATION:
+                log_error(__FILE__, __LINE__, "GL error: INVALID_OPERATION");
+                break;
+            case GL_OUT_OF_MEMORY:
+                log_error(__FILE__, __LINE__, "GL error: OUT_OF_MEMORY");
                 break;
             default: {
                 char error_msg[128] = {0};
                 snprintf(&error_msg[0], 128, "GL error: %u", gl_error);
-                log_error(&error_msg[0]);
+                log_error(__FILE__, __LINE__, &error_msg[0]);
             } break;
         }
 
@@ -442,25 +502,31 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     }
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    te_debug_stats* debug_stats = prv_debug_console_get_stats();
-    bool record_new_queries = true;
+    debug_stats = prv_debug_console_get_stats();
+    record_new_queries = true;
 
 #if defined(ENGINE_GLES)
     if (GLAD_GL_EXT_disjoint_timer_query != 1) {
+        record_new_queries = false;
+    }
+#else
+    if (GLAD_GL_ARB_timer_query != 1) {
         record_new_queries = false;
     }
 #endif
 
 #if defined(ENGINE_GLES)
     if (GLAD_GL_EXT_disjoint_timer_query == 1)
+#else
+    if (GLAD_GL_ARB_timer_query == 1)
 #endif
     {
-        // Check if the GPU finished commands.
+        /* check if the GPU finished commands */
         GLuint available = 0;
         glGetQueryObjectuiv(
             renderer->gl_timestamp_frame_end, GL_QUERY_RESULT_AVAILABLE, &available);
         if (available == GL_FALSE) {
-            // Don't do new queries on this frame, we will wait for the current queries to be finished.
+            /* don't do new queries on this frame, we will wait for the current queries to be finished */
             record_new_queries = false;
             debug_stats->cpu_ahead_gpu_frame_count += 1;
         } else {
@@ -469,7 +535,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
             debug_stats->gpu_time_draw_debug_ms =
                 prv_renderer_get_query_time_ms(renderer->gl_query_draw_debug);
 
-            // Reset world-dependant GPU metrics.
+            /* reset world-dependant GPU metrics */
             debug_stats->gpu_time_draw_models_ms = 0.0f;
             debug_stats->gpu_time_draw_widgets_ms = 0.0f;
             debug_stats->gpu_time_draw_particles_ms = 0.0f;
@@ -482,40 +548,52 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
                 glGetQueryObjecti64v(
                     renderer->gl_timestamp_frame_end, GL_QUERY_RESULT, &end_time);
                 debug_stats->gpu_time_frame_ms =
-                    (float)(end_time - start_time) / 1000000.0f; // nanoseconds to milliseconds
+                    (float)(end_time - start_time)
+                    / 1000000.0f; /* nanoseconds to milliseconds */
             }
 
-            // Mark frame start.
+            /* mark frame start */
             glQueryCounter(renderer->gl_timestamp_frame_start, GL_TIMESTAMP);
         }
     }
 
-    // Reset world-dependant CPU metrics.
+    /* reset world-dependant CPU metrics */
     debug_stats->cpu_time_submit_models_ms = 0.0f;
     debug_stats->cpu_time_submit_particles_ms = 0.0f;
     debug_stats->cpu_time_submit_widgets_ms = 0.0f;
 
-    const uint64_t cpu_frame_start_counter = high_freq_timer_now();
+    cpu_frame_start_counter = high_freq_timer_now();
 #endif
 
-    // Get window size (for later).
-    unsigned int window_width = 0;
-    unsigned int window_height = 0;
+    /* get window size (for later) */
+    window_width = 0;
+    window_height = 0;
     window_get_size(renderer->window, &window_width, &window_height);
 
-    // Rendering to window's framebuffer.
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    /* rendering to window's framebuffer */
     glClearColor(
         renderer->light_params->clear_color[0], renderer->light_params->clear_color[1],
         renderer->light_params->clear_color[2], 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Get worlds.
-    te_game_manager* game_manager = window_get_game_manager(renderer->window);
-    unsigned int world_count = 0;
-    te_world** worlds = game_manager_get_worlds(game_manager, &world_count);
+    /* get worlds */
+    game_manager = window_get_game_manager(renderer->window);
+    world_count = 0;
+    worlds = game_manager_get_worlds(game_manager, &world_count);
 
-    for (unsigned int i = 0; i < world_count; i++) {
+    for (i = 0; i < world_count; i++) {
+        te_model_renderer* opaque_model_renderer;
+        te_model_renderer* transparent_model_renderer;
+        te_widget_renderer* widget_renderer;
+        te_particle_renderer* particle_renderer;
+        te_mat4* view_proj_mat;
+        te_mat4* view_mat;
+        te_mat4* proj_mat;
+        struct te_frustum_shape* camera_frustum;
+        te_vec4 viewport;
+        unsigned int viewport_width;
+        unsigned int viewport_height;
+
         te_camera* camera = world_get_active_camera(worlds[i]);
         if (camera == NULL) {
             continue;
@@ -523,7 +601,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 
 #if defined(ENGINE_DEBUG_TOOLS)
         if (record_new_queries) {
-            // Save results of the previous GPU metrics.
+            /* save results of the prevmious GPU metrics */
             debug_stats->gpu_time_draw_models_ms +=
                 prv_renderer_get_query_time_ms(prv_world_get_gl_query_draw_models(worlds[i]));
             debug_stats->gpu_time_draw_widgets_ms +=
@@ -533,38 +611,30 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         }
 #endif
 
-        te_model_renderer* opaque_model_renderer = world_get_opaque_model_renderer(worlds[i]);
-        te_model_renderer* transparent_model_renderer =
-            world_get_transparent_model_renderer(worlds[i]);
-        te_widget_renderer* widget_renderer = world_get_widget_renderer(worlds[i]);
-        te_particle_renderer* particle_renderer = world_get_particle_renderer(worlds[i]);
+        opaque_model_renderer = world_get_opaque_model_renderer(worlds[i]);
+        transparent_model_renderer = world_get_transparent_model_renderer(worlds[i]);
+        widget_renderer = world_get_widget_renderer(worlds[i]);
+        particle_renderer = world_get_particle_renderer(worlds[i]);
 
-        // Set camera's aspect ratio.
-        vec4 viewport;
-        camera_get_viewport(camera, viewport);
-        const unsigned int viewport_width = (unsigned int)((float)window_width * viewport[2]);
-        const unsigned int viewport_height =
-            (unsigned int)((float)window_height * viewport[3]);
+        /* set camera's aspect ratio */ camera_get_viewport(camera, viewport);
+        viewport_width = (unsigned int)((float)window_width * viewport[2]);
+        viewport_height = (unsigned int)((float)window_height * viewport[3]);
         prv_camera_set_render_target_size(camera, viewport_width, viewport_height);
 
-        mat4* view_proj_mat = camera_get_view_proj_mat(camera);
-        mat4* view_mat = camera_get_view_mat(camera);
-        mat4* proj_mat = camera_get_proj_mat(camera);
-        struct te_frustum_shape* camera_frustum = camera_get_frustum(camera);
+        view_proj_mat = camera_get_view_proj_mat(camera);
+        view_mat = camera_get_view_mat(camera);
+        proj_mat = camera_get_proj_mat(camera);
+        camera_frustum = camera_get_frustum(camera);
 
-        ivec4 gl_viewport;
-        gl_viewport[0] = (int)((float)window_width * viewport[0]);
-        gl_viewport[1] =
-            (int)((float)window_height * (1.0f - fmin(1.0f, viewport[1] + viewport[3])));
-        gl_viewport[2] = (int)viewport_width;
-        gl_viewport[3] = (int)viewport_height;
+        glViewport(
+            (int)((float)window_width * viewport[0]),
+            (int)((float)window_height * (1.0f - math_min(1.0f, viewport[1] + viewport[3]))),
+            (int)viewport_width, (int)viewport_height);
 
-        glViewport(gl_viewport[0], gl_viewport[1], gl_viewport[2], gl_viewport[3]);
-
-        // Draw models.
+        /* draw models */
         {
 #if defined(ENGINE_DEBUG_TOOLS)
-            const uint64_t cpu_start_counter = high_freq_timer_now();
+            const te_hft_t cpu_start_counter = high_freq_timer_now();
             if (record_new_queries) {
                 GPU_TIME_SECTION_BEGIN(prv_world_get_gl_query_draw_models(worlds[i]));
             }
@@ -608,11 +678,12 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 #endif
         }
 
-        // Draw particles.
+        /* draw particles */
         {
 #if defined(ENGINE_DEBUG_TOOLS)
+            te_hft_t cpu_start_counter;
             GPU_SECTION_BEGIN("particles");
-            const uint64_t cpu_start_counter = high_freq_timer_now();
+            cpu_start_counter = high_freq_timer_now();
             if (record_new_queries) {
                 GPU_TIME_SECTION_BEGIN(prv_world_get_gl_query_draw_particles(worlds[i]));
             }
@@ -631,11 +702,12 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 #endif
         }
 
-        // Draw widgets.
+        /* draw widgets */
         {
 #if defined(ENGINE_DEBUG_TOOLS)
+            te_hft_t cpu_start_counter;
             GPU_SECTION_BEGIN("widgets");
-            const uint64_t cpu_start_counter = high_freq_timer_now();
+            cpu_start_counter = high_freq_timer_now();
             if (record_new_queries) {
                 GPU_TIME_SECTION_BEGIN(prv_world_get_gl_query_draw_widgets(worlds[i]));
             }
@@ -655,34 +727,34 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     }
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    te_camera* debug_camera = NULL;
-    for (unsigned int i = 0; i < world_count; i++) {
+    debug_camera = NULL;
+    for (i = 0; i < world_count; i++) {
         debug_camera = world_get_active_camera(worlds[i]);
         if (debug_camera == NULL) {
             continue;
         }
 
 #if defined(ENGINE_EDITOR)
-        // First camera in the game world.
+        /* first camera in the game world */
         if (strcmp(world_get_name(worlds[i]), "game") == 0) {
             break;
         } else {
             debug_camera = NULL;
         }
 #else
-        // Just use the first active camera.
+        /* just use the first active camera */
         break;
 #endif
     }
 
     if (debug_camera != NULL) {
-        // Draw debug.
+        /* draw debug */
         GPU_SECTION_BEGIN("debug");
         if (record_new_queries) {
             GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_debug);
         }
         {
-            const uint64_t cpu_start_counter = high_freq_timer_now();
+            const te_hft_t cpu_start_counter = high_freq_timer_now();
 
             prv_debug_console_draw(delta_time_sec);
             prv_debug_drawer_draw(
@@ -701,10 +773,10 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         glQueryCounter(renderer->gl_timestamp_frame_end, GL_TIMESTAMP);
     }
 
-    // Get CPU time before swap as it might block the current thread.
+    /* get CPU time before swap as it might block the current thread */
     debug_stats->cpu_time_frame_ms = high_freq_timer_get_elapsed_ms(cpu_frame_start_counter);
 
-    const uint64_t cpu_swap_start_counter = high_freq_timer_now();
+    cpu_swap_start_counter = high_freq_timer_now();
 #endif
 
     prv_window_swap_buffers(renderer->window);

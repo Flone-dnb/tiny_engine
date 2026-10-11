@@ -3,30 +3,19 @@
 #include <stdbool.h>
 
 typedef struct te_keyboard_modifiers {
-    // bit 0 - alt
-    // bit 1 - ctrl
-    // bit 2 - shift
+    /* bit 0 - alt
+     * bit 1 - ctrl
+     * bit 2 - shift */
     unsigned char bitmask;
 } te_keyboard_modifiers;
 
-static inline bool
-keyboard_modifiers_is_shift_pressed(te_keyboard_modifiers* mods) {
-    return mods->bitmask & 0b1;
-}
-
-static inline bool
-keyboard_modifiers_is_ctrl_pressed(te_keyboard_modifiers* mods) {
-    return mods->bitmask & 0b10;
-}
-
-static inline bool
-keyboard_modifiers_is_alt_pressed(te_keyboard_modifiers* mods) {
-    return mods->bitmask & 0b100;
-}
+bool keyboard_modifiers_is_shift_pressed(te_keyboard_modifiers* mods);
+bool keyboard_modifiers_is_ctrl_pressed(te_keyboard_modifiers* mods);
+bool keyboard_modifiers_is_alt_pressed(te_keyboard_modifiers* mods);
 
 #if defined(WIN32)
 
-// windows scancodes
+/* windows scancodes */
 enum te_keyboard_button {
     TE_KB_SPACE = 0x39,
     TE_KB_COMMA = 0x33,
@@ -104,14 +93,14 @@ enum te_keyboard_button {
     TE_KB_LEFT_ALT = 0x38,
     TE_KB_RIGHT_SHIFT = 0x36,
     TE_KB_RIGHT_CONTROL = 0xE01D,
-    TE_KB_RIGHT_ALT = 0xE038,
+    TE_KB_RIGHT_ALT = 0xE038
 };
 
 #else
 
 #include <linux/input-event-codes.h>
 
-// Linux scancodes.
+/* linux scancodes */
 enum te_keyboard_button {
     TE_KB_SPACE = KEY_SPACE,
     TE_KB_COMMA = KEY_COMMA,
@@ -189,7 +178,7 @@ enum te_keyboard_button {
     TE_KB_LEFT_ALT = KEY_LEFTALT,
     TE_KB_RIGHT_SHIFT = KEY_RIGHTSHIFT,
     TE_KB_RIGHT_CONTROL = KEY_RIGHTCTRL,
-    TE_KB_RIGHT_ALT = KEY_RIGHTALT,
+    TE_KB_RIGHT_ALT = KEY_RIGHTALT
 };
 
 #endif

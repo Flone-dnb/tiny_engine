@@ -1,5 +1,7 @@
 #include <editor.h>
 
+#include <stdlib.h>
+#include <snprintf.h>
 #include <string.h>
 #include <stdio.h>
 #include <editor_camera.h>
@@ -32,45 +34,35 @@
 #define EDITOR_SHORTCUTS_Y_POS 0.075f
 
 struct te_editor {
-    // Not NULL if @ref game_world was loaded from a file (relative to the `res` directory).
+    /* not NULL if @ref game_world was loaded from a file (relative to the `res` directory) */
     char* game_world_relative_path;
 
-    // NULL if the game is not started yet.
+    /* NULL if the game is not started yet */
     te_game_manager* game_manager;
 
-    // Always valid pointer. Must be destroyed during the editor's destruction.
+    /* always valid pointer, must be destroyed during the editor's destruction */
     te_editor_camera* editor_camera;
 
-    // Not NULL if @ref game_world is valid. Displays FPS and RAM in the corner of the viewport.
+    /* not NULL if @ref game_world is valid */
     te_text_widget* game_world_stats_widget;
-
-    // Not NULL if @ref game_world is  valid. Displays keyboard shortcuts.
     te_text_widget* shortcuts_widget;
-
-    // Not NULL if game world exists.
     te_world* game_world;
 
-    // Not NULL if exists.
+    /* can be NULL */
     te_world* editor_world;
-
-    // Not NULL if world for dialog widgets exists.
     te_world* dialog_world;
-
-    // Not NULL if showing a file dialog.
     te_file_dialog* file_dialog;
-
-    // Always valid.
-    te_editor_ui* ui;
-
-    // Not NULL if shown.
     te_gizmo* gizmo;
 
-    // Time (in seconds) since @ref game_world_stats_widget was updated.
+    /* always valid */
+    te_editor_ui* ui;
+
+    /* time (in seconds) since @ref game_world_stats_widget was updated */
     float time_since_stats_update_sec;
 };
 
 te_editor*
-editor_create() {
+editor_create(void) {
     te_editor* editor = malloc(sizeof(te_editor));
     editor->editor_camera = editor_camera_create();
     editor->game_manager = NULL;
@@ -120,10 +112,10 @@ destroy_game_world(te_editor* editor, te_game_manager* game_manager) {
         editor->dialog_world = NULL;
     }
 
-    // Despawn editor camera because we manage its destruction manually.
+    /* despawn editor camera because we manage its destruction manually */
     editor_camera_despawn(editor->editor_camera, editor->game_world);
 
-    // Destroy world.
+    /* destroy world */
     game_manager_destroy_world(game_manager, editor->game_world);
     editor->game_world = NULL;
     editor->game_world_stats_widget = NULL;
@@ -154,10 +146,12 @@ editor_on_window_close(void* game_instance, struct te_game_manager* game_manager
 
 static void
 editor_create_editor_world(te_editor* editor, struct te_game_manager* game_manager) {
+    te_camera* camera;
+
     editor->editor_world = game_manager_create_world(game_manager, "editor world");
 
-    // Create a dummy camera to display editor's UI.
-    te_camera* camera = camera_create();
+    /* create a dummy camera to display editor's UI */
+    camera = camera_create();
     world_spawn_game_object(editor->editor_world, camera, camera_get_game_object_info());
     world_set_active_camera(editor->editor_world, camera);
 
@@ -166,68 +160,91 @@ editor_create_editor_world(te_editor* editor, struct te_game_manager* game_manag
 
 void
 editor_on_game_started(void* game_instance, te_game_manager* game_manager) {
+    te_renderer* renderer;
+    te_font_manager* font_manager;
+    te_editor* editor;
+
     game_register_custom_types();
 
-    // Load font.
-    te_renderer* renderer = game_manager_get_renderer(game_manager);
-    te_font_manager* font_manager = renderer_get_font_manager(renderer);
+    /* load font */
+    renderer = game_manager_get_renderer(game_manager);
+    font_manager = renderer_get_font_manager(renderer);
     font_manager_load_font(font_manager, "engine/font/font.ttf");
 
-    te_editor* editor = game_instance;
+    editor = game_instance;
     editor->game_manager = game_manager;
 
-    // Create worlds.
+    /* create worlds */
     editor_create_editor_world(editor, game_manager);
     editor_create_game_world(editor, NULL);
 }
 
 void
 editor_create_game_world(te_editor* editor, const char* relative_path_to_world) {
+    te_light_params* light_params;
+
     if (editor->game_world != NULL) {
         destroy_game_world(editor, editor->game_manager);
     }
 
     editor->game_world = game_manager_create_world(editor->game_manager, "game");
     if (relative_path_to_world == NULL) {
-        // Prepare a sample scene.
-        te_model* floor = model_create();
+        te_model* box;
+        te_model* floor;
+        te_vec3 tmp3;
+        te_vec4 color;
+
+        /* prepare a sample scene */
+        floor = model_create();
         model_set_name(floor, "floor");
-        model_set_scale(floor, (vec3){4.0f, 1.0f, 4.0f});
-        model_set_color(floor, (vec4){1.0f, 0.5f, 0.0f, 1.0f});
+        vec3_set(4.0f, 1.0f, 4.0f, tmp3);
+        model_set_scale(floor, tmp3);
+        vec4_set(1.0f, 0.5f, 0.0f, 1.0f, color);
+        model_set_color(floor, color);
         world_spawn_game_object(editor->game_world, floor, model_get_game_object_info());
 
-        te_model* box = model_create();
+        box = model_create();
         model_set_name(box, "box");
-        model_set_position(box, (vec3){0.0f, 1.0f, -1.0f});
+        vec3_set(0.0f, 1.0f, -1.0f, tmp3);
+        model_set_position(box, tmp3);
         world_spawn_game_object(editor->game_world, box, model_get_game_object_info());
     } else {
+        size_t len;
+
         world_add_from_file(editor->game_world, relative_path_to_world, true);
 
         free(editor->game_world_relative_path);
-        const size_t len = strlen(relative_path_to_world);
+        len = strlen(relative_path_to_world);
 
         editor->game_world_relative_path = malloc(sizeof(char) * (len + 1));
         memcpy(editor->game_world_relative_path, relative_path_to_world, sizeof(char) * len);
         editor->game_world_relative_path[len] = 0;
     }
 
-    // Setup light.
-    te_light_params* light_params =
-        renderer_get_light_params(game_manager_get_renderer(editor->game_manager));
-    glm_vec3_copy((vec3){1.0f, -1.0f, 1.0f}, light_params->directional_light_direction);
-    glm_vec3_normalize(light_params->directional_light_direction);
-    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, light_params->directional_light_color);
+    /* setup light */
+    light_params = renderer_get_light_params(game_manager_get_renderer(editor->game_manager));
+    vec3_set(1.0f, -1.0f, 1.0f, light_params->directional_light_direction);
+    vec3_normalize(light_params->directional_light_direction);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, light_params->directional_light_color);
 
     editor_camera_spawn(editor->editor_camera, editor->game_world);
 
-    // Prepare and spawn stats widget.
+    /* prepare and spawn stats widget */
     {
+        wchar_t* stats_text;
+        unsigned int text_len;
+        te_vec2 tmp2;
+
         editor->game_world_stats_widget = text_widget_create();
+
+        vec2_set(EDITOR_STATS_POS_OFFSET, EDITOR_STATS_POS_OFFSET, tmp2);
         widget_set_relative_position(
-            text_widget_get_widget(editor->game_world_stats_widget),
-            (vec2){EDITOR_STATS_POS_OFFSET, EDITOR_STATS_POS_OFFSET});
+            text_widget_get_widget(editor->game_world_stats_widget), tmp2);
+
+        vec2_set(0.5f, 0.2f, tmp2);
         widget_set_relative_size(
-            text_widget_get_widget(editor->game_world_stats_widget), (vec2){0.5f, 0.2f});
+            text_widget_get_widget(editor->game_world_stats_widget), tmp2);
+
         widget_set_is_serialization_allowed(
             text_widget_get_widget(editor->game_world_stats_widget), false);
         text_widget_set_is_multiline(editor->game_world_stats_widget, true);
@@ -235,30 +252,34 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
 
         text_widget_set_text_height(editor->game_world_stats_widget, 0.025f);
 
-        unsigned int text_len;
-        wchar_t* stats_text = wchar_from_char("", &text_len);
+        stats_text = wchar_from_char("", &text_len);
         text_widget_set_text_own(editor->game_world_stats_widget, stats_text, text_len);
 
         world_spawn_widget(
             editor->game_world, text_widget_get_widget(editor->game_world_stats_widget));
     }
 
-    // Prepare and spawn shortcuts widget.
+    /* prepare and spawn shortcuts widget */
     {
+        wchar_t* shortcuts_text;
+        unsigned int text_len;
+        te_vec2 tmp2;
+
         editor->shortcuts_widget = text_widget_create();
-        widget_set_relative_position(
-            text_widget_get_widget(editor->shortcuts_widget),
-            (vec2){EDITOR_SHORTCUTS_X_POS, EDITOR_SHORTCUTS_Y_POS});
-        widget_set_relative_size(
-            text_widget_get_widget(editor->shortcuts_widget), (vec2){0.5f, 0.2f});
+
+        vec2_set(EDITOR_SHORTCUTS_X_POS, EDITOR_SHORTCUTS_Y_POS, tmp2);
+        widget_set_relative_position(text_widget_get_widget(editor->shortcuts_widget), tmp2);
+
+        vec2_set(0.5f, 0.2f, tmp2);
+        widget_set_relative_size(text_widget_get_widget(editor->shortcuts_widget), tmp2);
+
         widget_set_is_serialization_allowed(
             text_widget_get_widget(editor->shortcuts_widget), false);
         text_widget_set_is_multiline(editor->shortcuts_widget, true);
 
         text_widget_set_text_height(editor->shortcuts_widget, 0.018f);
 
-        unsigned int text_len;
-        wchar_t* shortcuts_text = wchar_from_char(
+        shortcuts_text = wchar_from_char(
             "Ctrl+N - new world\nCtrl+S - save world\nCtrl+Shift+S - save world as\nTab - "
             "toggle fullscreen",
             &text_len);
@@ -268,12 +289,12 @@ editor_create_game_world(te_editor* editor, const char* relative_path_to_world) 
             editor->game_world, text_widget_get_widget(editor->shortcuts_widget));
     }
 
-    // Refresh world inspector.
-    te_world_inspector* inspector = editor_ui_get_world_inspector(editor->ui);
-    world_inspector_rebuild_list(inspector, editor->game_world);
+    /* refresh world inspector */
+    world_inspector_rebuild_list(
+        editor_ui_get_world_inspector(editor->ui), editor->game_world);
 }
 
-// ------------------------------------------------------------------------------------------------
+/* ------------------------------------------------------------------------------------------------ */
 static void* file_dialog_custom = NULL;
 static void (*file_dialog_on_selected)(void* custom, const char* path) = NULL;
 static void (*file_dialog_on_cancel)(void* custom) = NULL;
@@ -307,9 +328,11 @@ void
 editor_show_file_dialog(
     te_editor* editor, void* custom, void (*on_selected)(void* custom, const char* path),
     void (*on_cancel)(void* custom), enum te_file_dialog_mode mode) {
-    // Create a new world for dialog widget to be displayed on top of both the editor and the game worlds.
+    te_camera* camera;
+
+    /* create a new world for dialog widget to be displayed on top of both the editor and the game worlds */
     editor->dialog_world = game_manager_create_world(editor->game_manager, "dialog");
-    te_camera* camera = camera_create();
+    camera = camera_create();
     world_spawn_game_object(editor->dialog_world, camera, camera_get_game_object_info());
     world_set_active_camera(editor->dialog_world, camera);
 
@@ -321,7 +344,7 @@ editor_show_file_dialog(
         editor->dialog_world, editor, prv_file_dialog_on_selected, prv_file_dialog_on_cancel,
         mode);
 }
-// ------------------------------------------------------------------------------------------------
+/* ------------------------------------------------------------------------------------------------ */
 
 void
 editor_refresh_filesystem_view(te_editor* editor) {
@@ -330,14 +353,17 @@ editor_refresh_filesystem_view(te_editor* editor) {
 
 static void
 set_camera_editor_shape_visibility(te_world* world, bool is_visible) {
-    bool found_camera = false;
+    te_game_object_data* game_obj_data;
+    bool found_camera;
+    unsigned int count;
+    unsigned int i;
+
     do {
         found_camera = false;
 
-        unsigned int count;
-        te_game_object_data* game_obj_data = world_get_root_game_objects(world, &count);
+        game_obj_data = world_get_root_game_objects(world, &count);
 
-        for (unsigned int i = 0; i < count; i++) {
+        for (i = 0; i < count; i++) {
             if (game_obj_data[i].info->type == TE_GOT_CAMERA) {
                 te_camera* camera = (te_camera*)game_obj_data[i].object;
                 if (world_get_active_camera(world) == camera) {
@@ -346,7 +372,7 @@ set_camera_editor_shape_visibility(te_world* world, bool is_visible) {
                 if (is_visible != prv_camera_is_editor_shape_visible(camera)) {
                     prv_camera_set_editor_shape_visibility(camera, is_visible);
                     found_camera = true;
-                    break; // editor shape was despawned and world root objects array changed
+                    break; /* editor shape was despawned and world root objects array changed */
                 }
             } else if (game_obj_data[i].info->type == TE_GOT_MODEL) {
                 te_model* model = (te_model*)game_obj_data[i].object;
@@ -358,7 +384,7 @@ set_camera_editor_shape_visibility(te_world* world, bool is_visible) {
                     if (is_visible != prv_camera_is_editor_shape_visible(attached_camera)) {
                         prv_camera_set_editor_shape_visibility(attached_camera, is_visible);
                         found_camera = true;
-                        break; // same reason
+                        break; /* same reason */
                     }
                 }
             }
@@ -369,22 +395,25 @@ set_camera_editor_shape_visibility(te_world* world, bool is_visible) {
 
 static void
 show_ui(te_editor* editor) {
-    // Show stats.
-    te_widget* widget = text_widget_get_widget(editor->game_world_stats_widget);
-    widget_set_relative_position(
-        widget, (vec2){EDITOR_STATS_POS_OFFSET, EDITOR_STATS_POS_OFFSET});
+    te_scene_animation_editor* anim_editor;
+    te_vec2 tmp2;
 
-    // Show shortcuts.
+    /* show stats */
+    te_widget* widget = text_widget_get_widget(editor->game_world_stats_widget);
+    vec2_set(EDITOR_STATS_POS_OFFSET, EDITOR_STATS_POS_OFFSET, tmp2);
+    widget_set_relative_position(widget, tmp2);
+
+    /* show shortcuts */
     widget = text_widget_get_widget(editor->shortcuts_widget);
-    widget_set_relative_position(
-        widget, (vec2){EDITOR_SHORTCUTS_X_POS, EDITOR_SHORTCUTS_Y_POS});
+    vec2_set(EDITOR_SHORTCUTS_X_POS, EDITOR_SHORTCUTS_Y_POS, tmp2);
+    widget_set_relative_position(widget, tmp2);
 
     editor_ui_set_visibility(editor->ui, true);
     set_camera_editor_shape_visibility(editor->game_world, true);
 
     editor_camera_set_is_fullscreen(editor->editor_camera, false);
 
-    te_scene_animation_editor* anim_editor =
+    anim_editor =
         world_inspector_get_scene_animation_editor(editor_ui_get_world_inspector(editor->ui));
     if (anim_editor != NULL) {
         scene_animation_editor_show(anim_editor);
@@ -393,20 +422,26 @@ show_ui(te_editor* editor) {
 
 static void
 hide_ui(te_editor* editor) {
+    te_widget* widget;
+    te_scene_animation_editor* anim_editor;
+    te_vec2 tmp2;
+
     editor_camera_set_is_fullscreen(editor->editor_camera, true);
 
-    // Hide stats.
-    te_widget* widget = text_widget_get_widget(editor->game_world_stats_widget);
-    widget_set_relative_position(widget, (vec2){1.0f, 1.0f});
+    /* hide stats */
+    widget = text_widget_get_widget(editor->game_world_stats_widget);
+    vec2_set(1.0f, 1.0f, tmp2);
+    widget_set_relative_position(widget, tmp2);
 
-    // Hide shortcuts.
+    /* hide shortcuts */
     widget = text_widget_get_widget(editor->shortcuts_widget);
-    widget_set_relative_position(widget, (vec2){1.0f, 1.0f});
+    vec2_set(1.0f, 1.0f, tmp2);
+    widget_set_relative_position(widget, tmp2);
 
     editor_ui_set_visibility(editor->ui, false);
     set_camera_editor_shape_visibility(editor->game_world, false);
 
-    te_scene_animation_editor* anim_editor =
+    anim_editor =
         world_inspector_get_scene_animation_editor(editor_ui_get_world_inspector(editor->ui));
     if (anim_editor != NULL) {
         scene_animation_editor_hide(anim_editor);
@@ -416,7 +451,7 @@ hide_ui(te_editor* editor) {
 void
 editor_set_gizmo(te_editor* editor, te_model* target) {
     if (editor->game_world == NULL) {
-        log_error("expected the game world to be valid");
+        log_error(__FILE__, __LINE__, "expected the game world to be valid");
         abort();
     }
 
@@ -439,13 +474,15 @@ editor_pilot_camera(te_editor* editor, te_camera* camera) {
 void
 editor_on_before_game_obj_deleted(
     te_editor* editor, void* game_object, te_game_object_info* info) {
+    unsigned int i;
+
     te_scene_animation* anim = world_get_scene_animation(editor->game_world);
     const char* go_name = info->get_name(game_object);
     if (go_name != NULL && anim != NULL && scene_animation_is_playing(anim)) {
-        // Is animated?
+        /* is animated? */
         unsigned int obj_count;
         char** obj_names = scene_animation_get_object_names(anim, &obj_count);
-        for (unsigned int i = 0; i < obj_count; i++) {
+        for (i = 0; i < obj_count; i++) {
             if (strcmp(obj_names[i], go_name) != 0) {
                 continue;
             }
@@ -456,7 +493,7 @@ editor_on_before_game_obj_deleted(
     }
 
     if (editor->gizmo != NULL) {
-        // Is selected with gizmo?
+        /* is selected with gizmo? */
         if (gizmo_get_target(editor->gizmo) == game_object) {
             gizmo_destroy_in_world_now(editor->gizmo, editor->game_world);
             editor->gizmo = NULL;
@@ -466,22 +503,28 @@ editor_on_before_game_obj_deleted(
 
 void
 editor_on_game_tick(void* game_instance, te_game_manager* game_manager, float delta_time_sec) {
+    te_editor* editor;
+    te_scene_animation_editor* anim_editor;
+
     (void)game_manager;
 
-    te_editor* editor = game_instance;
+    editor = game_instance;
     editor_camera_on_game_tick(editor->editor_camera, delta_time_sec);
 
-    te_scene_animation_editor* anim_editor =
+    anim_editor =
         world_inspector_get_scene_animation_editor(editor_ui_get_world_inspector(editor->ui));
     if (anim_editor != NULL) {
         prv_scene_animation_editor_tick(anim_editor);
     }
 
-    // Update stats.
+    /* update stats */
     editor->time_since_stats_update_sec += delta_time_sec;
     if (editor->game_world_stats_widget != NULL
         && editor->time_since_stats_update_sec >= 2.0f) {
-        editor->time_since_stats_update_sec = 0.0f;
+        char* src_text;
+        wchar_t* stats_text;
+        unsigned int text_len;
+        int len;
 
         te_renderer* renderer = game_manager_get_renderer(game_manager);
         const unsigned int fps = renderer_get_fps(renderer);
@@ -499,19 +542,19 @@ editor_on_game_tick(void* game_instance, te_game_manager* game_manager, float de
         fmt = "FPS: %u (limit: %u)\nRAM used (MB): %u (%u/%u) (ASan enabled)";
 #endif
 
-        int len =
-            snprintf(NULL, 0, fmt, fps, fps_limit, process_mem, total_used_mem, total_mem);
+        editor->time_since_stats_update_sec = 0.0f;
+
+        len = snprintf(NULL, 0, fmt, fps, fps_limit, process_mem, total_used_mem, total_mem);
         if (len < 0) {
-            log_error("snprintf error");
+            log_error(__FILE__, __LINE__, "snprintf error");
             abort();
         }
-        char* src_text = malloc(sizeof(char) * (size_t)(len + 1));
+        src_text = malloc(sizeof(char) * (size_t)(len + 1));
         snprintf(
             src_text, (size_t)len + 1, fmt, fps, fps_limit, process_mem, total_used_mem,
             total_mem);
 
-        unsigned int text_len;
-        wchar_t* stats_text = wchar_from_char(src_text, &text_len);
+        stats_text = wchar_from_char(src_text, &text_len);
         text_widget_set_text_own(editor->game_world_stats_widget, stats_text, text_len);
 
         free(src_text);
@@ -521,14 +564,15 @@ editor_on_game_tick(void* game_instance, te_game_manager* game_manager, float de
 static void
 on_new_world_file_selected(void* custom, const char* path_to_file) {
     te_editor* editor = custom;
+    char* relative_path;
 
     if (editor->game_world == NULL) {
         return;
     }
 
-    char* relative_path = filesystem_convert_path_to_relative(path_to_file);
+    relative_path = filesystem_convert_path_to_relative(path_to_file);
     if (relative_path == NULL) {
-        log_warn("new world must be in the \"res\" directory");
+        log_warn(__FILE__, __LINE__, "new world must be in the \"res\" directory");
         return;
     }
 
@@ -542,82 +586,85 @@ on_new_world_file_selected(void* custom, const char* path_to_file) {
     editor_ui_refresh_filesystem_view(editor->ui);
 }
 
-// Returns false if outside of game world viewport.
-// Returned cursor pos is in range [0; 1] relative to window.
-// Returned game camera is always valid if returned value is `true`
+/* returns `false` if outside of game world viewport
+ * returned cursor pos is in range [0; 1] relative to window
+ * returned game camera is always valid if returned value is `true` */
 static bool
 get_game_world_cursor_pos_relative_window(
-    te_editor* editor, vec2 out_cursor_pos, te_camera** out_game_camera) {
+    te_editor* editor, te_vec2 out_cursor_pos, te_camera** out_game_camera) {
     (*out_game_camera) = NULL;
 
-    if (editor->dialog_world != NULL) {
+    if (editor->dialog_world != NULL || editor->game_world == NULL) {
         return false;
+    } else {
+        te_camera* game_camera;
+        te_window* window;
+        te_vec4 viewport;
+        te_vec2 window_cursor_pos;
+        te_vec2 tmp2;
+        unsigned int window_width;
+        unsigned int window_height;
+
+        game_camera = world_get_active_camera(editor->game_world);
+        if (game_camera == NULL) {
+            return false;
+        }
+
+        camera_get_viewport(game_camera, viewport);
+
+        window = game_manager_get_window(editor->game_manager);
+        window_get_cursor_position(window, &window_cursor_pos[0], &window_cursor_pos[1]);
+
+        window_get_size(window, &window_width, &window_height);
+        vec2_set((float)window_width, (float)window_height, tmp2);
+        vec2_div(window_cursor_pos, tmp2, window_cursor_pos);
+
+        if (window_cursor_pos[0] < viewport[0] || window_cursor_pos[1] < viewport[1]
+            || window_cursor_pos[0] > viewport[0] + viewport[2]
+            || window_cursor_pos[1] > viewport[1] + viewport[3]) {
+            /* outside of the game viewport */
+            return false;
+        }
+
+        vec2_copy(window_cursor_pos, out_cursor_pos);
+        (*out_game_camera) = game_camera;
+        return true;
     }
-
-    if (editor->game_world == NULL) {
-        return false;
-    }
-    te_camera* game_camera = world_get_active_camera(editor->game_world);
-    if (game_camera == NULL) {
-        return false;
-    }
-
-    vec4 viewport;
-    camera_get_viewport(game_camera, viewport);
-
-    vec2 window_cursor_pos;
-    te_window* window = game_manager_get_window(editor->game_manager);
-    window_get_cursor_position(window, &window_cursor_pos[0], &window_cursor_pos[1]);
-
-    unsigned int window_width;
-    unsigned int window_height;
-    window_get_size(window, &window_width, &window_height);
-    glm_vec2_div(
-        window_cursor_pos, (vec2){(float)window_width, (float)window_height},
-        window_cursor_pos);
-
-    if (window_cursor_pos[0] < viewport[0] || window_cursor_pos[1] < viewport[1]
-        || window_cursor_pos[0] > viewport[0] + viewport[2]
-        || window_cursor_pos[1] > viewport[1] + viewport[3]) {
-        // Outside of the game viewport.
-        return false;
-    }
-
-    glm_vec2_copy(window_cursor_pos, out_cursor_pos);
-    (*out_game_camera) = game_camera;
-    return true;
 }
 
 void
 editor_on_keyboard_button_pressed(
     void* game_instance, struct te_game_manager* game_manager, enum te_keyboard_button button,
     te_keyboard_modifiers modifiers) {
+    te_editor* editor;
+    te_scene_animation_editor* anim_editor;
+
     (void)game_manager;
 
-    te_editor* editor = game_instance;
+    editor = game_instance;
     if (editor->game_world == NULL) {
         return;
     }
 
-    te_scene_animation_editor* anim_editor =
+    anim_editor =
         world_inspector_get_scene_animation_editor(editor_ui_get_world_inspector(editor->ui));
     if (anim_editor != NULL) {
         prv_scene_animation_editor_on_keyboard_button_pressed(anim_editor, button, modifiers);
     }
 
     if (keyboard_modifiers_is_ctrl_pressed(&modifiers) && button == TE_KB_N) {
-        // Create new world.
+        /* create new world */
         editor_create_game_world(editor, NULL);
         return;
     } else if (
         keyboard_modifiers_is_ctrl_pressed(&modifiers)
         && keyboard_modifiers_is_shift_pressed(&modifiers) && button == TE_KB_S) {
-        // Save world as.
+        /* save world as */
         editor_show_file_dialog(
             editor, editor, on_new_world_file_selected, NULL, TE_FDM_SELECT_NEW_FILE);
         return;
     } else if (keyboard_modifiers_is_ctrl_pressed(&modifiers) && button == TE_KB_S) {
-        // Save world.
+        /* save world */
         if (editor->game_world_relative_path == NULL) {
             editor_show_file_dialog(
                 editor, editor, on_new_world_file_selected, NULL, TE_FDM_SELECT_NEW_FILE);
@@ -626,7 +673,7 @@ editor_on_keyboard_button_pressed(
         }
         return;
     } else if (button == TE_KB_TAB) {
-        // Toggle fullscreen.
+        /* toggle fullscreen */
         if (editor_camera_is_fullscreen(editor->editor_camera)) {
             show_ui(editor);
         } else {
@@ -641,6 +688,9 @@ void
 editor_on_keyboard_button_released(
     void* game_instance, struct te_game_manager* game_manager, enum te_keyboard_button button,
     te_keyboard_modifiers modifiers) {
+    te_camera* game_camera;
+    te_vec2 window_cursor_pos;
+
     te_editor* editor = game_instance;
 
     te_scene_animation_editor* anim_editor =
@@ -660,8 +710,6 @@ editor_on_keyboard_button_released(
         }
     }
 
-    te_camera* game_camera;
-    vec2 window_cursor_pos;
     if (!get_game_world_cursor_pos_relative_window(editor, window_cursor_pos, &game_camera)) {
         return;
     }
@@ -709,9 +757,11 @@ void
 editor_on_gamepad_axis_moved(
     void* game_instance, struct te_game_manager* game_manager, enum te_gamepad_axis axis,
     float new_pos) {
+    te_editor* editor;
+
     (void)game_manager;
 
-    te_editor* editor = game_instance;
+    editor = game_instance;
     editor_camera_on_gamepad_axis_moved(editor->editor_camera, axis, new_pos);
 }
 
@@ -719,39 +769,45 @@ void
 editor_on_mouse_button_pressed(
     void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button,
     bool was_handled_by_widget) {
+    te_editor* editor;
+    te_camera* game_camera;
+    te_scene_animation_editor* anim_editor;
+    te_vec4 viewport;
+    te_vec2 window_cursor_pos;
+
     (void)was_handled_by_widget;
     (void)game_manager;
-    te_editor* editor = game_instance;
 
-    te_camera* game_camera;
-    vec2 window_cursor_pos;
+    editor = game_instance;
+
     if (!get_game_world_cursor_pos_relative_window(editor, window_cursor_pos, &game_camera)) {
         return;
     }
 
-    vec4 viewport;
     camera_get_viewport(game_camera, viewport);
 
-    // Check if we clicked on scene animation editor.
-    te_scene_animation_editor* anim_editor =
+    /* check if we clicked on scene animation editor */
+    anim_editor =
         world_inspector_get_scene_animation_editor(editor_ui_get_world_inspector(editor->ui));
     if (anim_editor != NULL) {
-        // Remap to viewport for scene animation.
-        vec2 cursor_pos;
-        glm_vec2_sub(window_cursor_pos, viewport, cursor_pos);
-        glm_vec2_div(cursor_pos, &viewport[2], cursor_pos);
+        te_widget* widget;
+        te_vec2 pos;
+        te_vec2 size;
+        te_vec2 cursor_pos;
 
-        te_widget* widget = scene_animation_editor_get_root_widget(anim_editor);
+        /* remap to viewport for scene animation */
+        vec2_sub(window_cursor_pos, viewport, cursor_pos);
+        vec2_div(cursor_pos, &viewport[2], cursor_pos);
 
-        vec2 pos;
+        widget = scene_animation_editor_get_root_widget(anim_editor);
+
         widget_get_screen_position(widget, pos);
-        vec2 size;
         widget_get_screen_size(widget, size);
 
         if (cursor_pos[0] > pos[0] && cursor_pos[0] < pos[0] + size[0]
             && cursor_pos[1] > pos[1] && cursor_pos[1] < pos[1] + size[1]) {
-            glm_vec2_sub(cursor_pos, pos, cursor_pos);
-            glm_vec2_div(cursor_pos, size, cursor_pos);
+            vec2_sub(cursor_pos, pos, cursor_pos);
+            vec2_div(cursor_pos, size, cursor_pos);
             prv_scene_animation_editor_on_mouse_click(anim_editor, button, cursor_pos);
             return;
         }
@@ -791,10 +847,13 @@ void
 editor_on_mouse_button_released(
     void* game_instance, struct te_game_manager* game_manager, enum te_mouse_button button,
     bool was_handled_by_widget) {
+    te_editor* editor;
+    te_window* window;
+
     (void)was_handled_by_widget;
 
-    te_editor* editor = game_instance;
-    te_window* window = game_manager_get_window(game_manager);
+    editor = game_instance;
+    window = game_manager_get_window(game_manager);
 
     if (button == TE_MB_RIGHT) {
         if (window_is_mouse_captured(window)) {
@@ -817,9 +876,11 @@ void
 editor_on_mouse_moved(
     void* game_instance, struct te_game_manager* game_manager, float x_offset,
     float y_offset) {
+    te_editor* editor;
+
     (void)game_manager;
 
-    te_editor* editor = game_instance;
+    editor = game_instance;
     if (editor->game_world == NULL) {
         return;
     }
@@ -836,40 +897,45 @@ editor_on_mouse_moved(
 void
 editor_on_mouse_scroll_moved(
     void* game_instance, struct te_game_manager* game_manager, float offset) {
+    te_editor* editor;
+    te_camera* game_camera;
+    te_scene_animation_editor* anim_editor;
+    te_vec4 viewport;
+    te_vec2 window_cursor_pos;
+
     (void)game_manager;
     (void)offset;
 
-    te_editor* editor = game_instance;
+    editor = game_instance;
 
-    te_camera* game_camera;
-    vec2 window_cursor_pos;
     if (!get_game_world_cursor_pos_relative_window(editor, window_cursor_pos, &game_camera)) {
         return;
     }
 
-    vec4 viewport;
     camera_get_viewport(game_camera, viewport);
 
-    // Check if we clicked on scene animation editor.
-    te_scene_animation_editor* anim_editor =
+    /* check if we clicked on scene animation editor */
+    anim_editor =
         world_inspector_get_scene_animation_editor(editor_ui_get_world_inspector(editor->ui));
     if (anim_editor != NULL) {
-        // Remap to viewport for scene animation.
-        vec2 cursor_pos;
-        glm_vec2_sub(window_cursor_pos, viewport, cursor_pos);
-        glm_vec2_div(cursor_pos, &viewport[2], cursor_pos);
+        te_widget* widget;
+        te_vec2 cursor_pos;
+        te_vec2 pos;
+        te_vec2 size;
 
-        te_widget* widget = scene_animation_editor_get_root_widget(anim_editor);
+        /* remap to viewport for scene animation */
+        vec2_sub(window_cursor_pos, viewport, cursor_pos);
+        vec2_div(cursor_pos, &viewport[2], cursor_pos);
 
-        vec2 pos;
+        widget = scene_animation_editor_get_root_widget(anim_editor);
+
         widget_get_screen_position(widget, pos);
-        vec2 size;
         widget_get_screen_size(widget, size);
 
         if (cursor_pos[0] > pos[0] && cursor_pos[0] < pos[0] + size[0]
             && cursor_pos[1] > pos[1] && cursor_pos[1] < pos[1] + size[1]) {
-            glm_vec2_sub(cursor_pos, pos, cursor_pos);
-            glm_vec2_div(cursor_pos, size, cursor_pos);
+            vec2_sub(cursor_pos, pos, cursor_pos);
+            vec2_div(cursor_pos, size, cursor_pos);
             prv_scene_animation_editor_on_mouse_scroll_moved(anim_editor, offset, cursor_pos);
             return;
         }
@@ -878,17 +944,19 @@ editor_on_mouse_scroll_moved(
 
 void
 editor_on_gamepad_connected(void* game_instance, struct te_game_manager* game_manager) {
+    te_editor* editor = game_instance;
+
     (void)game_manager;
 
-    te_editor* editor = game_instance;
     editor_camera_on_gamepad_connected(editor->editor_camera);
 }
 
 void
 editor_on_gamepad_disconnected(void* game_instance, struct te_game_manager* game_manager) {
+    te_editor* editor = game_instance;
+
     (void)game_manager;
 
-    te_editor* editor = game_instance;
     editor_camera_on_gamepad_disconnected(editor->editor_camera);
 }
 
@@ -902,23 +970,24 @@ editor_on_input_source_changed(
 
 void
 editor_on_window_received_focus(void* game_instance, struct te_game_manager* game_manager) {
+    te_editor* editor = game_instance;
+
     (void)game_manager;
 
-    te_editor* editor = game_instance;
     editor_ui_refresh_filesystem_view(editor->ui);
 }
 
 void
 editor_on_window_lost_focus(void* game_instance, struct te_game_manager* game_manager) {
-    (void)game_manager;
-
+    te_window* window;
     te_editor* editor = game_instance;
+    (void)game_manager;
     if (editor->game_world == NULL) {
-        // No point in doing something.
+        /* no point in doing something */
         return;
     }
 
-    te_window* window = game_manager_get_window(game_manager);
+    window = game_manager_get_window(game_manager);
     window_capture_mouse_cursor(window, false);
 
     editor_camera_enable_input(editor->editor_camera, false);

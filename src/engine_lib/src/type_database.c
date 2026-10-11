@@ -5,7 +5,7 @@
 #include <game/camera.h>
 #include <game/model.h>
 #include <game/particle_emitter.h>
-#include <hashmap.c/hashmap.h>
+#include <misc/num_hashtable.h>
 #include <io/log.h>
 #include <io/config.h>
 #include <misc/wchar_funcs.h>
@@ -19,34 +19,42 @@
 #include <widget/vbox_widget.h>
 
 typedef struct te_type_database {
-    struct hashmap* types;
+    te_num_hashtable* types;
 } te_type_database;
 
-// Static for ease of access.
+/* static for ease of access */
 static te_type_database type_database;
 
-// Command hash for hashmap.
-static uint64_t
-prv_type_info_hash(const void* item, uint64_t seed0, uint64_t seed1) {
-    const te_type_info* const* info = item;
-    return hashmap_sip((*info)->id, strlen((*info)->id), seed0, seed1);
-}
+static void
+free_type_info(void* ptr) {
+    te_type_info* info = ptr;
+    free(info->game_object_info);
+    free(info->variables);
+    free(info->bool_setters);
+    free(info->bool_getters);
+    free(info->uint_setters);
+    free(info->uint_getters);
+    free(info->float_setters);
+    free(info->float_getters);
+    free(info->vec2_setters);
+    free(info->vec2_getters);
+    free(info->vec3_setters);
+    free(info->vec3_getters);
+    free(info->vec4_setters);
+    free(info->vec4_getters);
+    free(info->string_setters);
+    free(info->string_getters);
+    free(info->wstring_setters);
+    free(info->wstring_getters);
 
-// Command compare for hashmap.
-static int
-prv_type_info_compare(const void* a, const void* b, void* udata) {
-    (void)udata;
-    const te_type_info* const* info1 = a;
-    const te_type_info* const* info2 = b;
-    return strcmp((*info1)->id, (*info2)->id);
+    free(info);
 }
 
 void
 prv_type_database_init(void) {
-    type_database.types = hashmap_new(
-        sizeof(te_type_info*), 4, 0, 0, prv_type_info_hash, prv_type_info_compare, NULL, NULL);
+    type_database.types = num_hashtable_create(512, sizeof(te_type_info), free_type_info);
 
-    // Register engine types.
+    /* register engine types */
     model_register_type();
     camera_register_type();
     particle_emitter_register_type();
@@ -82,6 +90,8 @@ type_info_create(
     info->variables = NULL;
     info->variable_count = 0;
 
+    /* NOTE: add new variables to type_info_save_to_config and type_info_load_from_config */
+
     info->bool_setters = NULL;
     info->bool_getters = NULL;
     info->bool_count = 0;
@@ -114,53 +124,28 @@ type_info_create(
     info->wstring_getters = NULL;
     info->wstring_count = 0;
 
-    // NOTE: add new variables to type_info_save_to_config and type_info_load_from_config
+    /* NOTE: add new variables to type_info_save_to_config and type_info_load_from_config */
 
     return info;
 }
 
 void
 prv_type_database_deinit(void) {
-    size_t iter = 0;
-    void* item;
-    while (hashmap_iter(type_database.types, &iter, &item)) {
-        const te_type_info** ptr = item;
-        te_type_info* info = (te_type_info*)*ptr;
-        free(info->game_object_info);
-        free(info->variables);
-        free(info->bool_setters);
-        free(info->bool_getters);
-        free(info->uint_setters);
-        free(info->uint_getters);
-        free(info->float_setters);
-        free(info->float_getters);
-        free(info->vec2_setters);
-        free(info->vec2_getters);
-        free(info->vec3_setters);
-        free(info->vec3_getters);
-        free(info->vec4_setters);
-        free(info->vec4_getters);
-        free(info->string_setters);
-        free(info->string_getters);
-        free(info->wstring_setters);
-        free(info->wstring_getters);
-
-        free(info);
-    }
-    hashmap_clear(type_database.types, true);
-
-    hashmap_free(type_database.types);
+    num_hashtable_destroy(type_database.types);
     type_database.types = NULL;
 }
 
 #define TYPE_INFO_ALLOC_VARIABLE(                                                             \
     info, var_name, var_type, type_var_count, setters, getters, new_setter, new_getter)       \
+    te_variable_info* new_variables;                                                          \
+    void* new_getters;                                                                        \
+    void* new_setters;                                                                        \
+    te_variable_info* var_info;                                                               \
     if (info->variable_count == 0xffff) {                                                     \
-        log_error("reached variable limit");                                                  \
+        log_error(__FILE__, __LINE__, "reached variable limit");                              \
         abort();                                                                              \
     }                                                                                         \
-    te_variable_info* new_variables =                                                         \
-        malloc(sizeof(te_variable_info) * (info->variable_count + 1));                        \
+    new_variables = malloc(sizeof(te_variable_info) * (info->variable_count + 1));            \
     memcpy(new_variables, info->variables, sizeof(te_variable_info) * info->variable_count);  \
                                                                                               \
     free(info->variables);                                                                    \
@@ -168,14 +153,14 @@ prv_type_database_deinit(void) {
                                                                                               \
     info->variable_count += 1;                                                                \
                                                                                               \
-    void* new_setters = malloc(sizeof(void*) * (type_var_count + 1));                         \
+    new_setters = malloc(sizeof(void*) * (type_var_count + 1));                               \
     memcpy(new_setters, setters, sizeof(void*) * type_var_count);                             \
                                                                                               \
     free(setters);                                                                            \
     setters = new_setters;                                                                    \
     setters[type_var_count] = new_setter;                                                     \
                                                                                               \
-    void* new_getters = malloc(sizeof(void*) * (type_var_count + 1));                         \
+    new_getters = malloc(sizeof(void*) * (type_var_count + 1));                               \
     memcpy(new_getters, getters, sizeof(void*) * type_var_count);                             \
                                                                                               \
     free(getters);                                                                            \
@@ -184,7 +169,7 @@ prv_type_database_deinit(void) {
                                                                                               \
     type_var_count += 1;                                                                      \
                                                                                               \
-    te_variable_info* var_info = &info->variables[info->variable_count - 1];                  \
+    var_info = &info->variables[info->variable_count - 1];                                    \
     var_info->name = name;                                                                    \
     var_info->type = var_type;                                                                \
     var_info->set_get_index = type_var_count - 1;
@@ -255,9 +240,11 @@ type_info_add_wstring_variable(
 
 unsigned int
 type_info_save_to_config(const te_type_info* type_info, te_config* config, void* obj) {
+    unsigned int var_idx;
+
     const unsigned int section_idx = config_create_section(config, type_info->id);
 
-    for (unsigned int var_idx = 0; var_idx < type_info->variable_count; var_idx++) {
+    for (var_idx = 0; var_idx < type_info->variable_count; var_idx++) {
         te_variable_info* var_info = &type_info->variables[var_idx];
         switch (var_info->type) {
             case (TE_VT_BOOL): {
@@ -297,19 +284,19 @@ type_info_save_to_config(const te_type_info* type_info, te_config* config, void*
                 break;
             }
             case (TE_VT_VEC2): {
-                vec2 val;
+                te_vec2 val;
                 type_info->vec2_getters[var_info->set_get_index](obj, val);
                 config_section_set_float_array(config, section_idx, var_info->name, val, 2);
                 break;
             }
             case (TE_VT_VEC3): {
-                vec3 val;
+                te_vec3 val;
                 type_info->vec3_getters[var_info->set_get_index](obj, val);
                 config_section_set_float_array(config, section_idx, var_info->name, val, 3);
                 break;
             }
             case (TE_VT_VEC4): {
-                vec4 val;
+                te_vec4 val;
                 type_info->vec4_getters[var_info->set_get_index](obj, val);
                 config_section_set_float_array(config, section_idx, var_info->name, val, 4);
                 break;
@@ -323,7 +310,9 @@ type_info_save_to_config(const te_type_info* type_info, te_config* config, void*
 void
 type_info_load_from_config(
     const te_type_info* type_info, te_config* config, unsigned int section_idx, void* obj) {
-    for (unsigned int var_idx = 0; var_idx < type_info->variable_count; var_idx++) {
+    unsigned int var_idx;
+
+    for (var_idx = 0; var_idx < type_info->variable_count; var_idx++) {
         te_variable_info* var_info = &type_info->variables[var_idx];
         switch (var_info->type) {
             case (TE_VT_BOOL): {
@@ -372,6 +361,7 @@ type_info_load_from_config(
                     config, section_idx, var_info->name, &count);
                 if (count != 2) {
                     log_warn_fmt(
+                        __FILE__, __LINE__,
                         "variable \"%s\" of section with index %u has unexpected array size "
                         "in the config, expected 2 got %u, "
                         "ignoring this variable",
@@ -387,6 +377,7 @@ type_info_load_from_config(
                     config, section_idx, var_info->name, &count);
                 if (count != 3) {
                     log_warn_fmt(
+                        __FILE__, __LINE__,
                         "variable \"%s\" of section with index %u has unexpected array size "
                         "in the config, expected 3 got %u, "
                         "ignoring this variable",
@@ -402,6 +393,7 @@ type_info_load_from_config(
                     config, section_idx, var_info->name, &count);
                 if (count != 4) {
                     log_warn_fmt(
+                        __FILE__, __LINE__,
                         "variable \"%s\" of section with index %u has unexpected array size "
                         "in the config, expected 4 got %u, "
                         "ignoring this variable",
@@ -418,17 +410,17 @@ type_info_load_from_config(
 void
 type_database_register_type(te_type_info* info) {
     if (type_database.types == NULL) {
-        log_error("type database is not initialized yet or was already deinitialized");
+        log_error(
+            __FILE__, __LINE__,
+            "type database is not initialized yet or was already deinitialized");
         abort();
     }
 
-    const te_type_info* const* found = hashmap_get(type_database.types, &info);
-    if (found != NULL) {
-        log_error("a type with the specified ID is already registered");
+    if (num_hashtable_insert(type_database.types, calc_string_hash(info->id), info) == 0) {
+        log_error(__FILE__, __LINE__, "a type with the specified ID is already registered");
         abort();
     }
-
-    hashmap_set(type_database.types, &info);
+    free(info); /* no longer need this pointer, data of the ptr was copied to hashtable */
 }
 
 const te_type_info*
@@ -438,40 +430,37 @@ type_database_get_type_info(const char* id) {
     }
 
     if (type_database.types == NULL) {
-        log_error("type database is not initialized yet or was already deinitialized");
+        log_error(
+            __FILE__, __LINE__,
+            "type database is not initialized yet or was already deinitialized");
         abort();
     }
 
-    te_type_info* test = type_info_create(id, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-    const te_type_info* const* found = hashmap_get(type_database.types, &test);
-    free(test);
-
-    if (found == NULL) {
-        return NULL;
-    }
-
-    return *found;
+    return num_hashtable_find(type_database.types, calc_string_hash(id));
 }
 
 const char**
 type_database_get_all_type_ids(unsigned int* count) {
-    (*count) = (unsigned int)hashmap_count(type_database.types);
-    if ((*count) == 0) {
+    const char** array;
+    te_num_hashtable_iterator* it;
+    te_type_info* info;
+    unsigned int i;
+
+    (*count) = (unsigned int)num_hashtable_get_item_count(type_database.types);
+    if (*count == 0) {
         return NULL;
     }
 
-    const char** array = malloc(sizeof(const char*) * (*count));
+    array = malloc(sizeof(const char*) * (*count));
 
-    size_t iter = 0;
-    size_t item_idx = 0;
-    void* item;
-    while (hashmap_iter(type_database.types, &iter, &item)) {
-        const te_type_info** ptr = item;
-        te_type_info* info = (te_type_info*)*ptr;
+    it = num_hashtable_iterator_create(type_database.types);
 
-        array[item_idx] = info->id;
-        item_idx += 1;
+    for (i = 0; i < *count; i++) {
+        info = num_hashtable_iterator_next(it);
+        array[i] = info->id;
     }
+
+    num_hashtable_iterator_destroy(it);
 
     return array;
 }

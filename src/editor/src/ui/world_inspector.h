@@ -16,18 +16,19 @@ void world_inspector_add(te_world_inspector* inspector, struct te_widget* left_p
 
 void world_inspector_rebuild_list(te_world_inspector* inspector, struct te_world* game_world);
 
-// Clears displayed items, usually called before world destruction.
+/* Clears displayed items, usually called before world destruction. */
 void world_inspector_reset(te_world_inspector* inspector);
 
-// Looks for the specified game object and selects it if it exists in the world inspector.
-// Specify NULL to clear selection.
+/* Looks for the specified game object and selects it if it exists in the world inspector.
+ * Specify NULL to clear selection. */
 void world_inspector_select_obj(
     te_world_inspector* inspector, void* target_game_object,
     struct te_game_object_info* target_info);
 
-// In case some game object's name was changed call this function to make sure world inspector displays the updated name.
+/* In case some game object's name was changed call this function to
+ * make sure world inspector displays the updated name. */
 void world_inspector_refresh_names(te_world_inspector* inspector);
 
-// Returns NULL if scene animation editor is not opened currently.
+/* Returns NULL if scene animation editor is not opened currently. */
 struct te_scene_animation_editor*
 world_inspector_get_scene_animation_editor(te_world_inspector* inspector);

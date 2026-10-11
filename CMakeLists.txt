@@ -43,17 +43,17 @@ endif()
 # Define a function to configure engine targets (i.e. common configuration for targets).
 function(tiny_engine_configure_target TARGET_NAME)
     # Set C standard.
-    set_property(TARGET ${TARGET_NAME} PROPERTY C_STANDARD 99)
+    set_property(TARGET ${TARGET_NAME} PROPERTY C_STANDARD 90)
     set_property(TARGET ${TARGET_NAME} PROPERTY C_STANDARD_REQUIRED ON)
 
     # More warnings.
     if(MSVC)
-        target_compile_options(${TARGET_NAME} PUBLIC /W3 /WX /wd4996 /wd4113)
+        target_compile_options(${TARGET_NAME} PUBLIC /W3 /WX /permissive- /wd4996 /wd4113)
 	if(CMAKE_SIZEOF_VOID_P EQUAL 4)
 	    target_compile_options(${TARGET_NAME} PUBLIC /wd4090)
 	endif()
     else()
-	target_compile_options(${TARGET_NAME} PUBLIC -Wall -Wextra -Werror -Wconversion -Wno-unused-but-set-parameter -Wno-incompatible-function-pointer-types)
+	target_compile_options(${TARGET_NAME} PUBLIC -Wall -Wextra -Werror -Wpedantic --ansi -Wconversion -Wno-unused-but-set-parameter -Wno-incompatible-function-pointer-types)
 	if(CMAKE_COMPILER_IS_GNUCC)
 	    target_compile_options(${TARGET_NAME} PUBLIC -Wno-incompatible-pointer-types -Wno-unused-result -Wno-unknown-warning-option)
 	endif()
@@ -66,6 +66,12 @@ function(tiny_engine_configure_target TARGET_NAME)
     if(NOT IS_RELEASE_BUILD)
 	    message(STATUS "${PROJECT_NAME}: adding DEBUG macro")
 	    target_compile_definitions(${TARGET_NAME} PUBLIC DEBUG)
+    endif()
+
+    # Add 32-bit macro.
+    if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+        message(STATUS "${PROJECT_NAME}: adding 32-bit macro")
+        target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_32BIT)
     endif()
 
     # Debug tools.

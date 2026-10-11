@@ -1,29 +1,30 @@
 #include <widget/widget.h>
 
+#include <stdlib.h>
 #include <string.h>
 #include <io/log.h>
 #include <world.h>
 
 struct te_widget {
-    // Actual widget that owns this component.
+    /* actual widget that owns this component */
     void* owner;
 
-    // Not NULL if was set.
+    /* not NULL if was set */
     char* name;
 
-    // May be NULL. Do not free/destroy this pointer.
+    /* may be NULL, do not free/destroy this pointer */
     te_widget* parent;
 
-    // Non-NULL if spawned. Do not free/destroy this pointer.
+    /* non-NULL if spawned. Do not free/destroy this pointer */
     te_world* world;
 
-    // Size of this array is @ref child_widget_count.
+    /* size of this array is @ref child_widget_count */
     te_widget** child_widgets;
 
-    // Always valid.
+    /* always valid */
     const char* (*get_type_id)(void);
 
-    // May be NULL.
+    /* may be NULL */
     void (*on_pos_changed)(void* owner);
     void (*on_size_changed)(void* owner);
     void (*on_parent_changed)(void* owner);
@@ -33,32 +34,33 @@ struct te_widget {
     void (*on_before_despawned)(void* owner);
     void (*on_window_size_changed)(void* owner);
 
-    // May be NULL, used by interactable widgets.
-    void (*on_cursor_entered)(void* owner, vec2 cursor_pos);
-    void (*on_cursor_left)(void* owner, vec2 cursor_pos);
-    void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, vec2 cursor_pos);
+    /* may be NULL, used by interactable widgets */
+    void (*on_cursor_entered)(void* owner, te_vec2 cursor_pos);
+    void (*on_cursor_left)(void* owner, te_vec2 cursor_pos);
+    void (*on_mouse_button_pressed)(
+        void* owner, enum te_mouse_button button, te_vec2 cursor_pos);
     void (*on_mouse_button_released)(
-        void* owner, enum te_mouse_button button, vec2 cursor_pos);
-    void (*on_hovered_cursor_moved)(void* owner, vec2 cursor_pos);
+        void* owner, enum te_mouse_button button, te_vec2 cursor_pos);
+    void (*on_hovered_cursor_moved)(void* owner, te_vec2 cursor_pos);
     void (*on_keyboard_input_text)(void* owner, const char* text);
     void (*on_keyboard_input)(void* owner, enum te_keyboard_button button);
 
-    // If @ref parent is NULL equal to screen pos/size, otherwise
-    // stores pos/size relative to the parent.
-    vec2 relative_pos;
-    vec2 relative_size;
+    /* if @ref parent is NULL equal to screen pos/size, otherwise
+     * stores pos/size relative to the parent */
+    te_vec2 relative_pos;
+    te_vec2 relative_size;
 
-    // Stores the final screen pos/size (includes parents if have parents)
-    // in range [0.0; 1.0] relative to the window size.
-    vec2 screen_pos;
-    vec2 screen_size;
+    /* stores the final screen pos/size (includes parents if have parents)
+     * in range [0.0; 1.0] relative to the window size */
+    te_vec2 screen_pos;
+    te_vec2 screen_size;
 
     size_t custom_value;
     void* custom_ptr;
 
     unsigned int child_widget_count;
 
-    // `false` if this widget (and its child widgets) should not be serialized.
+    /* `false` if this widget (and its child widgets) should not be serialized */
     bool allow_serialization;
 };
 
@@ -72,11 +74,11 @@ widget_create(
     te_widget* widget = malloc(sizeof(te_widget));
 
     if (owner == NULL) {
-        log_error("owner widget must be specified");
+        log_error(__FILE__, __LINE__, "owner widget must be specified");
         abort();
     }
     if (get_type_id == NULL) {
-        log_error("get_type_id function must be specified");
+        log_error(__FILE__, __LINE__, "get_type_id function must be specified");
         abort();
     }
 
@@ -107,19 +109,21 @@ widget_create(
     widget->on_keyboard_input_text = NULL;
     widget->on_keyboard_input = NULL;
 
-    glm_vec2_copy((vec2){0.1f, 0.1f}, widget->relative_pos);
-    glm_vec2_copy((vec2){0.1f, 0.05f}, widget->relative_size);
+    vec2_set(0.1f, 0.1f, widget->relative_pos);
+    vec2_set(0.1f, 0.05f, widget->relative_size);
 
-    glm_vec2_copy(widget->relative_pos, widget->screen_pos);
-    glm_vec2_copy(widget->relative_size, widget->screen_size);
+    vec2_copy(widget->relative_pos, widget->screen_pos);
+    vec2_copy(widget->relative_size, widget->screen_size);
 
     return widget;
 }
 
 void
 widget_destroy(te_widget* widget) {
+    unsigned int i;
+
     if (widget->world != NULL) {
-        log_error("can't destroy a spawned widget, despawn it first");
+        log_error(__FILE__, __LINE__, "can't destroy a spawned widget, despawn it first");
         abort();
     }
 
@@ -127,7 +131,7 @@ widget_destroy(te_widget* widget) {
         widget->on_before_base_destroyed(widget->owner);
     }
 
-    for (unsigned int i = 0; i < widget->child_widget_count; i++) {
+    for (i = 0; i < widget->child_widget_count; i++) {
         widget_destroy(widget->child_widgets[i]);
     }
     free(widget->child_widgets);
@@ -169,7 +173,7 @@ widget_get_custom_ptr(te_widget* widget) {
 }
 
 static void
-prv_widget_calc_screen_pos_size_recursive(te_widget* base, vec2 pos, vec2 size) {
+prv_widget_calc_screen_pos_size_recursive(te_widget* base, te_vec2 pos, te_vec2 size) {
     pos[0] = base->relative_pos[0] + pos[0] * base->relative_size[0];
     pos[1] = base->relative_pos[1] + pos[1] * base->relative_size[1];
 
@@ -183,8 +187,8 @@ prv_widget_calc_screen_pos_size_recursive(te_widget* base, vec2 pos, vec2 size) 
 
 static void
 prv_widget_recalc_screen_pos_size(te_widget* widget) {
-    glm_vec2_copy(widget->relative_pos, widget->screen_pos);
-    glm_vec2_copy(widget->relative_size, widget->screen_size);
+    vec2_copy(widget->relative_pos, widget->screen_pos);
+    vec2_copy(widget->relative_size, widget->screen_size);
 
     if (widget->parent != NULL) {
         prv_widget_calc_screen_pos_size_recursive(
@@ -194,10 +198,12 @@ prv_widget_recalc_screen_pos_size(te_widget* widget) {
 
 static void
 prv_widget_on_parent_pos_changed(te_widget* widget) {
+    unsigned int i;
+
     prv_widget_recalc_screen_pos_size(widget);
 
-    // Notify child widgets.
-    for (unsigned int i = 0; i < widget->child_widget_count; i++) {
+    /* notify child widgets */
+    for (i = 0; i < widget->child_widget_count; i++) {
         prv_widget_on_parent_pos_changed(widget->child_widgets[i]);
     }
 
@@ -208,10 +214,12 @@ prv_widget_on_parent_pos_changed(te_widget* widget) {
 
 static void
 prv_widget_on_parent_size_changed(te_widget* widget) {
+    unsigned int i;
+
     prv_widget_recalc_screen_pos_size(widget);
 
-    // Notify child widgets.
-    for (unsigned int i = 0; i < widget->child_widget_count; i++) {
+    /* notify child widgets */
+    for (i = 0; i < widget->child_widget_count; i++) {
         prv_widget_on_parent_size_changed(widget->child_widgets[i]);
     }
 
@@ -222,19 +230,21 @@ prv_widget_on_parent_size_changed(te_widget* widget) {
 
 void
 widget_set_parent(te_widget* widget, te_widget* new_parent) {
+    unsigned int i;
+
     if (new_parent == widget->parent) {
         return;
     }
     if (widget == new_parent) {
-        log_error("can't attach a widget to itself");
+        log_error(__FILE__, __LINE__, "can't attach a widget to itself");
         abort();
     }
 
     if (widget->parent != NULL) {
-        // Remove self from old parent's array of child widgets.
+        /* remove self from old parent's array of child widgets */
         unsigned int index = 0;
         bool found = false;
-        for (unsigned int i = 0; i < widget->parent->child_widget_count; i++) {
+        for (i = 0; i < widget->parent->child_widget_count; i++) {
             if (widget->parent->child_widgets[i] != widget) {
                 continue;
             }
@@ -244,7 +254,9 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
             break;
         }
         if (!found) {
-            log_error("unable to find widget in parent's array of child widgets");
+            log_error(
+                __FILE__, __LINE__,
+                "unable to find widget in parent's array of child widgets");
             abort();
         }
 
@@ -267,7 +279,7 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
         }
     }
 
-    // Add self to new parent's array of child widgets.
+    /* add self to new parent's array of child widgets */
     if (new_parent != NULL) {
         te_widget** new_children =
             malloc(sizeof(te_widget*) * (new_parent->child_widget_count + 1));
@@ -296,15 +308,17 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
         } else {
             if (new_parent->world != NULL) {
                 if (widget->world != new_parent->world) {
-                    log_error("can't attach a widget to another widget because they are "
-                              "spawned in different worlds");
+                    log_error(
+                        __FILE__, __LINE__,
+                        "can't attach a widget to another widget because they are "
+                        "spawned in different worlds");
                     abort();
                 } else {
                     prv_world_remove_root_widget_no_notify(widget->world, widget, false);
                 }
             } else {
-                // This is a child widget and we also don't need to notify the world
-                // (root widgets don't have parents).
+                /* this is a child widget and we also don't need to notify the world
+                 * (root widgets don't have parents) */
                 prv_widget_on_despawned(widget);
             }
         }
@@ -319,14 +333,14 @@ widget_set_parent(te_widget* widget, te_widget* new_parent) {
         new_parent->on_children_changed(new_parent->owner);
     }
 
-    // Notify.
-    for (unsigned int i = 0; i < widget->child_widget_count; i++) {
+    /* notify */
+    for (i = 0; i < widget->child_widget_count; i++) {
         prv_widget_on_parent_pos_changed(widget->child_widgets[i]);
     }
     if (widget->world != NULL && widget->on_pos_changed != NULL) {
         widget->on_pos_changed(widget->owner);
     }
-    for (unsigned int i = 0; i < widget->child_widget_count; i++) {
+    for (i = 0; i < widget->child_widget_count; i++) {
         prv_widget_on_parent_size_changed(widget->child_widgets[i]);
     }
     if (widget->world != NULL && widget->on_size_changed != NULL) {
@@ -341,8 +355,10 @@ widget_get_parent(te_widget* widget) {
 
 te_widget**
 widget_get_child_widgets(te_widget* widget, unsigned int* count) {
+    te_widget** children;
+
     (*count) = widget->child_widget_count;
-    te_widget** children = malloc(sizeof(te_widget*) * widget->child_widget_count);
+    children = malloc(sizeof(te_widget*) * widget->child_widget_count);
     memcpy(children, widget->child_widgets, sizeof(te_widget*) * widget->child_widget_count);
     return children;
 }
@@ -371,12 +387,14 @@ widget_get_name(te_widget* widget) {
 }
 
 void
-widget_set_relative_position(te_widget* widget, vec2 position) {
-    glm_vec2_copy(position, widget->relative_pos); // don't check for [0.0; 1.0]
+widget_set_relative_position(te_widget* widget, te_vec2 position) {
+    unsigned int i;
+
+    vec2_copy(position, widget->relative_pos); /* don't check for [0.0; 1.0] */
     prv_widget_recalc_screen_pos_size(widget);
 
-    // Notify child widgets.
-    for (unsigned int i = 0; i < widget->child_widget_count; i++) {
+    /* notify child widgets */
+    for (i = 0; i < widget->child_widget_count; i++) {
         prv_widget_on_parent_pos_changed(widget->child_widgets[i]);
     }
 
@@ -386,17 +404,19 @@ widget_set_relative_position(te_widget* widget, vec2 position) {
 }
 
 void
-widget_get_relative_position(te_widget* widget, vec2 out) {
-    glm_vec2_copy(widget->relative_pos, out);
+widget_get_relative_position(te_widget* widget, te_vec2 out) {
+    vec2_copy(widget->relative_pos, out);
 }
 
 void
-widget_set_relative_size(te_widget* widget, vec2 size) {
-    glm_vec2_copy(size, widget->relative_size);
+widget_set_relative_size(te_widget* widget, te_vec2 size) {
+    unsigned int i;
+
+    vec2_copy(size, widget->relative_size);
     prv_widget_recalc_screen_pos_size(widget);
 
-    // Notify child widgets.
-    for (unsigned int i = 0; i < widget->child_widget_count; i++) {
+    /* notify child widgets */
+    for (i = 0; i < widget->child_widget_count; i++) {
         prv_widget_on_parent_size_changed(widget->child_widgets[i]);
     }
 
@@ -406,25 +426,25 @@ widget_set_relative_size(te_widget* widget, vec2 size) {
 }
 
 void
-widget_get_relative_size(te_widget* widget, vec2 out) {
-    glm_vec2_copy(widget->relative_size, out);
+widget_get_relative_size(te_widget* widget, te_vec2 out) {
+    vec2_copy(widget->relative_size, out);
 }
 
 void
-widget_get_screen_position(te_widget* widget, vec2 pos) {
-    glm_vec2_copy(widget->screen_pos, pos);
+widget_get_screen_position(te_widget* widget, te_vec2 pos) {
+    vec2_copy(widget->screen_pos, pos);
 }
 
 void
-widget_get_screen_size(te_widget* widget, vec2 size) {
-    glm_vec2_copy(widget->screen_size, size);
+widget_get_screen_size(te_widget* widget, te_vec2 size) {
+    vec2_copy(widget->screen_size, size);
 }
 
 te_world*
 widget_get_world(te_widget* widget) {
 #if defined(DEBUG)
     if (widget == NULL) {
-        log_error("invalid widget specified");
+        log_error(__FILE__, __LINE__, "invalid widget specified");
         abort();
     }
 #endif
@@ -443,22 +463,26 @@ widget_is_serialization_allowed(te_widget* widget) {
 
 void
 prv_widget_on_spawned(te_widget* widget, te_world* world) {
-    // Spawn from top to bottom (in the hierarchy) so that widgets will be placed in the renderer
-    // in the order from top to bottom (in the hierarchy) for top widgets to be rendered first and bottom widgets last.
+    unsigned int i;
+
+    /* spawn from top to bottom (in the hierarchy) so that widgets will be placed in the renderer
+     * in the order from top to bottom (in the hierarchy) for top widgets to be rendered first and bottom widgets last */
     widget->world = world;
     if (widget->on_after_spawned != NULL) {
         widget->on_after_spawned(widget->owner);
     }
 
-    for (unsigned int i = 0; i < widget->child_widget_count; i++) {
+    for (i = 0; i < widget->child_widget_count; i++) {
         prv_widget_on_spawned(widget->child_widgets[i], world);
     }
 }
 
 void
 prv_widget_on_despawned(te_widget* widget) {
-    // Despawn children first.
-    for (unsigned int i = 0; i < widget->child_widget_count; i++) {
+    unsigned int i;
+
+    /* despawn children first */
+    for (i = 0; i < widget->child_widget_count; i++) {
         prv_widget_on_despawned(widget->child_widgets[i]);
     }
 
@@ -470,14 +494,16 @@ prv_widget_on_despawned(te_widget* widget) {
 
 void
 prv_widget_on_window_size_changed(te_widget* widget) {
+    unsigned int i;
+
     if (widget->world == NULL) {
-        // No need to notify widgets because they will query window size when spawned.
+        /* no need to notify widgets because they will query window size when spawned */
         return;
     }
 
-    // Start from deepest child widget so that when parent widgets are notified
-    // they will have child widgets having already updated data.
-    for (unsigned int i = 0; i < widget->child_widget_count; i++) {
+    /* start from deepest child widget so that when parent widgets are notified
+     * they will have child widgets having already updated data */
+    for (i = 0; i < widget->child_widget_count; i++) {
         prv_widget_on_window_size_changed(widget->child_widgets[i]);
     }
 
@@ -488,12 +514,13 @@ prv_widget_on_window_size_changed(te_widget* widget) {
 
 void
 prv_widget_set_input_callbacks(
-    te_widget* widget, void (*on_cursor_entered)(void* owner, vec2 cursor_pos),
-    void (*on_cursor_left)(void* owner, vec2 cursor_pos),
-    void (*on_mouse_button_pressed)(void* owner, enum te_mouse_button button, vec2 cursor_pos),
+    te_widget* widget, void (*on_cursor_entered)(void* owner, te_vec2 cursor_pos),
+    void (*on_cursor_left)(void* owner, te_vec2 cursor_pos),
+    void (*on_mouse_button_pressed)(
+        void* owner, enum te_mouse_button button, te_vec2 cursor_pos),
     void (*on_mouse_button_released)(
-        void* owner, enum te_mouse_button button, vec2 cursor_pos),
-    void (*on_hovered_cursor_moved)(void* owner, vec2 cursor_pos),
+        void* owner, enum te_mouse_button button, te_vec2 cursor_pos),
+    void (*on_hovered_cursor_moved)(void* owner, te_vec2 cursor_pos),
     void (*on_keyboard_input_text)(void* owner, const char* input_text),
     void (*on_keyboard_input)(void* owner, enum te_keyboard_button button)) {
     widget->on_cursor_entered = on_cursor_entered;
@@ -507,7 +534,7 @@ prv_widget_set_input_callbacks(
 
 void
 prv_widget_on_mouse_button_pressed(
-    te_widget* widget, enum te_mouse_button button, vec2 cursor_pos) {
+    te_widget* widget, enum te_mouse_button button, te_vec2 cursor_pos) {
     if (widget->on_mouse_button_pressed == NULL) {
         return;
     }
@@ -517,7 +544,7 @@ prv_widget_on_mouse_button_pressed(
 
 void
 prv_widget_on_mouse_button_released(
-    te_widget* widget, enum te_mouse_button button, vec2 cursor_pos) {
+    te_widget* widget, enum te_mouse_button button, te_vec2 cursor_pos) {
     if (widget->on_mouse_button_released == NULL) {
         return;
     }
@@ -526,7 +553,7 @@ prv_widget_on_mouse_button_released(
 }
 
 void
-prv_widget_on_cursor_entered(te_widget* widget, vec2 cursor_pos) {
+prv_widget_on_cursor_entered(te_widget* widget, te_vec2 cursor_pos) {
     if (widget->on_cursor_entered == NULL) {
         return;
     }
@@ -535,7 +562,7 @@ prv_widget_on_cursor_entered(te_widget* widget, vec2 cursor_pos) {
 }
 
 void
-prv_widget_on_cursor_left(te_widget* widget, vec2 cursor_pos) {
+prv_widget_on_cursor_left(te_widget* widget, te_vec2 cursor_pos) {
     if (widget->on_cursor_left == NULL) {
         return;
     }
@@ -544,7 +571,7 @@ prv_widget_on_cursor_left(te_widget* widget, vec2 cursor_pos) {
 }
 
 void
-prv_widget_on_hovered_cursor_moved(te_widget* widget, vec2 cursor_pos) {
+prv_widget_on_hovered_cursor_moved(te_widget* widget, te_vec2 cursor_pos) {
     if (widget->on_hovered_cursor_moved == NULL) {
         return;
     }

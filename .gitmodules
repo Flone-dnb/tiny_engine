@@ -1,21 +1,15 @@
-[submodule "ext/cglm"]
-	path = ext/cglm
-	url = https://github.com/Flone-dnb/cglm.git
 [submodule "ext/stb"]
 	path = ext/stb
 	url = https://github.com/nothings/stb.git
 [submodule "ext/freetype"]
 	path = ext/freetype
-	url = https://gitlab.freedesktop.org/freetype/freetype.git
-[submodule "ext/hashmap.c"]
-	path = ext/hashmap.c
-	url = https://github.com/tidwall/hashmap.c.git
+	url = https://github.com/Flone-dnb/freetype.git
 [submodule "ext/memcheck"]
 	path = ext/memcheck
 	url = https://github.com/Flone-dnb/memcheck.git
 [submodule "ext/cgltf"]
 	path = ext/cgltf
-	url = https://github.com/jkuhlmann/cgltf.git
+	url = https://github.com/Flone-dnb/cgltf.git
 [submodule "ext/miniaudio"]
 	path = ext/miniaudio
-	url = https://github.com/mackron/miniaudio.git
+	url = https://github.com/Flone-dnb/miniaudio.git

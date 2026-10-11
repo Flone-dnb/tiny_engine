@@ -45,6 +45,7 @@ IndentWrappedFunctionNames: false
 KeepEmptyLinesAtTheStartOfBlocks: true
 MacroBlockBegin: ""
 MacroBlockEnd: ""
+InsertNewlineAtEOF: true
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
 PenaltyBreakAssignment: 2

@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <cglm/vec2.h>
+#include <math/vec2.h>
 #include <debug_console.h>
 #include <io/log.h>
 #include <io/filesystem.h>
@@ -22,48 +22,51 @@ typedef struct te_game_tick_callback {
     unsigned int id;
 } te_game_tick_callback;
 
-// Stores all core systems such as game world, physics, audio, renderer and etc.
+/* stores all core systems such as game world, physics, audio, renderer and etc. */
 struct te_game_manager {
-    // Always valid pointer to the window that owns this object. This pointer should not be freed.
+    /* always valid pointer to the window that owns this object. This pointer should not be freed */
     struct te_window* window;
 
     te_renderer* renderer;
 
     te_sound_manager* sound_manager;
 
-    // Custom user tick callbacks. The number of elements in this array is @ref tick_callback_count.
+    /* custom user tick callbacks, the number of elements in this array is @ref tick_callback_count */
     te_game_tick_callback* tick_callbacks;
 
-    // Game worlds. Size of this array is @ref world_count.
+    /* game worlds, size of this array is @ref world_count */
     te_world** worlds;
 
-    // Number of elements in the @ref worlds array.
+    /* number of elements in the @ref worlds array */
     unsigned int world_count;
 
-    // Number of elements in the @ref tick_callbacks array.
+    /* number of elements in the @ref tick_callbacks array */
     unsigned int tick_callback_count;
 
-    // Next unique ID of a new tick callback to be used.
+    /* next unique ID of a new tick callback to be used */
     unsigned int next_tick_callback_id;
 
-    // `true` if we are currently iterating over @ref tick_callbacks.
+    /* `true` if we are currently iterating over @ref tick_callbacks */
     bool is_processing_tick_callbacks;
 
-    // `true` if while processing tick callbacks they changed.
+    /* `true` if while processing tick callbacks they changed */
     bool is_tick_callbacks_changed;
 };
 
 te_game_manager*
 prv_game_manager_create(struct te_window* window) {
+    te_game_manager* game_manager;
+
     srand((unsigned int)time(NULL));
 
-    // make sure "res" directory exists
+    /* make sure "res" directory exists */
     if (!filesystem_does_path_exists("res")) {
-        log_error("expected to have \"res\" directory next to the executable");
+        log_error(
+            __FILE__, __LINE__, "expected to have \"res\" directory next to the executable");
         abort();
     }
 
-    te_game_manager* game_manager = malloc(sizeof(te_game_manager));
+    game_manager = malloc(sizeof(te_game_manager));
 
     game_manager->window = window;
     game_manager->worlds = NULL;
@@ -77,7 +80,7 @@ prv_game_manager_create(struct te_window* window) {
     prv_type_database_init();
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    // init before other stuff to be able to register debug commands in subsystems
+    /* init before other stuff to be able to register debug commands in subsystems */
     prv_debug_console_init(game_manager);
 #endif
 
@@ -88,38 +91,40 @@ prv_game_manager_create(struct te_window* window) {
     prv_debug_drawer_init(game_manager->renderer);
 #endif
 
-    // Log some info.
-    log_info("state:");
+    /* log some info */
+    log_info(__FILE__, __LINE__, "state:");
 
 #if defined(ENGINE_ASAN_ENABLED)
-    log_info("- AddressSanitizer (ASan) is enabled, expect increased RAM usage!");
+    log_info(
+        __FILE__, __LINE__,
+        "- AddressSanitizer (ASan) is enabled, expect increased RAM usage!");
 #endif
 
 #if defined(DEBUG)
-    log_info("- DEBUG is defined, running debug build");
+    log_info(__FILE__, __LINE__, "- DEBUG is defined, running debug build");
 #else
-    log_info("- DEBUG is NOT defined, running release build");
+    log_info(__FILE__, __LINE__, "- DEBUG is NOT defined, running release build");
 #endif
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    log_info("- ENGINE_DEBUG_TOOLS is defined, debug tools are enabled");
+    log_info(__FILE__, __LINE__, "- ENGINE_DEBUG_TOOLS is defined, debug tools are enabled");
 #else
-    log_info("- ENGINE_DEBUG_TOOLS is NOT defined");
+    log_info(__FILE__, __LINE__, "- ENGINE_DEBUG_TOOLS is NOT defined");
 #endif
 
 #if defined(ENGINE_MEMCHECK_ENABLED)
 #if !defined(DEBUG)
 #error "memcheck should be disabled in release builds"
 #endif
-    log_info("- ENGINE_MEMCHECK_ENABLED is defined, memcheck enabled");
+    log_info(__FILE__, __LINE__, "- ENGINE_MEMCHECK_ENABLED is defined, memcheck enabled");
 #else
-    log_info("- ENGINE_MEMCHECK_ENABLED is NOT defined");
+    log_info(__FILE__, __LINE__, "- ENGINE_MEMCHECK_ENABLED is NOT defined");
 #endif
 
 #if defined(ENGINE_GLES)
-    log_info("- ENGINE_GLES is defined, using OpenGL ES");
+    log_info(__FILE__, __LINE__, "- ENGINE_GLES is defined, using OpenGL ES");
 #else
-    log_info("- ENGINE_GLES is NOT defined, using regular OpenGL");
+    log_info(__FILE__, __LINE__, "- ENGINE_GLES is NOT defined, using regular OpenGL");
 #endif
 
     return game_manager;
@@ -127,14 +132,16 @@ prv_game_manager_create(struct te_window* window) {
 
 void
 prv_game_manager_destroy(te_game_manager* game_manager) {
-    // First destroy worlds.
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    unsigned int i;
+
+    /* first destroy worlds */
+    for (i = 0; i < game_manager->world_count; i++) {
         prv_world_destroy(game_manager->worlds[i]);
     }
     free(game_manager->worlds);
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    // Destroy before renderer.
+    /* destroy before renderer */
     prv_debug_console_deinit();
     prv_debug_drawer_deinit(game_manager->renderer);
 #endif
@@ -146,6 +153,7 @@ prv_game_manager_destroy(te_game_manager* game_manager) {
 
     if (game_manager->tick_callback_count > 0) {
         log_error_fmt(
+            __FILE__, __LINE__,
             "the game manager is destroyed but there are still %u tick callback(s) registered",
             game_manager->tick_callback_count);
         abort();
@@ -156,20 +164,23 @@ prv_game_manager_destroy(te_game_manager* game_manager) {
 
 te_world*
 game_manager_create_world(te_game_manager* game_manager, const char* name) {
+    te_world** new_worlds;
+    te_world* new_world;
+
     if (name == NULL) {
-        log_error("world name must not be NULL");
+        log_error(__FILE__, __LINE__, "world name must not be NULL");
         abort();
     }
 
-    // Expand array.
-    te_world** new_worlds = malloc(sizeof(te_world*) * (game_manager->world_count + 1));
+    /* expand array */
+    new_worlds = malloc(sizeof(te_world*) * (game_manager->world_count + 1));
     memcpy(new_worlds, game_manager->worlds, sizeof(te_world*) * game_manager->world_count);
 
     free(game_manager->worlds);
     game_manager->worlds = new_worlds;
 
-    // Create new world.
-    te_world* new_world = prv_world_create(game_manager, name);
+    /* create new world */
+    new_world = prv_world_create(game_manager, name);
     game_manager->worlds[game_manager->world_count] = new_world;
     game_manager->world_count += 1;
 
@@ -184,9 +195,11 @@ game_manager_destroy_world(te_game_manager* game_manager, te_world* world) {
         free(game_manager->worlds);
         game_manager->worlds = NULL;
     } else {
+        te_world** new_worlds;
         bool found = false;
         unsigned int index = 0;
-        for (unsigned int i = 0; i < game_manager->world_count; i++) {
+        unsigned int i;
+        for (i = 0; i < game_manager->world_count; i++) {
             if (game_manager->worlds[i] != world) {
                 continue;
             }
@@ -195,13 +208,13 @@ game_manager_destroy_world(te_game_manager* game_manager, te_world* world) {
             break;
         }
         if (!found) {
-            log_error("unable to find the specified world to destroy");
+            log_error(__FILE__, __LINE__, "unable to find the specified world to destroy");
             abort();
         }
 
         prv_world_destroy(game_manager->worlds[index]);
 
-        te_world** new_worlds = malloc(sizeof(te_world*) * (game_manager->world_count - 1));
+        new_worlds = malloc(sizeof(te_world*) * (game_manager->world_count - 1));
         memcpy(new_worlds, game_manager->worlds, sizeof(te_world*) * index);
         memcpy(
             new_worlds + index, game_manager->worlds + (index + 1),
@@ -218,6 +231,8 @@ unsigned int
 game_manager_add_tick_callback(
     te_game_manager* game_manager, void* custom,
     void (*on_tick)(void* custom, float delta_time_sec)) {
+    te_game_tick_callback* callback;
+
     te_game_tick_callback* new_callbacks =
         malloc(sizeof(te_game_tick_callback) * (game_manager->tick_callback_count + 1));
     memcpy(
@@ -227,7 +242,7 @@ game_manager_add_tick_callback(
     free(game_manager->tick_callbacks);
     game_manager->tick_callbacks = new_callbacks;
 
-    te_game_tick_callback* callback = &new_callbacks[game_manager->tick_callback_count];
+    callback = &new_callbacks[game_manager->tick_callback_count];
     callback->on_tick = on_tick;
     callback->custom = custom;
     callback->id = game_manager->next_tick_callback_id;
@@ -244,6 +259,9 @@ game_manager_add_tick_callback(
 
 void
 game_manager_remove_tick_callback(te_game_manager* game_manager, unsigned int callback_id) {
+    te_game_tick_callback* new_callbacks;
+    unsigned int i;
+
     if (game_manager->tick_callback_count == 1) {
         free(game_manager->tick_callbacks);
         game_manager->tick_callbacks = NULL;
@@ -251,12 +269,12 @@ game_manager_remove_tick_callback(te_game_manager* game_manager, unsigned int ca
         return;
     }
 
-    for (unsigned int i = 0; i < game_manager->tick_callback_count; i++) {
+    for (i = 0; i < game_manager->tick_callback_count; i++) {
         if (game_manager->tick_callbacks[i].id != callback_id) {
             continue;
         }
 
-        te_game_tick_callback* new_callbacks =
+        new_callbacks =
             malloc(sizeof(te_game_tick_callback) * (game_manager->tick_callback_count - 1));
         memcpy(new_callbacks, game_manager->tick_callbacks, sizeof(te_game_tick_callback) * i);
         memcpy(
@@ -273,7 +291,9 @@ game_manager_remove_tick_callback(te_game_manager* game_manager, unsigned int ca
         return;
     }
 
-    log_error_fmt("unable to find a registered tick callback with ID %u", callback_id);
+    log_error_fmt(
+        __FILE__, __LINE__, "unable to find a registered tick callback with ID %u",
+        callback_id);
     abort();
 }
 
@@ -310,61 +330,68 @@ game_manager_get_tick_callback_count(te_game_manager* game_manager) {
 
 void
 prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
+    te_camera* active_camera;
+    unsigned int i;
+
     (void)delta_time_sec;
 
-    // Get active camera to update sound listener.
-    te_camera* active_camera = NULL;
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    /* get active camera to update sound listener */
+    active_camera = NULL;
+    for (i = 0; i < game_manager->world_count; i++) {
         active_camera = world_get_active_camera(game_manager->worlds[i]);
         if (active_camera == NULL) {
             continue;
         }
 
 #if defined(ENGINE_EDITOR)
-        // Use game world camera as sound listener.
+        /* use game world camera as sound listener */
         if (strcmp(world_get_name(game_manager->worlds[i]), "game") == 0) {
             break;
         } else {
             active_camera = NULL;
         }
 #else
-        // Just use the first active camera.
+        /* just use the first active camera */
         break;
 #endif
     }
 
     if (active_camera != NULL) {
-        vec3 pos;
-        camera_get_world_position(active_camera, pos);
+        te_vec3 pos;
+        te_vec3 forward;
+        te_vec3 up;
 
-        vec3 forward;
-        vec3 up;
+        camera_get_world_position(active_camera, pos);
         camera_get_forward(active_camera, forward);
         camera_get_up(active_camera, up);
 
         prv_sound_manager_set_listener(game_manager->sound_manager, pos, forward, up);
     }
 
-    // Tick worlds.
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    /* tick worlds */
+    for (i = 0; i < game_manager->world_count; i++) {
         prv_world_tick(game_manager->worlds[i]);
     }
 
-    // Tick custom callbacks.
+    /* tick custom callbacks */
     {
+        unsigned int* notified_ids;
+        unsigned int notified_count;
+        unsigned int callback_idx;
+
 #if defined(ENGINE_DEBUG_TOOLS)
+        te_hft_t cpu_start_counter;
         te_debug_stats* debug_stats = prv_debug_console_get_stats();
         debug_stats->cpu_time_tick_callbacks_ms = 0.0f;
-        const uint64_t cpu_start_counter = high_freq_timer_now();
+        cpu_start_counter = high_freq_timer_now();
 #endif
 
         game_manager->is_processing_tick_callbacks = true;
 
-        // Because logic inside a callback can add/remove tick callbacks (array we are iterating)
-        // we track which callbacks we triggered and recheck if needed.
-        unsigned int* notified_ids =
-            malloc(sizeof(unsigned int) * game_manager->tick_callback_count);
-        unsigned int notified_count = 0;
+        /* because logic inside a callback can add/remove tick callbacks (array we are iterating)
+         * we track which callbacks we triggered and recheck if needed */
+        notified_ids = malloc(sizeof(unsigned int) * game_manager->tick_callback_count);
+        notified_count = 0;
 
         while (true) {
             bool check_if_notified = false;
@@ -382,13 +409,14 @@ prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
                 check_if_notified = true;
             }
 
-            for (unsigned int callback_idx = 0;
-                 callback_idx < game_manager->tick_callback_count; callback_idx++) {
+            for (callback_idx = 0; callback_idx < game_manager->tick_callback_count;
+                 callback_idx++) {
                 te_game_tick_callback* callback = &game_manager->tick_callbacks[callback_idx];
 
                 if (check_if_notified) {
+                    unsigned int i;
                     bool notified = false;
-                    for (unsigned int i = 0; i < notified_count; i++) {
+                    for (i = 0; i < notified_count; i++) {
                         if (notified_ids[i] == callback->id) {
                             notified = true;
                             break;
@@ -434,9 +462,11 @@ prv_game_manager_draw_frame(te_game_manager* game_manager, float delta_time_sec)
 
 void
 prv_game_manager_on_window_size_changed(te_game_manager* game_manager) {
+    unsigned int i;
+
     prv_renderer_on_window_size_changed(game_manager->renderer);
 
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    for (i = 0; i < game_manager->world_count; i++) {
         prv_world_on_window_size_changed(game_manager->worlds[i]);
     }
 }
@@ -444,9 +474,10 @@ prv_game_manager_on_window_size_changed(te_game_manager* game_manager) {
 bool
 prv_game_manager_on_mouse_button_pressed(
     te_game_manager* game_manager, enum te_mouse_button button) {
-    vec2 cursor_pos;
+    te_vec2 cursor_pos;
+    unsigned int i;
     bool is_handled = false;
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    for (i = 0; i < game_manager->world_count; i++) {
         if (!world_get_cursor_relative_pos(game_manager->worlds[i], cursor_pos)) {
             continue;
         }
@@ -460,9 +491,10 @@ prv_game_manager_on_mouse_button_pressed(
 bool
 prv_game_manager_on_mouse_button_released(
     te_game_manager* game_manager, enum te_mouse_button button) {
-    vec2 cursor_pos;
+    te_vec2 cursor_pos;
+    unsigned int i;
     bool is_handled = false;
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    for (i = 0; i < game_manager->world_count; i++) {
         if (!world_get_cursor_relative_pos(game_manager->worlds[i], cursor_pos)) {
             continue;
         }
@@ -475,8 +507,9 @@ prv_game_manager_on_mouse_button_released(
 
 void
 prv_game_manager_on_mouse_moved(te_game_manager* game_manager) {
-    vec2 cursor_pos;
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    te_vec2 cursor_pos;
+    unsigned int i;
+    for (i = 0; i < game_manager->world_count; i++) {
         if (!world_get_cursor_relative_pos(game_manager->worlds[i], cursor_pos)) {
             continue;
         }
@@ -486,8 +519,9 @@ prv_game_manager_on_mouse_moved(te_game_manager* game_manager) {
 
 void
 prv_game_manager_on_mouse_cursor_captured(te_game_manager* game_manager, bool captured) {
-    vec2 cursor_pos;
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    te_vec2 cursor_pos;
+    unsigned int i;
+    for (i = 0; i < game_manager->world_count; i++) {
         if (!world_get_cursor_relative_pos(game_manager->worlds[i], cursor_pos)) {
             continue;
         }
@@ -497,7 +531,8 @@ prv_game_manager_on_mouse_cursor_captured(te_game_manager* game_manager, bool ca
 
 void
 prv_game_manager_on_keyboard_input_text(te_game_manager* game_manager, const char* text) {
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    unsigned int i;
+    for (i = 0; i < game_manager->world_count; i++) {
         prv_world_on_keyboard_input_text(game_manager->worlds[i], text);
     }
 }
@@ -505,14 +540,16 @@ prv_game_manager_on_keyboard_input_text(te_game_manager* game_manager, const cha
 void
 prv_game_manager_on_keyboard_input(
     te_game_manager* game_manager, enum te_keyboard_button button, bool is_repeat) {
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    unsigned int i;
+    for (i = 0; i < game_manager->world_count; i++) {
         prv_world_on_keyboard_input(game_manager->worlds[i], button, is_repeat);
     }
 }
 
 void
 prv_game_manager_on_input_source_changed(te_game_manager* game_manager) {
-    for (unsigned int i = 0; i < game_manager->world_count; i++) {
+    unsigned int i;
+    for (i = 0; i < game_manager->world_count; i++) {
         prv_world_on_input_source_changed(game_manager->worlds[i]);
     }
 }

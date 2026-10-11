@@ -1,5 +1,10 @@
 #include <io/filesystem.h>
 
+#if defined(__linux__)
+#define _POSIX_C_SOURCE 200809L
+#define _DEFAULT_SOURCE
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,7 +29,7 @@
 
 void
 filesystem_ensure_dirs_exist(const char* file_path) {
-    const char pathSeparator = '/'; // we convert \\ to / on windows
+    const char pathSeparator = '/'; /* we convert \\ to / on windows */
 
     char* dir_path = malloc(strlen(file_path) + 1);
 
@@ -73,7 +78,7 @@ filesystem_path_is_directory(const char* path) {
 #if defined(WIN32)
     DWORD dwAttrib = GetFileAttributesA(path);
     if (dwAttrib == INVALID_FILE_ATTRIBUTES) {
-        log_error_fmt("failed to get path attributes for %s", path);
+        log_error_fmt(__FILE__, __LINE__, "failed to get path attributes for %s", path);
         return false;
     }
     if (dwAttrib & FILE_ATTRIBUTE_DIRECTORY) {
@@ -84,7 +89,7 @@ filesystem_path_is_directory(const char* path) {
 #elif __linux__
     struct stat path_stat;
     if (stat(path, &path_stat) != 0) {
-        log_error_fmt("failed to get path attributes for %s", path);
+        log_error_fmt(__FILE__, __LINE__, "failed to get path attributes for %s", path);
         return false;
     }
 
@@ -114,7 +119,9 @@ filesystem_remove_file(const char* path) {
 void
 filesystem_rename_file(const char* old_path, const char* new_path) {
     if (rename(old_path, new_path) != 0) {
-        log_error_fmt("failed to rename file from \"%s\" to \"%s\"", old_path, new_path);
+        log_error_fmt(
+            __FILE__, __LINE__, "failed to rename file from \"%s\" to \"%s\"", old_path,
+            new_path);
         abort();
     }
 }
@@ -124,7 +131,10 @@ filesystem_copy_file(const char* src, const char* dst) {
 #if defined(WIN32)
     CopyFile(src, dst, 0);
 #else
-    int input, output;
+    struct stat file_stat = {0};
+    int input, output, result;
+    off_t copied;
+
     if ((input = open(src, O_RDONLY)) == -1) {
         return;
     }
@@ -133,9 +143,8 @@ filesystem_copy_file(const char* src, const char* dst) {
         return;
     }
 
-    struct stat file_stat = {0};
-    int result = fstat(input, &file_stat);
-    off_t copied = 0;
+    result = fstat(input, &file_stat);
+    copied = 0;
     while (result == 0 && copied < file_stat.st_size) {
         ssize_t written = sendfile(output, input, &copied, SSIZE_MAX);
         copied += written;
@@ -151,10 +160,12 @@ filesystem_copy_file(const char* src, const char* dst) {
 
 const char*
 filesystem_find_filename(const char* path, bool include_extension, unsigned int* ret_len) {
+    size_t i;
+    size_t idx;
     const size_t len = strlen(path);
 
-    size_t idx = len;
-    for (size_t i = len - 1; i > 0; i--) {
+    idx = len;
+    for (i = len - 1; i > 0; i--) {
 #if defined(WIN32)
         if (path[i] == '/' || path[i] == '\\') {
 #else
@@ -178,7 +189,7 @@ filesystem_find_filename(const char* path, bool include_extension, unsigned int*
         return path + idx;
     }
 
-    for (size_t i = idx; i < len; i++) {
+    for (i = idx; i < len; i++) {
         if (path[i] == '.') {
             if (ret_len != NULL) {
                 (*ret_len) = (unsigned int)(i - idx);
@@ -203,9 +214,14 @@ filesystem_convert_path_to_absolute(const char* src) {
 
 char*
 filesystem_convert_path_to_relative(const char* src) {
-    // Find `res/` in the path.
-    const size_t len = strlen(src);
+    char* dst;
+    size_t i;
+    size_t len;
     size_t start_pos = 0xFFFFFFFF;
+
+    /* find `res/` in the path */
+    len = strlen(src);
+    start_pos = 0xFFFFFFFF;
 
 #if defined(__linux__)
     if (strncmp(src, "res/", 4) == 0)
@@ -215,7 +231,7 @@ filesystem_convert_path_to_relative(const char* src) {
     {
         start_pos = 4;
     } else {
-        for (size_t i = 1; i < len; i++) {
+        for (i = 1; i < len; i++) {
 #if defined(__linux__)
             if (strncmp(src + i, "/res/", 5) == 0)
 #else
@@ -231,7 +247,7 @@ filesystem_convert_path_to_relative(const char* src) {
         return NULL;
     }
 
-    char* dst = malloc(sizeof(char) * (len - start_pos + 1));
+    dst = malloc(sizeof(char) * (len - start_pos + 1));
     memcpy(dst, src + start_pos, sizeof(char) * (len - start_pos));
     dst[len - start_pos] = 0;
 
@@ -240,6 +256,9 @@ filesystem_convert_path_to_relative(const char* src) {
 
 char*
 filesystem_get_parent_path(const char* path, unsigned int path_len, unsigned int* ret_strlen) {
+    char* out;
+    unsigned int pos;
+
     if (path_len == 0) {
         path_len = (unsigned int)strlen(path);
     }
@@ -247,7 +266,7 @@ filesystem_get_parent_path(const char* path, unsigned int path_len, unsigned int
         return NULL;
     }
 
-    unsigned int pos = path_len - 1;
+    pos = path_len - 1;
 #if defined(WIN32)
     if (path[pos] == '\\' || path[pos] == '/')
 #else
@@ -271,7 +290,7 @@ filesystem_get_parent_path(const char* path, unsigned int path_len, unsigned int
         return NULL;
     }
 
-    char* out = malloc(sizeof(char) * (pos + 1));
+    out = malloc(sizeof(char) * (pos + 1));
     memcpy(out, path, sizeof(char) * pos);
     out[pos] = 0;
 
@@ -309,6 +328,10 @@ char*
 filesystem_append_path(
     const char* path, unsigned int path_len, const char* add, unsigned int add_len,
     unsigned int* ret_strlen) {
+    char* out;
+    unsigned int out_len;
+    bool have_slash;
+
     if (path_len == 0) {
         path_len = (unsigned int)strlen(path);
     }
@@ -316,10 +339,10 @@ filesystem_append_path(
         add_len = (unsigned int)strlen(add);
     }
 
-    const bool have_slash = path[path_len - 1] == '/' || path[path_len - 1] == '\\';
+    have_slash = path[path_len - 1] == '/' || path[path_len - 1] == '\\';
 
-    const unsigned int out_len = path_len + !have_slash + add_len;
-    char* out = malloc(sizeof(char) * (out_len + 1));
+    out_len = path_len + !have_slash + add_len;
+    out = malloc(sizeof(char) * (out_len + 1));
 
     memcpy(out, path, sizeof(char) * path_len);
 #if defined(WIN32)
@@ -342,6 +365,10 @@ char*
 filesystem_append_path_ext(
     const char* path, unsigned int path_len, const char* add, unsigned int add_len,
     const char* extension, unsigned int extension_len, unsigned int* ret_strlen) {
+    char* out;
+    unsigned int out_len;
+    bool have_slash;
+
     if (path_len == 0) {
         path_len = (unsigned int)strlen(path);
     }
@@ -352,10 +379,10 @@ filesystem_append_path_ext(
         extension_len = (unsigned int)strlen(extension);
     }
 
-    const bool have_slash = path[path_len - 1] == '/' || path[path_len - 1] == '\\';
+    have_slash = path[path_len - 1] == '/' || path[path_len - 1] == '\\';
 
-    const unsigned int out_len = path_len + !have_slash + add_len + extension_len;
-    char* out = malloc(sizeof(char) * (out_len + 1));
+    out_len = path_len + !have_slash + add_len + extension_len;
+    out = malloc(sizeof(char) * (out_len + 1));
 
     memcpy(out, path, sizeof(char) * path_len);
 #if defined(WIN32)
@@ -377,16 +404,32 @@ filesystem_append_path_ext(
 
 te_filesystem_entry*
 filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count) {
+#if defined(__linux__)
+    DIR* dir;
+    struct dirent* entry;
+    te_filesystem_entry* entries;
+    size_t len;
+    unsigned int i;
+#elif defined(WIN32)
+    char abs_path[MAX_PATH * 2 + 2] = {0};
+    te_filesystem_entry* entries;
+    size_t len;
+    WIN32_FIND_DATA ffd;
+    HANDLE hFind;
+    unsigned int i;
+#endif
+
     (*entry_count) = 0;
 
 #if defined(__linux__)
-    // Count number of entries.
-    DIR* dir = opendir(path_to_dir);
+    /* count number of entries */
+    dir = opendir(path_to_dir);
     if (dir == NULL) {
-        log_error_fmt("unable to open the directory \"%s\" (does path exist?)", path_to_dir);
+        log_error_fmt(
+            __FILE__, __LINE__, "unable to open the directory \"%s\" (does path exist?)",
+            path_to_dir);
         abort();
     }
-    struct dirent* entry;
     while ((entry = readdir(dir)) != NULL) {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
@@ -398,21 +441,23 @@ filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count) {
     if ((*entry_count) == 0) {
         return NULL;
     }
-    te_filesystem_entry* entries = malloc(sizeof(te_filesystem_entry) * (*entry_count));
+    entries = malloc(sizeof(te_filesystem_entry) * (*entry_count));
 
-    // Save entries.
+    /* save entries */
     dir = opendir(path_to_dir);
     if (dir == NULL) {
-        log_error_fmt("unable to open the directory \"%s\" (does path exist?)", path_to_dir);
+        log_error_fmt(
+            __FILE__, __LINE__, "unable to open the directory \"%s\" (does path exist?)",
+            path_to_dir);
         abort();
     }
-    unsigned int i = 0;
+    i = 0;
     while ((entry = readdir(dir)) != NULL) {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
         }
 
-        const size_t len = strlen(entry->d_name);
+        len = strlen(entry->d_name);
         entries[i].name = malloc(sizeof(char) * (len + 1));
         memcpy(entries[i].name, entry->d_name, sizeof(char) * len);
         entries[i].name[len] = 0;
@@ -427,12 +472,11 @@ filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count) {
 
     return entries;
 #elif defined(WIN32)
-    char abs_path[MAX_PATH * 2 + 2] = {0};
     _fullpath(abs_path, path_to_dir, MAX_PATH * 2);
 
-    // Prepare path for FindFirstFile.
+    /* prepare path for FindFirstFile */
     {
-        const size_t len = strlen(abs_path);
+        len = strlen(abs_path);
         if (abs_path[len - 1] == '\\' || abs_path[len - 1] == '/') {
             abs_path[len] = '*';
         } else {
@@ -441,12 +485,13 @@ filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count) {
         }
     }
 
-    // Count entries.
+    /* count entries */
     {
-        WIN32_FIND_DATA ffd;
-        HANDLE hFind = FindFirstFileA(abs_path, &ffd);
+        hFind = FindFirstFileA(abs_path, &ffd);
         if (hFind == INVALID_HANDLE_VALUE) {
-            log_error_fmt("unable to open the directory \"%s\" (does path exist?)", abs_path);
+            log_error_fmt(
+                __FILE__, __LINE__, "unable to open the directory \"%s\" (does path exist?)",
+                abs_path);
             abort();
         }
         (*entry_count) = 0;
@@ -462,23 +507,24 @@ filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count) {
     if ((*entry_count) == 0) {
         return NULL;
     }
-    te_filesystem_entry* entries = malloc(sizeof(te_filesystem_entry) * (*entry_count));
+    entries = malloc(sizeof(te_filesystem_entry) * (*entry_count));
 
-    // Save entries.
+    /* save entries */
     {
-        WIN32_FIND_DATA ffd;
-        HANDLE hFind = FindFirstFileA(abs_path, &ffd);
+        hFind = FindFirstFileA(abs_path, &ffd);
         if (hFind == INVALID_HANDLE_VALUE) {
-            log_error_fmt("unable to open the directory \"%s\" (does path exist?)", abs_path);
+            log_error_fmt(
+                __FILE__, __LINE__, "unable to open the directory \"%s\" (does path exist?)",
+                abs_path);
             abort();
         }
-        unsigned int i = 0;
+        i = 0;
         do {
             if (strcmp(ffd.cFileName, ".") == 0 || strcmp(ffd.cFileName, "..") == 0) {
                 continue;
             }
 
-            const size_t len = strlen(ffd.cFileName);
+            len = strlen(ffd.cFileName);
             entries[i].name = malloc(sizeof(char) * (len + 1));
             memcpy(entries[i].name, ffd.cFileName, sizeof(char) * len);
             entries[i].name[len] = 0;

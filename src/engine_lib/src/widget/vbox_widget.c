@@ -1,6 +1,7 @@
 #include <widget/vbox_widget.h>
 
-#include <cglm/vec2.h>
+#include <stdlib.h>
+#include <math/vec2.h>
 #include <widget/widget.h>
 #include <world.h>
 #include <type_database.h>
@@ -8,13 +9,13 @@
 struct te_vbox_widget {
     te_widget* widget;
 
-    // Spacing between child widgets in range [0.0; 1.0] relative to window's height.
+    /* spacing between child widgets in range [0.0; 1.0] relative to window's height */
     float child_spacing;
 
     bool is_vbox_widget_destroy;
 };
 
-// Widget callbacks:
+/* widget callbacks */
 static void prv_vbox_widget_on_size_changed(void* this);
 static void prv_vbox_widget_on_children_changed(void* this);
 static void prv_vbox_widget_on_window_size_changed(void* this);
@@ -40,7 +41,7 @@ void
 vbox_widget_destroy(te_vbox_widget* vbox_widget) {
     vbox_widget->is_vbox_widget_destroy = true;
 
-    if (vbox_widget->widget != NULL) { // may be null if we got here from base destroy
+    if (vbox_widget->widget != NULL) { /* may be null if we got here from base destroy */
         widget_destroy(vbox_widget->widget);
     }
 
@@ -54,15 +55,15 @@ prv_vbox_widget_on_before_base_destroyed(void* this) {
         return;
     }
 
-    // Destroy was called on the base (widget) component, possibly due to
-    // parent being destroyed, cleanup our data.
+    /* destroy was called on the base (widget) component, possibly due to
+     * parent being destroyed, cleanup our data */
     vbox_widget->widget = NULL;
     vbox_widget_destroy(vbox_widget);
 }
 
-// Returns component used to adjust common widget properties (pos, size)
-// and attach widget to other widgets.
-// You can destroy returned object and it will cause this widget to be destroyed.
+/* returns component used to adjust common widget properties (pos, size)
+ * and attach widget to other widgets
+ * you can destroy returned object and it will cause this widget to be destroyed */
 te_widget*
 vbox_widget_get_widget(te_vbox_widget* vbox_widget) {
     return vbox_widget->widget;
@@ -75,23 +76,25 @@ vbox_widget_get_child_spacing(te_vbox_widget* vbox_widget) {
 
 static void
 prv_vbox_widget_update_children(te_vbox_widget* vbox_widget) {
+    te_vec2 screen_size;
+    te_vec2 relative_pos;
+    float relative_spacing;
+    unsigned int i;
+
     unsigned int child_count;
-    te_widget** child_widgets =
-        widget_get_child_widgets(vbox_widget->widget, &child_count);
+    te_widget** child_widgets = widget_get_child_widgets(vbox_widget->widget, &child_count);
     if (child_count == 0) {
         free(child_widgets);
         return;
     }
 
-    // Recalculate child spacing to relative spacing.
-    vec2 screen_size;
+    /* recalculate child spacing to relative spacing */
     widget_get_screen_size(vbox_widget->widget, screen_size);
-    const float relative_spacing = vbox_widget->child_spacing / screen_size[1];
+    relative_spacing = vbox_widget->child_spacing / screen_size[1];
 
-    vec2 relative_pos;
-    glm_vec2_copy((vec2){0.0f, 0.0f}, relative_pos);
-    for (unsigned int i = 0; i < child_count; i++) {
-        vec2 child_relative_size;
+    vec2_set(0.0f, 0.0f, relative_pos);
+    for (i = 0; i < child_count; i++) {
+        te_vec2 child_relative_size;
         widget_get_relative_size(child_widgets[i], child_relative_size);
 
         widget_set_relative_position(child_widgets[i], relative_pos);
@@ -130,23 +133,23 @@ prv_vbox_widget_on_after_spawned(void* this) {
     prv_vbox_widget_update_children(this);
 }
 
-static inline void
-prv_vbox_widget_set_position(te_vbox_widget* vbox_widget, vec2 pos) {
+static void
+prv_vbox_widget_set_position(te_vbox_widget* vbox_widget, te_vec2 pos) {
     widget_set_relative_position(vbox_widget->widget, pos);
 }
 
-static inline void
-prv_vbox_widget_get_position(te_vbox_widget* vbox_widget, vec2 out) {
+static void
+prv_vbox_widget_get_position(te_vbox_widget* vbox_widget, te_vec2 out) {
     widget_get_relative_position(vbox_widget->widget, out);
 }
 
-static inline void
-prv_vbox_widget_set_size(te_vbox_widget* vbox_widget, vec2 size) {
+static void
+prv_vbox_widget_set_size(te_vbox_widget* vbox_widget, te_vec2 size) {
     widget_set_relative_size(vbox_widget->widget, size);
 }
 
-static inline void
-prv_vbox_widget_get_size(te_vbox_widget* vbox_widget, vec2 out) {
+static void
+prv_vbox_widget_get_size(te_vbox_widget* vbox_widget, te_vec2 out) {
     widget_get_relative_size(vbox_widget->widget, out);
 }
 

@@ -1,13 +1,14 @@
 #include <render/particle_renderer.h>
 
+#include <stdlib.h>
 #include <render/renderer.h>
 #include <render/render_data_array.h>
 #include <render/shader_manager.h>
 #include <glad/gl.h>
-#include <cglm/vec2.h>
+#include <math/vec2.h>
 
 #define PARTICLE_QUAD_GL_VERT_ATTRIB_PTR                                                      \
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vec2), NULL);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(te_vec2), NULL);
 
 typedef struct te_particle_shader_data {
     unsigned int prog_id;
@@ -28,10 +29,7 @@ struct te_particle_renderer {
 
     te_particle_shader_data particle_shader_data;
 
-    // Quad geometry.
-#if !defined(ENGINE_GLES)
-    unsigned int vao;
-#endif
+    /* quad geometry */
     unsigned int vbo;
     unsigned int ebo;
 };
@@ -44,7 +42,7 @@ particle_renderer_create(te_renderer* renderer) {
     particle_renderer->emitter_data_array =
         render_data_array_create(sizeof(te_particle_emitter_render_data), 2, 4);
 
-    // Load quad shader.
+    /* load quad shader */
     {
         te_particle_shader_data* shader = &particle_renderer->particle_shader_data;
 
@@ -65,42 +63,34 @@ particle_renderer_create(te_renderer* renderer) {
             get_uniform_location(shader->prog_id, "distance_fog_range");
     }
 
-    // Create quad geometry.
+    /* create quad geometry */
     {
-        vec2 vertices[4]; // XY pos, ZW uv
-        glm_vec2_copy((vec2){0.0f, 0.0f}, &vertices[0][0]);
-        glm_vec2_copy((vec2){0.0f, 1.0f}, &vertices[1][0]);
-        glm_vec2_copy((vec2){1.0f, 1.0f}, &vertices[2][0]);
-        glm_vec2_copy((vec2){1.0f, 0.0f}, &vertices[3][0]);
         const unsigned short indices[6] = {0, 2, 1, 0, 3, 2};
+        te_vec2 vertices[4]; /* XY pos, ZW uv */
+        vec2_set(0.0f, 0.0f, &vertices[0][0]);
+        vec2_set(0.0f, 1.0f, &vertices[1][0]);
+        vec2_set(1.0f, 1.0f, &vertices[2][0]);
+        vec2_set(1.0f, 0.0f, &vertices[3][0]);
 
-#if !defined(ENGINE_GLES)
-        glGenVertexArrays(1, &particle_renderer->vao);
-#endif
         glGenBuffers(1, &particle_renderer->vbo);
         glGenBuffers(1, &particle_renderer->ebo);
 
-#if !defined(ENGINE_GLES)
-        glBindVertexArray(particle_renderer->vao);
-#endif
         {
-            // Vertex buffer.
+            /* vertex buffer */
             glBindBuffer(GL_ARRAY_BUFFER, particle_renderer->vbo);
-            glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(vec2), &vertices[0][0], GL_STATIC_DRAW);
+            glBufferData(
+                GL_ARRAY_BUFFER, 4 * sizeof(te_vec2), &vertices[0][0], GL_STATIC_DRAW);
 
-            // Vertex layout.
+            /* vertex layout */
             glEnableVertexAttribArray(0);
             PARTICLE_QUAD_GL_VERT_ATTRIB_PTR
 
-            // Index buffer.
+            /* index buffer */
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, particle_renderer->ebo);
             glBufferData(
                 GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned short), &indices[0],
                 GL_STATIC_DRAW);
         }
-#if !defined(ENGINE_GLES)
-        glBindVertexArray(0);
-#endif
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
@@ -137,45 +127,44 @@ particle_renderer_get_emitter_render_data_tmp(
 
 void
 particle_renderer_draw(
-    te_particle_renderer* renderer, te_light_params* light_params, mat4* view_mat,
-    mat4* proj_mat) {
+    te_particle_renderer* renderer, te_light_params* light_params, te_mat4* view_mat,
+    te_mat4* proj_mat) {
+    unsigned int emitter_count;
+
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    const unsigned int emitter_count =
-        render_data_array_get_item_count(renderer->emitter_data_array);
+    emitter_count = render_data_array_get_item_count(renderer->emitter_data_array);
     if (emitter_count > 0) {
+        te_particle_emitter_render_data* data;
+        unsigned int emitter_idx;
+        unsigned int particle_idx;
+
         te_particle_shader_data* shader = &renderer->particle_shader_data;
 
         glUseProgram(shader->prog_id);
 
-#if defined(ENGINE_GLES)
         glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ebo);
         PARTICLE_QUAD_GL_VERT_ATTRIB_PTR
-#else
-        glBindVertexArray(renderer->vao);
-#endif
 
-        glActiveTexture(GL_TEXTURE0); // quad texture
+        glActiveTexture(GL_TEXTURE0); /* quad texture */
 
         glUniformMatrix4fv(shader->uniform_view_mat, 1, GL_FALSE, (*view_mat)[0]);
         glUniformMatrix4fv(shader->uniform_proj_mat, 1, GL_FALSE, (*proj_mat)[0]);
 
-        // Fog.
+        /* fog */
         glUniform3fv(shader->uniform_distance_fog_color, 1, light_params->distance_fog_color);
         glUniform2fv(shader->uniform_distance_fog_range, 1, light_params->distance_fog_range);
 
-        te_particle_emitter_render_data* data =
-            render_data_array_get_internal_array(renderer->emitter_data_array);
+        data = render_data_array_get_internal_array(renderer->emitter_data_array);
 
-        for (unsigned int emitter_idx = 0; emitter_idx < emitter_count; emitter_idx++) {
+        for (emitter_idx = 0; emitter_idx < emitter_count; emitter_idx++) {
             if (data->particle_count > 0) {
                 glUniform1i(shader->uniform_is_using_tex, data->tex_id > 0);
                 glBindTexture(GL_TEXTURE_2D, data->tex_id);
 
-                for (unsigned int particle_idx = 0; particle_idx < data->particle_count;
-                     particle_idx++) {
+                for (particle_idx = 0; particle_idx < data->particle_count; particle_idx++) {
                     glUniform4fv(
                         shader->uniform_particle_color, 1,
                         data->particles[particle_idx].color);
@@ -183,10 +172,8 @@ particle_renderer_draw(
                         shader->uniform_in_world_pos_size, 1,
                         data->particles[particle_idx].pos_and_size);
 
-                    // note: not using instancing because this implementation will work on both renderers:
-                    // regular GL and GLES 2.0 which does not support instancing
-                    // (tldr yes I'm lazy I don't feel like creating 2 implementations and checking for extensions, for now)
-                    // in case this becomes your bottleneck change according to your game's needs so... TODO, I guess
+                    /* note: not using instancing because this implementation will work
+		     * on both regular GL and GLES that we support */
                     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
                 }
             }

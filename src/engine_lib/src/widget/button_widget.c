@@ -1,5 +1,6 @@
 #include <widget/button_widget.h>
 
+#include <stdlib.h>
 #include <string.h>
 #include <game_manager.h>
 #include <io/log.h>
@@ -13,63 +14,65 @@
 #define BUTTON_WIDGET_TEX_LOAD_OPTION TE_TLO_NO_MIPMAPS
 
 struct te_button_widget {
-    vec4 color;
-    vec4 color_hovered;
-    vec4 color_pressed;
+    te_vec4 color;
+    te_vec4 color_hovered;
+    te_vec4 color_pressed;
 
     te_widget* widget;
 
-    // Do not free/destroy. Child widget.
+    /* do not free/destroy, child widget */
     te_rect_widget* rect_widget;
 
-    // NULL if not set. Must be freed.
+    /* NULL if not set, must be freed */
     char* tex_relative_path;
     char* tex_hovered_relative_path;
     char* tex_pressed_relative_path;
 
-    // May be NULL if not set.
+    /* may be NULL if not set */
     void (*on_clicked)(te_button_widget*);
     void (*on_right_clicked)(te_button_widget*);
 
-    // Cached textures.
+    /* cached textures */
     unsigned int tex_id;
     unsigned int tex_hovered_id;
     unsigned int tex_pressed_id;
 
-    // `true` if entered the "destroy" function.
+    /* `true` if entered the "destroy" function */
     bool is_button_widget_destroy;
     bool is_cursor_inside_widget;
 };
 
-// Widget callbacks:
+/* widget callbacks */
 static void prv_button_widget_on_pos_changed(void* this);
 static void prv_button_widget_on_size_changed(void* this);
 static void prv_button_widget_on_before_base_destroyed(void* this);
 static void prv_button_widget_on_after_spawned(void* this);
 static void prv_button_widget_on_before_despawned(void* this);
 
-// Interactable callbacks:
+/* interactable callbacks */
 static void prv_button_widget_on_mouse_button_pressed(
-    void* this, enum te_mouse_button button, vec2 cursor_pos);
+    void* this, enum te_mouse_button button, te_vec2 cursor_pos);
 static void prv_button_widget_on_mouse_button_released(
-    void* this, enum te_mouse_button button, vec2 cursor_pos);
-static void prv_button_widget_on_cursor_entered(void* this, vec2 cursor_pos);
-static void prv_button_widget_on_cursor_left(void* this, vec2 cursor_pos);
+    void* this, enum te_mouse_button button, te_vec2 cursor_pos);
+static void prv_button_widget_on_cursor_entered(void* this, te_vec2 cursor_pos);
+static void prv_button_widget_on_cursor_left(void* this, te_vec2 cursor_pos);
 
 static void prv_button_widget_register_render_data(te_button_widget* button_widget);
 static void prv_button_widget_unregister_render_data(te_button_widget* button_widget);
 
 te_button_widget*
 button_widget_create(void) {
+    te_vec2 tmp2;
+
     te_button_widget* button_widget = malloc(sizeof(te_button_widget));
 
     button_widget->widget = widget_create(
         button_widget, button_widget_get_type_id, prv_button_widget_on_pos_changed,
         prv_button_widget_on_size_changed, prv_button_widget_on_before_base_destroyed, NULL,
         NULL, prv_button_widget_on_after_spawned, prv_button_widget_on_before_despawned, NULL);
-    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color);
-    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color_hovered);
-    glm_vec4_copy((vec4){1.0f, 1.0f, 1.0f, 1.0f}, button_widget->color_pressed);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, button_widget->color);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, button_widget->color_hovered);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, button_widget->color_pressed);
 
     button_widget->on_clicked = NULL;
     button_widget->on_right_clicked = NULL;
@@ -91,10 +94,11 @@ button_widget_create(void) {
     widget_set_is_serialization_allowed(
         rect_widget_get_widget(button_widget->rect_widget), false);
 
-    widget_set_relative_position(
-        rect_widget_get_widget(button_widget->rect_widget), (vec2){0.0f, 0.0f});
-    widget_set_relative_size(
-        rect_widget_get_widget(button_widget->rect_widget), (vec2){1.0f, 1.0f});
+    vec2_set(0.0f, 0.0f, tmp2);
+    widget_set_relative_position(rect_widget_get_widget(button_widget->rect_widget), tmp2);
+
+    vec2_set(1.0f, 1.0f, tmp2);
+    widget_set_relative_size(rect_widget_get_widget(button_widget->rect_widget), tmp2);
 
     prv_widget_set_input_callbacks(
         button_widget->widget, prv_button_widget_on_cursor_entered,
@@ -108,7 +112,7 @@ void
 button_widget_destroy(te_button_widget* button_widget) {
     button_widget->is_button_widget_destroy = true;
 
-    if (button_widget->widget != NULL) { // may be null if we got here from base destroy
+    if (button_widget->widget != NULL) { /* may be null if we got here from base destroy */
         widget_destroy(button_widget->widget);
     }
 
@@ -126,8 +130,8 @@ prv_button_widget_on_before_base_destroyed(void* this) {
         return;
     }
 
-    // Destroy was called on the base (widget) component, possibly due to
-    // parent being destroyed, cleanup our data.
+    /* destroy was called on the base (widget) component, possibly due to
+     * parent being destroyed, cleanup our data */
     button_widget->widget = NULL;
     button_widget_destroy(button_widget);
 }
@@ -152,13 +156,15 @@ prv_button_widget_on_before_despawned(void* this) {
 
 static void
 prv_button_widget_register_render_data(te_button_widget* button_widget) {
+    te_texture_manager* texture_manager;
+
     te_world* world = widget_get_world(button_widget->widget);
     if (world == NULL) {
-        log_error("expected the widget to be spawned");
+        log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
 
-    te_texture_manager* texture_manager =
+    texture_manager =
         renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(world)));
     if (button_widget->tex_relative_path != NULL) {
         button_widget->tex_id = texture_manager_request_texture(
@@ -180,13 +186,15 @@ prv_button_widget_register_render_data(te_button_widget* button_widget) {
 
 static void
 prv_button_widget_unregister_render_data(te_button_widget* button_widget) {
+    te_texture_manager* texture_manager;
+
     te_world* world = widget_get_world(button_widget->widget);
     if (world == NULL) {
-        log_error("expected the widget to be spawned");
+        log_error(__FILE__, __LINE__, "expected the widget to be spawned");
         abort();
     }
 
-    te_texture_manager* texture_manager =
+    texture_manager =
         renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(world)));
     if (button_widget->tex_id > 0) {
         texture_manager_mark_unused_texture(texture_manager, button_widget->tex_id);
@@ -209,23 +217,23 @@ button_widget_get_widget(te_button_widget* button_widget) {
     return button_widget->widget;
 }
 
-static inline void
-prv_button_widget_set_position(te_button_widget* button_widget, vec2 pos) {
+static void
+prv_button_widget_set_position(te_button_widget* button_widget, te_vec2 pos) {
     widget_set_relative_position(button_widget->widget, pos);
 }
 
-static inline void
-prv_button_widget_get_position(te_button_widget* button_widget, vec2 out) {
+static void
+prv_button_widget_get_position(te_button_widget* button_widget, te_vec2 out) {
     widget_get_relative_position(button_widget->widget, out);
 }
 
-static inline void
-prv_button_widget_set_size(te_button_widget* button_widget, vec2 size) {
+static void
+prv_button_widget_set_size(te_button_widget* button_widget, te_vec2 size) {
     widget_set_relative_size(button_widget->widget, size);
 }
 
-static inline void
-prv_button_widget_get_size(te_button_widget* button_widget, vec2 out) {
+static void
+prv_button_widget_get_size(te_button_widget* button_widget, te_vec2 out) {
     widget_get_relative_size(button_widget->widget, out);
 }
 
@@ -311,8 +319,8 @@ button_widget_set_on_right_clicked(
 }
 
 void
-button_widget_set_color(te_button_widget* button_widget, vec4 color) {
-    glm_vec4_copy(color, button_widget->color);
+button_widget_set_color(te_button_widget* button_widget, te_vec4 color) {
+    vec4_copy(color, button_widget->color);
 
     if (widget_get_world(button_widget->widget) != NULL
         && !button_widget->is_cursor_inside_widget) {
@@ -321,8 +329,8 @@ button_widget_set_color(te_button_widget* button_widget, vec4 color) {
 }
 
 void
-button_widget_set_color_hovered(te_button_widget* button_widget, vec4 color) {
-    glm_vec4_copy(color, button_widget->color_hovered);
+button_widget_set_color_hovered(te_button_widget* button_widget, te_vec4 color) {
+    vec4_copy(color, button_widget->color_hovered);
 
     if (widget_get_world(button_widget->widget) != NULL
         && button_widget->is_cursor_inside_widget) {
@@ -331,27 +339,29 @@ button_widget_set_color_hovered(te_button_widget* button_widget, vec4 color) {
 }
 
 void
-button_widget_set_color_pressed(te_button_widget* button_widget, vec4 color) {
-    glm_vec4_copy(color, button_widget->color_pressed);
+button_widget_set_color_pressed(te_button_widget* button_widget, te_vec4 color) {
+    vec4_copy(color, button_widget->color_pressed);
 }
 
 void
-button_widget_get_color(te_button_widget* button_widget, vec4 out) {
-    glm_vec4_copy(button_widget->color, out);
+button_widget_get_color(te_button_widget* button_widget, te_vec4 out) {
+    vec4_copy(button_widget->color, out);
 }
 
 void
-button_widget_get_color_hovered(te_button_widget* button_widget, vec4 out) {
-    glm_vec4_copy(button_widget->color_hovered, out);
+button_widget_get_color_hovered(te_button_widget* button_widget, te_vec4 out) {
+    vec4_copy(button_widget->color_hovered, out);
 }
 
 void
-button_widget_get_color_pressed(te_button_widget* button_widget, vec4 out) {
-    glm_vec4_copy(button_widget->color_pressed, out);
+button_widget_get_color_pressed(te_button_widget* button_widget, te_vec4 out) {
+    vec4_copy(button_widget->color_pressed, out);
 }
 
 void
 button_widget_set_texture(te_button_widget* button_widget, const char* relative_path) {
+    te_world* world;
+
     free(button_widget->tex_relative_path);
     button_widget->tex_relative_path = NULL;
 
@@ -362,7 +372,7 @@ button_widget_set_texture(te_button_widget* button_widget, const char* relative_
         button_widget->tex_relative_path[len] = 0;
     }
 
-    te_world* world = widget_get_world(button_widget->widget);
+    world = widget_get_world(button_widget->widget);
     if (world != NULL) {
         te_texture_manager* texture_manager = renderer_get_texture_manager(
             game_manager_get_renderer(world_get_game_manager(world)));
@@ -384,6 +394,8 @@ button_widget_set_texture(te_button_widget* button_widget, const char* relative_
 
 void
 button_widget_set_texture_hovered(te_button_widget* button_widget, const char* relative_path) {
+    te_world* world;
+
     free(button_widget->tex_hovered_relative_path);
     button_widget->tex_hovered_relative_path = NULL;
 
@@ -394,7 +406,7 @@ button_widget_set_texture_hovered(te_button_widget* button_widget, const char* r
         button_widget->tex_hovered_relative_path[len] = 0;
     }
 
-    te_world* world = widget_get_world(button_widget->widget);
+    world = widget_get_world(button_widget->widget);
     if (world != NULL) {
         te_texture_manager* texture_manager = renderer_get_texture_manager(
             game_manager_get_renderer(world_get_game_manager(world)));
@@ -417,6 +429,8 @@ button_widget_set_texture_hovered(te_button_widget* button_widget, const char* r
 
 void
 button_widget_set_texture_pressed(te_button_widget* button_widget, const char* relative_path) {
+    te_world* world;
+
     free(button_widget->tex_pressed_relative_path);
     button_widget->tex_pressed_relative_path = NULL;
 
@@ -427,7 +441,7 @@ button_widget_set_texture_pressed(te_button_widget* button_widget, const char* r
         button_widget->tex_pressed_relative_path[len] = 0;
     }
 
-    te_world* world = widget_get_world(button_widget->widget);
+    world = widget_get_world(button_widget->widget);
     if (world != NULL) {
         te_texture_manager* texture_manager = renderer_get_texture_manager(
             game_manager_get_renderer(world_get_game_manager(world)));
@@ -505,9 +519,9 @@ button_widget_enter_pressed_state(te_button_widget* button_widget) {
 
 static void
 prv_button_widget_on_mouse_button_pressed(
-    void* this, enum te_mouse_button button, vec2 cursor_pos) {
-    (void)cursor_pos;
+    void* this, enum te_mouse_button button, te_vec2 cursor_pos) {
     te_button_widget* button_widget = this;
+    (void)cursor_pos;
 
     if ((button_widget->on_clicked != NULL && button == TE_MB_LEFT)
         || (button_widget->on_right_clicked != NULL && button == TE_MB_RIGHT)) {
@@ -517,9 +531,9 @@ prv_button_widget_on_mouse_button_pressed(
 
 static void
 prv_button_widget_on_mouse_button_released(
-    void* this, enum te_mouse_button button, vec2 cursor_pos) {
-    (void)cursor_pos;
+    void* this, enum te_mouse_button button, te_vec2 cursor_pos) {
     te_button_widget* button_widget = this;
+    (void)cursor_pos;
 
     if ((button_widget->on_clicked != NULL && button == TE_MB_LEFT)
         || (button_widget->on_right_clicked != NULL && button == TE_MB_RIGHT)) {
@@ -538,18 +552,18 @@ prv_button_widget_on_mouse_button_released(
 }
 
 static void
-prv_button_widget_on_cursor_entered(void* this, vec2 cursor_pos) {
-    (void)cursor_pos;
+prv_button_widget_on_cursor_entered(void* this, te_vec2 cursor_pos) {
     te_button_widget* button_widget = this;
+    (void)cursor_pos;
 
     button_widget_enter_hovered_state(button_widget);
     button_widget->is_cursor_inside_widget = true;
 }
 
 static void
-prv_button_widget_on_cursor_left(void* this, vec2 cursor_pos) {
-    (void)cursor_pos;
+prv_button_widget_on_cursor_left(void* this, te_vec2 cursor_pos) {
     te_button_widget* button_widget = this;
+    (void)cursor_pos;
 
     button_widget_enter_normal_state(button_widget);
     button_widget->is_cursor_inside_widget = false;

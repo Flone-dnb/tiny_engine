@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
-#include <cglm/vec4.h>
+#include <math/vec4.h>
 
 typedef struct te_checkbox_widget te_checkbox_widget;
 struct te_widget;
@@ -9,9 +9,9 @@ struct te_widget;
 te_checkbox_widget* checkbox_widget_create(void);
 void checkbox_widget_destroy(te_checkbox_widget* checkbox_widget);
 
-// Returns component used to adjust common widget properties (pos, size)
-// and attach widget to other widgets.
-// You can destroy returned object and it will cause this widget to be destroyed.
+/* returns component used to adjust common widget properties (pos, size)
+ * and attach widget to other widgets.
+ * you can destroy returned object and it will cause this widget to be destroyed */
 struct te_widget* checkbox_widget_get_widget(te_checkbox_widget* checkbox_widget);
 
 void checkbox_widget_set_on_changed(
@@ -21,25 +21,25 @@ void checkbox_widget_set_on_changed(
 void checkbox_widget_set_is_checked(te_checkbox_widget* checkbox_widget, bool is_checked);
 bool checkbox_widget_is_checked(te_checkbox_widget* checkbox_widget);
 
-// Sets RGBA color to checkbox background and foreground (checked state).
-void checkbox_widget_set_background_color(te_checkbox_widget* checkbox_widget, vec4 color);
-void checkbox_widget_set_checked_color(te_checkbox_widget* checkbox_widget, vec4 color);
+/* sets RGBA color to checkbox background and foreground (checked state) */
+void checkbox_widget_set_background_color(te_checkbox_widget* checkbox_widget, te_vec4 color);
+void checkbox_widget_set_checked_color(te_checkbox_widget* checkbox_widget, te_vec4 color);
 
-void checkbox_widget_get_background_color(te_checkbox_widget* checkbox_widget, vec4 out);
-void checkbox_widget_get_checked_color(te_checkbox_widget* checkbox_widget, vec4 out);
+void checkbox_widget_get_background_color(te_checkbox_widget* checkbox_widget, te_vec4 out);
+void checkbox_widget_get_checked_color(te_checkbox_widget* checkbox_widget, te_vec4 out);
 
-// Sets path (relataive to the `res` directory) to background and foreground (checked) textures.
+/* sets path (relataive to the `res` directory) to background and foreground (checked) textures */
 void checkbox_widget_set_background_texture(
     te_checkbox_widget* checkbox_widget, const char* relative_path);
 void checkbox_widget_set_checked_texture(
     te_checkbox_widget* checkbox_widget, const char* relative_path);
 
-// Returns NULL if the texture was not set.
-// Do not free returned string, valid while the widget exists and the texture is not changed.
+/* returns NULL if the texture was not set
+ * do not free returned string, valid while the widget exists and the texture is not changed */
 char* checkbox_widget_get_background_texture(te_checkbox_widget* checkbox_widget);
 char* checkbox_widget_get_checked_texture(te_checkbox_widget* checkbox_widget);
 
-// Returns unique ID of this type in the type database.
+/* returns unique ID of this type in the type database */
 const char* checkbox_widget_get_type_id(void);
-// Registers the type in the type database.
+/* registers the type in the type database */
 void checkbox_widget_register_type(void);

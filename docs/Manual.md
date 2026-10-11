@@ -262,10 +262,10 @@ Try `sudo apt update && sudo apt upgrade -y` if you get an error `sudo: unable t
 
 ```
 sudo apt update && sudo apt upgrade -y
-sudo apt install --no-install-recommends build-essential git wget libdrm-dev libopenal-dev premake4 autoconf libevdev-dev pkg-config zlib1g-dev cmake cmake-data libarchive13 libcurl4 libfreetype6-dev librhash0 libuv1 libgbm-dev clang libvorbis-dev libflac-dev
+sudo apt install --no-install-recommends build-essential git wget libdrm-dev libopenal-dev premake4 autoconf libevdev-dev pkg-config zlib1g-dev cmake cmake-data libarchive13 libcurl4 libfreetype6-dev librhash0 libuv1 libgbm-dev clang libvorbis-dev libflac-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev libusb-1.0-0-dev libpipewire-0.3-dev libwayland-dev libdecor-0-dev liburing-dev
 ```
 
-Then install SDL dependencies: https://github.com/libsdl-org/SDL/blob/main/docs/README-linux.md#build-dependencies, including the Wayland packages.
+> A lot of these dependencies are not actually needed, further testing for actually needed packages is required.
 
 ## Steps for each release of your game
 
@@ -282,7 +282,8 @@ cmake --build . --target <game_target_name> --config=Release -j 4
 
 > Note: -DENGINE_GLES is optional but is often required for retro-handhelds because they only support OpenGL ES (not the regular GL).
 
-Then copy the resulting binary (from `build/OUTPUT/game`) to your ARM64 Linux device. We don't worry about installing SDL libraries because we link SDL statically. Also don't forget to copy the `res` directory next to the binary.
+Then copy the resulting binary (from `build/OUTPUT/game`) to your ARM64 Linux device and also don't forget to copy the `res` directory next to the binary.
 
 Inside of your ARM64 Linux device launch the game using some file explorer or a console.
 
+Note that due to varying hardware/software of such handhelds it's not guaranteed that your game will work, you might need to SSH into your device and debug startup failures (also check logs).

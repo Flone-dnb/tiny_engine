@@ -1,6 +1,6 @@
 #pragma once
 
-// Macros to measure GPU time.
+/* macros to measure GPU time */
 #if defined(ENGINE_DEBUG_TOOLS)
 #include <glad/gl.h>
 
@@ -10,7 +10,10 @@
         glBeginQueryEXT(GL_TIME_ELAPSED_EXT, gl_query_id);                                    \
     }
 #else
-#define GPU_TIME_SECTION_BEGIN(gl_query_id) glBeginQuery(GL_TIME_ELAPSED, gl_query_id);
+#define GPU_TIME_SECTION_BEGIN(gl_query_id)                                                   \
+    if (GLAD_GL_ARB_timer_query == 1) {                                                       \
+        glBeginQuery(GL_TIME_ELAPSED, gl_query_id);                                           \
+    }
 #endif
 
 #if defined(ENGINE_GLES)
@@ -19,7 +22,10 @@
         glEndQueryEXT(GL_TIME_ELAPSED_EXT);                                                   \
     }
 #else
-#define GPU_TIME_SECTION_END glEndQuery(GL_TIME_ELAPSED);
+#define GPU_TIME_SECTION_END                                                                  \
+    if (GLAD_GL_ARB_timer_query == 1) {                                                       \
+        glEndQuery(GL_TIME_ELAPSED);                                                          \
+    }
 #endif
 
 #else

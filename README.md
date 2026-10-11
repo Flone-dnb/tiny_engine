@@ -2,11 +2,11 @@
 
 Tiny 3D game engine for making small games.
 
-Supported platforms: Windows (x32, x64), Linux (x32, x64, ARM64).
+Supported platforms: Windows XP and above (x32, x64), Linux (x32, x64, ARM64).
 
 # Features
 
-- [X] Simple forward renderer using OpenGL 4.5 (can be switched to OpenGL ES 2.0 with a cmake option)
+- [X] Simple forward renderer using OpenGL 2.0 (can be switched to OpenGL ES 2.0 with a cmake option)
 - [X] Game save/config management
 - [X] GUI
 - [X] Type reflection
@@ -27,7 +27,7 @@ You can read the manual from `docs/Manual.md`. There are also a lot of comments 
 
 # Prerequisites
 
-- Compiler that supports C99
+- Compiler that supports C89/C90
 - [CMake](https://cmake.org/download/)
 
 Optional (for automatic code formatting):
