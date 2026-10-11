@@ -160,12 +160,13 @@ renderer_create(struct te_window* window) {
 #if defined(ENGINE_DEBUG_TOOLS)
     te_debug_console_command fps_command = {0};
 #endif
+    te_renderer* renderer;
     unsigned int refresh_rate;
 
     const GLubyte* gl_version = glGetString(GL_VERSION);
     log_info_fmt(__FILE__, __LINE__, "GL_VERSION: %s", (char*)gl_version);
 
-    te_renderer* renderer = malloc(sizeof(te_renderer));
+    renderer = malloc(sizeof(te_renderer));
 
     renderer->window = window;
     renderer->shader_manager = prv_shader_manager_create();
