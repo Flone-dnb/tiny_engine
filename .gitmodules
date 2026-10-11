@@ -12,4 +12,4 @@
 	url = https://github.com/Flone-dnb/cgltf.git
 [submodule "ext/miniaudio"]
 	path = ext/miniaudio
-	url = https://github.com/mackron/miniaudio.git
+	url = https://github.com/Flone-dnb/miniaudio.git
