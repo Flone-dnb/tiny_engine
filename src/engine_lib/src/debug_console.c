@@ -377,8 +377,14 @@ prv_debug_console_draw(float delta_time_sec) {
             if (GLAD_GL_EXT_disjoint_timer_query != 1) {
                 prv_debug_console_draw_stat(
                     screen_pos, "%s", "GL_EXT_disjoint_timer_query not supported");
-            } else {
+            } else
+#else
+            if (GLAD_GL_ARB_timer_query != 1) {
+                prv_debug_console_draw_stat(
+                    screen_pos, "%s", "GL_ARB_timer_query not supported");
+            } else
 #endif
+            {
                 /* GPU stats */
                 prv_debug_console_draw_stat(
                     screen_pos, "CPU is ahead of the GPU on %u frame(s)",
@@ -394,9 +400,7 @@ prv_debug_console_draw(float delta_time_sec) {
                     screen_pos, "- %s: %.2f", "widgets", stats->gpu_time_draw_widgets_ms);
                 prv_debug_console_draw_stat(
                     screen_pos, "- %s: %.2f", "debug", stats->gpu_time_draw_debug_ms);
-#if defined(ENGINE_GLES)
             }
-#endif
 
             if (fps_limit > 0) {
                 prv_debug_console_draw_stat(screen_pos, "%s", "! FPS LIMIT AFFECTS STATS !");

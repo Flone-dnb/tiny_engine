@@ -183,7 +183,7 @@ set(GLAD_TARGET_NAME glad)
 if(ENGINE_GLES)
     set(GLAD_PATH ${RELATIVE_EXT_PATH}/glad_gles20)
 else()
-    set(GLAD_PATH ${RELATIVE_EXT_PATH}/glad_gl45)
+    set(GLAD_PATH ${RELATIVE_EXT_PATH}/glad_gl20)
 endif()
 add_library(${GLAD_TARGET_NAME} STATIC
     ${GLAD_PATH}/src/gl.c

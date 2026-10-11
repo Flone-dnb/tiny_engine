@@ -103,18 +103,20 @@ prv_shader_manager_compile_shader(const char* path, bool is_frag) {
     }
 #else
     if (is_frag) {
-        prefix = "#version 450\n"
+        prefix = "#version 110\n"
                  "precision highp float;\n"
                  "precision highp int;\n"
-                 "#define ATTRIBUTE_IN in\n"
-                 "out vec4 out_color;\n"
+                 "#define ATTRIBUTE_IN varying\n"
+                 "#define out_color gl_FragColor\n"
+                 "#define texture texture2D\n"
                  "\n";
     } else {
-        prefix = "#version 450\n"
+        prefix = "#version 110\n"
                  "precision highp float;\n"
                  "precision highp int;\n"
-                 "#define ATTRIBUTE_IN in\n"
-                 "#define ATTRIBUTE_OUT out\n"
+                 "#define ATTRIBUTE_IN attribute\n"
+                 "#define ATTRIBUTE_OUT varying\n"
+                 "#define texture texture2D\n"
                  "\n";
     }
 #endif

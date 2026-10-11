@@ -30,10 +30,8 @@ enum te_vertex_attribute {
 
 /* manages vertex access */
 typedef struct te_vertex_pack {
-#if defined(ENGINE_GLES)
     /* binds vertex attribute names to a shader program, used after creating a model's shader */
     void (*bind_gl_vertex_attributes)(unsigned int shader_prog_id);
-#endif
 
     /* sets pointers to vertex attributes, used during the rendering */
     void (*set_attribute_pointers)(void);

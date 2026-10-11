@@ -10,8 +10,8 @@ typedef struct te_os_window te_os_window;
 
 /* configurable options */
 #if !defined(ENGINE_GLES)
-#define TE_OS_WINDOW_GL_MAJOR_VERSION 4 /* same as GLAD version */
-#define TE_OS_WINDOW_GL_MINOR_VERSION 5 /* same as GLAD version */
+#define TE_OS_WINDOW_GL_MAJOR_VERSION 2 /* same as GLAD version */
+#define TE_OS_WINDOW_GL_MINOR_VERSION 0 /* same as GLAD version */
 #define TE_OS_WINDOW_MSAA 1 /* set to 2 or 4 to require os to support msaa backbuffers */
 #else
 #define TE_OS_WINDOW_GL_MAJOR_VERSION 2 /* same as GLAD version */

@@ -44,9 +44,6 @@ struct te_widget_renderer {
     te_renderer* renderer;
 
     /* quad geometry */
-#if !defined(ENGINE_GLES)
-    unsigned int vao;
-#endif
     unsigned int vbo;
     unsigned int ebo;
 
@@ -105,15 +102,8 @@ widget_renderer_create(te_renderer* renderer) {
         vec4_set(1.0f, 1.0f, 1.0f, 1.0f, &vertices[2][0]);
         vec4_set(1.0f, 0.0f, 1.0f, 0.0f, &vertices[3][0]);
 
-#if !defined(ENGINE_GLES)
-        glGenVertexArrays(1, &widget_renderer->vao);
-#endif
         glGenBuffers(1, &widget_renderer->vbo);
         glGenBuffers(1, &widget_renderer->ebo);
-
-#if !defined(ENGINE_GLES)
-        glBindVertexArray(widget_renderer->vao);
-#endif
         {
             /* vertex buffer */
             glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
@@ -130,9 +120,6 @@ widget_renderer_create(te_renderer* renderer) {
                 GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned short), &indices[0],
                 GL_STATIC_DRAW);
         }
-#if !defined(ENGINE_GLES)
-        glBindVertexArray(0);
-#endif
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
@@ -167,9 +154,6 @@ widget_renderer_destroy(te_widget_renderer* widget_renderer) {
         renderer_get_shader_manager(widget_renderer->renderer),
         widget_renderer->quad_shader.prog_id);
 
-#if !defined(ENGINE_GLES)
-    glDeleteVertexArrays(1, &widget_renderer->vao);
-#endif
     glDeleteBuffers(1, &widget_renderer->vbo);
     glDeleteBuffers(1, &widget_renderer->ebo);
 
@@ -254,13 +238,9 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
         glUseProgram(shader->prog_id);
 
-#if defined(ENGINE_GLES)
         glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
         WIDGET_QUAD_GL_VERT_ATTRIB_PTR
-#else
-        glBindVertexArray(widget_renderer->vao);
-#endif
 
         glActiveTexture(GL_TEXTURE0); /* quad texture */
 
@@ -300,13 +280,9 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
         glUseProgram(shader->prog_id);
 
-#if defined(ENGINE_GLES)
         glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
         WIDGET_QUAD_GL_VERT_ATTRIB_PTR
-#else
-        glBindVertexArray(widget_renderer->vao);
-#endif
 
         glActiveTexture(GL_TEXTURE0); /* glyph's bitmap */
 

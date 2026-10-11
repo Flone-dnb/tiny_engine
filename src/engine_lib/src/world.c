@@ -151,14 +151,15 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
 
 #if defined(ENGINE_DEBUG_TOOLS)
 #if defined(ENGINE_GLES)
-    if (GLAD_GL_EXT_disjoint_timer_query == 1) {
+    if (GLAD_GL_EXT_disjoint_timer_query == 1)
+#else
+    if (GLAD_GL_ARB_timer_query == 1)
 #endif
+    {
         glGenQueries(1, &world->gl_query_draw_models);
         glGenQueries(1, &world->gl_query_draw_particles);
         glGenQueries(1, &world->gl_query_draw_widgets);
-#if defined(ENGINE_GLES)
     }
-#endif
 
     /* init timers */
     GPU_TIME_SECTION_BEGIN(world->gl_query_draw_models);
@@ -226,14 +227,15 @@ prv_world_destroy(te_world* world) {
 
 #if defined(ENGINE_DEBUG_TOOLS)
 #if defined(ENGINE_GLES)
-    if (GLAD_GL_EXT_disjoint_timer_query == 1) {
+    if (GLAD_GL_EXT_disjoint_timer_query == 1)
+#else
+    if (GLAD_GL_ARB_timer_query == 1)
 #endif
+    {
         glDeleteQueries(1, &world->gl_query_draw_models);
         glDeleteQueries(1, &world->gl_query_draw_particles);
         glDeleteQueries(1, &world->gl_query_draw_widgets);
-#if defined(ENGINE_GLES)
     }
-#endif
 #endif
 
     free(world);

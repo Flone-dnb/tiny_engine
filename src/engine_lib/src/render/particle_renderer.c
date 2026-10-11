@@ -30,9 +30,6 @@ struct te_particle_renderer {
     te_particle_shader_data particle_shader_data;
 
     /* quad geometry */
-#if !defined(ENGINE_GLES)
-    unsigned int vao;
-#endif
     unsigned int vbo;
     unsigned int ebo;
 };
@@ -75,15 +72,9 @@ particle_renderer_create(te_renderer* renderer) {
         vec2_set(1.0f, 1.0f, &vertices[2][0]);
         vec2_set(1.0f, 0.0f, &vertices[3][0]);
 
-#if !defined(ENGINE_GLES)
-        glGenVertexArrays(1, &particle_renderer->vao);
-#endif
         glGenBuffers(1, &particle_renderer->vbo);
         glGenBuffers(1, &particle_renderer->ebo);
 
-#if !defined(ENGINE_GLES)
-        glBindVertexArray(particle_renderer->vao);
-#endif
         {
             /* vertex buffer */
             glBindBuffer(GL_ARRAY_BUFFER, particle_renderer->vbo);
@@ -100,9 +91,6 @@ particle_renderer_create(te_renderer* renderer) {
                 GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned short), &indices[0],
                 GL_STATIC_DRAW);
         }
-#if !defined(ENGINE_GLES)
-        glBindVertexArray(0);
-#endif
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
@@ -156,13 +144,9 @@ particle_renderer_draw(
 
         glUseProgram(shader->prog_id);
 
-#if defined(ENGINE_GLES)
         glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ebo);
         PARTICLE_QUAD_GL_VERT_ATTRIB_PTR
-#else
-        glBindVertexArray(renderer->vao);
-#endif
 
         glActiveTexture(GL_TEXTURE0); /* quad texture */
 

@@ -4,11 +4,7 @@
 ATTRIBUTE_IN vec3 pos;
 ATTRIBUTE_IN vec3 normal;
 ATTRIBUTE_IN vec2 uv;
-#ifdef ENGINE_GLES
 ATTRIBUTE_IN vec4 bone_indices;
-#else
-ATTRIBUTE_IN uvec4 bone_indices;
-#endif
 ATTRIBUTE_IN vec4 bone_weights;
 
 ATTRIBUTE_OUT vec3 frag_pos;
@@ -28,11 +24,7 @@ void main(void) {
     vec4 skinned_normal = vec4(0.0);
     for (int i = 0; i < 4; i++) {
         float bone_weight = bone_weights[i];
-#ifdef ENGINE_GLES
         mat4 bone_mat = skinning_mats[int(bone_indices[i])];
-#else
-        mat4 bone_mat = skinning_mats[bone_indices[i]];
-#endif
 
         // passing 0 as 4th component for position to avoid applying translation twice
         skinned_pos += (bone_mat * vec4(pos, 1.0)) * bone_weight;

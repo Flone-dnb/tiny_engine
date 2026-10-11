@@ -205,8 +205,16 @@ renderer_create(struct te_window* window) {
             __FILE__, __LINE__,
             "the GPU does not support GL_EXT_disjoint_timer_query extension, GPU time "
             "metrics are disabled");
-    } else {
+    } else
+#else
+    if (GLAD_GL_ARB_timer_query != 1) {
+        log_info(
+            __FILE__, __LINE__,
+            "the GPU does not support GL_ARB_timer_query extension, GPU time "
+            "metrics are disabled");
+    } else
 #endif
+    {
         glGenQueries(1, &renderer->gl_timestamp_frame_start);
         glGenQueries(1, &renderer->gl_timestamp_frame_end);
         glGenQueries(1, &renderer->gl_query_draw_debug);
@@ -217,9 +225,7 @@ renderer_create(struct te_window* window) {
 
         GPU_TIME_SECTION_BEGIN(renderer->gl_query_draw_debug);
         GPU_TIME_SECTION_END;
-#if defined(ENGINE_GLES)
     }
-#endif
 #endif
 
 #if defined(DEBUG)
@@ -245,7 +251,11 @@ renderer_create(struct te_window* window) {
 
     /* setup clear values */
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+#if defined(ENGINE_GLES)
     glClearDepthf(1.0f);
+#else
+    glClearDepth(1.0);
+#endif
 
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
@@ -309,14 +319,15 @@ renderer_destroy(te_renderer* renderer) {
 
 #if defined(ENGINE_DEBUG_TOOLS)
 #if defined(ENGINE_GLES)
-    if (GLAD_GL_EXT_disjoint_timer_query == 1) {
+    if (GLAD_GL_EXT_disjoint_timer_query == 1)
+#else
+    if (GLAD_GL_ARB_timer_query == 1)
 #endif
+    {
         glDeleteQueries(1, &renderer->gl_timestamp_frame_start);
         glDeleteQueries(1, &renderer->gl_timestamp_frame_end);
         glDeleteQueries(1, &renderer->gl_query_draw_debug);
-#if defined(ENGINE_GLES)
     }
-#endif
 #endif
 
     free(renderer);
@@ -476,9 +487,6 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
             case GL_OUT_OF_MEMORY:
                 log_error(__FILE__, __LINE__, "GL error: OUT_OF_MEMORY");
                 break;
-            case GL_INVALID_FRAMEBUFFER_OPERATION:
-                log_error(__FILE__, __LINE__, "GL error: INVALID_FRAMEBUFFER_OPERATION");
-                break;
             default: {
                 char error_msg[128] = {0};
                 snprintf(&error_msg[0], 128, "GL error: %u", gl_error);
@@ -497,10 +505,16 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     if (GLAD_GL_EXT_disjoint_timer_query != 1) {
         record_new_queries = false;
     }
+#else
+    if (GLAD_GL_ARB_timer_query != 1) {
+        record_new_queries = false;
+    }
 #endif
 
 #if defined(ENGINE_GLES)
     if (GLAD_GL_EXT_disjoint_timer_query == 1)
+#else
+    if (GLAD_GL_ARB_timer_query == 1)
 #endif
     {
         /* check if the GPU finished commands */
@@ -553,7 +567,6 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     window_get_size(renderer->window, &window_width, &window_height);
 
     /* rendering to window's framebuffer */
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glClearColor(
         renderer->light_params->clear_color[0], renderer->light_params->clear_color[1],
         renderer->light_params->clear_color[2], 1.0f);

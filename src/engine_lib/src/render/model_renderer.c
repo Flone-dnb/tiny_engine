@@ -376,6 +376,7 @@ unsigned int
 model_renderer_draw(
     te_model_renderer* renderer, te_light_params* light_params, te_mat4* view_mat,
     te_mat4* view_proj_mat, te_frustum_shape* camera_frustum) {
+    void (*set_vertex_attribute_pointers)(void);
     unsigned int model_count = 0;
     unsigned int render_data_idx = 0;
     unsigned int group_idx = 0;
@@ -388,12 +389,10 @@ model_renderer_draw(
             glDisable(GL_CULL_FACE);
         }
 
-#if defined(ENGINE_GLES)
-        void (*set_vertex_attribute_pointers)(void) =
+        set_vertex_attribute_pointers =
             group->uniform_skin_mats == -1
                 ? prv_model_set_attribute_pointers_model_vertex
                 : prv_model_set_attribute_pointers_model_vertex_skinned;
-#endif
 
         glUseProgram(group->prog_id);
 
@@ -440,13 +439,9 @@ model_renderer_draw(
 
             glBindTexture(GL_TEXTURE_2D, data->tex_id); /* binds 0 if not set */
 
-#if defined(ENGINE_GLES)
             glBindBuffer(GL_ARRAY_BUFFER, data->vbo);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data->ebo);
             set_vertex_attribute_pointers();
-#else
-            glBindVertexArray(data->vao);
-#endif
 
             glDrawElements(GL_TRIANGLES, data->index_count, GL_UNSIGNED_SHORT, NULL);
             model_count += 1;

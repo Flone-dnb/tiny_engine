@@ -113,8 +113,11 @@ texture_manager_request_texture(
                     GL_TEXTURE_2D, 0, gl_internal_format, width, height, 0,
                     (unsigned int)gl_format, GL_UNSIGNED_BYTE, pixels);
                 if (opt == TE_TLO_GENERATE_MIPMAPS) {
+#if defined(ENGINE_GLES)
                     glGenerateMipmap(GL_TEXTURE_2D);
-
+#else
+                    glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+#endif
                     glTexParameteri(
                         GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
                 } else {

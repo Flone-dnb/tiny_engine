@@ -41,7 +41,6 @@ typedef struct te_win32_window {
 } te_win32_window;
 
 static PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB = NULL;
-static PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = NULL;
 static PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT = NULL;
 static const wchar_t* window_class = L"Win32WindowClass";
 static HMODULE opengl32dll = NULL;
@@ -283,14 +282,6 @@ load_wgl_extensions(void) {
         abort();
     }
 
-    wglCreateContextAttribsARB =
-        (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
-    if (wglCreateContextAttribsARB == NULL) {
-        log_error(
-            __FILE__, __LINE__, "failed to load wgl extension wglCreateContextAttribsARB");
-        abort();
-    }
-
     wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)wglGetProcAddress("wglSwapIntervalEXT");
     if (wglSwapIntervalEXT == NULL) {
         log_warn(__FILE__, __LINE__, "wglSwapIntervalEXT not supported");
@@ -445,7 +436,7 @@ win32_window_create(te_os_window* os_window, const char* title) {
         abort();
     }
 
-    win32_window->hglrc = wglCreateContextAttribsARB(win32_window->hdc, NULL, context_attribs);
+    win32_window->hglrc = wglCreateContext(win32_window->hdc);
     if (win32_window->hglrc == NULL) {
 #if defined(WIN32)
         MessageBoxA(NULL, "Error", "failed to create OpenGL context", MB_OK);
