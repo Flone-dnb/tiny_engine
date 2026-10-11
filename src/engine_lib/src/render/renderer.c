@@ -162,6 +162,9 @@ renderer_create(struct te_window* window) {
 #endif
     unsigned int refresh_rate;
 
+    const GLubyte* gl_version = glGetString(GL_VERSION);
+    log_info_fmt(__FILE__, __LINE__, "GL_VERSION: %s", (char*)gl_version);
+
     te_renderer* renderer = malloc(sizeof(te_renderer));
 
     renderer->window = window;
