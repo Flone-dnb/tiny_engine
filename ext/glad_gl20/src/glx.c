@@ -28,6 +28,8 @@ int GLAD_GLX_VERSION_1_1 = 0;
 int GLAD_GLX_VERSION_1_2 = 0;
 int GLAD_GLX_VERSION_1_3 = 0;
 int GLAD_GLX_VERSION_1_4 = 0;
+int GLAD_GLX_ARB_create_context = 0;
+int GLAD_GLX_ARB_create_context_profile = 0;
 
 
 
@@ -35,6 +37,7 @@ PFNGLXCHOOSEFBCONFIGPROC glad_glXChooseFBConfig = NULL;
 PFNGLXCHOOSEVISUALPROC glad_glXChooseVisual = NULL;
 PFNGLXCOPYCONTEXTPROC glad_glXCopyContext = NULL;
 PFNGLXCREATECONTEXTPROC glad_glXCreateContext = NULL;
+PFNGLXCREATECONTEXTATTRIBSARBPROC glad_glXCreateContextAttribsARB = NULL;
 PFNGLXCREATEGLXPIXMAPPROC glad_glXCreateGLXPixmap = NULL;
 PFNGLXCREATENEWCONTEXTPROC glad_glXCreateNewContext = NULL;
 PFNGLXCREATEPBUFFERPROC glad_glXCreatePbuffer = NULL;
@@ -126,6 +129,10 @@ static void glad_glx_load_GLX_VERSION_1_4( GLADuserptrloadfunc load, void* userp
     if(!GLAD_GLX_VERSION_1_4) return;
     glad_glXGetProcAddress = (PFNGLXGETPROCADDRESSPROC) load(userptr, "glXGetProcAddress");
 }
+static void glad_glx_load_GLX_ARB_create_context( GLADuserptrloadfunc load, void* userptr) {
+    if(!GLAD_GLX_ARB_create_context) return;
+    glad_glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC) load(userptr, "glXCreateContextAttribsARB");
+}
 
 
 
@@ -171,7 +178,8 @@ static GLADapiproc glad_glx_get_proc_from_userptr(void *userptr, const char* nam
 }
 
 static int glad_glx_find_extensions(Display *display, int screen) {
-    GLAD_UNUSED(&glad_glx_has_extension);
+    GLAD_GLX_ARB_create_context = glad_glx_has_extension(display, screen, "GLX_ARB_create_context");
+    GLAD_GLX_ARB_create_context_profile = glad_glx_has_extension(display, screen, "GLX_ARB_create_context_profile");
     return 1;
 }
 
@@ -211,6 +219,7 @@ int gladLoadGLXUserPtr(Display *display, int screen, GLADuserptrloadfunc load, v
     glad_glx_load_GLX_VERSION_1_4(load, userptr);
 
     if (!glad_glx_find_extensions(display, screen)) return 0;
+    glad_glx_load_GLX_ARB_create_context(load, userptr);
 
 
     return version;
