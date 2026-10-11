@@ -22,6 +22,7 @@ const char*
 paths_get_config_dir(void) {
     if (cached_path_to_config_dir[0] == 0) {
 #if defined(WIN32)
+        char* path_tmp;
         wchar_t folder_wpath[MAX_PATH + 1] = {0};
         unsigned int path_len;
         size_t i;
@@ -32,7 +33,7 @@ paths_get_config_dir(void) {
             abort();
         }
 
-        char* path_tmp = wchar_to_char(folder_wpath, &path_len);
+        path_tmp = wchar_to_char(folder_wpath, &path_len);
 
         /* copy path and replace slashes */
         if (path_len > 256) {
@@ -78,6 +79,7 @@ const char*
 paths_get_log_file(void) {
     if (cached_path_to_log_file[0] == 0) {
 #if defined(WIN32)
+        char* path_tmp;
         wchar_t folder_wpath[MAX_PATH + 1] = {0};
         unsigned int path_len;
         size_t i;
@@ -88,7 +90,7 @@ paths_get_log_file(void) {
             abort();
         }
 
-        char* path_tmp = wchar_to_char(folder_wpath, &path_len);
+        path_tmp = wchar_to_char(folder_wpath, &path_len);
 
         /* copy path and replace slashes */
         if (path_len > 256) {
