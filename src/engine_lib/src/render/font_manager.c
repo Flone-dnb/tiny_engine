@@ -1,5 +1,4 @@
 #include <render/font_manager.h>
-#include <stdint.h>
 
 #include <freetype/freetype.h>
 #include <misc/num_hashtable.h>

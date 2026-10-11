@@ -41,9 +41,9 @@ round_to_power_of_2(size_t x) {
     x |= x >> 8;
     x |= x >> 16;
 
-    if (sizeof(size_t) == 8) {
-        x |= x >> 32;
-    }
+#if !defined(ENGINE_32BIT)
+    x |= x >> 32;
+#endif
 
     return x + 1;
 }
@@ -351,17 +351,17 @@ calc_string_hash(const char* str) {
     size_t prime;
     int c;
 
-    if (sizeof(size_t) >= 8) {
+#if !defined(ENGINE_32BIT)
         /* 64-bit FNV offset basis: 14695981039346656037 */
         hash = ((size_t)0xCBF29CE4UL << 32) | (size_t)0x428A2F98UL;
 
         /* 64-bit FNV prime: 1099511628211 */
         prime = ((size_t)0x00000100UL << 32) | (size_t)0x000001B3UL;
-    } else {
+#else
         /* 32-bit constants */
         hash = (size_t)2166136261UL;
         prime = (size_t)16777619UL;
-    }
+#endif
 
     while ((c = (unsigned char)*str++)) {
         hash ^= (size_t)c;

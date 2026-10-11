@@ -4,6 +4,7 @@
 #define _XOPEN_SOURCE 500
 #endif
 
+#include <snprintf.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>

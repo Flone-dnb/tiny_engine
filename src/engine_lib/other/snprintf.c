@@ -1,10 +1,11 @@
 #include <snprintf.h>
 
-#if !defined(HAVE_SNPRINTF)
+#if !defined(HAVE_SNPRINTF) || !defined(HAVE_VSNPRINTF)
 
 #include <stdlib.h>
 #include <string.h>
 
+#if !defined(HAVE_VSNPRINTF)
 int
 vsnprintf(char* str, size_t size, const char* format, va_list ap) {
     int retval;
@@ -46,7 +47,9 @@ vsnprintf(char* str, size_t size, const char* format, va_list ap) {
 
     return retval;
 }
+#endif
 
+#if !defined(HAVE_SNPRINTF)
 int
 snprintf(char* str, size_t size, const char* format, ...) {
     va_list ap;
@@ -58,5 +61,6 @@ snprintf(char* str, size_t size, const char* format, ...) {
 
     return retval;
 }
+#endif
 
 #endif

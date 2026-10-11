@@ -11,6 +11,7 @@
 #define NOMINMAX
 #include <windows.h>
 #include <psapi.h>
+#pragma comment(lib, "Psapi.lib")
 #elif defined(__linux__)
 #include <stdio.h>
 #include <sys/sysinfo.h>

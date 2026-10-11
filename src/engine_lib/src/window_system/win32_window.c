@@ -17,6 +17,10 @@
 #pragma comment(lib, "opengl32.lib") /* for wgl functions */
 #pragma comment(lib, "XInput.lib")
 
+#ifndef XUSER_MAX_COUNT
+#define XUSER_MAX_COUNT 4
+#endif
+
 typedef struct te_win32_window {
     HWND hwnd;
     HDC hdc;
@@ -42,12 +46,14 @@ static HMODULE opengl32dll = NULL;
 
 static void
 process_wm_char(te_os_window* os_window, wchar_t ch) {
+	static char utf8[8];
+	int n;
+
     if (ch == L'\b' || ch == L'\r' || ch == L'\t' || ch == L'\x1B') {
         return;
     }
 
-    static char utf8[8];
-    int n = WideCharToMultiByte(CP_UTF8, 0, &ch, 1, utf8, sizeof(utf8), NULL, NULL);
+    n = WideCharToMultiByte(CP_UTF8, 0, &ch, 1, utf8, sizeof(utf8), NULL, NULL);
     prv_os_window_get_callbacks(os_window)->on_text_input(os_window, &utf8[0]);
 }
 
@@ -138,11 +144,11 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                     (te_win32_window*)prv_os_window_get_impl(os_window);
                 button = (enum te_keyboard_button)(code);
                 if (button == TE_KB_LEFT_ALT) {
-                    win32_window->keyboard_mods.bitmask |= 0b1;
+                    win32_window->keyboard_mods.bitmask |= 1;
                 } else if (button == TE_KB_LEFT_CONTROL) {
-                    win32_window->keyboard_mods.bitmask |= 0b10;
+                    win32_window->keyboard_mods.bitmask |= 2;
                 } else if (button == TE_KB_LEFT_SHIFT) {
-                    win32_window->keyboard_mods.bitmask |= 0b100;
+                    win32_window->keyboard_mods.bitmask |= 4;
                 }
 
                 prv_os_window_get_callbacks(os_window)->on_keyboard_button_pressed(
@@ -161,11 +167,11 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                     (te_win32_window*)prv_os_window_get_impl(os_window);
                 button = (enum te_keyboard_button)(code);
                 if (button == TE_KB_LEFT_ALT) {
-                    win32_window->keyboard_mods.bitmask &= ~0b1;
+                    win32_window->keyboard_mods.bitmask &= ~1;
                 } else if (button == TE_KB_LEFT_CONTROL) {
-                    win32_window->keyboard_mods.bitmask &= ~0b10;
+                    win32_window->keyboard_mods.bitmask &= ~2;
                 } else if (button == TE_KB_LEFT_SHIFT) {
-                    win32_window->keyboard_mods.bitmask &= ~0b100;
+                    win32_window->keyboard_mods.bitmask &= ~4;
                 }
 
                 prv_os_window_get_callbacks(os_window)->on_keyboard_button_released(
@@ -191,8 +197,9 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                 te_win32_window* win32_window =
                     (te_win32_window*)prv_os_window_get_impl(os_window);
                 if (win32_window->controller_id == 255) {
+					DWORD i;
                     /* check if newly connected */
-                    for (DWORD i = 0; i < XUSER_MAX_COUNT; i++) {
+                    for (i = 0; i < XUSER_MAX_COUNT; i++) {
                         memset(&win32_window->xinput_state, 0, sizeof(XINPUT_STATE));
                         if (XInputGetState(i, &win32_window->xinput_state) == ERROR_SUCCESS) {
                             win32_window->controller_id = (unsigned char)i;
@@ -316,6 +323,7 @@ gladloadproc(const char* name) {
 void
 win32_window_create(te_os_window* os_window, const char* title) {
     wchar_t* titlew;
+	te_win32_window* win32_window;
     HINSTANCE hinstance;
     PIXELFORMATDESCRIPTOR pfd;
     WNDCLASSW wc = {0};
@@ -368,11 +376,10 @@ win32_window_create(te_os_window* os_window, const char* title) {
         0};
 
     SetProcessDPIAware();
-    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
     load_wgl_extensions();
 
-    te_win32_window* win32_window = malloc(sizeof(te_win32_window));
+    win32_window = malloc(sizeof(te_win32_window));
     memset(win32_window, 0, sizeof(te_win32_window));
     prv_os_window_set_impl(os_window, win32_window);
 
@@ -548,8 +555,8 @@ check_thumbstick_changes(
     XINPUT_GAMEPAD* new_state) {
 #define CHECK_GAMEPAD_AXIS(xaxis, engine_axis, sign)                                          \
     if (prev_state->xaxis != new_state->xaxis) {                                              \
-        float prev_abs_norm = math_abs(fmaxf(-1, (float)prev_state->xaxis / 32767));          \
-        float norm = fmaxf(-1, (float)new_state->xaxis / 32767);                              \
+        float prev_abs_norm = math_abs(math_max(-1, (float)prev_state->xaxis / 32767));          \
+        float norm = math_max(-1, (float)new_state->xaxis / 32767);                              \
         float abs_norm = math_abs(norm);                                                      \
         if (prev_abs_norm > TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE                                \
             || abs_norm > TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE) {                               \
@@ -657,6 +664,7 @@ win32_window_get_refresh_rate(te_os_window* os_window) {
 
 void
 win32_window_capture_mouse_cursor(te_os_window* os_window, bool capture) {
+    static POINT pos_before_lock;
     te_win32_window* win32_window = prv_os_window_get_impl(os_window);
 
     if (win32_window->capture_mouse == capture) {
@@ -665,12 +673,16 @@ win32_window_capture_mouse_cursor(te_os_window* os_window, bool capture) {
 
     win32_window->capture_mouse = capture;
 
-    static POINT pos_before_lock;
-
     if (capture) {
+		RECT cap_rect;
+		cap_rect.top = 0;
+		cap_rect.left = 0;
+		cap_rect.bottom = 1;
+		cap_rect.right = 1;
+
         GetCursorPos(&pos_before_lock);
 
-        ClipCursor(&(RECT){0, 0, 1, 1});
+        ClipCursor(&cap_rect);
         ShowCursor(FALSE);
     } else {
         ClipCursor(NULL);

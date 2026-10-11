@@ -3,7 +3,6 @@
 #if defined(ENGINE_DEBUG_TOOLS)
 #include <snprintf.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <render/renderer.h>
