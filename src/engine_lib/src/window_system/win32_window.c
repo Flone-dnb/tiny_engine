@@ -21,6 +21,8 @@
 #define XUSER_MAX_COUNT 4
 #endif
 
+typedef BOOL(WINAPI* SetProcessDPIAwarePtr)(void);
+
 typedef struct te_win32_window {
     HWND hwnd;
     HDC hdc;
@@ -375,7 +377,18 @@ win32_window_create(te_os_window* os_window, const char* title) {
 #endif
         0};
 
-    SetProcessDPIAware();
+    /* check for SetProcessDPIAware (instead of calling directly) because on old Windows versions it does not exist */
+    {
+        HMODULE user32 = LoadLibrary("user32.dll");
+        if (user32 != NULL) {
+            SetProcessDPIAwarePtr func =
+                (SetProcessDPIAwarePtr)GetProcAddress(user32, "SetProcessDPIAware");
+            if (func != NULL) {
+                func();
+            }
+            FreeLibrary(user32);
+        }
+    }
 
     load_wgl_extensions();
 
