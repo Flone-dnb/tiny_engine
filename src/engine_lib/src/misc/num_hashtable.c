@@ -337,7 +337,7 @@ num_hashtable_iterator_next(te_num_hashtable_iterator* it) {
         it->entry_idx += 1;
         it->item_idx = 0;
 
-        while (it->ht->entries[it->entry_idx] == NULL && it->entry_idx < it->ht->entry_count) {
+        while (it->entry_idx < it->ht->entry_count && it->ht->entries[it->entry_idx] == NULL) {
             it->entry_idx += 1;
         }
 
@@ -352,15 +352,15 @@ calc_string_hash(const char* str) {
     int c;
 
 #if !defined(ENGINE_32BIT)
-        /* 64-bit FNV offset basis: 14695981039346656037 */
-        hash = ((size_t)0xCBF29CE4UL << 32) | (size_t)0x428A2F98UL;
+    /* 64-bit FNV offset basis: 14695981039346656037 */
+    hash = ((size_t)0xCBF29CE4UL << 32) | (size_t)0x428A2F98UL;
 
-        /* 64-bit FNV prime: 1099511628211 */
-        prime = ((size_t)0x00000100UL << 32) | (size_t)0x000001B3UL;
+    /* 64-bit FNV prime: 1099511628211 */
+    prime = ((size_t)0x00000100UL << 32) | (size_t)0x000001B3UL;
 #else
-        /* 32-bit constants */
-        hash = (size_t)2166136261UL;
-        prime = (size_t)16777619UL;
+    /* 32-bit constants */
+    hash = (size_t)2166136261UL;
+    prime = (size_t)16777619UL;
 #endif
 
     while ((c = (unsigned char)*str++)) {
