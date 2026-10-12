@@ -132,22 +132,43 @@ render_data_array_remove_item(te_render_data_array* array, unsigned int handle) 
 
     array->handle_to_data[handle] = INVALID_DATA_INDEX;
 
-    if (array->render_data_count > 1) {
+    /* if have only 1 item or removing last item then nothing to move */
+    if (array->render_data_count > 1 && render_data_index < array->render_data_count - 1) {
+#if defined(DEBUG)
+        bool found;
+#endif
         /* remove "hole" from the array. */
         char* render_data = array->render_data; /* cast from void* */
-        memmove(
-            render_data + array->sizeof_render_data * render_data_index,
-            render_data + array->sizeof_render_data * (render_data_index + 1),
-            array->sizeof_render_data * (array->render_data_count - render_data_index - 1));
-    }
 
-    /* shift render data indices after the removed one */
-    for (i = 0; i < array->array_size; i++) {
-        if (array->handle_to_data[i] == INVALID_DATA_INDEX
-            || array->handle_to_data[i] < render_data_index) {
-            continue;
+        /* because we don't care about item order in the array we can just swap last item and item to remove */
+        memcpy(
+            render_data + array->sizeof_render_data * render_data_index,
+            render_data + array->sizeof_render_data * (array->render_data_count - 1),
+            array->sizeof_render_data);
+
+#if defined(DEBUG)
+        found = false;
+#endif
+        for (i = 0; i < array->array_size; i++) {
+            if (array->handle_to_data[i] == INVALID_DATA_INDEX
+                || array->handle_to_data[i] != array->render_data_count - 1) {
+                continue;
+            }
+            array->handle_to_data[i] = render_data_index;
+#if defined(DEBUG)
+            found = true;
+#endif
+            break;
         }
-        array->handle_to_data[i] -= 1;
+
+#if defined(DEBUG)
+        if (!found) {
+            log_error_fmt(
+                __FILE__, __LINE__,
+                "expected to find last item handle, array size: %u, removing handle: %u",
+                array->array_size, handle);
+        }
+#endif
     }
 
     array->render_data_count -= 1;
