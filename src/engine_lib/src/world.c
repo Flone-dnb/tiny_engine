@@ -340,13 +340,16 @@ prv_world_remove_root_game_object_no_notify(
         }
     }
 
-    /* remove from array (shift other elements) */
-    if (world->spawned_root_game_object_count > 1) {
-        memmove(
+    /* if have only 1 item or removing last item then nothing to move */
+    if (world->spawned_root_game_object_count > 1
+        && idx < world->spawned_root_game_object_count - 1) {
+        /* because we don't care about item order in the array we can just do this */
+        memcpy(
             world->spawned_root_game_objects + idx,
-            world->spawned_root_game_objects + (idx + 1),
-            sizeof(te_game_object_data) * (world->spawned_root_game_object_count - idx - 1));
+            world->spawned_root_game_objects + (world->spawned_root_game_object_count - 1),
+            sizeof(te_game_object_data));
     }
+
     world->spawned_root_game_object_count -= 1;
 }
 

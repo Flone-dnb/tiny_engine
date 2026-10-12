@@ -140,7 +140,7 @@ render_data_array_remove_item(te_render_data_array* array, unsigned int handle) 
         /* remove "hole" from the array. */
         char* render_data = array->render_data; /* cast from void* */
 
-        /* because we don't care about item order in the array we can just swap last item and item to remove */
+        /* because we don't care about item order in the array we can just do this */
         memcpy(
             render_data + array->sizeof_render_data * render_data_index,
             render_data + array->sizeof_render_data * (array->render_data_count - 1),
