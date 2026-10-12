@@ -109,23 +109,31 @@ texture_manager_request_texture(
 
             glBindTexture(GL_TEXTURE_2D, tex_id);
             {
+#if !defined(ENGINE_GLES)
+                if (opt == TE_TLO_GENERATE_MIPMAPS) {
+                    /* generates mipmaps on the next glTexImage2D call */
+                    glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+                }
+#endif
+
+                glTexParameteri(
+                    GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                    opt == TE_TLO_GENERATE_MIPMAPS ? GL_NEAREST_MIPMAP_LINEAR : GL_NEAREST);
+
+                /* load image */
                 glTexImage2D(
                     GL_TEXTURE_2D, 0, gl_internal_format, width, height, 0,
                     (unsigned int)gl_format, GL_UNSIGNED_BYTE, pixels);
-                if (opt == TE_TLO_GENERATE_MIPMAPS) {
-#if defined(ENGINE_GLES)
-                    glGenerateMipmap(GL_TEXTURE_2D);
-#else
-                    glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
-#endif
-                    glTexParameteri(
-                        GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
-                } else {
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                }
 
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+#if defined(ENGINE_GLES)
+                if (opt == TE_TLO_GENERATE_MIPMAPS) {
+                    /* generates mipmaps based on the current image data */
+                    glGenerateMipmap(GL_TEXTURE_2D);
+                }
+#endif
             }
             glBindTexture(GL_TEXTURE_2D, 0);
             stbi_image_free(pixels);
