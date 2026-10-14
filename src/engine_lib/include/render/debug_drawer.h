@@ -16,6 +16,7 @@ struct te_aabb_shape;
  * adjusted if there is already some text being displayed this way
  * (so multiple text object won't be drawn on top of each other),
  * otherwise specify a position (relative to the window's top-left corner) in range [0.0; 1.0] */
+void debug_drawer_draw_text(float time_sec, const char* text);
 void debug_drawer_draw_text_fmt(float time_sec, const char* fmt, ...);
 void debug_drawer_draw_text_color(const char* text, float time_sec, te_vec3 color);
 void
@@ -26,6 +27,11 @@ void debug_drawer_draw_aabb(struct te_aabb_shape* aabb, float time_sec, te_vec3 
 
 /* specify 0 as time to draw for just 1 frame */
 void debug_drawer_draw_line(te_vec3 from, te_vec3 to, float time_sec);
+
+/* draws a triangle in 3D with RGBA color
+ * specify 0 as time to draw for just 1 frame */
+void debug_drawer_draw_triangle_solid(
+    te_vec3 v0, te_vec3 v1, te_vec3 v2, te_vec4 rgba, float time_sec);
 
 float debug_drawer_get_default_text_height(void);
 
