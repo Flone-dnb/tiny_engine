@@ -827,7 +827,12 @@ prv_debug_drawer_draw(
 
         /* prepare starting position for the first text (relative to screen's top-left corner)
          * x will be reset on every text so it's defined below */
+#if defined(ENGINE_EDITOR)
+        /* start putting text slightly lower due to FPS stats text in the editor */
+        screen_pos[1] = (float)window_height * 0.2f;
+#else
         screen_pos[1] = (float)window_height * 0.1f;
+#endif
 
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
