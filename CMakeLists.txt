@@ -144,6 +144,9 @@ function(create_symlink_to_res DIR_NAME)
                 COMMAND cmd /c mklink /J "${DST_DIR}" "${SRC_DIR}"
                 RESULT_VARIABLE result
             )
+	    if(result EQUAL 1)
+		message(WARNING "\n\nCan't use mklink to create a symlink to \"res\", you have to copy it yourself\n\n")
+	    endif()
         else()
             execute_process(
                 COMMAND ${CMAKE_COMMAND} -E create_symlink "${RES_LINK_FROM}" "${RES_LINK_TO}"
