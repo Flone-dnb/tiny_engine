@@ -171,11 +171,7 @@ font_manager_cache_glyphs(
     }
 
     gl_type = GL_UNSIGNED_BYTE;
-#if defined(ENGINE_GLES)
     gl_format = GL_LUMINANCE;
-#else
-    gl_format = GL_RED;
-#endif
 
     /* set byte-alignment to 1 because we will create single-channel textures */
     prev_unpack_alignment = 0;
@@ -197,23 +193,26 @@ font_manager_cache_glyphs(
             abort();
         }
 
-        /* create texture */
         tex_id = 0;
-        glGenTextures(1, &tex_id);
+        if (manager->ft_face->glyph->bitmap.width > 0) {
+            /* create texture */
+            glGenTextures(1, &tex_id);
 
-        glBindTexture(GL_TEXTURE_2D, tex_id);
-        {
-            glTexImage2D(
-                GL_TEXTURE_2D, 0, (GLint)gl_format, (int)manager->ft_face->glyph->bitmap.width,
-                (int)manager->ft_face->glyph->bitmap.rows, 0, (GLenum)gl_format, gl_type,
-                manager->ft_face->glyph->bitmap.buffer);
+            glBindTexture(GL_TEXTURE_2D, tex_id);
+            {
+                glTexImage2D(
+                    GL_TEXTURE_2D, 0, (GLint)gl_format,
+                    (int)manager->ft_face->glyph->bitmap.width,
+                    (int)manager->ft_face->glyph->bitmap.rows, 0, (GLenum)gl_format, gl_type,
+                    manager->ft_face->glyph->bitmap.buffer);
 
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            }
+            glBindTexture(GL_TEXTURE_2D, 0);
         }
-        glBindTexture(GL_TEXTURE_2D, 0);
 
         /* save */
         new_glyph.tex_id = tex_id;
