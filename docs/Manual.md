@@ -95,7 +95,7 @@ The lighting is very simple in this engine, all lighting parameters are stored i
 
 # Import GLTF
 
-The editor provides a button to import GLTF/GLB files (`io/import.h` is used). Imported GLTF scene will appear in a new directory as a new world file. You can then load this GLTF scene by creating a new world and using the `world_add_from_file` function or you can add this imported GLTF scene to your already existing game world by using the same `world_add_from_file` function.
+The editor provides a button to import GLTF/GLB files (`import.h` is used). Imported GLTF scene will appear in a new directory as a new world file. You can then load this GLTF scene by creating a new world and using the `world_add_from_file` function or you can add this imported GLTF scene to your already existing game world by using the same `world_add_from_file` function.
 
 # Sound
 
