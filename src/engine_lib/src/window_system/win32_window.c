@@ -62,172 +62,173 @@ static LRESULT CALLBACK
 wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
     te_os_window* os_window = (te_os_window*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
     if (os_window != NULL) {
-        switch (msg) {
-            case WM_INPUT: {
-                static BYTE buffer[sizeof(RAWINPUT)];
-                UINT size = sizeof(buffer);
-                RAWINPUT* raw;
+        te_os_window_callbacks* callbacks = prv_os_window_get_callbacks(os_window);
+        if (callbacks != NULL) {
+            switch (msg) {
+                case WM_INPUT: {
+                    static BYTE buffer[sizeof(RAWINPUT)];
+                    UINT size = sizeof(buffer);
+                    RAWINPUT* raw;
 
-                if (GetRawInputData(
-                        (HRAWINPUT)lparam, RID_INPUT, buffer, &size, sizeof(RAWINPUTHEADER))
-                    != size) {
-                    return 0;
+                    if (GetRawInputData(
+                            (HRAWINPUT)lparam, RID_INPUT, buffer, &size,
+                            sizeof(RAWINPUTHEADER))
+                        != size) {
+                        return 0;
+                    }
+
+                    raw = (RAWINPUT*)buffer;
+                    if (raw->header.dwType == RIM_TYPEMOUSE) {
+                        RAWMOUSE* mouse = &raw->data.mouse;
+                        te_win32_window* win32_window =
+                            (te_win32_window*)prv_os_window_get_impl(os_window);
+
+                        if ((mouse->usFlags & MOUSE_MOVE_ABSOLUTE) == 0) {
+                            win32_window->is_cached_cursor_pos_valid = false;
+                            callbacks->on_mouse_move(
+                                os_window, (float)mouse->lLastX, (float)mouse->lLastY);
+                        }
+
+                        if (mouse->usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN) {
+                            callbacks->on_mouse_button_pressed(os_window, TE_MB_LEFT);
+                        }
+                        if (mouse->usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP) {
+                            callbacks->on_mouse_button_released(os_window, TE_MB_LEFT);
+                        }
+                        if (mouse->usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN) {
+                            callbacks->on_mouse_button_pressed(os_window, TE_MB_RIGHT);
+                        }
+                        if (mouse->usButtonFlags & RI_MOUSE_RIGHT_BUTTON_UP) {
+                            callbacks->on_mouse_button_released(os_window, TE_MB_RIGHT);
+                        }
+                        if (mouse->usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_DOWN) {
+                            callbacks->on_mouse_button_pressed(os_window, TE_MB_MIDDLE);
+                        }
+                        if (mouse->usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_UP) {
+                            callbacks->on_mouse_button_released(os_window, TE_MB_MIDDLE);
+                        }
+                        if (mouse->usButtonFlags & RI_MOUSE_BUTTON_4_DOWN) {
+                            callbacks->on_mouse_button_pressed(os_window, TE_MB_X1);
+                        }
+                        if (mouse->usButtonFlags & RI_MOUSE_BUTTON_4_UP) {
+                            callbacks->on_mouse_button_released(os_window, TE_MB_X1);
+                        }
+                        if (mouse->usButtonFlags & RI_MOUSE_BUTTON_5_DOWN) {
+                            callbacks->on_mouse_button_pressed(os_window, TE_MB_X2);
+                        }
+                        if (mouse->usButtonFlags & RI_MOUSE_BUTTON_5_UP) {
+                            callbacks->on_mouse_button_released(os_window, TE_MB_X2);
+                        }
+
+                        if (mouse->usButtonFlags & RI_MOUSE_WHEEL) {
+                            callbacks->on_mouse_scroll_moved(
+                                os_window, (float)mouse->usButtonData);
+                        }
+
+                        return 0;
+                    }
                 }
+                case WM_CHAR: {
+                    process_wm_char(os_window, (wchar_t)wparam);
+                    break;
+                }
+                case WM_KEYDOWN: {
+                    enum te_keyboard_button button;
 
-                raw = (RAWINPUT*)buffer;
-                if (raw->header.dwType == RIM_TYPEMOUSE) {
-                    RAWMOUSE* mouse = &raw->data.mouse;
+                    UINT scancode = (lparam >> 16) & 0xFF;
+                    bool is_extended = (lparam & (1 << 24)) != 0;
+                    UINT code = is_extended ? (0xE000u | scancode) : scancode;
+
+                    bool is_repeat = (lparam & (1 << 30)) != 0;
+
+                    /* update keyboard modifiers */
                     te_win32_window* win32_window =
                         (te_win32_window*)prv_os_window_get_impl(os_window);
-
-                    te_os_window_callbacks* callbacks = prv_os_window_get_callbacks(os_window);
-
-                    if ((mouse->usFlags & MOUSE_MOVE_ABSOLUTE) == 0) {
-                        win32_window->is_cached_cursor_pos_valid = false;
-                        callbacks->on_mouse_move(
-                            os_window, (float)mouse->lLastX, (float)mouse->lLastY);
+                    button = (enum te_keyboard_button)(code);
+                    if (button == TE_KB_LEFT_ALT) {
+                        win32_window->keyboard_mods.bitmask |= 1;
+                    } else if (button == TE_KB_LEFT_CONTROL) {
+                        win32_window->keyboard_mods.bitmask |= 2;
+                    } else if (button == TE_KB_LEFT_SHIFT) {
+                        win32_window->keyboard_mods.bitmask |= 4;
                     }
 
-                    if (mouse->usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN) {
-                        callbacks->on_mouse_button_pressed(os_window, TE_MB_LEFT);
-                    }
-                    if (mouse->usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP) {
-                        callbacks->on_mouse_button_released(os_window, TE_MB_LEFT);
-                    }
-                    if (mouse->usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN) {
-                        callbacks->on_mouse_button_pressed(os_window, TE_MB_RIGHT);
-                    }
-                    if (mouse->usButtonFlags & RI_MOUSE_RIGHT_BUTTON_UP) {
-                        callbacks->on_mouse_button_released(os_window, TE_MB_RIGHT);
-                    }
-                    if (mouse->usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_DOWN) {
-                        callbacks->on_mouse_button_pressed(os_window, TE_MB_MIDDLE);
-                    }
-                    if (mouse->usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_UP) {
-                        callbacks->on_mouse_button_released(os_window, TE_MB_MIDDLE);
-                    }
-                    if (mouse->usButtonFlags & RI_MOUSE_BUTTON_4_DOWN) {
-                        callbacks->on_mouse_button_pressed(os_window, TE_MB_X1);
-                    }
-                    if (mouse->usButtonFlags & RI_MOUSE_BUTTON_4_UP) {
-                        callbacks->on_mouse_button_released(os_window, TE_MB_X1);
-                    }
-                    if (mouse->usButtonFlags & RI_MOUSE_BUTTON_5_DOWN) {
-                        callbacks->on_mouse_button_pressed(os_window, TE_MB_X2);
-                    }
-                    if (mouse->usButtonFlags & RI_MOUSE_BUTTON_5_UP) {
-                        callbacks->on_mouse_button_released(os_window, TE_MB_X2);
-                    }
-
-                    if (mouse->usButtonFlags & RI_MOUSE_WHEEL) {
-                        callbacks->on_mouse_scroll_moved(
-                            os_window, (float)mouse->usButtonData);
-                    }
-
-                    return 0;
+                    callbacks->on_keyboard_button_pressed(
+                        os_window, button, is_repeat, win32_window->keyboard_mods);
+                    break;
                 }
-            }
-            case WM_CHAR: {
-                process_wm_char(os_window, (wchar_t)wparam);
-                break;
-            }
-            case WM_KEYDOWN: {
-                enum te_keyboard_button button;
+                case WM_KEYUP: {
+                    enum te_keyboard_button button;
 
-                UINT scancode = (lparam >> 16) & 0xFF;
-                bool is_extended = (lparam & (1 << 24)) != 0;
-                UINT code = is_extended ? (0xE000u | scancode) : scancode;
+                    UINT scancode = (lparam >> 16) & 0xFF;
+                    bool is_extended = (lparam & (1 << 24)) != 0;
+                    UINT code = is_extended ? (0xE000u | scancode) : scancode;
 
-                bool is_repeat = (lparam & (1 << 30)) != 0;
+                    /* update keyboard modifiers */
+                    te_win32_window* win32_window =
+                        (te_win32_window*)prv_os_window_get_impl(os_window);
+                    button = (enum te_keyboard_button)(code);
+                    if (button == TE_KB_LEFT_ALT) {
+                        win32_window->keyboard_mods.bitmask &= ~1;
+                    } else if (button == TE_KB_LEFT_CONTROL) {
+                        win32_window->keyboard_mods.bitmask &= ~2;
+                    } else if (button == TE_KB_LEFT_SHIFT) {
+                        win32_window->keyboard_mods.bitmask &= ~4;
+                    }
 
-                /* update keyboard modifiers */
-                te_win32_window* win32_window =
-                    (te_win32_window*)prv_os_window_get_impl(os_window);
-                button = (enum te_keyboard_button)(code);
-                if (button == TE_KB_LEFT_ALT) {
-                    win32_window->keyboard_mods.bitmask |= 1;
-                } else if (button == TE_KB_LEFT_CONTROL) {
-                    win32_window->keyboard_mods.bitmask |= 2;
-                } else if (button == TE_KB_LEFT_SHIFT) {
-                    win32_window->keyboard_mods.bitmask |= 4;
+                    callbacks->on_keyboard_button_released(
+                        os_window, button, win32_window->keyboard_mods);
+                    break;
                 }
-
-                prv_os_window_get_callbacks(os_window)->on_keyboard_button_pressed(
-                    os_window, button, is_repeat, win32_window->keyboard_mods);
-                break;
-            }
-            case WM_KEYUP: {
-                enum te_keyboard_button button;
-
-                UINT scancode = (lparam >> 16) & 0xFF;
-                bool is_extended = (lparam & (1 << 24)) != 0;
-                UINT code = is_extended ? (0xE000u | scancode) : scancode;
-
-                /* update keyboard modifiers */
-                te_win32_window* win32_window =
-                    (te_win32_window*)prv_os_window_get_impl(os_window);
-                button = (enum te_keyboard_button)(code);
-                if (button == TE_KB_LEFT_ALT) {
-                    win32_window->keyboard_mods.bitmask &= ~1;
-                } else if (button == TE_KB_LEFT_CONTROL) {
-                    win32_window->keyboard_mods.bitmask &= ~2;
-                } else if (button == TE_KB_LEFT_SHIFT) {
-                    win32_window->keyboard_mods.bitmask &= ~4;
+                case WM_SETFOCUS: {
+                    callbacks->on_received_focus(os_window);
+                    break;
                 }
-
-                prv_os_window_get_callbacks(os_window)->on_keyboard_button_released(
-                    os_window, button, win32_window->keyboard_mods);
-                break;
-            }
-            case WM_SETFOCUS: {
-                prv_os_window_get_callbacks(os_window)->on_received_focus(os_window);
-                break;
-            }
-            case WM_KILLFOCUS: {
-                prv_os_window_get_callbacks(os_window)->on_lost_focus(os_window);
-                break;
-            }
-            case WM_SIZE: {
-                unsigned int width = (unsigned int)LOWORD(lparam);
-                unsigned int height = (unsigned int)HIWORD(lparam);
-                prv_os_window_on_size_changed(os_window, width, height);
-                prv_os_window_get_callbacks(os_window)->on_resized(os_window, width, height);
-                break;
-            }
-            case WM_DEVICECHANGE: {
-                te_win32_window* win32_window =
-                    (te_win32_window*)prv_os_window_get_impl(os_window);
-                if (win32_window->controller_id == 255) {
-					DWORD i;
-                    /* check if newly connected */
-                    for (i = 0; i < XUSER_MAX_COUNT; i++) {
+                case WM_KILLFOCUS: {
+                    callbacks->on_lost_focus(os_window);
+                    break;
+                }
+                case WM_SIZE: {
+                    unsigned int width = (unsigned int)LOWORD(lparam);
+                    unsigned int height = (unsigned int)HIWORD(lparam);
+                    prv_os_window_on_size_changed(os_window, width, height);
+                    callbacks->on_resized(os_window, width, height);
+                    break;
+                }
+                case WM_DEVICECHANGE: {
+                    te_win32_window* win32_window =
+                        (te_win32_window*)prv_os_window_get_impl(os_window);
+                    if (win32_window->controller_id == 255) {
+                        DWORD i;
+                        /* check if newly connected */
+                        for (i = 0; i < XUSER_MAX_COUNT; i++) {
+                            memset(&win32_window->xinput_state, 0, sizeof(XINPUT_STATE));
+                            if (XInputGetState(i, &win32_window->xinput_state)
+                                == ERROR_SUCCESS) {
+                                win32_window->controller_id = (unsigned char)i;
+                                log_info(__FILE__, __LINE__, "gamepad connected");
+                                callbacks->on_gamepad_connected(os_window);
+                                break;
+                            }
+                        }
+                    } else {
+                        /* check if disconnected */
                         memset(&win32_window->xinput_state, 0, sizeof(XINPUT_STATE));
-                        if (XInputGetState(i, &win32_window->xinput_state) == ERROR_SUCCESS) {
-                            win32_window->controller_id = (unsigned char)i;
-                            log_info(__FILE__, __LINE__, "gamepad connected");
-                            prv_os_window_get_callbacks(os_window)->on_gamepad_connected(
-                                os_window);
-                            break;
+                        if (XInputGetState(
+                                win32_window->controller_id, &win32_window->xinput_state)
+                            != ERROR_SUCCESS) {
+                            win32_window->controller_id = 255;
+                            log_info(__FILE__, __LINE__, "gamepad disconnected");
+                            callbacks->on_gamepad_disconnected(os_window);
                         }
                     }
-                } else {
-                    /* check if disconnected */
-                    memset(&win32_window->xinput_state, 0, sizeof(XINPUT_STATE));
-                    if (XInputGetState(
-                            win32_window->controller_id, &win32_window->xinput_state)
-                        != ERROR_SUCCESS) {
-                        win32_window->controller_id = 255;
-                        log_info(__FILE__, __LINE__, "gamepad disconnected");
-                        prv_os_window_get_callbacks(os_window)->on_gamepad_disconnected(
-                            os_window);
-                    }
+                    break;
                 }
-                break;
-            }
-            case WM_CLOSE: {
-                os_window_close(os_window);
-                PostQuitMessage(0);
-                return 0;
+                case WM_CLOSE: {
+                    os_window_close(os_window);
+                    PostQuitMessage(0);
+                    return 0;
+                }
             }
         }
     }

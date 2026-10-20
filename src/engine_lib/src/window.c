@@ -289,26 +289,35 @@ window_close(te_window* window) {
 static void
 on_mouse_button_pressed(te_os_window* os_window, enum te_mouse_button button) {
     te_window* window = os_window_get_user_data(os_window);
-
-    const bool is_handled =
-        prv_game_manager_on_mouse_button_pressed(window->game_manager, button);
-    window->user_callbacks->on_mouse_button_pressed(
-        window->game_instance, window->game_manager, button, is_handled);
+    if (window->user_callbacks == NULL || window->game_manager == NULL) {
+        return;
+    } else {
+        const bool is_handled =
+            prv_game_manager_on_mouse_button_pressed(window->game_manager, button);
+        window->user_callbacks->on_mouse_button_pressed(
+            window->game_instance, window->game_manager, button, is_handled);
+    }
 }
 
 static void
 on_mouse_button_released(te_os_window* os_window, enum te_mouse_button button) {
     te_window* window = os_window_get_user_data(os_window);
-
-    const bool is_handled =
-        prv_game_manager_on_mouse_button_released(window->game_manager, button);
-    window->user_callbacks->on_mouse_button_released(
-        window->game_instance, window->game_manager, button, is_handled);
+    if (window->user_callbacks == NULL || window->game_manager == NULL) {
+        return;
+    } else {
+        const bool is_handled =
+            prv_game_manager_on_mouse_button_released(window->game_manager, button);
+        window->user_callbacks->on_mouse_button_released(
+            window->game_instance, window->game_manager, button, is_handled);
+    }
 }
 
 static void
 on_mouse_move(te_os_window* os_window, float x_diff, float y_diff) {
     te_window* window = os_window_get_user_data(os_window);
+    if (window->user_callbacks == NULL || window->game_manager == NULL) {
+        return;
+    }
 
     prv_game_manager_on_mouse_moved(window->game_manager);
     window->user_callbacks->on_mouse_moved(
@@ -318,6 +327,9 @@ on_mouse_move(te_os_window* os_window, float x_diff, float y_diff) {
 static void
 on_mouse_scroll_moved(te_os_window* os_window, float offset) {
     te_window* window = os_window_get_user_data(os_window);
+    if (window->user_callbacks == NULL || window->game_manager == NULL) {
+        return;
+    }
 
     window->user_callbacks->on_mouse_scroll_moved(
         window->game_instance, window->game_manager, offset);
@@ -328,6 +340,9 @@ on_keyboard_button_pressed(
     te_os_window* os_window, enum te_keyboard_button button, bool is_repeat,
     te_keyboard_modifiers modifiers) {
     te_window* window = os_window_get_user_data(os_window);
+    if (window->user_callbacks == NULL || window->game_manager == NULL) {
+        return;
+    }
 
 #if defined(IS_ARM64)
     if (os_window_is_gamepad_connected(window->os_window)) {
@@ -361,6 +376,9 @@ static void
 on_keyboard_button_released(
     te_os_window* os_window, enum te_keyboard_button button, te_keyboard_modifiers modifiers) {
     te_window* window = os_window_get_user_data(os_window);
+    if (window->user_callbacks == NULL || window->game_manager == NULL) {
+        return;
+    }
 
 #if defined(IS_ARM64)
     if (os_window_is_gamepad_connected(window->os_window)) {
@@ -390,6 +408,9 @@ on_keyboard_button_released(
 static void
 on_text_input(te_os_window* os_window, const char* text) {
     te_window* window = os_window_get_user_data(os_window);
+    if (window->user_callbacks == NULL || window->game_manager == NULL) {
+        return;
+    }
 
 #if defined(IS_ARM64)
     if (os_window_is_gamepad_connected(window->os_window)) {
@@ -416,6 +437,9 @@ on_text_input(te_os_window* os_window, const char* text) {
 static void
 on_gamepad_connected(te_os_window* os_window) {
     te_window* window = os_window_get_user_data(os_window);
+    if (window->user_callbacks == NULL || window->game_manager == NULL) {
+        return;
+    }
 
     window->user_callbacks->on_gamepad_connected(window->game_instance, window->game_manager);
 }
@@ -423,6 +447,9 @@ on_gamepad_connected(te_os_window* os_window) {
 static void
 on_gamepad_disconnected(te_os_window* os_window) {
     te_window* window = os_window_get_user_data(os_window);
+    if (window->user_callbacks == NULL || window->game_manager == NULL) {
+        return;
+    }
 
     window->user_callbacks->on_gamepad_disconnected(
         window->game_instance, window->game_manager);
@@ -436,6 +463,9 @@ on_gamepad_disconnected(te_os_window* os_window) {
 static void
 on_gamepad_button_pressed(te_os_window* os_window, enum te_gamepad_button button) {
     te_window* window = os_window_get_user_data(os_window);
+    if (window->user_callbacks == NULL || window->game_manager == NULL) {
+        return;
+    }
 
     window->had_gamepad_input_curr_frame = true;
     window->user_callbacks->on_gamepad_button_pressed(
@@ -445,6 +475,9 @@ on_gamepad_button_pressed(te_os_window* os_window, enum te_gamepad_button button
 static void
 on_gamepad_button_released(te_os_window* os_window, enum te_gamepad_button button) {
     te_window* window = os_window_get_user_data(os_window);
+    if (window->user_callbacks == NULL || window->game_manager == NULL) {
+        return;
+    }
 
 #if defined(ENGINE_DEBUG_TOOLS)
     if (button == TE_GB_BACK) {
@@ -476,6 +509,9 @@ on_gamepad_button_released(te_os_window* os_window, enum te_gamepad_button butto
 static void
 on_gamepad_axis_moved(te_os_window* os_window, enum te_gamepad_axis axis, float new_pos) {
     te_window* window = os_window_get_user_data(os_window);
+    if (window->user_callbacks == NULL || window->game_manager == NULL) {
+        return;
+    }
 
     window->had_gamepad_input_curr_frame = true;
 
@@ -486,6 +522,9 @@ on_gamepad_axis_moved(te_os_window* os_window, enum te_gamepad_axis axis, float 
 static void
 on_received_focus(te_os_window* os_window) {
     te_window* window = os_window_get_user_data(os_window);
+    if (window->user_callbacks == NULL || window->game_manager == NULL) {
+        return;
+    }
 
     window->user_callbacks->on_window_received_focus(
         window->game_instance, window->game_manager);
@@ -494,6 +533,9 @@ on_received_focus(te_os_window* os_window) {
 static void
 on_lost_focus(te_os_window* os_window) {
     te_window* window = os_window_get_user_data(os_window);
+    if (window->user_callbacks == NULL || window->game_manager == NULL) {
+        return;
+    }
 
     window->user_callbacks->on_window_lost_focus(window->game_instance, window->game_manager);
 }

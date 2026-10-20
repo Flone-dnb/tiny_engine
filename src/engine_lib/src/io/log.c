@@ -11,6 +11,12 @@
 #include <render/debug_drawer.h>
 #include <math/vec3.h>
 
+#if defined(WIN32)
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <Windows.h>
+#endif
+
 #ifndef va_copy
 #ifdef __va_copy
 #define va_copy(dest, src) __va_copy((dest), (src))
@@ -106,6 +112,10 @@ prv_log(enum te_log_category category, const char* message, const char* filepath
     path_to_log_file = paths_get_log_file();
     log_file = fopen(path_to_log_file, "a");
     if (log_file == NULL) {
+        static logging_disabled = false;
+        if (logging_disabled) {
+            return;
+        }
         printf("failed to open log file \"%s\"\n", path_to_log_file);
 #if defined(WIN32)
         printf("does User name contains special characters?\n");
@@ -113,6 +123,7 @@ prv_log(enum te_log_category category, const char* message, const char* filepath
         log_file = fopen("log.txt", "a");
         if (log_file == NULL) {
             printf("can't even create a log.txt file, logging is disabled, good luck");
+            logging_disabled = true;
             return;
         }
         fprintf(
@@ -135,6 +146,14 @@ prv_log(enum te_log_category category, const char* message, const char* filepath
         debug_drawer_draw_text_color(message, 5.0f, color_warn);
     } else if (category == TE_LOG_ERROR) {
         debug_drawer_draw_text_color(message, 5.0f, color_error);
+    }
+#endif
+
+#if defined(WIN32)
+    if (category == TE_LOG_ERROR) {
+        MessageBoxW(
+            NULL, L"an error occurred, see the log file at %localappdata%/tiny_engine",
+            L"Error", MB_OK);
     }
 #endif
 
