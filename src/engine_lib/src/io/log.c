@@ -112,7 +112,7 @@ prv_log(enum te_log_category category, const char* message, const char* filepath
     path_to_log_file = paths_get_log_file();
     log_file = fopen(path_to_log_file, "a");
     if (log_file == NULL) {
-        static logging_disabled = false;
+        static bool logging_disabled = false;
         if (logging_disabled) {
             return;
         }
