@@ -134,11 +134,11 @@ In this case of a world when the sound is finished or stopped (or when the world
 
 Debug tools include things like `debug_drawer` (for rendering debug text and shapes) and `debug_console` (for registering new dev cheat commands and performance stats). In order to show/hide `debug_console` press the tilde (~) button on your keyboard.
 
-Debug console can show various statistics such as FPS, RAM usage, number of drawn meshes, various GPU metrics and etc. In order to show/hide such statistics use the commands `show_stats` and `hide_stats` (or `show_fps` and `hide_fps` for only FPS). Note that with `show_stats` you might want to also use the command `set_fps_limit 0` to make sure your GPU is running at max power (not being limited).
+Debug console can show various statistics such as FPS, RAM usage, number of drawn meshes, various GPU metrics and etc. In order to show/hide such statistics use the commands `show_stats` and `hide_stats` (or `show_fps` and `hide_fps` for only FPS). Note that with `show_stats` you might want to also use the command `set_fps_limit 0` and `set_enable_vsync 0` to make sure your GPU is running at max power (not being limited).
 
 To view debug stats using a gamepad you can click both the "start" button and the "menu" button (sometimes called the "back" button) to both toggle debug stats command and disable fps limit while the stats are visible.
 
-Debug tools are disabled in the "Release" build mode but if you need them in your release builds you can enable them if you pass -DENGINE_FORCE_ENABLE_DEBUG_TOOLS=ON while configuring cmake, cmake will then print a warning that you enabled debug tools in release build.
+Debug tools are disabled in the "Release" build mode but if you need them in your release builds you can enable them if you pass `-DENGINE_FORCE_ENABLE_DEBUG_TOOLS=ON` while configuring cmake, cmake will then print a warning that you enabled debug tools in release build.
 
 Note that in case you created a custom game object and want it to (for example) draw something when used in the editor you can use `ifdef ENGINE_EDITOR` macro for code that will only run in the editor.
 
