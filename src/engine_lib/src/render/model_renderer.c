@@ -441,11 +441,20 @@ model_renderer_draw(
 
             glBindBuffer(GL_ARRAY_BUFFER, data->vbo);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data->ebo);
+
+            /* must be called every time before draw */
             set_vertex_attribute_pointers();
 
             glDrawElements(GL_TRIANGLES, data->index_count, GL_UNSIGNED_SHORT, NULL);
             model_count += 1;
         }
+
+        /* at max (skinned models) we will use 5 attributes, clear them because the next group (or next renderer)
+	 * might not use all of them (and if enabled but not used old drivers will crash on NULL) */
+        glDisableVertexAttribArray(1);
+        glDisableVertexAttribArray(2);
+        glDisableVertexAttribArray(3);
+        glDisableVertexAttribArray(4);
 
         if (group->disable_backface_culling) {
             glEnable(GL_CULL_FACE);
