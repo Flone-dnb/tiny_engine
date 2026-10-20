@@ -81,10 +81,6 @@ particle_renderer_create(te_renderer* renderer) {
             glBufferData(
                 GL_ARRAY_BUFFER, 4 * sizeof(te_vec2), &vertices[0][0], GL_STATIC_DRAW);
 
-            /* vertex layout */
-            glEnableVertexAttribArray(0);
-            PARTICLE_QUAD_GL_VERT_ATTRIB_PTR
-
             /* index buffer */
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, particle_renderer->ebo);
             glBufferData(
@@ -146,6 +142,8 @@ particle_renderer_draw(
 
         glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ebo);
+        
+        glEnableVertexAttribArray(0);
         PARTICLE_QUAD_GL_VERT_ATTRIB_PTR
 
         glActiveTexture(GL_TEXTURE0); /* quad texture */

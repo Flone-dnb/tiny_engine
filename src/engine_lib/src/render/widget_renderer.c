@@ -119,10 +119,6 @@ widget_renderer_create(te_renderer* renderer) {
             glBufferData(
                 GL_ARRAY_BUFFER, 4 * sizeof(te_vec4), &vertices[0][0], GL_STATIC_DRAW);
 
-            /* vertex layout */
-            glEnableVertexAttribArray(0);
-            WIDGET_QUAD_GL_VERT_ATTRIB_PTR
-
             /* index buffer */
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
             glBufferData(
@@ -249,6 +245,8 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
         glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
+        
+        glEnableVertexAttribArray(0);
         WIDGET_QUAD_GL_VERT_ATTRIB_PTR
 
         glActiveTexture(GL_TEXTURE0); /* quad texture */
@@ -291,6 +289,9 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
         glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
+        WIDGET_QUAD_GL_VERT_ATTRIB_PTR
+        
+        glEnableVertexAttribArray(0);
         WIDGET_QUAD_GL_VERT_ATTRIB_PTR
 
         glActiveTexture(GL_TEXTURE0);

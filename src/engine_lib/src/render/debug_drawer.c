@@ -377,8 +377,6 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
 #if defined(ENGINE_GLES)
         glBindAttribLocation(drawer.text_shader.prog_id, 0, "vertex");
 #endif
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(te_vec4), NULL);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -420,8 +418,6 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
 #if defined(ENGINE_GLES)
         glBindAttribLocation(drawer.aabb_shader.prog_id, 0, "local_pos");
 #endif
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_vec3), NULL);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -448,8 +444,6 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
 #if defined(ENGINE_GLES)
         glBindAttribLocation(drawer.line_shader.prog_id, 0, "local_pos");
 #endif
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_vec3), NULL);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -476,8 +470,6 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
 #if defined(ENGINE_GLES)
         glBindAttribLocation(drawer.triangle_solid_shader.prog_id, 0, "local_pos");
 #endif
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_vec3), NULL);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -728,6 +720,8 @@ prv_debug_drawer_draw(
 
         glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_triangle);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_triangle);
+        
+        glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_vec3), NULL);
 
         glUniformMatrix4fv(
@@ -765,6 +759,8 @@ prv_debug_drawer_draw(
 
         glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_line);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_line);
+        
+        glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_vec3), NULL);
 
         glUniformMatrix4fv(
@@ -796,6 +792,8 @@ prv_debug_drawer_draw(
 
         glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_aabb);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_aabb);
+        
+        glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_vec3), NULL);
 
         glUniformMatrix4fv(
@@ -842,6 +840,8 @@ prv_debug_drawer_draw(
 
         glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_quad);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_quad);
+        
+        glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(te_vec4), NULL);
 
         glActiveTexture(GL_TEXTURE0);

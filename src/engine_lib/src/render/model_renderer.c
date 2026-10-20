@@ -442,7 +442,7 @@ model_renderer_draw(
             glBindBuffer(GL_ARRAY_BUFFER, data->vbo);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data->ebo);
 
-            /* must be called every time before draw */
+            /* must be called every time after binding a buffer */
             set_vertex_attribute_pointers();
 
             glDrawElements(GL_TRIANGLES, data->index_count, GL_UNSIGNED_SHORT, NULL);

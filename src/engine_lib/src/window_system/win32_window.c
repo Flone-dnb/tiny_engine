@@ -460,9 +460,9 @@ win32_window_create(te_os_window* os_window, const char* title) {
         abort();
     }
 
-    /* disable vsync */
+    /* enable vsync (we will disable fps limit because sleep is very inaccurate) */
     if (wglSwapIntervalEXT != NULL) {
-        wglSwapIntervalEXT(0);
+        wglSwapIntervalEXT(1);
     }
 
     /* NOTE: RIDEV_NOLEGACY should only be used for fullscreen apps

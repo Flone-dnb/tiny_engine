@@ -267,10 +267,15 @@ renderer_create(struct te_window* window) {
 
     /* set FPS limit */
     refresh_rate = window_get_display_refresh_rate(window);
+#if defined(WIN32)
+    /* sleep is very inaccurate, we just use vsync here */
+    renderer_set_fps_limit(renderer, 0);
+#else
     log_info_fmt(
         __FILE__, __LINE__, "setting FPS limit to %u (display's refresh rate)",
         window_get_display_refresh_rate(window));
     renderer_set_fps_limit(renderer, refresh_rate);
+#endif
 
 #if defined(ENGINE_DEBUG_TOOLS)
     fps_command.name = "set_fps_limit";
@@ -500,6 +505,13 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 
         abort();
     }
+    
+    /* setup vertex attributes */
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+    glDisableVertexAttribArray(2);
+    glDisableVertexAttribArray(3);
+    glDisableVertexAttribArray(4);
 
 #if defined(ENGINE_DEBUG_TOOLS)
     debug_stats = prv_debug_console_get_stats();
