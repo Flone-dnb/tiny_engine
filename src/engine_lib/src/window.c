@@ -282,6 +282,16 @@ window_get_display_refresh_rate(te_window* window) {
 }
 
 void
+window_set_enable_vsync(te_window* window, bool enable) {
+    os_window_set_enable_vsync(window->os_window, enable);
+}
+
+bool
+window_is_vsync_enabled(te_window* window) {
+    return os_window_is_vsync_enabled(window->os_window);
+}
+
+void
 window_close(te_window* window) {
     os_window_close(window->os_window);
 }

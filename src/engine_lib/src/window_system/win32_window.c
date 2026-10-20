@@ -38,6 +38,8 @@ typedef struct te_win32_window {
     unsigned char controller_id; /* 255 if not connected */
     bool capture_mouse;
     bool is_cached_cursor_pos_valid;
+
+    bool vsync_enabled;
 } te_win32_window;
 
 static PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB = NULL;
@@ -47,8 +49,8 @@ static HMODULE opengl32dll = NULL;
 
 static void
 process_wm_char(te_os_window* os_window, wchar_t ch) {
-	static char utf8[8];
-	int n;
+    static char utf8[8];
+    int n;
 
     if (ch == L'\b' || ch == L'\r' || ch == L'\t' || ch == L'\x1B') {
         return;
@@ -317,7 +319,7 @@ gladloadproc(const char* name) {
 void
 win32_window_create(te_os_window* os_window, const char* title) {
     wchar_t* titlew;
-	te_win32_window* win32_window;
+    te_win32_window* win32_window;
     HINSTANCE hinstance;
     PIXELFORMATDESCRIPTOR pfd;
     WNDCLASSW wc = {0};
@@ -460,9 +462,13 @@ win32_window_create(te_os_window* os_window, const char* title) {
         abort();
     }
 
-    /* enable vsync (we will disable fps limit because sleep is very inaccurate) */
+    /* enable vsync */
     if (wglSwapIntervalEXT != NULL) {
         wglSwapIntervalEXT(1);
+        log_info(__FILE__, __LINE__, "vsync enabled");
+        win32_window->vsync_enabled = true;
+    } else {
+        win32_window->vsync_enabled = false;
     }
 
     /* NOTE: RIDEV_NOLEGACY should only be used for fullscreen apps
@@ -560,8 +566,8 @@ check_thumbstick_changes(
     XINPUT_GAMEPAD* new_state) {
 #define CHECK_GAMEPAD_AXIS(xaxis, engine_axis, sign)                                          \
     if (prev_state->xaxis != new_state->xaxis) {                                              \
-        float prev_abs_norm = math_abs(math_max(-1, (float)prev_state->xaxis / 32767));          \
-        float norm = math_max(-1, (float)new_state->xaxis / 32767);                              \
+        float prev_abs_norm = math_abs(math_max(-1, (float)prev_state->xaxis / 32767));       \
+        float norm = math_max(-1, (float)new_state->xaxis / 32767);                           \
         float abs_norm = math_abs(norm);                                                      \
         if (prev_abs_norm > TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE                                \
             || abs_norm > TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE) {                               \
@@ -668,6 +674,24 @@ win32_window_get_refresh_rate(te_os_window* os_window) {
 }
 
 void
+win32_window_set_enable_vsync(struct te_os_window* os_window, bool enable) {
+    te_win32_window* win32_window = prv_os_window_get_impl(os_window);
+
+    if (wglSwapIntervalEXT == NULL) {
+        return;
+    }
+
+    wglSwapIntervalEXT(enable ? 1 : 0);
+    win32_window->vsync_enabled = enable;
+}
+
+bool
+win32_window_is_vsync_enabled(struct te_os_window* os_window) {
+    te_win32_window* win32_window = prv_os_window_get_impl(os_window);
+    return win32_window->vsync_enabled;
+}
+
+void
 win32_window_capture_mouse_cursor(te_os_window* os_window, bool capture) {
     static POINT pos_before_lock;
     te_win32_window* win32_window = prv_os_window_get_impl(os_window);
@@ -679,11 +703,11 @@ win32_window_capture_mouse_cursor(te_os_window* os_window, bool capture) {
     win32_window->capture_mouse = capture;
 
     if (capture) {
-		RECT cap_rect;
-		cap_rect.top = 0;
-		cap_rect.left = 0;
-		cap_rect.bottom = 1;
-		cap_rect.right = 1;
+        RECT cap_rect;
+        cap_rect.top = 0;
+        cap_rect.left = 0;
+        cap_rect.bottom = 1;
+        cap_rect.right = 1;
 
         GetCursorPos(&pos_before_lock);
 

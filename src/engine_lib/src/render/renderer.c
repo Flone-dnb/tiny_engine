@@ -127,6 +127,11 @@ debug_command_set_fps_limit(te_game_manager* game_manager, unsigned int new_limi
     te_renderer* renderer = game_manager_get_renderer(game_manager);
     renderer_set_fps_limit(renderer, new_limit);
 }
+void
+debug_command_set_enable_vsync(te_game_manager* game_manager, unsigned int enable) {
+    te_renderer* renderer = game_manager_get_renderer(game_manager);
+    window_set_enable_vsync(renderer_get_window(renderer), (bool)enable);
+}
 #endif
 
 /* getters/setters for light params for reflection */
@@ -161,7 +166,6 @@ renderer_create(struct te_window* window) {
     te_debug_console_command fps_command = {0};
 #endif
     te_renderer* renderer;
-    unsigned int refresh_rate;
 
     const GLubyte* gl_version = glGetString(GL_VERSION);
     log_info_fmt(__FILE__, __LINE__, "GL_VERSION: %s", (char*)gl_version);
@@ -265,21 +269,13 @@ renderer_create(struct te_window* window) {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
 
-    /* set FPS limit */
-    refresh_rate = window_get_display_refresh_rate(window);
-#if defined(WIN32)
-    /* sleep is very inaccurate, we just use vsync here */
-    renderer_set_fps_limit(renderer, 0);
-#else
-    log_info_fmt(
-        __FILE__, __LINE__, "setting FPS limit to %u (display's refresh rate)",
-        window_get_display_refresh_rate(window));
-    renderer_set_fps_limit(renderer, refresh_rate);
-#endif
-
 #if defined(ENGINE_DEBUG_TOOLS)
     fps_command.name = "set_fps_limit";
     fps_command.arg_uint = debug_command_set_fps_limit;
+    debug_console_register_command(fps_command);
+
+    fps_command.name = "set_enable_vsync";
+    fps_command.arg_uint = debug_command_set_enable_vsync;
     debug_console_register_command(fps_command);
 #endif
 
@@ -505,7 +501,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 
         abort();
     }
-    
+
     /* setup vertex attributes */
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);

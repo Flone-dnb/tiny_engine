@@ -138,6 +138,24 @@ os_window_get_cursor_position(te_os_window* os_window, float* x, float* y) {
 }
 
 void
+os_window_set_enable_vsync(te_os_window* os_window, bool enable) {
+#if defined(WIN32)
+    win32_window_set_enable_vsync(os_window, enable);
+#elif defined(__linux__)
+    x11_window_set_enable_vsync(os_window, enable);
+#endif
+}
+
+bool
+os_window_is_vsync_enabled(te_os_window* os_window) {
+#if defined(WIN32)
+    return win32_window_is_vsync_enabled(os_window);
+#elif defined(__linux__)
+    return x11_window_is_vsync_enabled(os_window);
+#endif
+}
+
+void
 os_window_get_size(te_os_window* os_window, unsigned int* width, unsigned int* height) {
     (*width) = os_window->width;
     (*height) = os_window->height;

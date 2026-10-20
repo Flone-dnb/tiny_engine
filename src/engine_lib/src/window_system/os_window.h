@@ -78,6 +78,9 @@ bool os_window_is_gamepad_connected(te_os_window* os_window);
 void os_window_set_cursor_position(te_os_window* os_window, float x, float y);
 void os_window_get_cursor_position(te_os_window* os_window, float* x, float* y);
 
+void os_window_set_enable_vsync(te_os_window* os_window, bool enable);
+bool os_window_is_vsync_enabled(te_os_window* os_window);
+
 /* Sets a flag that stops the window from processing window events. */
 void os_window_close(te_os_window* os_window);
 bool os_window_should_close(te_os_window* os_window);

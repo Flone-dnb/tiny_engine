@@ -78,6 +78,8 @@ typedef struct te_x11_window {
     int cursor_y;
     bool capture_mouse;
 
+    bool vsync_enabled;
+
     te_keyboard_modifiers keyboard_mods;
     te_x11_gamepad gamepad;
 
@@ -862,9 +864,13 @@ x11_window_create(te_os_window* os_window, const char* title) {
         abort();
     }
 
-    /* disable vsync */
+    /* enable vsync */
     if (glXSwapIntervalEXT_ptr != NULL) {
-        glXSwapIntervalEXT_ptr(x11_window->display, x11_window->window, 0);
+        glXSwapIntervalEXT_ptr(x11_window->display, x11_window->window, 1);
+        x11_window->vsync_enabled = true;
+        log_info(__FILE__, __LINE__, "vsync enabled");
+    } else {
+        x11_window->vsync_enabled = false;
     }
 
     /* initialize window state */
@@ -1037,6 +1043,24 @@ x11_window_get_refresh_rate(te_os_window* os_window) {
         refresh_rate = 60;
     }
     return refresh_rate;
+}
+
+void
+x11_window_set_enable_vsync(struct te_os_window* os_window, bool enable) {
+    te_x11_window* x11_window = prv_os_window_get_impl(os_window);
+
+    if (glXSwapIntervalEXT_ptr == NULL) {
+        return;
+    }
+
+    glXSwapIntervalEXT_ptr(x11_window->display, x11_window->window, enable ? 1 : 0);
+    x11_window->vsync_enabled = enable;
+}
+
+bool
+x11_window_is_vsync_enabled(struct te_os_window* os_window) {
+    te_x11_window* x11_window = prv_os_window_get_impl(os_window);
+    return x11_window->vsync_enabled;
 }
 
 void

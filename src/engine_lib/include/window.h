@@ -100,6 +100,9 @@ void window_set_cursor_position(te_window* window, float x, float y);
 
 unsigned int window_get_display_refresh_rate(te_window* window);
 
+void window_set_enable_vsync(te_window* window, bool enable);
+bool window_is_vsync_enabled(te_window* window);
+
 /* runs the window's event loop
  * specify callbacks and a pointer to the game's main system, this pointer will be passed to various callbacks */
 void window_process_events(

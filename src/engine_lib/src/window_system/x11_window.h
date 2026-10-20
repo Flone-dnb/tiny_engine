@@ -18,6 +18,9 @@ void x11_window_capture_mouse_cursor(struct te_os_window* os_window, bool captur
 
 unsigned int x11_window_get_refresh_rate(struct te_os_window* os_window);
 
+void x11_window_set_enable_vsync(struct te_os_window* os_window, bool enable);
+bool x11_window_is_vsync_enabled(struct te_os_window* os_window);
+
 bool x11_window_is_gamepad_connected(struct te_os_window* os_window);
 
 void x11_window_poll_event(struct te_os_window* os_window);

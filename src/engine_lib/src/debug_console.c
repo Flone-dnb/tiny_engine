@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <render/renderer.h>
+#include <window.h>
 #include <game_manager.h>
 #include <misc/num_hashtable.h>
 #include <io/log.h>
@@ -318,19 +319,26 @@ prv_debug_console_draw(float delta_time_sec) {
     }
 
     if ((console.show_stats || console.show_fps) && update_stats) {
+        te_renderer* renderer;
         te_debug_stats* stats = &console.displayed_stats;
         te_vec2 screen_pos;
         unsigned int fps_limit;
+        unsigned int vsync_enabled;
 
         vec2_set(0.01f, 0.4f, screen_pos);
 
+        renderer = game_manager_get_renderer(console.game_manager);
+
+        vsync_enabled = (unsigned int)window_is_vsync_enabled(renderer_get_window(renderer));
+
         /* FPS */
-        fps_limit = renderer_get_fps_limit(game_manager_get_renderer(console.game_manager));
+        fps_limit = renderer_get_fps_limit(renderer);
         if (console.show_fps) {
             prv_debug_console_draw_stat(screen_pos, "FPS: %u", stats->fps);
         } else {
             prv_debug_console_draw_stat(
-                screen_pos, "FPS: %u (limit: %u)", stats->fps, fps_limit);
+                screen_pos, "FPS: %u (limit: %u, vsync: %u)", stats->fps, fps_limit,
+                vsync_enabled);
         }
 
         if (console.show_stats) {
@@ -402,8 +410,9 @@ prv_debug_console_draw(float delta_time_sec) {
                     screen_pos, "- %s: %.2f", "debug", stats->gpu_time_draw_debug_ms);
             }
 
-            if (fps_limit > 0) {
-                prv_debug_console_draw_stat(screen_pos, "%s", "! FPS LIMIT AFFECTS STATS !");
+            if (fps_limit > 0 || vsync_enabled) {
+                prv_debug_console_draw_stat(
+                    screen_pos, "%s", "! FPS LIMIT AND VSYNC AFFECTS STATS !");
             }
         }
     }
