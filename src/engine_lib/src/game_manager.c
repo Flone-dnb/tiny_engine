@@ -463,9 +463,6 @@ prv_game_manager_draw_frame(te_game_manager* game_manager, float delta_time_sec)
 void
 prv_game_manager_on_window_size_changed(te_game_manager* game_manager) {
     unsigned int i;
-
-    prv_renderer_on_window_size_changed(game_manager->renderer);
-
     for (i = 0; i < game_manager->world_count; i++) {
         prv_world_on_window_size_changed(game_manager->worlds[i]);
     }

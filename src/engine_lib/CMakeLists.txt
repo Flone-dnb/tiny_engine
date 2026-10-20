@@ -206,14 +206,6 @@ target_include_directories(${GLAD_TARGET_NAME} SYSTEM PUBLIC ${GLAD_PATH}/includ
 target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE ${GLAD_TARGET_NAME})
 add_dependencies(${ENGINE_LIB_DEPS_TARGET} ${GLAD_TARGET_NAME})
 
-# Add FreeType.
-message(STATUS "${PROJECT_NAME}: adding external dependency \"FreeType\"...")
-set(FT_DISABLE_BROTLI ON CACHE BOOL "" FORCE)
-set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
-set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
-add_subdirectory(${RELATIVE_EXT_PATH}/freetype ${DEPENDENCY_BUILD_DIR_NAME}/freetype)
-target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE freetype)
-
 # Miniaudio.
 message(STATUS "${PROJECT_NAME}: adding external dependency \"miniaudio\"...")
 set(MINIAUDIO_NO_RUNTIME_LINKING OFF CACHE BOOL "" FORCE)

@@ -154,19 +154,13 @@ model_set_texture(model, "game/texture/sometex.png"); // located at `res/game/..
 
 When you import a GLTF/GLB file textures will be automatically imported (copied) to the `res` directory and the connection between imported meshes and their assigned textures will be saved in the imported files.
 
-# Loading font
+# Loading a custom font
 
-In order to load a font you need to have a .ttf file to load (there is a default .ttf in the res/engine/font). To load the font file you need to do the following at the start of your game:
+By default there's a default font `font_bitmap.bin` in the `res/engine` directory. In order to load a custom font you need to have a .ttf file to load (there is a default .ttf in the tools/convert_ttf/font). To load the font file you need to convert it to engine's internal format, compile `convert_ttf` tool and run it. It operates on the files from the `tools/convert_ttf/font` directory: it will take specific characters (specified in `chars_to_load.txt`) from the `font.ttf` file and create `font_bitmap.bin` next to the `font.ttf` file. Copy the resulting `font_bitmap.bin` to `res/engine` and replace the default one.
 
-```Cpp
-void on_game_started(void* game_instance, te_game_manager* game_manager) {
-    te_renderer* renderer = game_manager_get_renderer(game_manager);
-    te_font_manager* font_manager = renderer_get_font_manager(renderer);
-    font_manager_load_font(font_manager, "game/myfont.ttf");  // located at "res/game/myfont.ttf"
+If you have big text in your game and the text looks a little blurry you can increase the font quality by modifying the `FONT_HEIGHT_PIX_TO_LOAD` macro in the `main.c` of `convert_ttf` but note that bigger font means bigger bitmap file.
 
-    // ... create world, game objects, etc. ...
-}
-```
+Note that if in `chars_to_load.txt` you have non-ASCII characters make sure the file is saved in the UTF-8 encoding.
 
 # Widgets
 

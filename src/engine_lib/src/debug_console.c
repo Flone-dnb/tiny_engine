@@ -322,7 +322,7 @@ prv_debug_console_draw(float delta_time_sec) {
         te_vec2 screen_pos;
         unsigned int fps_limit;
 
-        vec2_set(0.01f, 0.45f, screen_pos);
+        vec2_set(0.01f, 0.4f, screen_pos);
 
         /* FPS */
         fps_limit = renderer_get_fps_limit(game_manager_get_renderer(console.game_manager));

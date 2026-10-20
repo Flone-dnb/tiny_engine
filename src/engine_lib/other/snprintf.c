@@ -10,10 +10,6 @@ int
 vsnprintf(char* str, size_t size, const char* format, va_list ap) {
     int retval;
 
-    if (str == NULL || size == 0) {
-        return -1;
-    }
-
 #if defined(_MSC_VER) && (_MSC_VER < 1900)
     /* old msvc does not guarantee null terminated when overflow */
     retval = _vsnprintf(str, size, format, ap);
@@ -32,7 +28,7 @@ vsnprintf(char* str, size_t size, const char* format, va_list ap) {
 
         retval = vsprintf(tmp_buf, format, ap);
 
-        if (retval >= 0) {
+        if (retval >= 0 && str != NULL && size > 0) {
             size_t copy_len = (size_t)retval;
             if (copy_len >= size) {
                 copy_len = size - 1;

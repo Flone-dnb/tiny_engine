@@ -2,7 +2,6 @@
 
 #include <stdlib.h>
 #include <render/renderer.h>
-#include <render/font_manager.h>
 #include <game_manager.h>
 #include <world.h>
 #include <camera_controller.h>
@@ -43,8 +42,6 @@ game_register_custom_types(void) {
 void
 game_on_game_started(void* game_instance, te_game_manager* game_manager) {
     te_game* game;
-    te_renderer* renderer;
-    te_font_manager* font_manager;
     te_world* world;
     te_camera* camera;
     te_light_params* light_params;
@@ -53,11 +50,6 @@ game_on_game_started(void* game_instance, te_game_manager* game_manager) {
 
     game = game_instance;
     game->game_manager = game_manager;
-
-    /* load engine default font */
-    renderer = game_manager_get_renderer(game_manager);
-    font_manager = renderer_get_font_manager(renderer);
-    font_manager_load_font(font_manager, "engine/font/font.ttf");
 
     /* create a sample world */
     world = game_manager_create_world(game_manager, "game");

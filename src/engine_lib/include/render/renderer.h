@@ -76,6 +76,3 @@ unsigned int renderer_get_fps_limit(te_renderer* renderer);
 
 /* submits a new frame */
 void prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec);
-
-/* called after the window changed its size */
-void prv_renderer_on_window_size_changed(te_renderer* renderer);

@@ -7,6 +7,7 @@
 #include <render/renderer.h>
 #include <render/shader_manager.h>
 #include <render/render_data_array.h>
+#include <render/font_manager.h>
 #include <window.h>
 #include <glad/gl.h>
 
@@ -22,6 +23,8 @@ typedef struct te_text_shader_data {
     int uniform_clip_rect;
     int uniform_window_size;
     int uniform_text_color;
+    int uniform_glyph_rel_size;
+    int uniform_glyph_rel_offset;
 } te_text_shader_data;
 
 /* groups data related to the quad shader program */
@@ -42,6 +45,7 @@ struct te_widget_renderer {
 
     /* do not free/destroy this pointer */
     te_renderer* renderer;
+    te_font_manager* font_manager;
 
     /* quad geometry */
     unsigned int vbo;
@@ -56,12 +60,13 @@ widget_renderer_create(te_renderer* renderer) {
     te_shader_manager* shader_manager;
 
     te_widget_renderer* widget_renderer = malloc(sizeof(te_widget_renderer));
+    widget_renderer->renderer = renderer;
+    widget_renderer->font_manager = renderer_get_font_manager(renderer);
 
     widget_renderer->text_widget_data =
         render_data_array_create(sizeof(te_text_widget_render_data), 64, 64);
     widget_renderer->rect_widget_data =
         render_data_array_create(sizeof(te_rect_widget_render_data), 32, 32);
-    widget_renderer->renderer = renderer;
 
     /* load text shader */
     shader_manager = renderer_get_shader_manager(renderer);
@@ -76,6 +81,10 @@ widget_renderer_create(te_renderer* renderer) {
         shader->uniform_clip_rect = get_uniform_location(shader->prog_id, "clip_rect");
         shader->uniform_window_size = get_uniform_location(shader->prog_id, "window_size");
         shader->uniform_text_color = get_uniform_location(shader->prog_id, "text_color");
+        shader->uniform_glyph_rel_size =
+            get_uniform_location(shader->prog_id, "glyph_rel_size");
+        shader->uniform_glyph_rel_offset =
+            get_uniform_location(shader->prog_id, "glyph_rel_offset");
     }
 
     /* load quad shader */
@@ -284,7 +293,9 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
         WIDGET_QUAD_GL_VERT_ATTRIB_PTR
 
-        glActiveTexture(GL_TEXTURE0); /* glyph's bitmap */
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(
+            GL_TEXTURE_2D, font_manager_get_font_bitmap_id(widget_renderer->font_manager));
 
         vec4_set(0.0f, 0.0f, 1.0f, 1.0f, clip_rect);
         glUniform4fv(shader->uniform_clip_rect, 1, clip_rect);
@@ -301,8 +312,11 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
                 glUniform2fv(shader->uniform_in_pos, 1, pos_pix);
                 glUniform2fv(shader->uniform_in_size, 1, data->glyphs[glyph_idx].size_pix);
-
-                glBindTexture(GL_TEXTURE_2D, data->glyphs[glyph_idx].tex_id);
+                glUniform2fv(
+                    shader->uniform_glyph_rel_size, 1, data->glyphs[glyph_idx].glyph_rel_size);
+                glUniform2fv(
+                    shader->uniform_glyph_rel_offset, 1,
+                    data->glyphs[glyph_idx].glyph_rel_offset);
 
                 glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
             }

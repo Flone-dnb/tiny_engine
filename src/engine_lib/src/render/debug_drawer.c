@@ -121,8 +121,9 @@ typedef struct te_debug_drawer_glyph {
     te_vec2 pos_offset;
     te_vec2 size;
 
-    /* 0 if " " (space) character */
-    unsigned int tex_id;
+    /* relative to font bitmap */
+    te_vec2 glyph_rel_size;
+    te_vec2 glyph_rel_offset;
 
     float distance_to_next_glyph;
 } te_debug_drawer_glyph;
@@ -186,6 +187,8 @@ typedef struct te_debug_drawer_text_shader {
     int uniform_clip_rect;
     int uniform_window_size;
     int uniform_text_color;
+    int uniform_glyph_rel_size;
+    int uniform_glyph_rel_offset;
 } te_debug_drawer_text_shader;
 
 /* data for the AABB shader program */
@@ -296,6 +299,10 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
             get_uniform_location(drawer.text_shader.prog_id, "window_size");
         drawer.text_shader.uniform_text_color =
             get_uniform_location(drawer.text_shader.prog_id, "text_color");
+        drawer.text_shader.uniform_glyph_rel_size =
+            get_uniform_location(drawer.text_shader.prog_id, "glyph_rel_size");
+        drawer.text_shader.uniform_glyph_rel_offset =
+            get_uniform_location(drawer.text_shader.prog_id, "glyph_rel_offset");
     }
 
     /* load AABB shader */
@@ -628,7 +635,8 @@ debug_drawer_draw_text_color_pos(
         te_font_manager* font_manager;
         size_t text_len;
         float font_scale;
-        unsigned int i;
+        float font_height_rel;
+        unsigned int i, window_width, window_height, font_bitmap_width, font_bitmap_height;
 
         /* init data */
         te_debug_drawer_text new_item;
@@ -644,29 +652,41 @@ debug_drawer_draw_text_color_pos(
         new_item.text[text_len] = 0;
         new_item.text_len = (unsigned int)text_len;
 
-        /* cache glyphs */
         font_manager = renderer_get_font_manager(drawer.renderer);
-        font_scale =
-            debug_drawer_default_text_height / prv_font_manager_get_font_height_to_load();
+        window_get_size(renderer_get_window(drawer.renderer), &window_width, &window_height);
+        font_height_rel =
+            (float)font_manager_get_font_height_pix(font_manager) / (float)window_height;
+        font_manager_get_font_bitmap_size(
+            font_manager, &font_bitmap_width, &font_bitmap_height);
+
+        /* cache glyphs */
+        font_scale = debug_drawer_default_text_height / font_height_rel;
         new_item.glyphs = malloc(sizeof(te_debug_drawer_glyph) * new_item.text_len);
         for (i = 0; i < new_item.text_len; i++) {
-            te_font_glyph src =
-                font_manager_get_glyph(font_manager, (unsigned long)new_item.text[i]);
+            te_font_glyph* src =
+                font_manager_get_glyph(font_manager, (unsigned int)new_item.text[i]);
             te_debug_drawer_glyph* dst = &new_item.glyphs[i];
 
             dst->distance_to_next_glyph =
-                (float)(src.advance >> 6) /* bitshift by 6 to get value in pixels (2^6 = 64) */
+                (float)(src->advance
+                        >> 6) /* bitshift by 6 to get value in pixels (2^6 = 64) */
                 * font_scale;
 
-            if (src.width == 0) {
-                dst->tex_id = 0;
-            } else {
-                dst->tex_id = src.tex_id;
+            if (src->width > 0) {
                 vec2_set(
-                    (float)src.bearing_x * font_scale, -(float)src.bearing_y * font_scale,
+                    (float)src->bearing_x * font_scale, -(float)src->bearing_y * font_scale,
                     dst->pos_offset);
                 vec2_set(
-                    (float)src.width * font_scale, (float)src.height * font_scale, dst->size);
+                    (float)src->width * font_scale, (float)src->height * font_scale,
+                    dst->size);
+                vec2_set(
+                    (float)src->width / (float)font_bitmap_width,
+                    (float)src->height / (float)font_bitmap_height, dst->glyph_rel_size);
+                vec2_set(
+                    (float)src->bitmap_x / (float)font_bitmap_width,
+                    (float)src->bitmap_y / (float)font_bitmap_height, dst->glyph_rel_offset);
+            } else {
+                vec2_zero(dst->size);
             }
         }
 
@@ -808,9 +828,15 @@ prv_debug_drawer_draw(
         te_vec2 screen_pos;
         float text_height;
         float auto_screen_y;
-        unsigned int text_idx;
-        const float font_height = prv_font_manager_get_font_height_to_load();
-        const float font_scale = debug_drawer_default_text_height / font_height;
+        float font_height_rel, font_scale;
+        unsigned int text_idx, font_bitmap_id;
+
+        te_font_manager* font_manager = renderer_get_font_manager(drawer.renderer);
+        font_height_rel =
+            (float)font_manager_get_font_height_pix(font_manager) / (float)window_height;
+        font_scale = debug_drawer_default_text_height / font_height_rel;
+
+        font_bitmap_id = font_manager_get_font_bitmap_id(font_manager);
 
         glUseProgram(drawer.text_shader.prog_id);
 
@@ -818,7 +844,8 @@ prv_debug_drawer_draw(
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_quad);
         glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(te_vec4), NULL);
 
-        glActiveTexture(GL_TEXTURE0); /* glyph's bitmap */
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, font_bitmap_id);
 
         vec4_set(0.0f, 0.0f, 1.0f, 1.0f, clip_rect);
         glUniform4fv(drawer.text_shader.uniform_clip_rect, 1, clip_rect);
@@ -846,7 +873,7 @@ prv_debug_drawer_draw(
             if (text->pos[0] >= 0.0f) {
                 screen_pos[0] = window_size[0] * text->pos[0];
             }
-            text_height = window_size[1] * font_height * font_scale;
+            text_height = window_size[1] * font_height_rel * font_scale;
 
             /* switch to the first row of the text */
             auto_screen_y = screen_pos[1]; /* save to restore later */
@@ -859,7 +886,7 @@ prv_debug_drawer_draw(
 
             /* draw each glyph */
             for (i = 0; i < text->text_len; i++) {
-                if (text->glyphs[i].tex_id == 0) {
+                if (text->glyphs[i].size[0] == 0.0f) {
                     screen_pos[0] += text->glyphs[i].distance_to_next_glyph;
                 } else {
                     te_vec2 glyph_pos;
@@ -867,8 +894,12 @@ prv_debug_drawer_draw(
 
                     glUniform2fv(drawer.text_shader.uniform_in_pos, 1, glyph_pos);
                     glUniform2fv(drawer.text_shader.uniform_in_size, 1, text->glyphs[i].size);
-
-                    glBindTexture(GL_TEXTURE_2D, text->glyphs[i].tex_id);
+                    glUniform2fv(
+                        drawer.text_shader.uniform_glyph_rel_size, 1,
+                        text->glyphs[i].glyph_rel_size);
+                    glUniform2fv(
+                        drawer.text_shader.uniform_glyph_rel_offset, 1,
+                        text->glyphs[i].glyph_rel_offset);
 
                     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
                 }

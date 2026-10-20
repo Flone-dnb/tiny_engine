@@ -272,9 +272,13 @@ prv_text_edit_widget_on_mouse_button_pressed(
     if (text_len > 0) {
         float x_start;
         float glyph_scale;
+        float font_height_rel;
         unsigned int char_idx;
         unsigned int glyph_idx;
         bool found;
+
+        font_height_rel =
+            (float)font_manager_get_font_height_pix(font_manager) / (float)window_height;
 
         /* put to end by default if have text */
         rect_pos[0] += data->glyphs[data->glyph_count - 1].offset_pix[0]
@@ -284,16 +288,16 @@ prv_text_edit_widget_on_mouse_button_pressed(
 
         x_start = data->pos_pix[0];
         found = false;
-        glyph_scale =
-            text_edit_widget->text_height / prv_font_manager_get_font_height_to_load();
+        glyph_scale = text_edit_widget->text_height / font_height_rel;
         for (char_idx = 0, glyph_idx = 0; char_idx < text_len && glyph_idx < data->glyph_count;
              char_idx++) {
-            te_font_glyph glyph =
-                font_manager_get_glyph(font_manager, (unsigned long)text[char_idx]);
+            te_font_glyph* glyph =
+                font_manager_get_glyph(font_manager, (unsigned int)text[char_idx]);
 
             float x_end = 0.0f;
-            if (glyph.width == 0) {
-                const float distance_to_next_glyph = (float)(glyph.advance >> 6) * glyph_scale;
+            if (glyph->width == 0) {
+                const float distance_to_next_glyph =
+                    (float)(glyph->advance >> 6) * glyph_scale;
                 x_end = x_start + distance_to_next_glyph;
             } else {
                 x_end = data->pos_pix[0] + data->glyphs[glyph_idx].offset_pix[0]
@@ -308,7 +312,7 @@ prv_text_edit_widget_on_mouse_button_pressed(
             }
 
             x_start = x_end;
-            glyph_idx += glyph.width > 0;
+            glyph_idx += glyph->width > 0;
         }
         if (!found) {
             rect_pos[0] = x_start;
@@ -404,18 +408,21 @@ prv_text_edit_widget_update_cursor(te_text_edit_widget* text_edit_widget) {
 
     vec2_copy(data->pos_pix, rect_pos);
     if (text_edit_widget->text_cursor_index > 0) {
+        float font_height_rel =
+            (float)font_manager_get_font_height_pix(font_manager) / (float)window_height;
+
         float x_start = data->pos_pix[0];
-        const float glyph_scale =
-            text_edit_widget->text_height / prv_font_manager_get_font_height_to_load();
+        const float glyph_scale = text_edit_widget->text_height / font_height_rel;
         bool found = false;
         for (char_idx = 0, glyph_idx = 0; char_idx < text_len && glyph_idx < data->glyph_count;
              char_idx++) {
-            te_font_glyph glyph =
-                font_manager_get_glyph(font_manager, (unsigned long)text[char_idx]);
+            te_font_glyph* glyph =
+                font_manager_get_glyph(font_manager, (unsigned int)text[char_idx]);
 
             float x_end = 0.0f;
-            if (glyph.width == 0) {
-                const float distance_to_next_glyph = (float)(glyph.advance >> 6) * glyph_scale;
+            if (glyph->width == 0) {
+                const float distance_to_next_glyph =
+                    (float)(glyph->advance >> 6) * glyph_scale;
                 x_end = x_start + distance_to_next_glyph;
             } else {
                 x_end = data->pos_pix[0] + data->glyphs[glyph_idx].offset_pix[0]
@@ -429,7 +436,7 @@ prv_text_edit_widget_update_cursor(te_text_edit_widget* text_edit_widget) {
             }
 
             x_start = x_end;
-            glyph_idx += glyph.width > 0;
+            glyph_idx += glyph->width > 0;
         }
         if (!found) {
             rect_pos[0] = x_start;

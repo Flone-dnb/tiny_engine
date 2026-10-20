@@ -360,16 +360,21 @@ collect_glyphs(
     te_text_widget* text_widget, unsigned int window_width, unsigned int window_height,
     te_font_manager* font_manager, te_text_widget_glyph* glyphs) {
     te_vec2 offset;
+    te_vec2 size;
     unsigned int char_idx;
     unsigned int glyph_count;
+    float font_height_rel, glyph_scale, glyph_height, line_spacing;
+    unsigned int font_bitmap_width, font_bitmap_height;
+
+    font_height_rel =
+        (float)font_manager_get_font_height_pix(font_manager) / (float)window_height;
+    font_manager_get_font_bitmap_size(font_manager, &font_bitmap_width, &font_bitmap_height);
 
     /* in pixels */
-    const float glyph_scale =
-        text_widget->text_height / prv_font_manager_get_font_height_to_load();
-    const float glyph_height = text_widget->text_height * (float)window_height;
-    const float line_spacing = text_widget->line_spacing * glyph_height;
+    glyph_scale = text_widget->text_height / font_height_rel;
+    glyph_height = text_widget->text_height * (float)window_height;
+    line_spacing = text_widget->line_spacing * glyph_height;
 
-    te_vec2 size;
     widget_get_screen_size(text_widget->widget, size);
     size[0] *= (float)window_width;
     size[1] *= (float)window_height;
@@ -382,26 +387,29 @@ collect_glyphs(
 
     glyph_count = 0;
     for (char_idx = 0; char_idx < text_widget->text_len; char_idx++) {
+        te_font_glyph* src_glyph;
         float distance_to_next_glyph;
 
-        te_font_glyph src_glyph =
-            font_manager_get_glyph(font_manager, (unsigned long)text_widget->text[char_idx]);
-        glyph_count += src_glyph.width > 0 && text_widget->text[char_idx] != '\n';
+        if (text_widget->text[char_idx] == '\r') {
+            continue;
+        } else if (text_widget->text[char_idx] == '\n') {
+            if (text_widget->is_multiline) {
+                offset[1] += glyph_height + line_spacing;
+                offset[0] = 0.0f;
 
-        if (text_widget->text[char_idx] == '\n' && text_widget->is_multiline) {
-            offset[1] += glyph_height + line_spacing;
-            offset[0] = 0.0f;
-
-            if (offset[1] > size[1]) {
-                /* reached vertical limit */
-                glyph_count -= 1;
-                break;
+                if (offset[1] > size[1]) {
+                    /* reached vertical limit */
+                    break;
+                }
             }
-
             continue; /* don't render \n */
         }
 
-        distance_to_next_glyph = (float)(src_glyph.advance >> 6) * glyph_scale;
+        src_glyph =
+            font_manager_get_glyph(font_manager, (unsigned int)text_widget->text[char_idx]);
+        glyph_count += src_glyph->width > 0;
+
+        distance_to_next_glyph = (float)(src_glyph->advance >> 6) * glyph_scale;
 
         if (offset[0] + distance_to_next_glyph > size[0]) {
             if (text_widget->is_multiline) {
@@ -421,19 +429,24 @@ collect_glyphs(
             }
         }
 
-        if (src_glyph.width != 0 && glyphs != NULL) {
+        if (src_glyph->width != 0 && glyphs != NULL) {
             te_text_widget_glyph* dst_glyph = &glyphs[glyph_count - 1];
 
-            dst_glyph->tex_id = src_glyph.tex_id;
-
             vec2_set(
-                (float)src_glyph.width * glyph_scale, (float)src_glyph.height * glyph_scale,
+                (float)src_glyph->width * glyph_scale, (float)src_glyph->height * glyph_scale,
                 dst_glyph->size_pix);
-
             vec2_copy(offset, dst_glyph->offset_pix);
+            vec2_set(
+                (float)src_glyph->width / (float)font_bitmap_width,
+                (float)src_glyph->height / (float)font_bitmap_height,
+                dst_glyph->glyph_rel_size);
+            vec2_set(
+                (float)src_glyph->bitmap_x / (float)font_bitmap_width,
+                (float)src_glyph->bitmap_y / (float)font_bitmap_height,
+                dst_glyph->glyph_rel_offset);
 
-            dst_glyph->offset_pix[0] += (float)src_glyph.bearing_x * glyph_scale;
-            dst_glyph->offset_pix[1] += -(float)src_glyph.bearing_y * glyph_scale;
+            dst_glyph->offset_pix[0] += (float)src_glyph->bearing_x * glyph_scale;
+            dst_glyph->offset_pix[1] += -(float)src_glyph->bearing_y * glyph_scale;
         }
 
         /* switch to the next glyph */

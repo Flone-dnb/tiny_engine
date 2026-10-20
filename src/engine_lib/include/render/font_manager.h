@@ -14,42 +14,36 @@ typedef struct te_font_glyph {
     int bearing_y;
 
     /* character code of this glyph */
-    unsigned long char_code;
+    unsigned int char_code;
 
     /* horizontal offset (in 1/64 pixels) until the next glyph */
     unsigned int advance;
 
-    /* OpenGL ID of the glyph texture */
-    unsigned int tex_id;
+    /* starting X and Y position (in pixels) of this glyph on the font bitmap */
+    unsigned int bitmap_x;
+    unsigned int bitmap_y;
 } te_font_glyph;
-
-struct te_renderer;
-
-/* loads a font file (.ttf) specified relative to the `res` directory
- * unloads old font if there was a font loaded previously */
-void font_manager_load_font(te_font_manager* manager, const char* relative_path);
 
 /* returns information about a cached glyph (loads and saves in the cache if was not cached previously)
  * also see @ref font_manager_cache_glyphs
  * 
  * @ref font_manager_load_font must be called previously */
-te_font_glyph font_manager_get_glyph(te_font_manager* manager, unsigned long char_code);
+te_font_glyph* font_manager_get_glyph(te_font_manager* manager, unsigned int char_code);
 
-/* makes sure the specified characters are in the cache (loads if needed)
- * the specified character code range is inclusive */
-void font_manager_cache_glyphs(
-    te_font_manager* manager, unsigned long char_code_first, unsigned long char_code_last);
+/* returns OpenGL ID of the font bitmap texture */
+unsigned int font_manager_get_font_bitmap_id(te_font_manager* manager);
+
+/* returns height of the font in pixels */
+unsigned int font_manager_get_font_height_pix(te_font_manager* manager);
+
+/* returns size of the font bitmap in pixels */
+void font_manager_get_font_bitmap_size(
+    te_font_manager* manager, unsigned int* width, unsigned int* height);
 
 /** ------------------------------------------------------------------------------------------------
  *                                       PRIVATE API
  * ------------------------------------------------------------------------------------------------- */
 
 /* renderer is expected to create this manager */
-te_font_manager* prv_font_manager_create(struct te_renderer* renderer);
+te_font_manager* prv_font_manager_create(void);
 void prv_font_manager_destroy(te_font_manager* manager);
-
-/* called by the renderer after window size changed */
-void prv_font_manager_on_window_size_changed(te_font_manager* manager);
-
-/* returns font height in range [0.0; 1.0] that is used to load the font */
-float prv_font_manager_get_font_height_to_load(void);

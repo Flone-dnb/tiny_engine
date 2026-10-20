@@ -171,7 +171,7 @@ renderer_create(struct te_window* window) {
     renderer->window = window;
     renderer->shader_manager = prv_shader_manager_create();
     renderer->texture_manager = prv_texture_manager_create();
-    renderer->font_manager = prv_font_manager_create(renderer);
+    renderer->font_manager = prv_font_manager_create();
 
     renderer->frame_stats.frame_count = 0;
     renderer->frame_stats.time_sec_since_update = 0.0f;
@@ -786,9 +786,4 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 #endif
 
     prv_renderer_calc_frame_stats(renderer, delta_time_sec);
-}
-
-void
-prv_renderer_on_window_size_changed(te_renderer* renderer) {
-    prv_font_manager_on_window_size_changed(renderer->font_manager);
 }

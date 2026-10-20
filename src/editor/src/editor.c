@@ -13,7 +13,6 @@
 #include <io/filesystem.h>
 #include <misc/memory_usage.h>
 #include <misc/wchar_funcs.h>
-#include <render/font_manager.h>
 #include <render/renderer.h>
 #include <widget/text_widget.h>
 #include <widget/widget.h>
@@ -160,16 +159,9 @@ editor_create_editor_world(te_editor* editor, struct te_game_manager* game_manag
 
 void
 editor_on_game_started(void* game_instance, te_game_manager* game_manager) {
-    te_renderer* renderer;
-    te_font_manager* font_manager;
     te_editor* editor;
 
     game_register_custom_types();
-
-    /* load font */
-    renderer = game_manager_get_renderer(game_manager);
-    font_manager = renderer_get_font_manager(renderer);
-    font_manager_load_font(font_manager, "engine/font/font.ttf");
 
     editor = game_instance;
     editor->game_manager = game_manager;

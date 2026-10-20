@@ -12,8 +12,9 @@ typedef struct te_text_widget_glyph {
     te_vec2 offset_pix;
     te_vec2 size_pix;
 
-    /* 0 if " " (space) character */
-    unsigned int tex_id;
+    /* relative to font bitmap */
+    te_vec2 glyph_rel_size;
+    te_vec2 glyph_rel_offset;
 } te_text_widget_glyph;
 
 /* data needed to render a text widget */
