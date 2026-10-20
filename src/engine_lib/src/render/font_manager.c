@@ -23,6 +23,8 @@ struct te_font_manager {
     /* in pixels */
     unsigned int font_bitmap_width;
     unsigned int font_bitmap_height;
+
+    unsigned int unknown_glyph_code;
 };
 
 static void load_font_chars(
@@ -40,6 +42,7 @@ prv_font_manager_create(void) {
     manager->font_height_pix = 0;
     manager->font_bitmap_width = 0;
     manager->font_bitmap_height = 0;
+    manager->unknown_glyph_code = 0;
 
     /* load font bitmap */
     if (!filesystem_does_path_exists(font_bitmap_path)) {
@@ -150,6 +153,9 @@ load_font_chars(
     }
     bitmap_size_y += max_row_height;
 
+    /* for now just take the first, later will take '?' char */
+    font_manager->unknown_glyph_code = glyphs[0].char_code;
+
     font_manager->font_bitmap_width = bitmap_size_x;
     font_manager->font_bitmap_height = bitmap_size_y;
 
@@ -226,16 +232,26 @@ load_font_chars(
     free(packed_bits);
     free(glyphs);
     fclose(fp);
+
+    glyph = num_hashtable_find(font_manager->cached_glyphs, '?');
+    if (glyph != NULL) {
+        font_manager->unknown_glyph_code = '?';
+    }
 }
 
 te_font_glyph*
 font_manager_get_glyph(te_font_manager* manager, unsigned int char_code) {
     te_font_glyph* glyph = num_hashtable_find(manager->cached_glyphs, char_code);
     if (glyph == NULL) {
-        log_error_fmt(
-            __FILE__, __LINE__, "unable to find a glyph with char code %u in the font bitmap",
-            char_code);
-        abort();
+        glyph = num_hashtable_find(manager->cached_glyphs, manager->unknown_glyph_code);
+        if (glyph == NULL) {
+            log_error_fmt(
+                __FILE__, __LINE__,
+                "unable to find a glyph with char code %u in the font bitmap (also can't find "
+                "unknown glyph code)",
+                char_code);
+            abort();
+        }
     }
 
     return glyph;

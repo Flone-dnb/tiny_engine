@@ -14,6 +14,8 @@ set(PROJECT_SOURCES
     src/obj_picking.h
     src/gizmo.c
     src/gizmo.h
+    src/import.c
+    src/import.h
     src/ui/editor_ui.c
     src/ui/editor_ui.h
     src/ui/editor_theme.h

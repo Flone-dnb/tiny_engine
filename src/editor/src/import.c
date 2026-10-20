@@ -1,4 +1,4 @@
-#include <io/import.h>
+#include <import.h>
 
 #include <snprintf.h>
 #include <game_manager.h>

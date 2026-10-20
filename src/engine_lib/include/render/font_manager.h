@@ -24,10 +24,7 @@ typedef struct te_font_glyph {
     unsigned int bitmap_y;
 } te_font_glyph;
 
-/* returns information about a cached glyph (loads and saves in the cache if was not cached previously)
- * also see @ref font_manager_cache_glyphs
- * 
- * @ref font_manager_load_font must be called previously */
+/* returns information about a glyph from the font bitmap */
 te_font_glyph* font_manager_get_glyph(te_font_manager* manager, unsigned int char_code);
 
 /* returns OpenGL ID of the font bitmap texture */

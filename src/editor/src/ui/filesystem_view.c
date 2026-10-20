@@ -7,7 +7,7 @@
 #include <editor.h>
 #include <io/log.h>
 #include <io/filesystem.h>
-#include <io/import.h>
+#include <import.h>
 #include <widget/widget.h>
 #include <widget/text_widget.h>
 #include <widget/button_widget.h>
@@ -110,7 +110,8 @@ refresh_page_text(te_filesystem_view* explorer) {
 
 static void
 refresh_dir_entry_names(te_filesystem_view* explorer) {
-    const float hpadding = editor_theme_get_horizontal_padding() / editor_theme_get_left_panel_width();
+    const float hpadding =
+        editor_theme_get_horizontal_padding() / editor_theme_get_left_panel_width();
 
     unsigned int button_idx;
     unsigned int item_idx;
@@ -409,9 +410,11 @@ filesystem_view_add(te_filesystem_view* explorer, te_widget* left_panel) {
     te_vec2 size;
     te_vec2 pos;
 
-    const float hpadding = editor_theme_get_horizontal_padding() / editor_theme_get_left_panel_width();
+    const float hpadding =
+        editor_theme_get_horizontal_padding() / editor_theme_get_left_panel_width();
     const float vpadding = editor_theme_get_vertical_padding();
-    const float hspacing = editor_theme_get_horizontal_spacing() / editor_theme_get_left_panel_width();
+    const float hspacing =
+        editor_theme_get_horizontal_spacing() / editor_theme_get_left_panel_width();
     const float dir_item_spacing = editor_theme_get_vertical_spacing() / 2.0f;
     const float nav_menu_height = editor_theme_get_button_height();
     const float hpadding_in_button = hpadding;
@@ -474,7 +477,8 @@ filesystem_view_add(te_filesystem_view* explorer, te_widget* left_panel) {
             widget_set_parent(widget, left_panel);
         }
 
-        text_widget_set_text_height(explorer->current_path_text, editor_theme_get_text_height());
+        text_widget_set_text_height(
+            explorer->current_path_text, editor_theme_get_text_height());
 
         wtext = wchar_from_char("res/", &text_len);
         text_widget_set_text_own(explorer->current_path_text, wtext, text_len);
