@@ -175,10 +175,8 @@ load_font_chars(
 
         for (y = 0; y < glyph->height; y++) {
             for (x = 0; x < glyph->width; x++) {
-                if ((packed_bits[byte_idx] >> bit_idx) & 1) {
-                    bitmap[bitmap_size_x * (glyph->bitmap_y + y) + (glyph->bitmap_x + x)] =
-                        255;
-                }
+                bitmap[bitmap_size_x * (glyph->bitmap_y + y) + (glyph->bitmap_x + x)] =
+                    255 * ((packed_bits[byte_idx] >> bit_idx) & 1);
                 bit_idx += 1;
                 if (bit_idx == 8) {
                     bit_idx = 0;
