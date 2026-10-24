@@ -355,12 +355,18 @@ widget_get_parent(te_widget* widget) {
 
 te_widget**
 widget_get_child_widgets(te_widget* widget, unsigned int* count) {
-    te_widget** children;
+    if (widget->child_widget_count == 0) {
+        (*count) = 0;
+        return NULL;
+    } else {
+        te_widget** children;
+        (*count) = widget->child_widget_count;
+        children = malloc(sizeof(te_widget*) * widget->child_widget_count);
+        memcpy(
+            children, widget->child_widgets, sizeof(te_widget*) * widget->child_widget_count);
 
-    (*count) = widget->child_widget_count;
-    children = malloc(sizeof(te_widget*) * widget->child_widget_count);
-    memcpy(children, widget->child_widgets, sizeof(te_widget*) * widget->child_widget_count);
-    return children;
+        return children;
+    }
 }
 
 unsigned int
