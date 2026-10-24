@@ -568,7 +568,7 @@ prv_camera_recalc_frustum(te_camera* camera) {
     camera_get_world_position(camera, pos);
 
     camera->frustum = frustum_shape_create(
-        pos, forward, up, camera->near_clip, camera->far_clip, camera->vertical_fov,
+        pos, forward, up, camera->near_clip, camera->far_clip, math_rad(camera->vertical_fov),
         (float)camera->render_width / (float)camera->render_height);
 }
 
