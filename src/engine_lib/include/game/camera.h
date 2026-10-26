@@ -68,9 +68,10 @@ void camera_set_custom_on_before_destroyed(
     te_camera* camera, void (*custom_on_before_destroyed)(te_camera*));
 
 /* uses mouse cursor's position in range [0.0; 1.0] (relative to the window)
- * and converts it into a world space direction from the camera along the cursor
+ * and converts it into a world space position and direction
  * returns `false` if the cursor is outside of the camera's viewport */
-bool camera_calc_cursor_world_dir(te_camera* camera, te_vec2 cursor_relative_pos, te_vec3 out);
+bool camera_calc_cursor_world_pos_dir(
+    te_camera* camera, te_vec2 cursor_relative_pos, te_vec3 out_pos, te_vec3 out_dir);
 
 /* allows disabling serialization of the camera (enabled by default) */
 void camera_set_is_serialization_allowed(te_camera* camera, bool enable);

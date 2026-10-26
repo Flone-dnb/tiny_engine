@@ -90,8 +90,8 @@ obj_picking_find_obj_under_cursor(
     te_game_object_data* root_game_objects;
     te_model* model;
     closest_model_info info;
-    te_vec3 camera_world_ray;
-    te_vec3 camera_world_pos;
+    te_vec3 ray_dir;
+    te_vec3 ray_pos;
     unsigned int count;
     unsigned int i;
     unsigned int child_idx;
@@ -101,11 +101,9 @@ obj_picking_find_obj_under_cursor(
 
     frustum = camera_get_frustum(camera);
 
-    if (!camera_calc_cursor_world_dir(camera, cursor_pos_rel, camera_world_ray)) {
+    if (!camera_calc_cursor_world_pos_dir(camera, cursor_pos_rel, ray_pos, ray_dir)) {
         return;
     }
-
-    camera_get_world_position(camera, camera_world_pos);
 
     root_game_objects = world_get_root_game_objects(world, &count);
     if (count == 0) {
@@ -121,7 +119,7 @@ obj_picking_find_obj_under_cursor(
         }
         model = root_game_object->object;
 
-        if (test_model_hit(&info, frustum, gizmo, camera_world_pos, camera_world_ray, model)) {
+        if (test_model_hit(&info, frustum, gizmo, ray_pos, ray_dir, model)) {
             break;
         }
 
@@ -133,8 +131,7 @@ obj_picking_find_obj_under_cursor(
                 break;
             }
 
-            if (test_model_hit(
-                    &info, frustum, gizmo, camera_world_pos, camera_world_ray, child)) {
+            if (test_model_hit(&info, frustum, gizmo, ray_pos, ray_dir, child)) {
                 break;
             }
             child_idx += 1;

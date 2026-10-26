@@ -509,19 +509,20 @@ camera_set_custom_on_before_destroyed(
 }
 
 bool
-camera_calc_cursor_world_dir(te_camera* camera, te_vec2 cursor_relative_pos, te_vec3 out) {
+camera_calc_cursor_world_pos_dir(
+    te_camera* camera, te_vec2 cursor_relative_pos, te_vec3 out_pos, te_vec3 out_dir) {
     if (cursor_relative_pos[0] < camera->viewport[0]
         || cursor_relative_pos[1] < camera->viewport[1]
         || cursor_relative_pos[0] > camera->viewport[0] + camera->viewport[2]
         || cursor_relative_pos[1] > camera->viewport[1] + camera->viewport[3]) {
         /* outside of the game's viewport */
-        vec3_zero(out);
+        vec3_zero(out_pos);
+        vec3_zero(out_dir);
         return false;
     } else {
         te_mat4* view_proj_mat;
         te_mat4 inv_view_proj_mat;
-        te_vec4 camera_ray;
-        te_vec3 camera_pos;
+        te_vec4 near_clip, far_clip, near_world, far_world;
         te_vec2 ndc;
 
         /* remap to viewport */
@@ -534,25 +535,26 @@ camera_calc_cursor_world_dir(te_camera* camera, te_vec2 cursor_relative_pos, te_
         ndc[0] -= 1.0f;
         ndc[1] -= 1.0f;
 
-        /* construct a point in clip space */
-        camera_ray[0] = ndc[0];
-        camera_ray[1] = ndc[1];
-        camera_ray[2] = -1.0f; /* forward axis in clip space */
-        camera_ray[3] = 1.0f;
-
-        /* apply inverse view/proj matrix */
         view_proj_mat = camera_get_view_proj_mat(camera);
         mat4_inv(*view_proj_mat, inv_view_proj_mat);
-        mat4_mulv(inv_view_proj_mat, camera_ray, camera_ray);
-        vec3_divs(camera_ray, camera_ray[3], camera_ray);
 
-        camera_get_world_position(camera, camera_pos);
+        vec4_set(ndc[0], ndc[1], -1.0f, 1.0f, near_clip);
+        vec4_set(ndc[0], ndc[1], 1.0f, 1.0f, far_clip);
 
-        /* get direction from camera pos */
-        vec3_sub(camera_ray, camera_pos, camera_ray);
-        vec3_normalize(camera_ray);
+        mat4_mulv(inv_view_proj_mat, near_clip, near_world);
+        vec3_divs(near_world, near_world[3], near_world);
 
-        vec3_copy(camera_ray, out);
+        mat4_mulv(inv_view_proj_mat, far_clip, far_world);
+        vec3_divs(far_world, far_world[3], far_world);
+
+        vec3_sub(far_world, near_world, out_dir);
+        vec3_normalize(out_dir);
+
+        if (!camera->is_orthographic) {
+            camera_get_world_position(camera, out_pos);
+        } else {
+            vec3_copy(near_world, out_pos);
+        }
 
         return true;
     }
