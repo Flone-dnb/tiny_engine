@@ -27,8 +27,10 @@ void mat4_make_view_mat_rh(
     te_vec3 camera_pos, te_vec3 norm_camera_forward, te_vec3 norm_camera_right,
     te_vec3 norm_camera_up, te_mat4 dst);
 
-void mat4_make_proj_mat_rh(
+void mat4_make_persp_proj_mat_rh(
     float fov_y_rad, float aspect_ratio, float near_z, float far_z, te_mat4 dst);
+void mat4_make_ortho_proj_mat_rh(
+    float left, float right, float bottom, float top, float near_z, float far_z, te_mat4 dst);
 
 void mat4_extract_euler_angles_rad(te_mat4 mat, te_vec3 dst);
 

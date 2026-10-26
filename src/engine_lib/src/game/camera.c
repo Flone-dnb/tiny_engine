@@ -66,6 +66,8 @@ struct te_camera {
     bool is_directions_outdated;
     bool is_proj_mat_outdated;
 
+    bool is_orthographic;
+
     bool is_serialization_allowed;
 };
 
@@ -101,6 +103,7 @@ camera_create(void) {
     camera->is_view_mat_outdated = true;
     camera->is_proj_mat_outdated = true;
     camera->is_directions_outdated = true;
+    camera->is_orthographic = false;
     camera->is_serialization_allowed = true;
     camera->custom_on_before_destroyed = NULL;
     camera->custom_ptr = NULL;
@@ -286,6 +289,8 @@ camera_register_type(void) {
     type_info_add_float_variable(
         info, "near_clip", camera_set_near_clip, camera_get_near_clip);
     type_info_add_float_variable(info, "far_clip", camera_set_far_clip, camera_get_far_clip);
+    type_info_add_bool_variable(
+        info, "is_orthographic", camera_set_is_orthographic, camera_get_is_orthographic);
     type_info_add_string_variable(info, "name", camera_set_name, camera_get_name);
 
     type_database_register_type(info);
@@ -385,6 +390,21 @@ camera_get_near_clip(te_camera* camera) {
 float
 camera_get_far_clip(te_camera* camera) {
     return camera->far_clip;
+}
+
+void
+camera_set_is_orthographic(te_camera* camera, bool is_orthographic) {
+    if (camera->is_orthographic == is_orthographic) {
+        return;
+    }
+
+    camera->is_orthographic = is_orthographic;
+    camera->is_proj_mat_outdated = true;
+}
+
+bool
+camera_get_is_orthographic(te_camera* camera) {
+    return camera->is_orthographic;
 }
 
 void
@@ -567,9 +587,17 @@ prv_camera_recalc_frustum(te_camera* camera) {
 
     camera_get_world_position(camera, pos);
 
-    camera->frustum = frustum_shape_create(
-        pos, forward, up, camera->near_clip, camera->far_clip, math_rad(camera->vertical_fov),
-        (float)camera->render_width / (float)camera->render_height);
+    if (!camera->is_orthographic) {
+        camera->frustum = frustum_shape_create_for_perspective(
+            pos, forward, up, camera->near_clip, camera->far_clip,
+            math_rad(camera->vertical_fov),
+            (float)camera->render_width / (float)camera->render_height);
+    } else {
+        camera->frustum = frustum_shape_create_for_orthographic(
+            pos, forward, up, camera->near_clip, camera->far_clip,
+            math_rad(camera->vertical_fov),
+            (float)camera->render_width / (float)camera->render_height);
+    }
 }
 
 static void
@@ -598,10 +626,24 @@ make_sure_view_proj_mat_updated(te_camera* camera) {
         }
 #endif
         if (camera->is_proj_mat_outdated) {
-            mat4_make_proj_mat_rh(
-                math_rad(camera->vertical_fov),
-                (float)camera->render_width / (float)camera->render_height, camera->near_clip,
-                camera->far_clip, camera->proj_mat);
+            if (!camera->is_orthographic) {
+                mat4_make_persp_proj_mat_rh(
+                    math_rad(camera->vertical_fov),
+                    (float)camera->render_width / (float)camera->render_height,
+                    camera->near_clip, camera->far_clip, camera->proj_mat);
+            } else {
+                float distance_to_target = (camera->near_clip + camera->far_clip) * 0.5f;
+                float top =
+                    distance_to_target * math_tan(math_rad(camera->vertical_fov) * 0.5f);
+                float bottom = -top;
+                float right =
+                    top * ((float)camera->render_width / (float)camera->render_height);
+                float left = -right;
+                mat4_make_ortho_proj_mat_rh(
+                    left, right, bottom, top, camera->near_clip, camera->far_clip,
+                    camera->proj_mat);
+            }
+
             camera->is_proj_mat_outdated = false;
         }
 

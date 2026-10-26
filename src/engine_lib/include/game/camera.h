@@ -41,6 +41,10 @@ void camera_set_far_clip(te_camera* camera, float far_clip);
 float camera_get_near_clip(te_camera* camera);
 float camera_get_far_clip(te_camera* camera);
 
+/* switch between perspective and orthographic projection */
+void camera_set_is_orthographic(te_camera* camera, bool is_orthographic);
+bool camera_get_is_orthographic(te_camera* camera);
+
 /* sets camera's viewport rectangle
  * position of the top-left corner of the viewport rectangle in XY and size in ZW (in range [0; 1]) */
 void camera_set_viewport(te_camera* camera, te_vec4 viewport);

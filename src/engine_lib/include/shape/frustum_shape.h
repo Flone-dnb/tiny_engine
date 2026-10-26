@@ -16,7 +16,10 @@ typedef struct te_frustum_shape {
     te_plane_shape far;
 } te_frustum_shape;
 
-te_frustum_shape frustum_shape_create(
+te_frustum_shape frustum_shape_create_for_perspective(
+    te_vec3 camera_pos, te_vec3 forward, te_vec3 up, float near_clip, float far_clip,
+    float vertical_fov, float aspect_ratio);
+te_frustum_shape frustum_shape_create_for_orthographic(
     te_vec3 camera_pos, te_vec3 forward, te_vec3 up, float near_clip, float far_clip,
     float vertical_fov, float aspect_ratio);
 

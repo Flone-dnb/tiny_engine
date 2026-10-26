@@ -259,7 +259,7 @@ mat4_make_view_mat_rh(
 }
 
 void
-mat4_make_proj_mat_rh(
+mat4_make_persp_proj_mat_rh(
     float fov_y_rad, float aspect_ratio, float near_z, float far_z, te_mat4 dst) {
     float fov_tan = 1.0f / math_tan(fov_y_rad * 0.5f);
     float inv_z = 1.0f / (near_z - far_z);
@@ -283,6 +283,34 @@ mat4_make_proj_mat_rh(
     dst[3][1] = 0.0f;
     dst[3][2] = 2.0f * near_z * far_z * inv_z;
     dst[3][3] = 0.0f;
+}
+
+void
+mat4_make_ortho_proj_mat_rh(
+    float left, float right, float bottom, float top, float near_z, float far_z, te_mat4 dst) {
+    float inv_x = 1.0f / (right - left);
+    float inv_y = 1.0f / (top - bottom);
+    float inv_z = 1.0f / (near_z - far_z);
+
+    dst[0][0] = 2.0f * inv_x;
+    dst[0][1] = 0.0f;
+    dst[0][2] = 0.0f;
+    dst[0][3] = 0.0f;
+
+    dst[1][0] = 0.0f;
+    dst[1][1] = 2.0f * inv_y;
+    dst[1][2] = 0.0f;
+    dst[1][3] = 0.0f;
+
+    dst[2][0] = 0.0f;
+    dst[2][1] = 0.0f;
+    dst[2][2] = 2.0f * inv_z;
+    dst[2][3] = 0.0f;
+
+    dst[3][0] = -(right + left) * inv_x;
+    dst[3][1] = -(top + bottom) * inv_y;
+    dst[3][2] = (near_z + far_z) * inv_z;
+    dst[3][3] = 1.0f;
 }
 
 void

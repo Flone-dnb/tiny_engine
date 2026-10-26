@@ -6,7 +6,7 @@
 #include <shape/sphere_shape.h>
 
 te_frustum_shape
-frustum_shape_create(
+frustum_shape_create_for_perspective(
     te_vec3 camera_pos, te_vec3 forward, te_vec3 up, float near_clip, float far_clip,
     float vertical_fov, float aspect_ratio) {
     te_frustum_shape frustum;
@@ -76,6 +76,65 @@ frustum_shape_create(
     vec3_cross(right, temp, temp);
     vec3_normalize(temp);
     frustum.bottom = plane_shape_create(temp, camera_pos);
+
+    return frustum;
+}
+
+te_frustum_shape
+frustum_shape_create_for_orthographic(
+    te_vec3 camera_pos, te_vec3 forward, te_vec3 up, float near_clip, float far_clip,
+    float vertical_fov, float aspect_ratio) {
+    te_frustum_shape frustum;
+    te_vec3 right;
+    te_vec3 far_normal;
+    te_vec3 left_normal;
+    te_vec3 bottom_normal;
+    te_vec3 to_near, to_far;
+    te_vec3 near_pos, far_pos;
+    te_vec3 plane_pos;
+    te_vec3 to_midpoint, offset, box_center;
+
+    float target_distance = (near_clip + far_clip) * 0.5f;
+
+    const float tan_half_fov = math_tan(0.5f * vertical_fov);
+    const float ortho_half_height = target_distance * tan_half_fov;
+    const float ortho_half_width = ortho_half_height * aspect_ratio;
+
+    vec3_cross(forward, up, right);
+    vec3_normalize(right);
+
+    vec3_copy(forward, far_normal);
+    vec3_muls(far_normal, -1.0f, far_normal);
+
+    vec3_muls(forward, near_clip, to_near);
+    vec3_muls(forward, far_clip, to_far);
+
+    vec3_add(camera_pos, to_near, near_pos);
+    vec3_add(camera_pos, to_far, far_pos);
+
+    frustum.near = plane_shape_create(forward, near_pos);
+    frustum.far = plane_shape_create(far_normal, far_pos);
+
+    vec3_muls(forward, target_distance, to_midpoint);
+    vec3_add(camera_pos, to_midpoint, box_center);
+
+    vec3_muls(right, -1.0f, left_normal);
+    vec3_muls(right, ortho_half_width, offset);
+    vec3_add(box_center, offset, plane_pos);
+    frustum.right = plane_shape_create(left_normal, plane_pos);
+
+    vec3_muls(right, -ortho_half_width, offset);
+    vec3_add(box_center, offset, plane_pos);
+    frustum.left = plane_shape_create(right, plane_pos);
+
+    vec3_muls(up, -1.0f, bottom_normal);
+    vec3_muls(up, ortho_half_height, offset);
+    vec3_add(box_center, offset, plane_pos);
+    frustum.top = plane_shape_create(bottom_normal, plane_pos);
+
+    vec3_muls(up, -ortho_half_height, offset);
+    vec3_add(box_center, offset, plane_pos);
+    frustum.bottom = plane_shape_create(up, plane_pos);
 
     return frustum;
 }
