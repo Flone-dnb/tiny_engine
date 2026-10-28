@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <render/renderer.h>
 #include <render/render_data_array.h>
-#include <render/shader_manager.h>
 #include <glad/gl.h>
 #include <math/vec2.h>
 
@@ -11,8 +10,6 @@
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(te_vec2), NULL);
 
 typedef struct te_particle_shader_data {
-    unsigned int prog_id;
-
     int uniform_view_mat;
     int uniform_proj_mat;
     int uniform_particle_color;
@@ -45,10 +42,6 @@ particle_renderer_create(te_renderer* renderer) {
     /* load quad shader */
     {
         te_particle_shader_data* shader = &particle_renderer->particle_shader_data;
-
-        shader->prog_id = shader_manager_request_shader(
-            renderer_get_shader_manager(renderer), "engine/shader/particle.vert.glsl",
-            "engine/shader/particle.frag.glsl");
 
         shader->uniform_view_mat = get_uniform_location(shader->prog_id, "view_mat");
         shader->uniform_proj_mat = get_uniform_location(shader->prog_id, "proj_mat");
@@ -96,10 +89,6 @@ particle_renderer_create(te_renderer* renderer) {
 
 void
 particle_renderer_destroy(te_particle_renderer* renderer) {
-    shader_manager_mark_unused_shader(
-        renderer_get_shader_manager(renderer->renderer),
-        renderer->particle_shader_data.prog_id);
-
     render_data_array_destroy(renderer->emitter_data_array);
 
     free(renderer);
@@ -142,7 +131,7 @@ particle_renderer_draw(
 
         glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ebo);
-        
+
         glEnableVertexAttribArray(0);
         PARTICLE_QUAD_GL_VERT_ATTRIB_PTR
 

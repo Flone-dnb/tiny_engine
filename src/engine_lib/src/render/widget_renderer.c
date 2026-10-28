@@ -5,7 +5,6 @@
 #include <io/log.h>
 #include <render/gpu_section.h>
 #include <render/renderer.h>
-#include <render/shader_manager.h>
 #include <render/render_data_array.h>
 #include <render/font_manager.h>
 #include <window.h>
@@ -16,8 +15,6 @@
 
 /* groups data related to the text shader program */
 typedef struct te_text_shader_data {
-    unsigned int prog_id;
-
     int uniform_in_pos;
     int uniform_in_size;
     int uniform_clip_rect;
@@ -57,8 +54,6 @@ struct te_widget_renderer {
 
 te_widget_renderer*
 widget_renderer_create(te_renderer* renderer) {
-    te_shader_manager* shader_manager;
-
     te_widget_renderer* widget_renderer = malloc(sizeof(te_widget_renderer));
     widget_renderer->renderer = renderer;
     widget_renderer->font_manager = renderer_get_font_manager(renderer);
@@ -69,12 +64,8 @@ widget_renderer_create(te_renderer* renderer) {
         render_data_array_create(sizeof(te_rect_widget_render_data), 32, 32);
 
     /* load text shader */
-    shader_manager = renderer_get_shader_manager(renderer);
     {
         te_text_shader_data* shader = &widget_renderer->text_shader;
-
-        shader->prog_id = shader_manager_request_shader(
-            shader_manager, "engine/shader/quad.vert.glsl", "engine/shader/text.frag.glsl");
 
         shader->uniform_in_pos = get_uniform_location(shader->prog_id, "in_pos");
         shader->uniform_in_size = get_uniform_location(shader->prog_id, "in_size");
@@ -90,9 +81,6 @@ widget_renderer_create(te_renderer* renderer) {
     /* load quad shader */
     {
         te_quad_shader_data* shader = &widget_renderer->quad_shader;
-
-        shader->prog_id = shader_manager_request_shader(
-            shader_manager, "engine/shader/quad.vert.glsl", "engine/shader/quad.frag.glsl");
 
         shader->uniform_in_pos = get_uniform_location(shader->prog_id, "in_pos");
         shader->uniform_in_size = get_uniform_location(shader->prog_id, "in_size");
@@ -151,13 +139,6 @@ widget_renderer_destroy(te_widget_renderer* widget_renderer) {
         abort();
     }
     render_data_array_destroy(widget_renderer->rect_widget_data);
-
-    shader_manager_mark_unused_shader(
-        renderer_get_shader_manager(widget_renderer->renderer),
-        widget_renderer->text_shader.prog_id);
-    shader_manager_mark_unused_shader(
-        renderer_get_shader_manager(widget_renderer->renderer),
-        widget_renderer->quad_shader.prog_id);
 
     glDeleteBuffers(1, &widget_renderer->vbo);
     glDeleteBuffers(1, &widget_renderer->ebo);
@@ -245,7 +226,7 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
         glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
-        
+
         glEnableVertexAttribArray(0);
         WIDGET_QUAD_GL_VERT_ATTRIB_PTR
 
@@ -290,7 +271,7 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
         glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
         WIDGET_QUAD_GL_VERT_ATTRIB_PTR
-        
+
         glEnableVertexAttribArray(0);
         WIDGET_QUAD_GL_VERT_ATTRIB_PTR
 

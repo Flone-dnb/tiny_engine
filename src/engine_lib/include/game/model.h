@@ -30,12 +30,6 @@ enum te_vertex_attribute {
 
 /* manages vertex access */
 typedef struct te_vertex_pack {
-    /* binds vertex attribute names to a shader program, used after creating a model's shader */
-    void (*bind_gl_vertex_attributes)(unsigned int shader_prog_id);
-
-    /* sets pointers to vertex attributes, used during the rendering */
-    void (*set_attribute_pointers)(void);
-
     /* actual vertex data */
     unsigned char* data;
 
@@ -140,10 +134,6 @@ const char* model_get_texture(te_model* model);
 /* sets texture tiling multiplier */
 void model_set_texture_tiling(te_model* model, te_vec2 tex_tiling);
 void model_get_texture_tiling(te_model* model, te_vec2 tex_tiling);
-
-/* sets offset for UV coordinates */
-void model_set_uv_offset(te_model* model, te_vec2 uv_offset);
-void model_get_uv_offset(te_model* model, te_vec2 uv_offset);
 
 /* disables backface culling */
 void model_set_disable_backface_culling(te_model* model, bool disable_backface_culling);

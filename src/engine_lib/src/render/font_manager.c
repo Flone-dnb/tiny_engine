@@ -199,14 +199,11 @@ load_font_chars(
 
         glBindTexture(GL_TEXTURE_2D, font_manager->font_bitmap_id);
         {
-#if !defined(ENGINE_GLES)
             /* generating a mipmap as a lazy way to remove aliasing from the font */
             const unsigned int mip_to_use = 1;
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mip_to_use);
             /* generates mipmaps on the next glTexImage2D call */
             glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
-#endif
-            /* GLES 2.0 will have crunchy font for now since GL_TEXTURE_MAX_LEVEL and GL_TEXTURE_BASE_LEVEL are not available there */
 
             glTexImage2D(
                 GL_TEXTURE_2D, 0, (GLint)gl_format, (int)bitmap_size_x, (int)bitmap_size_y, 0,
@@ -218,9 +215,7 @@ load_font_chars(
                 GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); /* don't use mipmaps here */
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-#if !defined(ENGINE_GLES)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, mip_to_use);
-#endif
         }
         glBindTexture(GL_TEXTURE_2D, 0);
     }

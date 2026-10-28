@@ -27,7 +27,6 @@
 #include <render/gpu_section.h>
 #include <render/gpu_time_section.h>
 #include <render/model_renderer.h>
-#include <render/shader_manager.h>
 #include <render/texture_manager.h>
 #include <render/widget_renderer.h>
 #include <render/particle_renderer.h>
@@ -36,27 +35,16 @@
 #include <world.h>
 #include <glad/gl.h>
 
-#if defined(ENGINE_GLES)
-#define glGenQueries glGenQueriesEXT
-#define glQueryCounter glQueryCounterEXT
-#define GL_TIMESTAMP GL_TIMESTAMP_EXT
-#define glDeleteQueries glDeleteQueriesEXT
-#define glGetQueryObjectui64v glGetQueryObjectui64vEXT
-#define GL_QUERY_RESULT GL_QUERY_RESULT_EXT
-#define glGetQueryObjectuiv glGetQueryObjectuivEXT
-#define GL_QUERY_RESULT_AVAILABLE GL_QUERY_RESULT_AVAILABLE_EXT
-#define glGetQueryObjecti64v glGetQueryObjecti64vEXT
-#define GL_DEBUG_SOURCE_SHADER_COMPILER GL_DEBUG_SOURCE_SHADER_COMPILER_KHR
-#define GL_DEBUG_TYPE_ERROR GL_DEBUG_TYPE_ERROR_KHR
-#define GL_DEBUG_SEVERITY_NOTIFICATION GL_DEBUG_SEVERITY_NOTIFICATION_KHR
-#define GL_DEBUG_OUTPUT GL_DEBUG_OUTPUT_KHR
-#define GL_DEBUG_OUTPUT_SYNCHRONOUS GL_DEBUG_OUTPUT_SYNCHRONOUS_KHR
-#define glDebugMessageCallback glDebugMessageCallbackKHR
-#define glDebugMessageControl glDebugMessageControlKHR
-#endif
-
 #if defined(WIN32)
 #pragma comment(lib, "Winmm.lib") /* for timeBeginPeriod and timeEndPeriod */
+#endif
+
+#if defined(ENGINE_DEBUG_TOOLS)
+static bool
+is_gpu_timers_supported(void) {
+    /* GL_ARB_occlusion_query adds glGenQueriesARB and GL_ARB_timer_query adds GL_TIMESTAMP so check for both */
+    return GLAD_GL_ARB_timer_query == 1 && GLAD_GL_ARB_occlusion_query == 1;
+}
 #endif
 
 /* stuff needed to calculate FPS and keep frame limit */
@@ -73,7 +61,6 @@ struct te_renderer {
     te_window* window;
 
     /* created by the renderer */
-    te_shader_manager* shader_manager;
     te_texture_manager* texture_manager;
     te_font_manager* font_manager;
 
@@ -142,8 +129,8 @@ debug_command_set_enable_vsync(te_game_manager* game_manager, unsigned int enabl
     }
 LIGHT_PARAMS_FUNC(set_clear_color, vec3_copy(arg, params->clear_color))
 LIGHT_PARAMS_FUNC(get_clear_color, vec3_copy(params->clear_color, arg))
-LIGHT_PARAMS_FUNC(set_ambient_light_color, vec3_copy(arg, params->ambient_light_color))
-LIGHT_PARAMS_FUNC(get_ambient_light_color, vec3_copy(params->ambient_light_color, arg))
+LIGHT_PARAMS_FUNC(set_ambient_light_color, vec4_copy(arg, params->ambient_light_color))
+LIGHT_PARAMS_FUNC(get_ambient_light_color, vec4_copy(params->ambient_light_color, arg))
 LIGHT_PARAMS_FUNC(set_dir_light_color, vec4_copy(arg, params->directional_light_color))
 LIGHT_PARAMS_FUNC(get_dir_light_color, vec4_copy(params->directional_light_color, arg))
 LIGHT_PARAMS_FUNC(set_dir_light_dir, vec3_normalize(arg);
@@ -157,8 +144,8 @@ LIGHT_PARAMS_FUNC(
     get_point_light_pos_and_dist, vec4_copy(params->point_light_pos_and_dist, arg))
 LIGHT_PARAMS_FUNC(set_distance_fog_range, vec2_copy(arg, params->distance_fog_range))
 LIGHT_PARAMS_FUNC(get_distance_fog_range, vec2_copy(params->distance_fog_range, arg))
-LIGHT_PARAMS_FUNC(set_distance_fog_color, vec3_copy(arg, params->distance_fog_color))
-LIGHT_PARAMS_FUNC(get_distance_fog_color, vec3_copy(params->distance_fog_color, arg))
+LIGHT_PARAMS_FUNC(set_distance_fog_color, vec4_copy(arg, params->distance_fog_color))
+LIGHT_PARAMS_FUNC(get_distance_fog_color, vec4_copy(params->distance_fog_color, arg))
 
 te_renderer*
 renderer_create(struct te_window* window) {
@@ -173,7 +160,6 @@ renderer_create(struct te_window* window) {
     renderer = malloc(sizeof(te_renderer));
 
     renderer->window = window;
-    renderer->shader_manager = prv_shader_manager_create();
     renderer->texture_manager = prv_texture_manager_create();
     renderer->font_manager = prv_font_manager_create();
 
@@ -192,7 +178,7 @@ renderer_create(struct te_window* window) {
 
         data = renderer->light_params;
 
-        vec3_set(0.5f, 0.5f, 0.5f, data->ambient_light_color);
+        vec4_set(0.5f, 0.5f, 0.5f, 0.5f, data->ambient_light_color);
 
         vec3_set(1.0f, -1.0f, 1.0f, data->directional_light_direction);
         vec3_normalize(data->directional_light_direction);
@@ -207,25 +193,16 @@ renderer_create(struct te_window* window) {
 #endif
 
 #if defined(ENGINE_DEBUG_TOOLS)
-#if defined(ENGINE_GLES)
-    if (GLAD_GL_EXT_disjoint_timer_query != 1) {
+    /* GL_ARB_occlusion_query adds glGenQueriesARB and GL_ARB_timer_query adds GL_TIMESTAMP so check for both */
+    if (!is_gpu_timers_supported()) {
         log_info(
             __FILE__, __LINE__,
-            "the GPU does not support GL_EXT_disjoint_timer_query extension, GPU time "
-            "metrics are disabled");
-    } else
-#else
-    if (GLAD_GL_ARB_timer_query != 1) {
-        log_info(
-            __FILE__, __LINE__,
-            "the GPU does not support GL_ARB_timer_query extension, GPU time "
-            "metrics are disabled");
-    } else
-#endif
-    {
-        glGenQueries(1, &renderer->gl_timestamp_frame_start);
-        glGenQueries(1, &renderer->gl_timestamp_frame_end);
-        glGenQueries(1, &renderer->gl_query_draw_debug);
+            "the GPU does not support GL_ARB_timer_query and/or GLAD_GL_ARB_occlusion_query "
+            "extension, GPU time metrics are disabled");
+    } else {
+        glGenQueriesARB(1, &renderer->gl_timestamp_frame_start);
+        glGenQueriesARB(1, &renderer->gl_timestamp_frame_end);
+        glGenQueriesARB(1, &renderer->gl_query_draw_debug);
 
         /* init timers */
         glQueryCounter(renderer->gl_timestamp_frame_start, GL_TIMESTAMP);
@@ -259,15 +236,14 @@ renderer_create(struct te_window* window) {
 
     /* setup clear values */
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-#if defined(ENGINE_GLES)
-    glClearDepthf(1.0f);
-#else
     glClearDepth(1.0);
-#endif
 
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
+
+    /* should be disabled by default but still disable just in case */
+    glDisable(GL_NORMALIZE);
 
 #if defined(ENGINE_DEBUG_TOOLS)
     fps_command.name = "set_fps_limit";
@@ -286,7 +262,7 @@ renderer_create(struct te_window* window) {
 
         type_info_add_vec3_variable(
             info, "clear_color", light_params_set_clear_color, light_params_get_clear_color);
-        type_info_add_vec3_variable(
+        type_info_add_vec4_variable(
             info, "ambient_light_color", light_params_set_ambient_light_color,
             light_params_get_ambient_light_color);
         type_info_add_vec4_variable(
@@ -304,7 +280,7 @@ renderer_create(struct te_window* window) {
         type_info_add_vec2_variable(
             info, "distance_fog_range", light_params_set_distance_fog_range,
             light_params_get_distance_fog_range);
-        type_info_add_vec3_variable(
+        type_info_add_vec4_variable(
             info, "distance_fog_color", light_params_set_distance_fog_color,
             light_params_get_distance_fog_color);
 
@@ -317,21 +293,15 @@ renderer_create(struct te_window* window) {
 void
 renderer_destroy(te_renderer* renderer) {
     prv_texture_manager_destroy(renderer->texture_manager);
-    prv_shader_manager_destroy(renderer->shader_manager);
     prv_font_manager_destroy(renderer->font_manager);
 
     free(renderer->light_params);
 
 #if defined(ENGINE_DEBUG_TOOLS)
-#if defined(ENGINE_GLES)
-    if (GLAD_GL_EXT_disjoint_timer_query == 1)
-#else
-    if (GLAD_GL_ARB_timer_query == 1)
-#endif
-    {
-        glDeleteQueries(1, &renderer->gl_timestamp_frame_start);
-        glDeleteQueries(1, &renderer->gl_timestamp_frame_end);
-        glDeleteQueries(1, &renderer->gl_query_draw_debug);
+    if (is_gpu_timers_supported()) {
+        glDeleteQueriesARB(1, &renderer->gl_timestamp_frame_start);
+        glDeleteQueriesARB(1, &renderer->gl_timestamp_frame_end);
+        glDeleteQueriesARB(1, &renderer->gl_query_draw_debug);
     }
 #endif
 
@@ -351,11 +321,6 @@ renderer_set_fps_limit(te_renderer* renderer, unsigned int limit) {
 te_window*
 renderer_get_window(te_renderer* renderer) {
     return renderer->window;
-}
-
-te_shader_manager*
-renderer_get_shader_manager(te_renderer* renderer) {
-    return renderer->shader_manager;
 }
 
 te_texture_manager*
@@ -455,7 +420,7 @@ prv_renderer_calc_frame_stats(te_renderer* renderer, float delta_time_sec) {
 static float
 prv_renderer_get_query_time_ms(unsigned int query) {
     GLuint64 time_elapsed = 0;
-    glGetQueryObjectui64v(query, GL_QUERY_RESULT, &time_elapsed);
+    glGetQueryObjectui64v(query, GL_QUERY_RESULT_ARB, &time_elapsed);
     return (float)(time_elapsed) / 1000000.0f; /* nanoseconds to milliseconds */
 }
 #endif
@@ -502,37 +467,17 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         abort();
     }
 
-    /* setup vertex attributes */
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
-    glDisableVertexAttribArray(2);
-    glDisableVertexAttribArray(3);
-    glDisableVertexAttribArray(4);
-
 #if defined(ENGINE_DEBUG_TOOLS)
     debug_stats = prv_debug_console_get_stats();
     record_new_queries = true;
 
-#if defined(ENGINE_GLES)
-    if (GLAD_GL_EXT_disjoint_timer_query != 1) {
+    if (!is_gpu_timers_supported()) {
         record_new_queries = false;
-    }
-#else
-    if (GLAD_GL_ARB_timer_query != 1) {
-        record_new_queries = false;
-    }
-#endif
-
-#if defined(ENGINE_GLES)
-    if (GLAD_GL_EXT_disjoint_timer_query == 1)
-#else
-    if (GLAD_GL_ARB_timer_query == 1)
-#endif
-    {
+    } else {
         /* check if the GPU finished commands */
         GLuint available = 0;
-        glGetQueryObjectuiv(
-            renderer->gl_timestamp_frame_end, GL_QUERY_RESULT_AVAILABLE, &available);
+        glGetQueryObjectuivARB(
+            renderer->gl_timestamp_frame_end, GL_QUERY_RESULT_AVAILABLE_ARB, &available);
         if (available == GL_FALSE) {
             /* don't do new queries on this frame, we will wait for the current queries to be finished */
             record_new_queries = false;
@@ -552,9 +497,9 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
                 GLint64 start_time = 0;
                 GLint64 end_time = 0;
                 glGetQueryObjecti64v(
-                    renderer->gl_timestamp_frame_start, GL_QUERY_RESULT, &start_time);
+                    renderer->gl_timestamp_frame_start, GL_QUERY_RESULT_ARB, &start_time);
                 glGetQueryObjecti64v(
-                    renderer->gl_timestamp_frame_end, GL_QUERY_RESULT, &end_time);
+                    renderer->gl_timestamp_frame_end, GL_QUERY_RESULT_ARB, &end_time);
                 debug_stats->gpu_time_frame_ms =
                     (float)(end_time - start_time)
                     / 1000000.0f; /* nanoseconds to milliseconds */
@@ -594,9 +539,8 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         te_model_renderer* transparent_model_renderer;
         te_widget_renderer* widget_renderer;
         te_particle_renderer* particle_renderer;
-        te_mat4* view_proj_mat;
-        te_mat4* view_mat;
         te_mat4* proj_mat;
+        te_mat4* view_mat;
         struct te_frustum_shape* camera_frustum;
         te_vec4 viewport;
         unsigned int viewport_width;
@@ -629,7 +573,6 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         viewport_height = (unsigned int)((float)window_height * viewport[3]);
         prv_camera_set_render_target_size(camera, viewport_width, viewport_height);
 
-        view_proj_mat = camera_get_view_proj_mat(camera);
         view_mat = camera_get_view_mat(camera);
         proj_mat = camera_get_proj_mat(camera);
         camera_frustum = camera_get_frustum(camera);
@@ -653,7 +596,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
             debug_stats->rendered_opaque_model_count =
 #endif
                 model_renderer_draw(
-                    opaque_model_renderer, renderer->light_params, view_mat, view_proj_mat,
+                    opaque_model_renderer, renderer->light_params, view_mat, proj_mat,
                     camera_frustum);
             GPU_SECTION_END;
 
@@ -668,8 +611,8 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
                 debug_stats->rendered_transparent_model_count =
 #endif
                     model_renderer_draw(
-                        transparent_model_renderer, renderer->light_params, view_mat,
-                        view_proj_mat, camera_frustum);
+                        transparent_model_renderer, renderer->light_params, view_mat, proj_mat,
+                        camera_frustum);
                 glDisable(GL_BLEND);
 
                 glEnable(GL_CULL_FACE);

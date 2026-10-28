@@ -12,29 +12,16 @@ struct te_light_params;
 
 /* data used to submit a model for rendering */
 typedef struct te_model_render_data {
-    te_mat4 world_mat;
-    te_mat3 normal_mat;
-    te_vec4 color;
-
-    /* texture tiling multiplier, must store -1 if @ref tex_id is 0 */
-    te_vec2 tex_tiling;
-
-    /* 0 if not used */
-    unsigned int tex_id;
-
-    /* 128 bytes --------- */
-
     te_aabb_shape aabb_world;
 
-    te_vec2 uv_offset;
+    te_mat4 world_mat;
+    te_vec4 color;
 
-    /* NULL if not using skinning */
-    te_mat4* skinning_mats;
-    unsigned int skinning_mats_count;
+    unsigned int display_list_id;
+    unsigned int tex_id;
 
-    int index_count;
-    unsigned int vbo;
-    unsigned int ebo;
+    /* GL_FRONT, GL_FRONT_AND_BACK, GL_BACK */
+    int gl_face_type;
 } te_model_render_data;
 
 /* capacity is the initial (reserved) size for data arrays where 1 item is used by 1 model
@@ -48,12 +35,13 @@ bool model_renderer_has_models(te_model_renderer* renderer);
 /* adds a new model to be rendered
  * returns handle to update model's render data using @ref model_renderer_get_render_data_tmp
  *
- * later you would need to remove the model from rendering using @ref model_renderer_remove_model */
-unsigned int model_renderer_add_model(
-    te_model_renderer* renderer, unsigned int shader_prog_id, bool disable_backface_culling);
+ * later you would need to remove the model from rendering using @ref model_renderer_remove_model,
+ * if you specified @ref uses_skinning here then in remove model you also need to pass the same value */
+unsigned int model_renderer_add_model(te_model_renderer* renderer, bool uses_skinning);
 
 /* removes a model from rendering */
-void model_renderer_remove_model(te_model_renderer* renderer, unsigned int handle);
+void model_renderer_remove_model(
+    te_model_renderer* renderer, unsigned int handle, bool uses_skinning);
 
 /* returns pointer to a model's render data to update/modify
  * 
@@ -62,11 +50,11 @@ void model_renderer_remove_model(te_model_renderer* renderer, unsigned int handl
  * update some render data. Suffix "_tmp" is used because of this.
  *
  * do not free/destroy returned pointer */
-te_model_render_data*
-model_renderer_get_render_data_tmp(te_model_renderer* renderer, unsigned int handle);
+te_model_render_data* model_renderer_get_render_data_tmp(
+    te_model_renderer* renderer, unsigned int handle, bool uses_skinning);
 
 /* draws models to the currently set framebuffer
  * returns the number of models drawn */
 unsigned int model_renderer_draw(
     te_model_renderer* renderer, struct te_light_params* light_params, te_mat4* view_mat,
-    te_mat4* view_proj_mat, struct te_frustum_shape* camera_frustum);
+    te_mat4* proj_mat, struct te_frustum_shape* camera_frustum);

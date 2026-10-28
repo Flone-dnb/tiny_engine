@@ -1,32 +1,20 @@
 #pragma once
 
 /* macros to measure GPU time */
+
 #if defined(ENGINE_DEBUG_TOOLS)
+
 #include <glad/gl.h>
 
-#if defined(ENGINE_GLES)
 #define GPU_TIME_SECTION_BEGIN(gl_query_id)                                                   \
-    if (GLAD_GL_EXT_disjoint_timer_query == 1) {                                              \
-        glBeginQueryEXT(GL_TIME_ELAPSED_EXT, gl_query_id);                                    \
+    if (GLAD_GL_ARB_timer_query == 1 && GLAD_GL_ARB_occlusion_query == 1) {                   \
+        glBeginQueryARB(GL_TIME_ELAPSED, gl_query_id);                                        \
     }
-#else
-#define GPU_TIME_SECTION_BEGIN(gl_query_id)                                                   \
-    if (GLAD_GL_ARB_timer_query == 1) {                                                       \
-        glBeginQuery(GL_TIME_ELAPSED, gl_query_id);                                           \
-    }
-#endif
 
-#if defined(ENGINE_GLES)
 #define GPU_TIME_SECTION_END                                                                  \
-    if (GLAD_GL_EXT_disjoint_timer_query == 1) {                                              \
-        glEndQueryEXT(GL_TIME_ELAPSED_EXT);                                                   \
+    if (GLAD_GL_ARB_timer_query == 1 && GLAD_GL_ARB_occlusion_query == 1) {                   \
+        glEndQueryARB(GL_TIME_ELAPSED);                                                       \
     }
-#else
-#define GPU_TIME_SECTION_END                                                                  \
-    if (GLAD_GL_ARB_timer_query == 1) {                                                       \
-        glEndQuery(GL_TIME_ELAPSED);                                                          \
-    }
-#endif
 
 #else
 

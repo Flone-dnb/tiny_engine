@@ -42,11 +42,11 @@ float debug_drawer_get_default_text_height(void);
 /* must be called before game is started and after game is finished
  * must be destroyed before renderer */
 void prv_debug_drawer_init(struct te_renderer* renderer);
-void prv_debug_drawer_deinit(struct te_renderer* renderer);
+void prv_debug_drawer_deinit(void);
 
 /* must be called every frame to draw debug objects */
 void prv_debug_drawer_draw(
-    struct te_renderer* renderer, float delta_time_sec, te_mat4* view_proj_mat);
+    struct te_renderer* renderer, float delta_time_sec, te_mat4* view_mat, te_mat4* proj_mat);
 
 #else
 /* dummy code to avoid compile error ISO C forbids an empty translation unit

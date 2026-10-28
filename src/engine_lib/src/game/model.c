@@ -16,7 +16,6 @@
 #include <math/math_funcs.h>
 #include <render/model_renderer.h>
 #include <render/renderer.h>
-#include <render/shader_manager.h>
 #include <render/texture_manager.h>
 #include <shape/aabb_shape.h>
 #include <sound_manager.h>
@@ -26,83 +25,6 @@
 #include <glad/gl.h>
 
 #define MODEL_TEX_LOAD_OPTION TE_TLO_GENERATE_MIPMAPS
-
-static void
-bind_gl_vertex_attributes_model_vertex(unsigned int shader_prog_id) {
-    glBindAttribLocation(shader_prog_id, 0, "pos");
-    glEnableVertexAttribArray(0);
-
-    glBindAttribLocation(shader_prog_id, 1, "normal");
-    glEnableVertexAttribArray(1);
-
-    glBindAttribLocation(shader_prog_id, 2, "uv");
-    glEnableVertexAttribArray(2);
-}
-
-static void
-bind_gl_vertex_attributes_model_vertex_skinned(unsigned int shader_prog_id) {
-    glBindAttribLocation(shader_prog_id, 0, "pos");
-    glEnableVertexAttribArray(0);
-
-    glBindAttribLocation(shader_prog_id, 1, "normal");
-    glEnableVertexAttribArray(1);
-
-    glBindAttribLocation(shader_prog_id, 2, "uv");
-    glEnableVertexAttribArray(2);
-
-    glBindAttribLocation(shader_prog_id, 3, "bone_indices");
-    glEnableVertexAttribArray(3);
-
-    glBindAttribLocation(shader_prog_id, 4, "bone_weights");
-    glEnableVertexAttribArray(4);
-}
-
-void
-prv_model_set_attribute_pointers_model_vertex(void) {
-    /* position */
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), NULL);
-
-    /* normal */
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(
-        1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)sizeof(te_vec3));
-
-    /* UV */
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(
-        2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex), (void*)(sizeof(te_vec3) * 2));
-}
-
-void
-prv_model_set_attribute_pointers_model_vertex_skinned(void) {
-    /* position */
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned), NULL);
-
-    /* normal */
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(
-        1, 3, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned), (void*)sizeof(te_vec3));
-
-    /* UV */
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(
-        2, 2, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned),
-        (void*)(sizeof(te_vec3) * 2));
-
-    /* bone indices */
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(
-        3, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(te_model_vertex_skinned),
-        (void*)(sizeof(te_vec3) * 2 + sizeof(te_vec2)));
-
-    /* bone weights */
-    glEnableVertexAttribArray(4);
-    glVertexAttribPointer(
-        4, 4, GL_FLOAT, GL_FALSE, sizeof(te_model_vertex_skinned),
-        (void*)(sizeof(te_vec3) * 2 + sizeof(te_vec2) + 4 * sizeof(te_bone_index_t)));
-}
 
 te_vertex_pack*
 vertex_pack_create(unsigned int vertex_count, bool is_skinned) {
@@ -118,9 +40,6 @@ vertex_pack_create(unsigned int vertex_count, bool is_skinned) {
         pack->attribute_offsets[TE_VA_NORMAL] = offset;
         offset += sizeof(te_vec3);
         pack->attribute_offsets[TE_VA_UV] = offset;
-
-        pack->bind_gl_vertex_attributes = bind_gl_vertex_attributes_model_vertex;
-        pack->set_attribute_pointers = prv_model_set_attribute_pointers_model_vertex;
     } else {
         unsigned char offset = 0;
         pack->vertex_sizeof = sizeof(te_model_vertex_skinned);
@@ -134,9 +53,6 @@ vertex_pack_create(unsigned int vertex_count, bool is_skinned) {
         pack->attribute_offsets[TE_VA_BONE_INDICES] = offset;
         offset += sizeof(te_bone_index_t) * 4;
         pack->attribute_offsets[TE_VA_BONE_WEIGHTS] = offset;
-
-        pack->bind_gl_vertex_attributes = bind_gl_vertex_attributes_model_vertex_skinned;
-        pack->set_attribute_pointers = prv_model_set_attribute_pointers_model_vertex_skinned;
     }
     pack->data = malloc(pack->vertex_sizeof * pack->vertex_count);
 
@@ -193,13 +109,9 @@ struct te_model {
     te_vec3 scale;
 
     te_vec2 tex_tiling;
-    te_vec2 uv_offset;
 
     /* stores invalid value if not spawned (see @ref world) */
     unsigned int render_data_handle;
-
-    /* stores invalid value if not spawned (see @ref world). OpenGL ID of the shader program used */
-    unsigned int shader_prog_id;
 
     /* number of elements in the array @ref child_models */
     unsigned int child_model_count;
@@ -211,9 +123,8 @@ struct te_model {
      * to which the model is attached to */
     unsigned int parent_bone_idx;
 
-    /* 0xFFFFFFFF if not being rendered, OpenGL vertex array object, vertex buffer object and element buffer object IDs */
-    unsigned int vbo;
-    unsigned int ebo;
+    /* 0xFFFFFFFF if not being rendered, OpenGL display list ID */
+    unsigned int display_list_id;
 
     /* ID used to unregister tick callback. 0xFFFFFFFF if not registered */
     unsigned int tick_callback_id;
@@ -236,10 +147,8 @@ model_create(void) {
     model->world = NULL;
     model->name = NULL;
     model->render_data_handle = 0xFFFFFFFF;
-    model->shader_prog_id = 0xFFFFFFFF;
     model->parent_bone_idx = 0xFFFFFFFF;
-    model->vbo = 0xFFFFFFFF;
-    model->ebo = 0xFFFFFFFF;
+    model->display_list_id = 0xFFFFFFFF;
     model->tick_callback_id = 0xFFFFFFFF;
     model->child_models = NULL;
     model->child_model_count = 0;
@@ -264,7 +173,6 @@ model_create(void) {
     model->is_serialization_allowed = true;
 
     vec2_set(1.0f, 1.0f, model->tex_tiling);
-    vec2_zero(model->uv_offset);
 
     vec4_set(1.0f, 1.0f, 1.0f, 1.0f, model->color);
 
@@ -375,6 +283,9 @@ model_destroy(te_model* model) {
     free(model);
 }
 
+static void prv_model_remove_from_model_renderer(te_model* model);
+static void prv_model_add_to_model_renderer(te_model* model);
+
 #if defined(ENGINE_EDITOR)
 static bool
 check_file_path(const char* relative_path) {
@@ -445,8 +356,7 @@ prv_model_get_renderer(te_model* model) {
     }
 }
 
-static void
-prv_model_calc_world_normal_matrices(te_model* model, te_mat4 world, te_mat3 normal);
+static void calc_world_mat(te_model* model, te_mat4 world);
 
 static void
 prv_model_update_child_model_mats(te_model* model) {
@@ -457,11 +367,11 @@ prv_model_update_child_model_mats(te_model* model) {
 
         if (child_model->render_data_handle != 0xffffffff) {
             te_model_renderer* renderer = prv_model_get_renderer(child_model);
-            te_model_render_data* data =
-                model_renderer_get_render_data_tmp(renderer, child_model->render_data_handle);
+            te_model_render_data* data = model_renderer_get_render_data_tmp(
+                renderer, child_model->render_data_handle,
+                model->skeleton_relative_path != NULL);
 
-            prv_model_calc_world_normal_matrices(
-                child_model, data->world_mat, data->normal_mat);
+            calc_world_mat(child_model, data->world_mat);
             data->aabb_world =
                 aabb_shape_convert_to_world(&child_model->aabb_local, data->world_mat);
         }
@@ -474,7 +384,7 @@ prv_model_on_after_skeleton_updated(te_model* model) {
 }
 
 static void
-prv_model_calc_world_normal_matrices(te_model* model, te_mat4 out_world, te_mat3 out_normal) {
+calc_world_mat(te_model* model, te_mat4 out_world) {
     te_mat4 mat1;
     te_mat4 mat2;
 
@@ -502,7 +412,8 @@ prv_model_calc_world_normal_matrices(te_model* model, te_mat4 out_world, te_mat3
         } else {
             te_model_renderer* renderer = prv_model_get_renderer(model->parent_model);
             te_model_render_data* data = model_renderer_get_render_data_tmp(
-                renderer, model->parent_model->render_data_handle);
+                renderer, model->parent_model->render_data_handle,
+                model->skeleton_relative_path != NULL);
 
             mat4_copy(data->world_mat, mat1);
         }
@@ -514,11 +425,6 @@ prv_model_calc_world_normal_matrices(te_model* model, te_mat4 out_world, te_mat3
 
         mat4_mul(mat1, out_world, out_world);
     }
-
-    /* calculate normal matrix */
-    mat4_inv(out_world, mat1);
-    mat4_transpose(mat1, mat1);
-    mat3_from_mat4(mat1, out_normal);
 
     prv_model_update_child_model_mats(model);
 
@@ -534,9 +440,10 @@ model_set_position(te_model* model, te_vec3 position) {
     if (model->world != NULL) {
         /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
-            prv_model_get_renderer(model), model->render_data_handle);
+            prv_model_get_renderer(model), model->render_data_handle,
+            model->skeleton_relative_path != NULL);
 
-        prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
+        calc_world_mat(model, data->world_mat);
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
     }
 }
@@ -548,9 +455,10 @@ model_set_rotation(te_model* model, te_vec3 rotation) {
     if (model->world != NULL) {
         /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
-            prv_model_get_renderer(model), model->render_data_handle);
+            prv_model_get_renderer(model), model->render_data_handle,
+            model->skeleton_relative_path != NULL);
 
-        prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
+        calc_world_mat(model, data->world_mat);
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
     }
 }
@@ -562,9 +470,10 @@ model_set_scale(te_model* model, te_vec3 scale) {
     if (model->world != NULL) {
         /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
-            prv_model_get_renderer(model), model->render_data_handle);
+            prv_model_get_renderer(model), model->render_data_handle,
+            model->skeleton_relative_path != NULL);
 
-        prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
+        calc_world_mat(model, data->world_mat);
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
     }
 }
@@ -576,7 +485,8 @@ model_set_color(te_model* model, te_vec4 color) {
     if (model->world != NULL) {
         /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
-            prv_model_get_renderer(model), model->render_data_handle);
+            prv_model_get_renderer(model), model->render_data_handle,
+            model->skeleton_relative_path != NULL);
         vec4_copy(model->color, data->color);
     }
 }
@@ -598,7 +508,8 @@ model_set_texture(te_model* model, const char* relative_path) {
         if (model->world != NULL) {
             /* update render data */
             te_model_render_data* data = model_renderer_get_render_data_tmp(
-                prv_model_get_renderer(model), model->render_data_handle);
+                prv_model_get_renderer(model), model->render_data_handle,
+                model->skeleton_relative_path != NULL);
 
             if (data->tex_id > 0) {
                 te_texture_manager* texture_manager = renderer_get_texture_manager(
@@ -607,7 +518,6 @@ model_set_texture(te_model* model, const char* relative_path) {
             }
 
             data->tex_id = 0;
-            vec2_set(-1.0f, -1.0f, data->tex_tiling);
         }
     } else {
         /* set new texture */
@@ -619,7 +529,8 @@ model_set_texture(te_model* model, const char* relative_path) {
         if (model->world != NULL) {
             /* update render data */
             te_model_render_data* data = model_renderer_get_render_data_tmp(
-                prv_model_get_renderer(model), model->render_data_handle);
+                prv_model_get_renderer(model), model->render_data_handle,
+                model->skeleton_relative_path != NULL);
 
             te_texture_manager* texture_manager = renderer_get_texture_manager(
                 game_manager_get_renderer(world_get_game_manager(model->world)));
@@ -628,7 +539,6 @@ model_set_texture(te_model* model, const char* relative_path) {
             }
             data->tex_id = texture_manager_request_texture(
                 texture_manager, relative_path, MODEL_TEX_LOAD_OPTION);
-            vec2_copy(model->tex_tiling, data->tex_tiling);
         }
     }
 }
@@ -637,24 +547,13 @@ void
 model_set_texture_tiling(te_model* model, te_vec2 tex_tiling) {
     vec2_copy(tex_tiling, model->tex_tiling);
 
+#if defined(ENGINE_EDITOR)
     if (model->world != NULL && model->tex_relative_path != NULL) {
-        /* update render data */
-        te_model_render_data* data = model_renderer_get_render_data_tmp(
-            prv_model_get_renderer(model), model->render_data_handle);
-        vec2_copy(model->tex_tiling, data->tex_tiling);
+        /* despawn, fill vertices again (with new uvs) and spawn */
+        prv_model_remove_from_model_renderer(model);
+        prv_model_add_to_model_renderer(model);
     }
-}
-
-void
-model_set_uv_offset(te_model* model, te_vec2 uv_offset) {
-    vec2_copy(uv_offset, model->uv_offset);
-
-    if (model->world != NULL) {
-        /* update render data */
-        te_model_render_data* data = model_renderer_get_render_data_tmp(
-            prv_model_get_renderer(model), model->render_data_handle);
-        vec2_copy(model->uv_offset, data->uv_offset);
-    }
+#endif
 }
 
 bool
@@ -697,13 +596,11 @@ model_get_world_position(te_model* model, te_vec3 out) {
     }
 
     target_data = model_renderer_get_render_data_tmp(
-        prv_model_get_model_renderer(model), prv_model_get_render_data_handle(model));
+        prv_model_get_model_renderer(model), prv_model_get_render_data_handle(model),
+        model->skeleton_relative_path != NULL);
 
     vec3_copy(target_data->world_mat[3], out);
 }
-
-static void prv_model_remove_from_model_renderer(te_model* model);
-static void prv_model_add_to_model_renderer(te_model* model);
 
 void
 model_set_skeleton_path(te_model* model, const char* relative_path) {
@@ -720,7 +617,7 @@ model_set_skeleton_path(te_model* model, const char* relative_path) {
     free(model->skeleton_relative_path);
     model->skeleton_relative_path = NULL;
 
-    if (relative_path != NULL) {
+    if (relative_path != NULL && strcmp(relative_path, "") != 0) {
         const size_t len = strlen(relative_path);
         model->skeleton_relative_path = malloc(sizeof(char) * (len + 1));
         memcpy(model->skeleton_relative_path, relative_path, sizeof(char) * len);
@@ -755,11 +652,6 @@ model_get_texture(te_model* model) {
 void
 model_get_texture_tiling(te_model* model, te_vec2 tex_tiling) {
     vec2_copy(model->tex_tiling, tex_tiling);
-}
-
-void
-model_get_uv_offset(te_model* model, te_vec2 uv_offset) {
-    vec2_copy(model->uv_offset, uv_offset);
 }
 
 void
@@ -861,9 +753,10 @@ model_set_parent(te_model* model, te_model* new_parent, unsigned int parent_bone
     if (model->world != NULL) {
         /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
-            prv_model_get_renderer(model), model->render_data_handle);
+            prv_model_get_renderer(model), model->render_data_handle,
+            model->skeleton_relative_path != NULL);
 
-        prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
+        calc_world_mat(model, data->world_mat);
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
     }
 }
@@ -1049,11 +942,29 @@ static void prv_model_load_geo(
 
 static te_aabb_shape prv_model_calc_aabb(te_vertex_pack* vertices);
 
+static bool
+has_non_uniform_scale(te_mat4 world_mat) {
+    te_vec4 translation;
+    te_mat4 rotation;
+    te_vec3 scale;
+    float eps;
+
+    mat4_decompose(world_mat, translation, rotation, scale);
+
+    eps = 0.001f;
+    if (math_abs(scale[0] - scale[1]) > eps || math_abs(scale[0] - scale[2]) > eps) {
+        return true;
+    }
+
+    return false;
+}
+
 static void
 prv_model_add_to_model_renderer(te_model* model) {
     te_game_manager* game_manager;
     te_model_renderer* model_renderer;
-    unsigned int index_count;
+    te_mat4 world_mat;
+    unsigned int index_count, tex_id;
 
 #if defined(DEBUG)
     if (model->world == NULL) {
@@ -1062,19 +973,18 @@ prv_model_add_to_model_renderer(te_model* model) {
     }
 #endif
 
-    /* get shader program */
-    {
-        te_shader_manager* shader_manager = renderer_get_shader_manager(
-            game_manager_get_renderer(world_get_game_manager(model->world)));
+    game_manager = world_get_game_manager(model->world);
 
-        model->shader_prog_id = shader_manager_request_shader(
-            shader_manager,
-            model->custom_vert_relative_path != NULL
-                ? model->custom_vert_relative_path
-                : (model->skeleton_relative_path != NULL ? "engine/shader/skeleton.vert.glsl"
-                                                         : "engine/shader/model.vert.glsl"),
-            model->custom_frag_relative_path != NULL ? model->custom_frag_relative_path
-                                                     : "engine/shader/model.frag.glsl");
+    calc_world_mat(model, world_mat);
+
+    /* setup texture */
+    tex_id = 0;
+    if (model->tex_relative_path != NULL) {
+        te_texture_manager* texture_manager =
+            renderer_get_texture_manager(game_manager_get_renderer(game_manager));
+
+        tex_id = texture_manager_request_texture(
+            texture_manager, model->tex_relative_path, MODEL_TEX_LOAD_OPTION);
     }
 
     /* load geometry */
@@ -1093,26 +1003,50 @@ prv_model_add_to_model_renderer(te_model* model) {
             mesh_generator_cube(&vertices, &indices, &index_count);
         }
 
-        glGenBuffers(1, &model->vbo);
-        glGenBuffers(1, &model->ebo);
+        model->display_list_id = glGenLists(1);
+        glNewList(model->display_list_id, GL_COMPILE);
         {
-            /* vertex buffer */
-            glBindBuffer(GL_ARRAY_BUFFER, model->vbo);
-            glBufferData(
-                GL_ARRAY_BUFFER,
-                (GLsizeiptr)(vertices->vertex_sizeof * vertices->vertex_count), vertices->data,
-                GL_STATIC_DRAW);
+            float* vert_comp;
+            unsigned char* vert_data;
+            te_vec2 uv;
+            unsigned int i;
+            bool non_uniform_scale;
 
-            /* index buffer */
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, model->ebo);
-            glBufferData(
-                GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(sizeof(unsigned short) * index_count),
-                indices, GL_STATIC_DRAW);
+            if (model->disable_backface_culling) {
+                glDisable(GL_CULL_FACE);
+            }
 
-            vertices->set_attribute_pointers();
+            log_warn(__FILE__, __LINE__, "TODO: check if this is calculated correctly");
+            non_uniform_scale = has_non_uniform_scale(world_mat);
+            if (non_uniform_scale) {
+                glEnable(GL_NORMALIZE);
+            }
+
+            glBegin(GL_TRIANGLES);
+            for (i = 0; i < index_count; i++) {
+                vert_data = vertices->data + vertices->vertex_sizeof * indices[i];
+
+                vert_comp = (float*)(vert_data + vertices->attribute_offsets[TE_VA_UV]);
+                vec2_mul(vert_comp, model->tex_tiling, uv);
+                glTexCoord2fv(uv);
+
+                vert_comp = (float*)(vert_data + vertices->attribute_offsets[TE_VA_NORMAL]);
+                glNormal3fv(vert_comp);
+
+                /* do position last as it finishes the vertex creation */
+                vert_comp = (float*)(vert_data + vertices->attribute_offsets[TE_VA_POSITION]);
+                glVertex3fv(vert_comp);
+            }
+            glEnd();
+
+            if (model->disable_backface_culling) {
+                glEnable(GL_CULL_FACE);
+            }
+            if (non_uniform_scale) {
+                glDisable(GL_NORMALIZE);
+            }
         }
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        glEndList();
 
         model->aabb_local = prv_model_calc_aabb(vertices);
 
@@ -1122,8 +1056,6 @@ prv_model_add_to_model_renderer(te_model* model) {
         }
     }
 
-    game_manager = world_get_game_manager(model->world);
-
     if (model->skeleton_relative_path != NULL) {
         model->skeleton =
             prv_skeleton_create(model->skeleton_relative_path, model, game_manager);
@@ -1131,41 +1063,22 @@ prv_model_add_to_model_renderer(te_model* model) {
 
     /* add to rendering */
     model_renderer = prv_model_get_renderer(model);
-    model->render_data_handle = model_renderer_add_model(
-        model_renderer, model->shader_prog_id, model->disable_backface_culling);
+    model->render_data_handle =
+        model_renderer_add_model(model_renderer, model->skeleton_relative_path != NULL);
 
     /* init render data */
     {
-        te_model_render_data* data =
-            model_renderer_get_render_data_tmp(model_renderer, model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(
+            model_renderer, model->render_data_handle, model->skeleton_relative_path != NULL);
 
         vec4_copy(model->color, data->color);
-        prv_model_calc_world_normal_matrices(model, data->world_mat, data->normal_mat);
+        mat4_copy(world_mat, data->world_mat);
 
-        data->vbo = model->vbo;
-        data->ebo = model->ebo;
-        data->index_count = (int)index_count;
-
-        data->tex_id = 0;
-        vec2_set(-1.0f, -1.0f, data->tex_tiling);
-        vec2_copy(model->uv_offset, data->uv_offset);
+        data->display_list_id = model->display_list_id;
+        data->tex_id = tex_id;
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
 
-        if (model->tex_relative_path != NULL) {
-            te_texture_manager* texture_manager =
-                renderer_get_texture_manager(game_manager_get_renderer(game_manager));
-
-            data->tex_id = texture_manager_request_texture(
-                texture_manager, model->tex_relative_path, MODEL_TEX_LOAD_OPTION);
-
-            vec2_copy(model->tex_tiling, data->tex_tiling);
-        }
-
-        data->skinning_mats_count = 0;
-        if (model->skeleton_relative_path != NULL) {
-            data->skinning_mats_count = skeleton_get_bone_count(model->skeleton);
-            data->skinning_mats = skeleton_get_skinning_mats(model->skeleton);
-        }
+        data->gl_face_type = model->disable_backface_culling ? GL_FRONT_AND_BACK : GL_FRONT;
     }
 }
 
@@ -1173,7 +1086,6 @@ static void
 prv_model_remove_from_model_renderer(te_model* model) {
     te_renderer* renderer;
     te_texture_manager* texture_manager;
-    te_shader_manager* shader_manager;
     te_model_renderer* model_renderer;
     unsigned int tex_id;
 
@@ -1186,21 +1098,21 @@ prv_model_remove_from_model_renderer(te_model* model) {
 
     renderer = game_manager_get_renderer(world_get_game_manager(model->world));
     texture_manager = renderer_get_texture_manager(renderer);
-    shader_manager = renderer_get_shader_manager(renderer);
     model_renderer = prv_model_get_renderer(model);
 
     tex_id = 0;
     {
-        te_model_render_data* data =
-            model_renderer_get_render_data_tmp(model_renderer, model->render_data_handle);
+        te_model_render_data* data = model_renderer_get_render_data_tmp(
+            model_renderer, model->render_data_handle, model->skeleton_relative_path != NULL);
         tex_id = data->tex_id;
     }
 
     /* remove from rendering */
-    model_renderer_remove_model(model_renderer, model->render_data_handle);
+    model_renderer_remove_model(
+        model_renderer, model->render_data_handle, model->skeleton_relative_path != NULL);
+    model->render_data_handle = 0xFFFFFFFF;
 
     /* mark unused stuff */
-    shader_manager_mark_unused_shader(shader_manager, model->shader_prog_id);
     if (model->tex_relative_path != NULL) {
         texture_manager_mark_unused_texture(texture_manager, tex_id);
     }
@@ -1211,11 +1123,8 @@ prv_model_remove_from_model_renderer(te_model* model) {
     }
 
     /* release geometry */
-    glDeleteBuffers(1, &model->vbo);
-    glDeleteBuffers(1, &model->ebo);
-
-    model->render_data_handle = 0xffffffff;
-    model->shader_prog_id = 0xffffffff;
+    glDeleteLists(1, model->display_list_id);
+    model->display_list_id = 0xFFFFFFFF;
 
     /* DO NOT: set NULL to world in this function, the caller is expected to do it if needed */
 }
@@ -1230,7 +1139,8 @@ prv_model_get_world_mat_tmp(te_model* model) {
     }
 
     data = model_renderer_get_render_data_tmp(
-        prv_model_get_renderer(model), model->render_data_handle);
+        prv_model_get_renderer(model), model->render_data_handle,
+        model->skeleton_relative_path != NULL);
     return &data->world_mat;
 }
 
@@ -1243,7 +1153,8 @@ prv_model_get_world_aabb(te_model* model) {
     }
 
     data = model_renderer_get_render_data_tmp(
-        prv_model_get_renderer(model), model->render_data_handle);
+        prv_model_get_renderer(model), model->render_data_handle,
+        model->skeleton_relative_path != NULL);
     return &data->aabb_world;
 }
 
@@ -1563,7 +1474,6 @@ model_register_type(void) {
     type_info_add_string_variable(info, "texture", model_set_texture, model_get_texture);
     type_info_add_vec2_variable(
         info, "texture_tiling", model_set_texture_tiling, model_get_texture_tiling);
-    type_info_add_vec2_variable(info, "uv_offset", model_set_uv_offset, model_get_uv_offset);
     type_info_add_uint_variable(
         info, "custom_value", model_set_custom_value, model_get_custom_value);
     type_info_add_bool_variable(

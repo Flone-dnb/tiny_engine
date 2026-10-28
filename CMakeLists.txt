@@ -2,7 +2,6 @@
 
 project(tiny_engine C)
 
-option(ENGINE_GLES "If enabled changes the rendering from regular OpenGL to OpenGL ES which is usually needed for ARM64 Linux retro-handhelds" OFF)
 option(ENGINE_FORCE_ENABLE_DEBUG_TOOLS "Can be useful in Release builds to measure performance, enabled in non-release builds by default" OFF)
 option(ENGINE_DISABLE_ASAN_IN_DEBUG "ASan is enabled in non-release builds, this option disables it. Note that memcheck is still enabled in non-release builds" OFF)
 option(ENGINE_DISABLE_MEMCHECK_IN_DEBUG OFF "Can be used to disable our little memory leak checker")
@@ -80,10 +79,6 @@ function(tiny_engine_configure_target TARGET_NAME)
     elseif(ENGINE_FORCE_ENABLE_DEBUG_TOOLS)
 	    message(WARNING "Note: you enabled ENGINE_DEBUG_TOOLS in release build.")
 	    target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_DEBUG_TOOLS)
-    endif()
-
-    if(ENGINE_GLES)
-        target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_GLES)
     endif()
 
     # Add includes (relative to the target's directory).

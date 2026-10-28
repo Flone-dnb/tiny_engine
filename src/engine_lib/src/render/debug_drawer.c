@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <render/font_manager.h>
 #include <render/renderer.h>
-#include <render/shader_manager.h>
 #include <shape/aabb_shape.h>
 #include <window.h>
 #include <glad/gl.h>
@@ -178,48 +177,6 @@ typedef struct te_debug_drawer_triangle_solid {
     float time_left_sec;
 } te_debug_drawer_triangle_solid;
 
-/* data for the text shader program */
-typedef struct te_debug_drawer_text_shader {
-    unsigned int prog_id;
-
-    int uniform_in_pos;
-    int uniform_in_size;
-    int uniform_clip_rect;
-    int uniform_window_size;
-    int uniform_text_color;
-    int uniform_glyph_rel_size;
-    int uniform_glyph_rel_offset;
-} te_debug_drawer_text_shader;
-
-/* data for the AABB shader program */
-typedef struct te_debug_drawer_aabb_shader {
-    unsigned int prog_id;
-
-    int uniform_pos_offset;
-    int uniform_extents;
-    int uniform_color;
-    int uniform_view_proj_mat;
-} te_debug_drawer_aabb_shader;
-
-/* data for the line shader program */
-typedef struct te_debug_drawer_line_shader {
-    unsigned int prog_id;
-
-    int uniform_from;
-    int uniform_to;
-    int uniform_view_proj_mat;
-} te_debug_drawer_line_shader;
-
-typedef struct te_debug_drawer_triangle_solid_shader {
-    unsigned int prog_id;
-
-    int uniform_v0;
-    int uniform_v1;
-    int uniform_v2;
-    int uniform_color;
-    int uniform_view_proj_mat;
-} te_debug_drawer_triangle_solid_shader;
-
 /* groups debug drawer data */
 typedef struct te_debug_drawer {
     /* do not free this pointer */
@@ -236,27 +193,6 @@ typedef struct te_debug_drawer {
 
     /* array of solid triangles to draw */
     te_double_array* triangles_solid;
-
-    /* quad geometry */
-    unsigned int vbo_quad;
-    unsigned int ebo_quad;
-
-    /* AABB geometry */
-    unsigned int vbo_aabb;
-    unsigned int ebo_aabb;
-
-    /* line geometry */
-    unsigned int vbo_line;
-    unsigned int ebo_line;
-
-    /* triangle geometry */
-    unsigned int vbo_triangle;
-    unsigned int ebo_triangle;
-
-    te_debug_drawer_text_shader text_shader;
-    te_debug_drawer_aabb_shader aabb_shader;
-    te_debug_drawer_line_shader line_shader;
-    te_debug_drawer_triangle_solid_shader triangle_solid_shader;
 } te_debug_drawer;
 
 /* static to allow drawing easily from various places */
@@ -269,211 +205,7 @@ prv_debug_drawer_init(struct te_renderer* renderer) {
     drawer.lines = double_array_create(sizeof(te_debug_drawer_line), 16);
     drawer.triangles_solid = double_array_create(sizeof(te_debug_drawer_triangle_solid), 64);
 
-    drawer.vbo_quad = 0;
-    drawer.ebo_quad = 0;
-
-    drawer.vbo_aabb = 0;
-    drawer.ebo_aabb = 0;
-
-    drawer.vbo_line = 0;
-    drawer.ebo_line = 0;
-
-    drawer.vbo_triangle = 0;
-    drawer.ebo_triangle = 0;
-
     drawer.renderer = renderer;
-
-    /* load text shader */
-    {
-        te_shader_manager* shader_manager = renderer_get_shader_manager(renderer);
-        drawer.text_shader.prog_id = shader_manager_request_shader(
-            shader_manager, "engine/shader/quad.vert.glsl", "engine/shader/text.frag.glsl");
-
-        drawer.text_shader.uniform_in_pos =
-            get_uniform_location(drawer.text_shader.prog_id, "in_pos");
-        drawer.text_shader.uniform_in_size =
-            get_uniform_location(drawer.text_shader.prog_id, "in_size");
-        drawer.text_shader.uniform_clip_rect =
-            get_uniform_location(drawer.text_shader.prog_id, "clip_rect");
-        drawer.text_shader.uniform_window_size =
-            get_uniform_location(drawer.text_shader.prog_id, "window_size");
-        drawer.text_shader.uniform_text_color =
-            get_uniform_location(drawer.text_shader.prog_id, "text_color");
-        drawer.text_shader.uniform_glyph_rel_size =
-            get_uniform_location(drawer.text_shader.prog_id, "glyph_rel_size");
-        drawer.text_shader.uniform_glyph_rel_offset =
-            get_uniform_location(drawer.text_shader.prog_id, "glyph_rel_offset");
-    }
-
-    /* load AABB shader */
-    {
-        te_shader_manager* shader_manager = renderer_get_shader_manager(renderer);
-        drawer.aabb_shader.prog_id = shader_manager_request_shader(
-            shader_manager, "engine/shader/debug/aabb.vert.glsl",
-            "engine/shader/debug/aabb.frag.glsl");
-
-        drawer.aabb_shader.uniform_pos_offset =
-            get_uniform_location(drawer.aabb_shader.prog_id, "pos_offset");
-        drawer.aabb_shader.uniform_extents =
-            get_uniform_location(drawer.aabb_shader.prog_id, "extents");
-        drawer.aabb_shader.uniform_color =
-            get_uniform_location(drawer.aabb_shader.prog_id, "color");
-        drawer.aabb_shader.uniform_view_proj_mat =
-            get_uniform_location(drawer.aabb_shader.prog_id, "view_proj_mat");
-    }
-
-    /* load line shader */
-    {
-        te_shader_manager* shader_manager = renderer_get_shader_manager(renderer);
-        drawer.line_shader.prog_id = shader_manager_request_shader(
-            shader_manager, "engine/shader/debug/line.vert.glsl",
-            "engine/shader/debug/line.frag.glsl");
-
-        drawer.line_shader.uniform_from =
-            get_uniform_location(drawer.line_shader.prog_id, "from");
-        drawer.line_shader.uniform_to = get_uniform_location(drawer.line_shader.prog_id, "to");
-        drawer.line_shader.uniform_view_proj_mat =
-            get_uniform_location(drawer.line_shader.prog_id, "view_proj_mat");
-    }
-
-    /* load triangle shader */
-    {
-        te_shader_manager* shader_manager = renderer_get_shader_manager(renderer);
-        drawer.triangle_solid_shader.prog_id = shader_manager_request_shader(
-            shader_manager, "engine/shader/debug/triangle_solid.vert.glsl",
-            "engine/shader/debug/triangle_solid.frag.glsl");
-
-        drawer.triangle_solid_shader.uniform_v0 =
-            get_uniform_location(drawer.triangle_solid_shader.prog_id, "v0");
-        drawer.triangle_solid_shader.uniform_v1 =
-            get_uniform_location(drawer.triangle_solid_shader.prog_id, "v1");
-        drawer.triangle_solid_shader.uniform_v2 =
-            get_uniform_location(drawer.triangle_solid_shader.prog_id, "v2");
-        drawer.triangle_solid_shader.uniform_color =
-            get_uniform_location(drawer.triangle_solid_shader.prog_id, "color");
-        drawer.triangle_solid_shader.uniform_view_proj_mat =
-            get_uniform_location(drawer.triangle_solid_shader.prog_id, "view_proj_mat");
-    }
-
-    /* create quad geometry */
-    {
-        const unsigned short indices[6] = {0, 1, 2, 0, 2, 3};
-        te_vec4 vertices[4]; /* XY pos, ZW uv */
-        vec4_set(0.0f, 0.0f, 0.0f, 0.0f, &vertices[0][0]);
-        vec4_set(0.0f, 1.0f, 0.0f, 1.0f, &vertices[1][0]);
-        vec4_set(1.0f, 1.0f, 1.0f, 1.0f, &vertices[2][0]);
-        vec4_set(1.0f, 0.0f, 1.0f, 0.0f, &vertices[3][0]);
-
-        glGenBuffers(1, &drawer.vbo_quad);
-        glGenBuffers(1, &drawer.ebo_quad);
-
-        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_quad);
-        glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(te_vec4), &vertices[0][0], GL_STATIC_DRAW);
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_quad);
-        glBufferData(
-            GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
-
-#if defined(ENGINE_GLES)
-        glBindAttribLocation(drawer.text_shader.prog_id, 0, "vertex");
-#endif
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    }
-
-    /* create AABB geometry (using lines) */
-    {
-        te_vec3 vertices[8];
-
-        const unsigned short indices[TE_DEBUG_DRAWER_AABB_INDEX_COUNT] = {
-            0, 1, 1, 2, 2, 3, 3, 0, /* lower quad */
-            4, 5, 5, 6, 6, 7, 7, 4, /* upper quad */
-            0, 4, 1, 5, 2, 6, 3, 7  /* vertical lines */
-        };
-
-        te_vec3 extents;
-        vec3_set(1.0f, 1.0f, 1.0f, extents);
-
-        vec3_set(-extents[0], -extents[1], -extents[2], &vertices[0][0]);
-        vec3_set(+extents[0], -extents[1], -extents[2], &vertices[1][0]);
-        vec3_set(+extents[0], -extents[1], +extents[2], &vertices[2][0]);
-        vec3_set(-extents[0], -extents[1], +extents[2], &vertices[3][0]);
-
-        vec3_set(-extents[0], +extents[1], -extents[2], &vertices[4][0]);
-        vec3_set(+extents[0], +extents[1], -extents[2], &vertices[5][0]);
-        vec3_set(+extents[0], +extents[1], +extents[2], &vertices[6][0]);
-        vec3_set(-extents[0], +extents[1], +extents[2], &vertices[7][0]);
-
-        glGenBuffers(1, &drawer.vbo_aabb);
-        glGenBuffers(1, &drawer.ebo_aabb);
-
-        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_aabb);
-        glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(te_vec3), &vertices[0][0], GL_STATIC_DRAW);
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_aabb);
-        glBufferData(
-            GL_ELEMENT_ARRAY_BUFFER, 24 * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
-
-#if defined(ENGINE_GLES)
-        glBindAttribLocation(drawer.aabb_shader.prog_id, 0, "local_pos");
-#endif
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    }
-
-    /* create line geometry */
-    {
-        const unsigned short indices[2] = {0, 1};
-        te_vec3 vertices[2];
-
-        vec3_set(0.0f, 0.0f, 0.0f, &vertices[0][0]);
-        vec3_set(1.0f, 1.0f, 1.0f, &vertices[1][0]);
-
-        glGenBuffers(1, &drawer.vbo_line);
-        glGenBuffers(1, &drawer.ebo_line);
-
-        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_line);
-        glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(te_vec3), &vertices[0][0], GL_STATIC_DRAW);
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_line);
-        glBufferData(
-            GL_ELEMENT_ARRAY_BUFFER, 2 * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
-
-#if defined(ENGINE_GLES)
-        glBindAttribLocation(drawer.line_shader.prog_id, 0, "local_pos");
-#endif
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    }
-
-    /* create triangle geometry */
-    {
-        const unsigned short indices[3] = {0, 1, 2};
-        te_vec3 vertices[3];
-        vec3_set(0.0f, 0.0f, 0.0f, vertices[0]);
-        vec3_set(1.0f, 0.0f, 0.0f, vertices[1]);
-        vec3_set(2.0f, 0.0f, 0.0f, vertices[2]);
-
-        glGenBuffers(1, &drawer.vbo_triangle);
-        glGenBuffers(1, &drawer.ebo_triangle);
-
-        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_triangle);
-        glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(te_vec3), &vertices[0], GL_STATIC_DRAW);
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_triangle);
-        glBufferData(
-            GL_ELEMENT_ARRAY_BUFFER, 3 * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
-
-#if defined(ENGINE_GLES)
-        glBindAttribLocation(drawer.triangle_solid_shader.prog_id, 0, "local_pos");
-#endif
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    }
 }
 
 void
@@ -483,8 +215,7 @@ prv_debug_drawer_free_text(te_debug_drawer_text* text) {
 }
 
 void
-prv_debug_drawer_deinit(struct te_renderer* renderer) {
-    te_shader_manager* shader_manager;
+prv_debug_drawer_deinit(void) {
     unsigned int i;
 
     /* free debug objects */
@@ -503,26 +234,6 @@ prv_debug_drawer_deinit(struct te_renderer* renderer) {
 
     double_array_destroy(drawer.triangles_solid);
     drawer.triangles_solid = NULL;
-
-    /* free shaders */
-    shader_manager = renderer_get_shader_manager(renderer);
-    shader_manager_mark_unused_shader(shader_manager, drawer.text_shader.prog_id);
-    shader_manager_mark_unused_shader(shader_manager, drawer.aabb_shader.prog_id);
-    shader_manager_mark_unused_shader(shader_manager, drawer.line_shader.prog_id);
-    shader_manager_mark_unused_shader(shader_manager, drawer.triangle_solid_shader.prog_id);
-
-    /* free geometry */
-    glDeleteBuffers(1, &drawer.vbo_quad);
-    glDeleteBuffers(1, &drawer.ebo_quad);
-
-    glDeleteBuffers(1, &drawer.vbo_aabb);
-    glDeleteBuffers(1, &drawer.ebo_aabb);
-
-    glDeleteBuffers(1, &drawer.vbo_line);
-    glDeleteBuffers(1, &drawer.ebo_line);
-
-    glDeleteBuffers(1, &drawer.vbo_triangle);
-    glDeleteBuffers(1, &drawer.ebo_triangle);
 
     drawer.renderer = NULL;
 }
@@ -693,7 +404,7 @@ debug_drawer_get_default_text_height(void) {
 
 void
 prv_debug_drawer_draw(
-    struct te_renderer* renderer, float delta_time_sec, te_mat4* view_proj_mat) {
+    struct te_renderer* renderer, float delta_time_sec, te_mat4* view_mat, te_mat4* proj_mat) {
     unsigned int window_width;
     unsigned int window_height;
     unsigned int old_line_count;
@@ -706,39 +417,40 @@ prv_debug_drawer_draw(
     window_get_size(renderer_get_window(renderer), &window_width, &window_height);
     vec2_set((float)window_width, (float)window_height, window_size);
 
+    glDisable(GL_LIGHTING);
+    glDisable(GL_FOG);
+
     glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    /* setup global matrices */
+    glMatrixMode(GL_PROJECTION);
+    glLoadMatrixf((*proj_mat)[0]);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadMatrixf((*view_mat)[0]);
+
+    glDisable(GL_TEXTURE_2D);
 
     old_triangle_count = double_array_get_size(drawer.triangles_solid);
     if (old_triangle_count > 0) {
         te_debug_drawer_triangle_solid* triangles;
-
-        glUseProgram(drawer.triangle_solid_shader.prog_id);
-
-        glDisable(GL_CULL_FACE);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_triangle);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_triangle);
-        
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_vec3), NULL);
-
-        glUniformMatrix4fv(
-            drawer.triangle_solid_shader.uniform_view_proj_mat, 1, GL_FALSE,
-            (*view_proj_mat)[0]);
 
         triangles = double_array_get_data(drawer.triangles_solid);
         double_array_switch_to_empty(drawer.triangles_solid);
         for (i = 0; i < old_triangle_count; i++) {
             te_debug_drawer_triangle_solid* triangle = &triangles[i];
 
-            glUniform3fv(drawer.triangle_solid_shader.uniform_v0, 1, triangle->v0);
-            glUniform3fv(drawer.triangle_solid_shader.uniform_v1, 1, triangle->v1);
-            glUniform3fv(drawer.triangle_solid_shader.uniform_v2, 1, triangle->v2);
-            glUniform4fv(drawer.triangle_solid_shader.uniform_color, 1, triangle->rgba);
+            glColor4fv(triangle->rgba);
 
-            glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_SHORT, NULL);
+            glBegin(GL_TRIANGLES);
+            glVertex3fv(triangle->v0);
+            glVertex3fv(triangle->v1);
+            glVertex3fv(triangle->v2);
+            glEnd();
 
             /* update state */
             triangle->time_left_sec -= delta_time_sec;
@@ -746,35 +458,23 @@ prv_debug_drawer_draw(
                 double_array_add_item(drawer.triangles_solid, triangle);
             }
         }
-
-        glEnable(GL_CULL_FACE);
-        glDisable(GL_BLEND);
     }
 
     old_line_count = double_array_get_size(drawer.lines);
     if (old_line_count > 0) {
         te_debug_drawer_line* lines;
 
-        glUseProgram(drawer.line_shader.prog_id);
-
-        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_line);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_line);
-        
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_vec3), NULL);
-
-        glUniformMatrix4fv(
-            drawer.line_shader.uniform_view_proj_mat, 1, GL_FALSE, (*view_proj_mat)[0]);
-
         lines = double_array_get_data(drawer.lines);
         double_array_switch_to_empty(drawer.lines);
         for (i = 0; i < old_line_count; i++) {
             te_debug_drawer_line* line = &lines[i];
 
-            glUniform3fv(drawer.line_shader.uniform_from, 1, line->from);
-            glUniform3fv(drawer.line_shader.uniform_to, 1, line->to);
+            glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-            glDrawElements(GL_LINES, 2, GL_UNSIGNED_SHORT, NULL);
+            glBegin(GL_LINES);
+            glVertex3fv(line->from);
+            glVertex3fv(line->to);
+            glEnd();
 
             /* update state */
             line->time_left_sec -= delta_time_sec;
@@ -786,30 +486,48 @@ prv_debug_drawer_draw(
 
     old_aabb_count = double_array_get_size(drawer.aabbs);
     if (old_aabb_count > 0) {
+        te_vec3 min, max;
         te_debug_drawer_aabb* aabbs;
-
-        glUseProgram(drawer.aabb_shader.prog_id);
-
-        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_aabb);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_aabb);
-        
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(te_vec3), NULL);
-
-        glUniformMatrix4fv(
-            drawer.aabb_shader.uniform_view_proj_mat, 1, GL_FALSE, (*view_proj_mat)[0]);
 
         aabbs = double_array_get_data(drawer.aabbs);
         double_array_switch_to_empty(drawer.aabbs);
         for (i = 0; i < old_aabb_count; i++) {
             te_debug_drawer_aabb* data = &aabbs[i];
 
-            glUniform3fv(drawer.aabb_shader.uniform_pos_offset, 1, data->aabb.center);
-            glUniform3fv(drawer.aabb_shader.uniform_extents, 1, data->aabb.extents);
-            glUniform3fv(drawer.aabb_shader.uniform_color, 1, data->color);
+            vec3_sub(data->aabb.center, data->aabb.extents, min);
+            vec3_add(data->aabb.center, data->aabb.extents, max);
 
-            glDrawElements(
-                GL_LINES, TE_DEBUG_DRAWER_AABB_INDEX_COUNT, GL_UNSIGNED_SHORT, NULL);
+            glColor4fv(data->color);
+
+            glBegin(GL_LINES);
+            /* bottom face */
+            glVertex3f(min[0], min[1], min[2]);
+            glVertex3f(max[0], min[1], min[2]);
+            glVertex3f(max[0], min[1], min[2]);
+            glVertex3f(max[0], max[1], min[2]);
+            glVertex3f(max[0], max[1], min[2]);
+            glVertex3f(min[0], max[1], min[2]);
+            glVertex3f(min[0], max[1], min[2]);
+            glVertex3f(min[0], min[1], min[2]);
+            /* top face */
+            glVertex3f(min[0], min[1], max[2]);
+            glVertex3f(max[0], min[1], max[2]);
+            glVertex3f(max[0], min[1], max[2]);
+            glVertex3f(max[0], max[1], max[2]);
+            glVertex3f(max[0], max[1], max[2]);
+            glVertex3f(min[0], max[1], max[2]);
+            glVertex3f(min[0], max[1], max[2]);
+            glVertex3f(min[0], min[1], max[2]);
+            /* vertical lines */
+            glVertex3f(min[0], min[1], min[2]);
+            glVertex3f(min[0], min[1], max[2]);
+            glVertex3f(max[0], min[1], min[2]);
+            glVertex3f(max[0], min[1], max[2]);
+            glVertex3f(max[0], max[1], min[2]);
+            glVertex3f(max[0], max[1], max[2]);
+            glVertex3f(min[0], max[1], min[2]);
+            glVertex3f(min[0], max[1], max[2]);
+            glEnd();
 
             /* update state */
             data->time_left_sec -= delta_time_sec;
@@ -819,10 +537,10 @@ prv_debug_drawer_draw(
         }
     }
 
+    /* lastly draw text */
     old_text_count = double_array_get_size(drawer.texts);
     if (old_text_count > 0) {
         te_debug_drawer_text* texts;
-        te_vec4 clip_rect;
         te_vec2 screen_pos;
         float text_height;
         float auto_screen_y;
@@ -834,23 +552,16 @@ prv_debug_drawer_draw(
             (float)font_manager_get_font_height_pix(font_manager) / (float)window_height;
         font_scale = debug_drawer_default_text_height / font_height_rel;
 
+        glEnable(GL_TEXTURE_2D);
         font_bitmap_id = font_manager_get_font_bitmap_id(font_manager);
-
-        glUseProgram(drawer.text_shader.prog_id);
-
-        glBindBuffer(GL_ARRAY_BUFFER, drawer.vbo_quad);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawer.ebo_quad);
-        
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(te_vec4), NULL);
-
-        glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, font_bitmap_id);
 
-        vec4_set(0.0f, 0.0f, 1.0f, 1.0f, clip_rect);
-        glUniform4fv(drawer.text_shader.uniform_clip_rect, 1, clip_rect);
-
-        glUniform2fv(drawer.text_shader.uniform_window_size, 1, window_size);
+        /* we want to specify text in pixels */
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glOrtho(0.0f, (float)window_width, (float)window_height, 0.0f, -1.0f, 1.0f);
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
 
         /* prepare starting position for the first text (relative to screen's top-left corner)
          * x will be reset on every text so it's defined below */
@@ -860,9 +571,6 @@ prv_debug_drawer_draw(
 #else
         screen_pos[1] = (float)window_height * 0.1f;
 #endif
-
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         texts = double_array_get_data(drawer.texts);
         double_array_switch_to_empty(drawer.texts);
@@ -882,26 +590,38 @@ prv_debug_drawer_draw(
             }
             screen_pos[1] += text_height;
 
-            glUniform4fv(drawer.text_shader.uniform_text_color, 1, text->color);
+            glColor4fv(text->color);
 
             /* draw each glyph */
             for (i = 0; i < text->text_len; i++) {
-                if (text->glyphs[i].size[0] == 0.0f) {
-                    screen_pos[0] += text->glyphs[i].distance_to_next_glyph;
+                te_debug_drawer_glyph* glyph = &text->glyphs[i];
+                if (glyph->size[0] == 0.0f) {
+                    screen_pos[0] += glyph->distance_to_next_glyph;
                 } else {
                     te_vec2 glyph_pos;
-                    vec2_add(screen_pos, text->glyphs[i].pos_offset, glyph_pos);
+                    vec2_add(screen_pos, glyph->pos_offset, glyph_pos);
 
-                    glUniform2fv(drawer.text_shader.uniform_in_pos, 1, glyph_pos);
-                    glUniform2fv(drawer.text_shader.uniform_in_size, 1, text->glyphs[i].size);
-                    glUniform2fv(
-                        drawer.text_shader.uniform_glyph_rel_size, 1,
-                        text->glyphs[i].glyph_rel_size);
-                    glUniform2fv(
-                        drawer.text_shader.uniform_glyph_rel_offset, 1,
-                        text->glyphs[i].glyph_rel_offset);
+                    glBegin(GL_QUADS);
 
-                    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
+                    glTexCoord2fv(glyph->glyph_rel_offset);
+                    glVertex2fv(glyph_pos);
+
+                    glTexCoord2f(
+                        glyph->glyph_rel_offset[0] + glyph->glyph_rel_size[0],
+                        glyph->glyph_rel_offset[1]);
+                    glVertex2f(glyph_pos[0] + glyph->size[0], glyph_pos[1]);
+
+                    glTexCoord2f(
+                        glyph->glyph_rel_offset[0] + glyph->glyph_rel_size[0],
+                        glyph->glyph_rel_offset[1] + glyph->glyph_rel_size[1]);
+                    glVertex2f(glyph_pos[0] + glyph->size[0], glyph_pos[1] + glyph->size[1]);
+
+                    glTexCoord2f(
+                        glyph->glyph_rel_offset[0],
+                        glyph->glyph_rel_offset[1] + glyph->glyph_rel_size[1]);
+                    glVertex2f(glyph_pos[0], glyph_pos[1] + glyph->size[1]);
+
+                    glEnd();
                 }
                 screen_pos[0] += text->glyphs[i].distance_to_next_glyph;
             }
@@ -920,10 +640,13 @@ prv_debug_drawer_draw(
             }
         }
 
-        glDisable(GL_BLEND);
+        glDisable(GL_TEXTURE_2D);
     }
 
+    glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
+
+    glDisable(GL_BLEND);
 }
 
 #endif

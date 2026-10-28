@@ -109,12 +109,10 @@ texture_manager_request_texture(
 
             glBindTexture(GL_TEXTURE_2D, tex_id);
             {
-#if !defined(ENGINE_GLES)
                 if (opt == TE_TLO_GENERATE_MIPMAPS) {
                     /* generates mipmaps on the next glTexImage2D call */
                     glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
                 }
-#endif
 
                 glTexParameteri(
                     GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
@@ -127,13 +125,6 @@ texture_manager_request_texture(
 
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-#if defined(ENGINE_GLES)
-                if (opt == TE_TLO_GENERATE_MIPMAPS) {
-                    /* generates mipmaps based on the current image data */
-                    glGenerateMipmap(GL_TEXTURE_2D);
-                }
-#endif
             }
             glBindTexture(GL_TEXTURE_2D, 0);
             stbi_image_free(pixels);

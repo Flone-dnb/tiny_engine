@@ -41,7 +41,6 @@ set(PROJECT_SOURCES
     src/math/mat4.c
     src/render/renderer.c
     src/render/model_renderer.c
-    src/render/shader_manager.c
     src/render/texture_manager.c
     src/render/font_manager.c
     src/render/debug_drawer.c
@@ -99,7 +98,6 @@ set(PROJECT_SOURCES
     include/game_manager.h
     include/sound_manager.h
     include/render/renderer.h
-    include/render/shader_manager.h
     include/render/texture_manager.h
     include/render/font_manager.h
     include/render/debug_drawer.h
@@ -178,22 +176,12 @@ endif()
 # Add GLAD.
 message(STATUS "${PROJECT_NAME}: adding dependency \"GLAD\"...")
 set(GLAD_TARGET_NAME glad)
-if(ENGINE_GLES)
-    set(GLAD_PATH ${RELATIVE_EXT_PATH}/glad_gles20)
-else()
-    set(GLAD_PATH ${RELATIVE_EXT_PATH}/glad_gl20)
-endif()
+set(GLAD_PATH ${RELATIVE_EXT_PATH}/glad)
 add_library(${GLAD_TARGET_NAME} STATIC
     ${GLAD_PATH}/src/gl.c
     ${GLAD_PATH}/include/KHR/khrplatform.h
     ${GLAD_PATH}/include/glad/gl.h
 )
-if(ENGINE_GLES)
-    target_sources(${GLAD_TARGET_NAME} PRIVATE
-        ${GLAD_PATH}/src/egl.c
-        ${GLAD_PATH}/include/glad/egl.h
-    )
-endif()
 if(NOT MSVC)
     target_sources(${GLAD_TARGET_NAME} PRIVATE
         ${GLAD_PATH}/src/glx.c

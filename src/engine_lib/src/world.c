@@ -28,9 +28,12 @@
 #define CONFIG_VAR_NAME_HAS_ATTACHED_CAMERA "has_attached_camera"
 #define CONFIG_VAR_NAME_CHILD_WIDGET_COUNT "child_widget_count"
 
-#if defined(ENGINE_GLES)
-#define glGenQueries glGenQueriesEXT
-#define glDeleteQueries glDeleteQueriesEXT
+#if defined(ENGINE_DEBUG_TOOLS)
+static bool
+is_gpu_timers_supported(void) {
+    /* GL_ARB_occlusion_query adds glGenQueriesARB and GL_ARB_timer_query adds GL_TIMESTAMP so check for both */
+    return GLAD_GL_ARB_timer_query == 1 && GLAD_GL_ARB_occlusion_query == 1;
+}
 #endif
 
 /* world represents several objects: audio system, cameras, game objects and etc. */
@@ -150,15 +153,10 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
     world->name[name_len] = 0;
 
 #if defined(ENGINE_DEBUG_TOOLS)
-#if defined(ENGINE_GLES)
-    if (GLAD_GL_EXT_disjoint_timer_query == 1)
-#else
-    if (GLAD_GL_ARB_timer_query == 1)
-#endif
-    {
-        glGenQueries(1, &world->gl_query_draw_models);
-        glGenQueries(1, &world->gl_query_draw_particles);
-        glGenQueries(1, &world->gl_query_draw_widgets);
+    if (is_gpu_timers_supported()) {
+        glGenQueriesARB(1, &world->gl_query_draw_models);
+        glGenQueriesARB(1, &world->gl_query_draw_particles);
+        glGenQueriesARB(1, &world->gl_query_draw_widgets);
     }
 
     /* init timers */
@@ -226,15 +224,10 @@ prv_world_destroy(te_world* world) {
     particle_renderer_destroy(world->particle_renderer);
 
 #if defined(ENGINE_DEBUG_TOOLS)
-#if defined(ENGINE_GLES)
-    if (GLAD_GL_EXT_disjoint_timer_query == 1)
-#else
-    if (GLAD_GL_ARB_timer_query == 1)
-#endif
-    {
-        glDeleteQueries(1, &world->gl_query_draw_models);
-        glDeleteQueries(1, &world->gl_query_draw_particles);
-        glDeleteQueries(1, &world->gl_query_draw_widgets);
+    if (is_gpu_timers_supported()) {
+        glDeleteQueriesARB(1, &world->gl_query_draw_models);
+        glDeleteQueriesARB(1, &world->gl_query_draw_particles);
+        glDeleteQueriesARB(1, &world->gl_query_draw_widgets);
     }
 #endif
 

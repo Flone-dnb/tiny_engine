@@ -700,11 +700,7 @@ x11_window_create(te_os_window* os_window, const char* title) {
         GLX_CONTEXT_MINOR_VERSION_ARB,
         TE_OS_WINDOW_GL_MINOR_VERSION,
         GLX_CONTEXT_PROFILE_MASK_ARB,
-#if !defined(ENGINE_GLES)
         GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
-#else
-        GLX_CONTEXT_ES2_PROFILE_BIT_EXT,
-#endif
 #if defined(DEBUG)
         GLX_CONTEXT_FLAGS_ARB,
         GLX_CONTEXT_DEBUG_BIT_ARB,
@@ -855,11 +851,7 @@ x11_window_create(te_os_window* os_window, const char* title) {
     }
 
     /* init GLAD */
-#if defined(ENGINE_GLES)
-    if (gladLoadGLES2(glad_load_proc) == 0) {
-#else
     if (gladLoadGL(glad_load_proc) == 0) {
-#endif
         log_error(__FILE__, __LINE__, "failed to initialize OpenGL");
         abort();
     }

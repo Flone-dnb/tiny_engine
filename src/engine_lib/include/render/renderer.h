@@ -7,7 +7,6 @@
 typedef struct te_renderer te_renderer;
 
 struct te_window;
-struct te_shader_manager;
 struct te_texture_manager;
 struct te_font_manager;
 
@@ -26,13 +25,14 @@ typedef struct te_light_params {
     /* note: if adding new variables add them to reflection
      * ------------------------------------------------------ */
 
-    te_vec3 ambient_light_color;
+    /* RGB color and intensity */
+    te_vec4 ambient_light_color;
 
     /* backbuffer (background) fill color */
     te_vec3 clear_color;
 
-    /* color if distance fog (if enabled  @ref distance_fog_range) */
-    te_vec3 distance_fog_color;
+    /* RGBA color if distance fog is enabled (see @ref distance_fog_range) */
+    te_vec4 distance_fog_color;
 
     /* stores (-1, -1) if disabled otherwise stores start (min fog) and end (max fog)
      * positions in range [0.0; +inf] as distance from camera */
@@ -52,10 +52,6 @@ void renderer_set_fps_limit(te_renderer* renderer, unsigned int limit);
 
 /* returns window, always valid pointer, do not free/destroy the pointer */
 struct te_window* renderer_get_window(te_renderer* renderer);
-
-/* returns shader manager, always valid pointer
- * do not free/destroy the pointer, valid while the renderer exists */
-struct te_shader_manager* renderer_get_shader_manager(te_renderer* renderer);
 
 /* returns texture manager, always valid pointer
  * do not free/destroy the pointer, valid while the renderer exists */

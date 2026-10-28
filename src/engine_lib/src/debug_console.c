@@ -381,18 +381,11 @@ prv_debug_console_draw(float delta_time_sec) {
             prv_debug_console_draw_stat(
                 screen_pos, "- %s: %.2f", "swap", stats->cpu_time_swap_ms);
 
-#if defined(ENGINE_GLES)
-            if (GLAD_GL_EXT_disjoint_timer_query != 1) {
+            if (GLAD_GL_ARB_timer_query != 1 || GLAD_GL_ARB_occlusion_query != 1) {
                 prv_debug_console_draw_stat(
-                    screen_pos, "%s", "GL_EXT_disjoint_timer_query not supported");
-            } else
-#else
-            if (GLAD_GL_ARB_timer_query != 1) {
-                prv_debug_console_draw_stat(
-                    screen_pos, "%s", "GL_ARB_timer_query not supported");
-            } else
-#endif
-            {
+                    screen_pos, "%s",
+                    "GL_ARB_timer_query and/or GL_ARB_occlusion_query not supported");
+            } else {
                 /* GPU stats */
                 prv_debug_console_draw_stat(
                     screen_pos, "CPU is ahead of the GPU on %u frame(s)",

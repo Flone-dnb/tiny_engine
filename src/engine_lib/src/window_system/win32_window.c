@@ -360,11 +360,7 @@ win32_window_create(te_os_window* os_window, const char* title) {
         WGL_CONTEXT_MINOR_VERSION_ARB,
         TE_OS_WINDOW_GL_MINOR_VERSION,
         WGL_CONTEXT_PROFILE_MASK_ARB,
-#if !defined(ENGINE_GLES)
         WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-#else
-        WGL_CONTEXT_ES2_PROFILE_BIT_EXT,
-#endif
 #if defined(DEBUG)
         WGL_CONTEXT_FLAGS_ARB,
         WGL_CONTEXT_DEBUG_BIT_ARB,
@@ -450,11 +446,7 @@ win32_window_create(te_os_window* os_window, const char* title) {
 
     wglMakeCurrent(win32_window->hdc, win32_window->hglrc);
 
-#if defined(ENGINE_GLES)
-    if (gladLoadGLES2((GLADloadfunc)gladloadproc) == 0) {
-#else
     if (gladLoadGL((GLADloadfunc)gladloadproc) == 0) {
-#endif
 #if defined(WIN32)
         MessageBoxA(NULL, "Error", "failed to initialize OpenGL", MB_OK);
 #endif
