@@ -7,6 +7,7 @@
 #include <io/filesystem.h>
 #include <io/log.h>
 #include <io/paths.h>
+#include <render/texture_manager.h>
 #include <window.h>
 #include <glad/gl.h>
 
@@ -96,6 +97,19 @@ prv_font_manager_destroy(te_font_manager* manager) {
     free(manager);
 }
 
+unsigned int
+round_to_power_of_2(unsigned int x) {
+    x--;
+
+    x |= x >> 1;
+    x |= x >> 2;
+    x |= x >> 4;
+    x |= x >> 8;
+    x |= x >> 16;
+
+    return x + 1;
+}
+
 static void
 load_font_chars(
     te_font_manager* font_manager, FILE* fp, unsigned int char_count,
@@ -106,8 +120,6 @@ load_font_chars(
     unsigned char* packed_bits;
     long curr_pos;
     unsigned int i, byte_idx, bit_idx, y, x;
-    unsigned int gl_type;
-    unsigned int gl_format;
     int prev_unpack_alignment;
 
     unsigned int glyph_padding = 4;             /* empty pixels around the glyph */
@@ -153,6 +165,9 @@ load_font_chars(
     }
     bitmap_size_y += max_row_height;
 
+    /* because OpenGL 1 requires power of 2 textures */
+    bitmap_size_y = round_to_power_of_2(bitmap_size_y);
+
     /* for now just take the first, later will take '?' char */
     font_manager->unknown_glyph_code = glyphs[0].char_code;
 
@@ -186,10 +201,6 @@ load_font_chars(
         }
     }
 
-    /* load bitmap to the GPU */
-    gl_type = GL_UNSIGNED_BYTE;
-    gl_format = GL_LUMINANCE;
-
     /* set byte-alignment to 1 because we will create single-channel textures */
     prev_unpack_alignment = 0;
     glGetIntegerv(GL_UNPACK_ALIGNMENT, &prev_unpack_alignment);
@@ -199,23 +210,13 @@ load_font_chars(
 
         glBindTexture(GL_TEXTURE_2D, font_manager->font_bitmap_id);
         {
-            /* generating a mipmap as a lazy way to remove aliasing from the font */
-            const unsigned int mip_to_use = 1;
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mip_to_use);
-            /* generates mipmaps on the next glTexImage2D call */
-            glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+            /* use mip #1 as mip #0 (as a lazy way to smooth aliasing on the font) */
+            texture_manager_upload_tex_with_mipmaps(
+                bitmap_size_x, bitmap_size_y, 1, bitmap, 1, 1);
 
-            glTexImage2D(
-                GL_TEXTURE_2D, 0, (GLint)gl_format, (int)bitmap_size_x, (int)bitmap_size_y, 0,
-                (GLenum)gl_format, gl_type, bitmap);
-
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
             glTexParameteri(
                 GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); /* don't use mipmaps here */
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, mip_to_use);
         }
         glBindTexture(GL_TEXTURE_2D, 0);
     }
