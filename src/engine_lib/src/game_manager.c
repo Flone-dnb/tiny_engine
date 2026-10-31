@@ -137,7 +137,7 @@ prv_game_manager_destroy(te_game_manager* game_manager) {
 #if defined(ENGINE_DEBUG_TOOLS)
     /* destroy before renderer */
     prv_debug_console_deinit();
-    prv_debug_drawer_deinit(game_manager->renderer);
+    prv_debug_drawer_deinit();
 #endif
 
     renderer_destroy(game_manager->renderer);

@@ -4,31 +4,13 @@
 #include <render/renderer.h>
 #include <render/render_data_array.h>
 #include <glad/gl.h>
+#include <game/camera.h>
 #include <math/vec2.h>
-
-#define PARTICLE_QUAD_GL_VERT_ATTRIB_PTR                                                      \
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(te_vec2), NULL);
-
-typedef struct te_particle_shader_data {
-    int uniform_view_mat;
-    int uniform_proj_mat;
-    int uniform_particle_color;
-    int uniform_in_world_pos_size;
-    int uniform_is_using_tex;
-    int uniform_distance_fog_color;
-    int uniform_distance_fog_range;
-} te_particle_shader_data;
 
 struct te_particle_renderer {
     te_renderer* renderer;
 
     te_render_data_array* emitter_data_array;
-
-    te_particle_shader_data particle_shader_data;
-
-    /* quad geometry */
-    unsigned int vbo;
-    unsigned int ebo;
 };
 
 te_particle_renderer*
@@ -38,51 +20,6 @@ particle_renderer_create(te_renderer* renderer) {
     particle_renderer->renderer = renderer;
     particle_renderer->emitter_data_array =
         render_data_array_create(sizeof(te_particle_emitter_render_data), 2, 4);
-
-    /* load quad shader */
-    {
-        te_particle_shader_data* shader = &particle_renderer->particle_shader_data;
-
-        shader->uniform_view_mat = get_uniform_location(shader->prog_id, "view_mat");
-        shader->uniform_proj_mat = get_uniform_location(shader->prog_id, "proj_mat");
-        shader->uniform_particle_color =
-            get_uniform_location(shader->prog_id, "particle_color");
-        shader->uniform_in_world_pos_size =
-            get_uniform_location(shader->prog_id, "in_world_pos_size");
-        shader->uniform_is_using_tex = get_uniform_location(shader->prog_id, "is_using_tex");
-        shader->uniform_distance_fog_color =
-            get_uniform_location(shader->prog_id, "distance_fog_color");
-        shader->uniform_distance_fog_range =
-            get_uniform_location(shader->prog_id, "distance_fog_range");
-    }
-
-    /* create quad geometry */
-    {
-        const unsigned short indices[6] = {0, 2, 1, 0, 3, 2};
-        te_vec2 vertices[4]; /* XY pos, ZW uv */
-        vec2_set(0.0f, 0.0f, &vertices[0][0]);
-        vec2_set(0.0f, 1.0f, &vertices[1][0]);
-        vec2_set(1.0f, 1.0f, &vertices[2][0]);
-        vec2_set(1.0f, 0.0f, &vertices[3][0]);
-
-        glGenBuffers(1, &particle_renderer->vbo);
-        glGenBuffers(1, &particle_renderer->ebo);
-
-        {
-            /* vertex buffer */
-            glBindBuffer(GL_ARRAY_BUFFER, particle_renderer->vbo);
-            glBufferData(
-                GL_ARRAY_BUFFER, 4 * sizeof(te_vec2), &vertices[0][0], GL_STATIC_DRAW);
-
-            /* index buffer */
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, particle_renderer->ebo);
-            glBufferData(
-                GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned short), &indices[0],
-                GL_STATIC_DRAW);
-        }
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    }
 
     return particle_renderer;
 }
@@ -112,8 +49,8 @@ particle_renderer_get_emitter_render_data_tmp(
 
 void
 particle_renderer_draw(
-    te_particle_renderer* renderer, te_light_params* light_params, te_mat4* view_mat,
-    te_mat4* proj_mat) {
+    te_particle_renderer* renderer, te_camera* camera, te_light_params* light_params,
+    te_mat4* view_proj_mat) {
     unsigned int emitter_count;
 
     glEnable(GL_BLEND);
@@ -122,46 +59,88 @@ particle_renderer_draw(
     emitter_count = render_data_array_get_item_count(renderer->emitter_data_array);
     if (emitter_count > 0) {
         te_particle_emitter_render_data* data;
+        te_vec3 camera_world_right, camera_world_up;
         unsigned int emitter_idx;
         unsigned int particle_idx;
 
-        te_particle_shader_data* shader = &renderer->particle_shader_data;
+        camera_get_right(camera, camera_world_right);
+        camera_get_up(camera, camera_world_up);
 
-        glUseProgram(shader->prog_id);
+        /* note: lighting should be already setup from the model renderer
+	 * here we just need to enable a few things */
+        glEnable(GL_LIGHTING);
+        glEnable(GL_LIGHT0);
+        glEnable(GL_LIGHT1);
+        if (light_params->distance_fog_range[0] >= 0.0f) {
+            glEnable(GL_FOG);
+        } else {
+            glDisable(GL_FOG);
+        }
 
-        glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ebo);
+        /* setup global matrices */
+        /* we want to draw billboards in screen space */
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
 
-        glEnableVertexAttribArray(0);
-        PARTICLE_QUAD_GL_VERT_ATTRIB_PTR
-
-        glActiveTexture(GL_TEXTURE0); /* quad texture */
-
-        glUniformMatrix4fv(shader->uniform_view_mat, 1, GL_FALSE, (*view_mat)[0]);
-        glUniformMatrix4fv(shader->uniform_proj_mat, 1, GL_FALSE, (*proj_mat)[0]);
-
-        /* fog */
-        glUniform3fv(shader->uniform_distance_fog_color, 1, light_params->distance_fog_color);
-        glUniform2fv(shader->uniform_distance_fog_range, 1, light_params->distance_fog_range);
+        glEnable(GL_TEXTURE_2D);
 
         data = render_data_array_get_internal_array(renderer->emitter_data_array);
 
         for (emitter_idx = 0; emitter_idx < emitter_count; emitter_idx++) {
             if (data->particle_count > 0) {
-                glUniform1i(shader->uniform_is_using_tex, data->tex_id > 0);
-                glBindTexture(GL_TEXTURE_2D, data->tex_id);
+                te_particle_render_data* p;
+                te_vec3 side, top;
+                te_vec4 min, max;
+
+                glBindTexture(GL_TEXTURE_2D, data->tex_id); /* binds 0 if not set */
 
                 for (particle_idx = 0; particle_idx < data->particle_count; particle_idx++) {
-                    glUniform4fv(
-                        shader->uniform_particle_color, 1,
-                        data->particles[particle_idx].color);
-                    glUniform4fv(
-                        shader->uniform_in_world_pos_size, 1,
-                        data->particles[particle_idx].pos_and_size);
+                    p = &data->particles[particle_idx];
+                    min[3] = 1.0f;
+                    max[3] = 1.0f;
 
-                    /* note: not using instancing because this implementation will work
-		     * on both regular GL and GLES that we support */
-                    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
+                    vec3_muls(camera_world_right, p->pos_and_size[3] / 2.0f, side);
+                    vec3_muls(camera_world_up, p->pos_and_size[3] / 2.0f, top);
+
+                    /* quad top-right pos */
+                    vec3_add(p->pos_and_size, side, max);
+                    vec3_add(max, top, max);
+
+                    vec3_muls(side, -1.0f, side);
+                    vec3_muls(top, -1.0f, top);
+
+                    /* quad left-bottom pos */
+                    vec3_add(p->pos_and_size, side, min);
+                    vec3_add(min, top, min);
+
+                    mat4_mulv((*view_proj_mat), min, min);
+                    mat4_mulv((*view_proj_mat), max, max);
+                    vec3_divs(min, min[3], min);
+                    vec3_divs(max, max[3], max);
+
+                    if (min[0] > 1.0f || min[1] > 1.0f || max[0] < 0.0f || max[1] < 0.0f) {
+                        continue;
+                    }
+
+                    glBegin(GL_QUADS);
+
+                    glColor4fv(p->color);
+
+                    glTexCoord2f(0.0f, 0.0f);
+                    glVertex2f(min[0], min[1]);
+
+                    glTexCoord2f(0.0f, 1.0f);
+                    glVertex2f(min[0], max[1]);
+
+                    glTexCoord2f(1.0f, 1.0f);
+                    glVertex2f(max[0], max[1]);
+
+                    glTexCoord2f(1.0f, 0.0f);
+                    glVertex2f(max[0], min[1]);
+
+                    glEnd();
                 }
             }
             data += 1;
@@ -169,4 +148,11 @@ particle_renderer_draw(
     }
 
     glDisable(GL_BLEND);
+
+    glDisable(GL_TEXTURE_2D);
+    glDisable(GL_FOG);
+
+    glDisable(GL_LIGHT0);
+    glDisable(GL_LIGHT1);
+    glDisable(GL_LIGHTING);
 }

@@ -81,6 +81,8 @@ bool widget_is_serialization_allowed(te_widget* widget);
  *                                       PRIVATE API
  * ------------------------------------------------------------------------------------------------ */
 
+bool prv_widget_should_generate_mipmaps(void);
+
 /* called to notify the widget about being spawned/despawned
  * recursively call this function on all child nodes */
 void prv_widget_on_spawned(te_widget* widget, struct te_world* world);

@@ -16,7 +16,6 @@
 #include <world.h>
 
 #define INVALID_RENDER_DATA_HANDLE 0xffffffff
-#define RECT_WIDGET_TEX_LOAD_OPTION TE_TLO_NO_MIPMAPS
 
 struct te_rect_widget {
     te_widget* widget;
@@ -205,7 +204,7 @@ rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) 
 
             /* load new texture */
             data->tex_id = texture_manager_request_texture(
-                texture_manager, relative_path, RECT_WIDGET_TEX_LOAD_OPTION);
+                texture_manager, relative_path, prv_widget_should_generate_mipmaps());
         }
     }
 }
@@ -272,7 +271,8 @@ prv_rect_widget_register_for_rendering(te_rect_widget* rect_widget) {
         te_texture_manager* texture_manager =
             renderer_get_texture_manager(game_manager_get_renderer(game_manager));
         data->tex_id = texture_manager_request_texture(
-            texture_manager, rect_widget->tex_relative_path, RECT_WIDGET_TEX_LOAD_OPTION);
+            texture_manager, rect_widget->tex_relative_path,
+            prv_widget_should_generate_mipmaps());
     }
 
     prv_rect_widget_update_non_tex_render_data(rect_widget);

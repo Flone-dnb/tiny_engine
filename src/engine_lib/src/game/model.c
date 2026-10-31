@@ -24,7 +24,7 @@
 #include <world.h>
 #include <glad/gl.h>
 
-#define MODEL_TEX_LOAD_OPTION TE_TLO_GENERATE_MIPMAPS
+#define MODEL_TEX_OPTION_GENERATE_MIPMAPS true
 
 te_vertex_pack*
 vertex_pack_create(unsigned int vertex_count, bool is_skinned) {
@@ -538,7 +538,7 @@ model_set_texture(te_model* model, const char* relative_path) {
                 texture_manager_mark_unused_texture(texture_manager, data->tex_id);
             }
             data->tex_id = texture_manager_request_texture(
-                texture_manager, relative_path, MODEL_TEX_LOAD_OPTION);
+                texture_manager, relative_path, MODEL_TEX_OPTION_GENERATE_MIPMAPS);
         }
     }
 }
@@ -984,7 +984,7 @@ prv_model_add_to_model_renderer(te_model* model) {
             renderer_get_texture_manager(game_manager_get_renderer(game_manager));
 
         tex_id = texture_manager_request_texture(
-            texture_manager, model->tex_relative_path, MODEL_TEX_LOAD_OPTION);
+            texture_manager, model->tex_relative_path, MODEL_TEX_OPTION_GENERATE_MIPMAPS);
     }
 
     /* load geometry */

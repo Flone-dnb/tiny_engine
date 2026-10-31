@@ -15,7 +15,7 @@
 #include <time.h>
 #include <string.h>
 
-#define PARTICLE_EMITTER_TEX_LOAD_OPTION TE_TLO_GENERATE_MIPMAPS
+#define PARTICLE_EMITTER_OPTION_GENERATE_MIPMAPS true
 
 /* data used to simulate a single particle */
 typedef struct te_particle_data {
@@ -255,7 +255,7 @@ particle_emitter_set_texture(te_particle_emitter* emitter, const char* relative_
                 texture_manager_mark_unused_texture(texture_manager, emitter->tex_id);
             }
             emitter->tex_id = texture_manager_request_texture(
-                texture_manager, relative_path, PARTICLE_EMITTER_TEX_LOAD_OPTION);
+                texture_manager, relative_path, PARTICLE_EMITTER_OPTION_GENERATE_MIPMAPS);
 
             /* update render data */
             particle_renderer = world_get_particle_renderer(emitter->world);
@@ -702,7 +702,8 @@ add_to_renderer(te_particle_emitter* emitter) {
             game_manager_get_renderer(world_get_game_manager(emitter->world)));
 
         emitter->tex_id = texture_manager_request_texture(
-            texture_manager, emitter->tex_relative_path, PARTICLE_EMITTER_TEX_LOAD_OPTION);
+            texture_manager, emitter->tex_relative_path,
+            PARTICLE_EMITTER_OPTION_GENERATE_MIPMAPS);
     }
 
     particle_renderer = world_get_particle_renderer(emitter->world);

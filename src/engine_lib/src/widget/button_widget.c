@@ -11,8 +11,6 @@
 #include <widget/widget.h>
 #include <world.h>
 
-#define BUTTON_WIDGET_TEX_LOAD_OPTION TE_TLO_NO_MIPMAPS
-
 struct te_button_widget {
     te_vec4 color;
     te_vec4 color_hovered;
@@ -168,17 +166,18 @@ prv_button_widget_register_render_data(te_button_widget* button_widget) {
         renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(world)));
     if (button_widget->tex_relative_path != NULL) {
         button_widget->tex_id = texture_manager_request_texture(
-            texture_manager, button_widget->tex_relative_path, BUTTON_WIDGET_TEX_LOAD_OPTION);
+            texture_manager, button_widget->tex_relative_path,
+            prv_widget_should_generate_mipmaps());
     }
     if (button_widget->tex_hovered_relative_path != NULL) {
         button_widget->tex_hovered_id = texture_manager_request_texture(
             texture_manager, button_widget->tex_hovered_relative_path,
-            BUTTON_WIDGET_TEX_LOAD_OPTION);
+            prv_widget_should_generate_mipmaps());
     }
     if (button_widget->tex_pressed_relative_path != NULL) {
         button_widget->tex_pressed_id = texture_manager_request_texture(
             texture_manager, button_widget->tex_pressed_relative_path,
-            BUTTON_WIDGET_TEX_LOAD_OPTION);
+            prv_widget_should_generate_mipmaps());
     }
 
     prv_world_add_interactable_widget(world, button_widget->widget);
@@ -383,7 +382,7 @@ button_widget_set_texture(te_button_widget* button_widget, const char* relative_
 
         if (relative_path != NULL) {
             button_widget->tex_id = texture_manager_request_texture(
-                texture_manager, relative_path, BUTTON_WIDGET_TEX_LOAD_OPTION);
+                texture_manager, relative_path, prv_widget_should_generate_mipmaps());
         }
 
         if (!button_widget->is_cursor_inside_widget) {
@@ -418,7 +417,7 @@ button_widget_set_texture_hovered(te_button_widget* button_widget, const char* r
 
         if (relative_path != NULL) {
             button_widget->tex_hovered_id = texture_manager_request_texture(
-                texture_manager, relative_path, BUTTON_WIDGET_TEX_LOAD_OPTION);
+                texture_manager, relative_path, prv_widget_should_generate_mipmaps());
         }
 
         if (button_widget->is_cursor_inside_widget) {
@@ -453,7 +452,7 @@ button_widget_set_texture_pressed(te_button_widget* button_widget, const char* r
 
         if (relative_path != NULL) {
             button_widget->tex_pressed_id = texture_manager_request_texture(
-                texture_manager, relative_path, BUTTON_WIDGET_TEX_LOAD_OPTION);
+                texture_manager, relative_path, prv_widget_should_generate_mipmaps());
         }
     }
 }

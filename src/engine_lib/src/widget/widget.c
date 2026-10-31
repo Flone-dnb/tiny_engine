@@ -467,6 +467,11 @@ widget_is_serialization_allowed(te_widget* widget) {
     return widget->allow_serialization;
 }
 
+bool
+prv_widget_should_generate_mipmaps(void) {
+    return false;
+}
+
 void
 prv_widget_on_spawned(te_widget* widget, te_world* world) {
     unsigned int i;

@@ -38,7 +38,8 @@ test_model_hit(
         return false;
     }
 
-    data = model_renderer_get_render_data_tmp(renderer, handle);
+    data = model_renderer_get_render_data_tmp(
+        renderer, handle, model_get_skeleton_path(model) != NULL);
     if (!frustum_shape_is_aabb_inside(frustum, &data->aabb_world)) {
         return false;
     }

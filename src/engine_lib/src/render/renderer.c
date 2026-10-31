@@ -582,7 +582,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
             (int)((float)window_height * (1.0f - math_min(1.0f, viewport[1] + viewport[3]))),
             (int)viewport_width, (int)viewport_height);
 
-        /* draw models */
+        /* draw models first */
         {
 #if defined(ENGINE_DEBUG_TOOLS)
             const te_hft_t cpu_start_counter = high_freq_timer_now();
@@ -629,7 +629,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 #endif
         }
 
-        /* draw particles */
+        /* then after lighting params were set draw particles */
         {
 #if defined(ENGINE_DEBUG_TOOLS)
             te_hft_t cpu_start_counter;
