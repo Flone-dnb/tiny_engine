@@ -419,12 +419,16 @@ collect_glyphs(
 
                 if (offset[1] > size[1]) {
                     /* reached vertical limit */
-                    glyph_count -= 1;
+                    if (src_glyph->width > 0) {
+                        glyph_count -= 1;
+                    }
                     break;
                 }
             } else {
                 /* reached horizontal limit */
-                glyph_count -= 1;
+                if (src_glyph->width > 0) {
+                    glyph_count -= 1;
+                }
                 break;
             }
         }
