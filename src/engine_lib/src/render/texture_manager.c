@@ -134,8 +134,9 @@ texture_manager_request_texture(
         glBindTexture(GL_TEXTURE_2D, tex_id);
         {
             texture_manager_upload_tex_with_mipmaps(
-                (unsigned int)width, (unsigned int)height, (unsigned int)channel_count, pixels,
-                generate_mipmaps ? 0 : 1, 0);
+                (unsigned int)width, (unsigned int)height,
+                channel_count == 4 ? TE_TF_RGBA : TE_TF_RGB, pixels, generate_mipmaps ? 0 : 1,
+                0);
 
             glTexParameteri(
                 GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
@@ -230,11 +231,11 @@ texture_manager_mark_unused_texture(te_texture_manager* manager, unsigned int te
 
 void
 texture_manager_upload_tex_with_mipmaps(
-    unsigned int tex_width, unsigned int tex_height, unsigned int channel_count,
+    unsigned int tex_width, unsigned int tex_height, enum te_texture_format format,
     unsigned char* tex_data, unsigned int levels_to_write, unsigned int level_skip_count) {
     unsigned char* curr_data;
     unsigned char* next_data;
-    unsigned int y, x, curr_w, curr_h, next_w, next_h;
+    unsigned int y, x, curr_w, curr_h, next_w, next_h, channel_count;
     int gl_format;
 
     unsigned int level = 0;
@@ -244,12 +245,27 @@ texture_manager_upload_tex_with_mipmaps(
         abort();
     }
 
-    if (channel_count == 4) {
-        gl_format = GL_RGBA;
-    } else if (channel_count == 3) {
-        gl_format = GL_RGB;
-    } else {
-        gl_format = GL_ALPHA;
+    switch (format) {
+        case (TE_TF_RGBA): {
+            gl_format = GL_RGBA;
+            channel_count = 4;
+            break;
+        }
+        case (TE_TF_RGB): {
+            gl_format = GL_RGB;
+            channel_count = 3;
+            break;
+        }
+        case (TE_TF_ALPHA): {
+            gl_format = GL_ALPHA;
+            channel_count = 1;
+            break;
+        }
+        case (TE_TF_RED): {
+            gl_format = GL_LUMINANCE;
+            channel_count = 1;
+            break;
+        }
     }
 
     curr_data = malloc(tex_width * tex_height * channel_count);

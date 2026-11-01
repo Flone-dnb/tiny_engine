@@ -212,7 +212,7 @@ load_font_chars(
         {
             /* use mip #1 as mip #0 (as a lazy way to smooth aliasing on the font) */
             texture_manager_upload_tex_with_mipmaps(
-                bitmap_size_x, bitmap_size_y, 1, bitmap, 1, 1);
+                bitmap_size_x, bitmap_size_y, TE_TF_ALPHA, bitmap, 1, 1);
 
             glTexParameteri(
                 GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); /* don't use mipmaps here */
