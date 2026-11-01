@@ -545,7 +545,7 @@ prv_debug_drawer_draw(
         float text_height;
         float auto_screen_y;
         float font_height_rel, font_scale;
-        unsigned int text_idx, font_bitmap_id;
+        unsigned int text_idx;
 
         te_font_manager* font_manager = renderer_get_font_manager(drawer.renderer);
         font_height_rel =
@@ -553,8 +553,7 @@ prv_debug_drawer_draw(
         font_scale = debug_drawer_default_text_height / font_height_rel;
 
         glEnable(GL_TEXTURE_2D);
-        font_bitmap_id = font_manager_get_font_bitmap_id(font_manager);
-        glBindTexture(GL_TEXTURE_2D, font_bitmap_id);
+        glBindTexture(GL_TEXTURE_2D, font_manager_get_font_bitmap_id(font_manager));
 
         /* we want to specify text in pixels */
         glMatrixMode(GL_PROJECTION);
@@ -609,9 +608,9 @@ prv_debug_drawer_draw(
 
                     /* top-left */
                     glTexCoord2f(
-                        glyph->glyph_rel_offset[0] + glyph->glyph_rel_size[0],
-                        glyph->glyph_rel_offset[1]);
-                    glVertex2f(glyph_pos[0] + glyph->size[0], glyph_pos[1]);
+                        glyph->glyph_rel_offset[0],
+                        glyph->glyph_rel_offset[1] + glyph->glyph_rel_size[1]);
+                    glVertex2f(glyph_pos[0], glyph_pos[1] + glyph->size[1]);
 
                     /* top-right */
                     glTexCoord2f(
@@ -621,9 +620,9 @@ prv_debug_drawer_draw(
 
                     /* right-bottom */
                     glTexCoord2f(
-                        glyph->glyph_rel_offset[0],
-                        glyph->glyph_rel_offset[1] + glyph->glyph_rel_size[1]);
-                    glVertex2f(glyph_pos[0], glyph_pos[1] + glyph->size[1]);
+                        glyph->glyph_rel_offset[0] + glyph->glyph_rel_size[0],
+                        glyph->glyph_rel_offset[1]);
+                    glVertex2f(glyph_pos[0] + glyph->size[0], glyph_pos[1]);
 
                     glEnd();
                 }

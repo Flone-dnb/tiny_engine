@@ -711,7 +711,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 
             prv_debug_console_draw(delta_time_sec);
             prv_debug_drawer_draw(
-                renderer, delta_time_sec, camera_get_view_proj_mat(debug_camera),
+                renderer, delta_time_sec, camera_get_view_mat(debug_camera),
                 camera_get_proj_mat(debug_camera));
 
             debug_stats->cpu_time_submit_debug_ms =

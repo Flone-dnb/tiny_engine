@@ -128,14 +128,14 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
+    glEnable(GL_TEXTURE_2D);
+
     /* draw rect widgets */
     rect_widget_count = render_data_array_get_item_count(widget_renderer->rect_widget_data);
     if (rect_widget_count > 0) {
         te_rect_widget_render_data* data;
         unsigned int widget_idx;
         GPU_SECTION_BEGIN("rect");
-
-        glEnable(GL_TEXTURE_2D);
 
         data = render_data_array_get_internal_array(widget_renderer->rect_widget_data);
         for (widget_idx = 0; widget_idx < rect_widget_count; widget_idx++) {
@@ -209,9 +209,9 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
                 /* top-left */
                 glTexCoord2f(
-                    glyph->glyph_rel_offset[0] + glyph->glyph_rel_size[0],
-                    glyph->glyph_rel_offset[1]);
-                glVertex2f(pos_pix[0] + glyph->size_pix[0], pos_pix[1]);
+                    glyph->glyph_rel_offset[0],
+                    glyph->glyph_rel_offset[1] + glyph->glyph_rel_size[1]);
+                glVertex2f(pos_pix[0], pos_pix[1] + glyph->size_pix[1]);
 
                 /* top-right */
                 glTexCoord2f(
@@ -221,9 +221,9 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
                 /* right-bottom */
                 glTexCoord2f(
-                    glyph->glyph_rel_offset[0],
-                    glyph->glyph_rel_offset[1] + glyph->glyph_rel_size[1]);
-                glVertex2f(pos_pix[0], pos_pix[1] + glyph->size_pix[1]);
+                    glyph->glyph_rel_offset[0] + glyph->glyph_rel_size[0],
+                    glyph->glyph_rel_offset[1]);
+                glVertex2f(pos_pix[0] + glyph->size_pix[0], pos_pix[1]);
 
                 glEnd();
             }

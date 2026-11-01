@@ -249,7 +249,7 @@ texture_manager_upload_tex_with_mipmaps(
     } else if (channel_count == 3) {
         gl_format = GL_RGB;
     } else {
-        gl_format = GL_LUMINANCE;
+        gl_format = GL_ALPHA;
     }
 
     curr_data = malloc(tex_width * tex_height * channel_count);
