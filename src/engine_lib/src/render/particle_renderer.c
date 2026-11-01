@@ -128,15 +128,19 @@ particle_renderer_draw(
 
                     glColor4fv(p->color);
 
+                    /* left-bottom */
                     glTexCoord2f(0.0f, 0.0f);
                     glVertex2f(min[0], min[1]);
 
+                    /* top-left */
                     glTexCoord2f(0.0f, 1.0f);
                     glVertex2f(min[0], max[1]);
 
+                    /* top-right */
                     glTexCoord2f(1.0f, 1.0f);
                     glVertex2f(max[0], max[1]);
 
+                    /* right-bottom */
                     glTexCoord2f(1.0f, 0.0f);
                     glVertex2f(max[0], min[1]);
 

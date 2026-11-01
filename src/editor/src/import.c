@@ -229,15 +229,6 @@ import_skeleton(
     FILE* fp;
     unsigned int total_bone_count;
 
-    if (skin->joints_count > TE_MAX_BONE_COUNT) {
-        log_error_fmt(
-            __FILE__, __LINE__,
-            "found skeleton with %zu bones while max allowed bone count is %i, "
-            "you can increase the bone count limit in the C code",
-            skin->joints_count, TE_MAX_BONE_COUNT);
-        abort();
-    }
-
     if (!filesystem_does_path_exists(path_to_anim_dir)) {
         filesystem_create_directory(path_to_anim_dir);
     }

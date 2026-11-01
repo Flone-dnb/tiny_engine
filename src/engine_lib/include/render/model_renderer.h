@@ -17,7 +17,15 @@ typedef struct te_model_render_data {
     te_mat4 world_mat;
     te_vec4 color;
 
-    unsigned int display_list_id;
+    /* NULL if not using a skeleton */
+    unsigned char* animated_vertices;
+    unsigned short* animated_vertex_indices;
+
+    /* if @ref animated_vertices is NULL stores GL display list ID
+     * otherwise index count in @ref animated_vertex_indices */
+    unsigned int list_id_or_idx_count;
+
+    /* 0 if not used */
     unsigned int tex_id;
 
     /* GL_FRONT, GL_FRONT_AND_BACK, GL_BACK */

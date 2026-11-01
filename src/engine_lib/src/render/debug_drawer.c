@@ -603,19 +603,23 @@ prv_debug_drawer_draw(
 
                     glBegin(GL_QUADS);
 
+                    /* left-bottom */
                     glTexCoord2fv(glyph->glyph_rel_offset);
                     glVertex2fv(glyph_pos);
 
+                    /* top-left */
                     glTexCoord2f(
                         glyph->glyph_rel_offset[0] + glyph->glyph_rel_size[0],
                         glyph->glyph_rel_offset[1]);
                     glVertex2f(glyph_pos[0] + glyph->size[0], glyph_pos[1]);
 
+                    /* top-right */
                     glTexCoord2f(
                         glyph->glyph_rel_offset[0] + glyph->glyph_rel_size[0],
                         glyph->glyph_rel_offset[1] + glyph->glyph_rel_size[1]);
                     glVertex2f(glyph_pos[0] + glyph->size[0], glyph_pos[1] + glyph->size[1]);
 
+                    /* right-bottom */
                     glTexCoord2f(
                         glyph->glyph_rel_offset[0],
                         glyph->glyph_rel_offset[1] + glyph->glyph_rel_size[1]);

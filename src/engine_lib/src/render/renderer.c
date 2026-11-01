@@ -541,6 +541,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         te_particle_renderer* particle_renderer;
         te_mat4* proj_mat;
         te_mat4* view_mat;
+        te_mat4* view_proj_mat;
         struct te_frustum_shape* camera_frustum;
         te_vec4 viewport;
         unsigned int viewport_width;
@@ -575,6 +576,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 
         view_mat = camera_get_view_mat(camera);
         proj_mat = camera_get_proj_mat(camera);
+        view_proj_mat = camera_get_view_proj_mat(camera);
         camera_frustum = camera_get_frustum(camera);
 
         glViewport(
@@ -641,7 +643,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 #endif
 
             particle_renderer_draw(
-                particle_renderer, renderer->light_params, view_mat, proj_mat);
+                particle_renderer, camera, renderer->light_params, view_proj_mat);
 
 #if defined(ENGINE_DEBUG_TOOLS)
             if (record_new_queries) {
@@ -709,7 +711,8 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 
             prv_debug_console_draw(delta_time_sec);
             prv_debug_drawer_draw(
-                renderer, delta_time_sec, camera_get_view_proj_mat(debug_camera));
+                renderer, delta_time_sec, camera_get_view_proj_mat(debug_camera),
+                camera_get_proj_mat(debug_camera));
 
             debug_stats->cpu_time_submit_debug_ms =
                 high_freq_timer_get_elapsed_ms(cpu_start_counter);

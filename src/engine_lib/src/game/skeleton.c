@@ -10,7 +10,6 @@
 #include <math/math_funcs.h>
 #include <misc/num_hashtable.h>
 
-struct te_skeleton_bone;
 typedef struct te_skeleton_bone {
     te_mat4 inverse_bind_pose_mat;
 

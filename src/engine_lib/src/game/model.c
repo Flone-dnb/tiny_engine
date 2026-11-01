@@ -26,6 +26,29 @@
 
 #define MODEL_TEX_OPTION_GENERATE_MIPMAPS true
 
+/* a single vertex stored in the GL_VERTEX_ARRAY buffer
+ * used when have a skeleton */
+typedef struct te_skeletal_mesh_vertex {
+    te_vec3 pos;
+    te_vec3 normal;
+    te_vec2 uv;
+} te_skeletal_mesh_vertex;
+
+void
+prv_model_set_skinned_vertex_pointers(unsigned char* vertex_data) {
+    glVertexPointer(3, GL_FLOAT, sizeof(te_skeletal_mesh_vertex), vertex_data);
+    glNormalPointer(GL_FLOAT, sizeof(te_skeletal_mesh_vertex), vertex_data + sizeof(te_vec3));
+    glTexCoordPointer(
+        2, GL_FLOAT, sizeof(te_skeletal_mesh_vertex), vertex_data + sizeof(te_vec3) * 2);
+}
+
+typedef struct te_skeletal_mesh_vertex_src_data {
+    te_vec3 pos;
+    te_vec3 normal;
+    te_vec4 bone_weights;
+    te_vec4 bone_indices;
+} te_skeletal_mesh_vertex_src_data;
+
 te_vertex_pack*
 vertex_pack_create(unsigned int vertex_count, bool is_skinned) {
     te_vertex_pack* pack = malloc(sizeof(te_vertex_pack));
@@ -91,6 +114,16 @@ struct te_model {
     te_camera* attached_camera;
     te_sound** attached_sounds;
 
+    /* if don't have a skeleton used as a static renderable geometry, OpenGL display list ID */
+    unsigned int display_list_id;
+
+    /* NULL if no skeleton, otherwise used as model's geometry instead of @ref display_list_id */
+    te_skeletal_mesh_vertex* animated_vertices;
+    te_skeletal_mesh_vertex_src_data* animated_vertices_src_data;
+    unsigned short* animated_vertex_indices;
+    unsigned int animated_index_count;
+    unsigned int animated_vertex_count;
+
     /* custom user-specified data */
     void* custom_ptr;
     void (*custom_on_before_destroyed)(te_model*);
@@ -123,9 +156,6 @@ struct te_model {
      * to which the model is attached to */
     unsigned int parent_bone_idx;
 
-    /* 0xFFFFFFFF if not being rendered, OpenGL display list ID */
-    unsigned int display_list_id;
-
     /* ID used to unregister tick callback. 0xFFFFFFFF if not registered */
     unsigned int tick_callback_id;
 
@@ -150,6 +180,11 @@ model_create(void) {
     model->parent_bone_idx = 0xFFFFFFFF;
     model->display_list_id = 0xFFFFFFFF;
     model->tick_callback_id = 0xFFFFFFFF;
+    model->animated_vertices_src_data = NULL;
+    model->animated_vertices = NULL;
+    model->animated_vertex_indices = NULL;
+    model->animated_index_count = 0;
+    model->animated_vertex_count = 0;
     model->child_models = NULL;
     model->child_model_count = 0;
     model->attached_sounds = NULL;
@@ -380,6 +415,41 @@ prv_model_update_child_model_mats(te_model* model) {
 
 void
 prv_model_on_after_skeleton_updated(te_model* model) {
+    /* update geometry */
+    unsigned int vert_idx, i;
+    te_skeletal_mesh_vertex_src_data* src;
+    te_skeletal_mesh_vertex* dst;
+    te_vec4 skinned_pos, skinned_normal, pos, normal;
+    te_mat4* skinning_mats = skeleton_get_skinning_mats(model->skeleton);
+    for (vert_idx = 0; vert_idx < model->animated_vertex_count; vert_idx++) {
+        src = &model->animated_vertices_src_data[vert_idx];
+        dst = &model->animated_vertices[vert_idx];
+
+        vec4_zero(skinned_pos);
+        vec4_zero(pos);
+        vec4_zero(skinned_normal);
+        vec4_zero(normal);
+        for (i = 0; i < 4; i++) {
+            te_mat4* bone_mat = &skinning_mats[(int)src->bone_indices[i]];
+
+            vec3_copy(src->pos, pos);
+            pos[3] = 1.0f;
+            mat4_mulv(*bone_mat, pos, pos);
+            vec4_muls(pos, src->bone_weights[i], pos);
+
+            vec4_add(skinned_pos, pos, skinned_pos);
+
+            vec3_copy(src->normal, normal);
+            normal[3] = 0.0f;
+            mat4_mulv(*bone_mat, normal, normal);
+            vec4_muls(normal, src->bone_weights[i], normal);
+
+            vec4_add(skinned_normal, normal, skinned_normal);
+        }
+        vec3_copy(skinned_pos, dst->pos);
+        vec3_copy(skinned_normal, dst->normal);
+    }
+
     prv_model_update_child_model_mats(model);
 }
 
@@ -992,7 +1062,9 @@ prv_model_add_to_model_renderer(te_model* model) {
     {
         te_vertex_pack* vertices;
         unsigned short* indices;
+        unsigned int i;
         bool free_custom_geometry = false;
+
         if (model->custom_get_geometry != NULL) {
             model->custom_get_geometry(
                 model, &vertices, &indices, &index_count, &free_custom_geometry);
@@ -1003,50 +1075,86 @@ prv_model_add_to_model_renderer(te_model* model) {
             mesh_generator_cube(&vertices, &indices, &index_count);
         }
 
-        model->display_list_id = glGenLists(1);
-        glNewList(model->display_list_id, GL_COMPILE);
-        {
-            float* vert_comp;
-            unsigned char* vert_data;
-            te_vec2 uv;
-            unsigned int i;
-            bool non_uniform_scale;
+        if (model->skeleton_relative_path == NULL) {
+            model->display_list_id = glGenLists(1);
+            glNewList(model->display_list_id, GL_COMPILE);
+            {
+                float* vert_comp;
+                unsigned char* vert_data;
+                te_vec2 uv;
+                bool non_uniform_scale;
 
-            if (model->disable_backface_culling) {
-                glDisable(GL_CULL_FACE);
+                if (model->disable_backface_culling) {
+                    glDisable(GL_CULL_FACE);
+                }
+
+                non_uniform_scale = has_non_uniform_scale(world_mat);
+                if (non_uniform_scale) {
+                    glEnable(GL_NORMALIZE);
+                }
+
+                glBegin(GL_TRIANGLES);
+                for (i = 0; i < index_count; i++) {
+                    vert_data = vertices->data + vertices->vertex_sizeof * indices[i];
+
+                    vert_comp = (float*)(vert_data + vertices->attribute_offsets[TE_VA_UV]);
+                    vec2_mul(vert_comp, model->tex_tiling, uv);
+                    glTexCoord2fv(uv);
+
+                    vert_comp =
+                        (float*)(vert_data + vertices->attribute_offsets[TE_VA_NORMAL]);
+                    glNormal3fv(vert_comp);
+
+                    /* do position last as it finishes the vertex creation */
+                    vert_comp =
+                        (float*)(vert_data + vertices->attribute_offsets[TE_VA_POSITION]);
+                    glVertex3fv(vert_comp);
+                }
+                glEnd();
+
+                if (model->disable_backface_culling) {
+                    glEnable(GL_CULL_FACE);
+                }
+                if (non_uniform_scale) {
+                    glDisable(GL_NORMALIZE);
+                }
             }
+            glEndList();
+        } else {
+            model->animated_index_count = index_count;
+            model->animated_vertex_count = vertices->vertex_count;
 
-            log_warn(__FILE__, __LINE__, "TODO: check if this is calculated correctly");
-            non_uniform_scale = has_non_uniform_scale(world_mat);
-            if (non_uniform_scale) {
-                glEnable(GL_NORMALIZE);
-            }
+            model->animated_vertex_indices = malloc(sizeof(unsigned short) * index_count);
+            memcpy(
+                model->animated_vertex_indices, indices, sizeof(unsigned short) * index_count);
 
-            glBegin(GL_TRIANGLES);
-            for (i = 0; i < index_count; i++) {
-                vert_data = vertices->data + vertices->vertex_sizeof * indices[i];
+            model->animated_vertices_src_data =
+                malloc(sizeof(te_skeletal_mesh_vertex_src_data) * vertices->vertex_count);
+            model->animated_vertices =
+                malloc(sizeof(te_skeletal_mesh_vertex) * vertices->vertex_count);
 
-                vert_comp = (float*)(vert_data + vertices->attribute_offsets[TE_VA_UV]);
-                vec2_mul(vert_comp, model->tex_tiling, uv);
-                glTexCoord2fv(uv);
+            for (i = 0; i < vertices->vertex_count; i++) {
+                unsigned char* src = vertices->data + vertices->vertex_sizeof * i;
+                te_skeletal_mesh_vertex* dst = &model->animated_vertices[i];
+                te_skeletal_mesh_vertex_src_data* init_data =
+                    &model->animated_vertices_src_data[i];
 
-                vert_comp = (float*)(vert_data + vertices->attribute_offsets[TE_VA_NORMAL]);
-                glNormal3fv(vert_comp);
+                vec3_copy(
+                    (float*)(src + vertices->attribute_offsets[TE_VA_POSITION]), dst->pos);
+                vec3_copy(
+                    (float*)(src + vertices->attribute_offsets[TE_VA_NORMAL]), dst->normal);
+                vec2_copy((float*)(src + vertices->attribute_offsets[TE_VA_UV]), dst->uv);
 
-                /* do position last as it finishes the vertex creation */
-                vert_comp = (float*)(vert_data + vertices->attribute_offsets[TE_VA_POSITION]);
-                glVertex3fv(vert_comp);
-            }
-            glEnd();
-
-            if (model->disable_backface_culling) {
-                glEnable(GL_CULL_FACE);
-            }
-            if (non_uniform_scale) {
-                glDisable(GL_NORMALIZE);
+                vec3_copy(dst->pos, init_data->pos);
+                vec3_copy(dst->normal, init_data->normal);
+                vec4_copy(
+                    (float*)(src + vertices->attribute_offsets[TE_VA_BONE_WEIGHTS]),
+                    init_data->bone_weights);
+                vec4_copy(
+                    (float*)(src + vertices->attribute_offsets[TE_VA_BONE_INDICES]),
+                    init_data->bone_indices);
             }
         }
-        glEndList();
 
         model->aabb_local = prv_model_calc_aabb(vertices);
 
@@ -1074,7 +1182,15 @@ prv_model_add_to_model_renderer(te_model* model) {
         vec4_copy(model->color, data->color);
         mat4_copy(world_mat, data->world_mat);
 
-        data->display_list_id = model->display_list_id;
+        if (model->skeleton_relative_path == NULL) {
+            data->list_id_or_idx_count = model->display_list_id;
+            data->animated_vertex_indices = NULL;
+            data->animated_vertices = NULL;
+        } else {
+            data->list_id_or_idx_count = index_count;
+            data->animated_vertices = (unsigned char*)model->animated_vertices;
+            data->animated_vertex_indices = model->animated_vertex_indices;
+        }
         data->tex_id = tex_id;
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
 
@@ -1123,8 +1239,22 @@ prv_model_remove_from_model_renderer(te_model* model) {
     }
 
     /* release geometry */
-    glDeleteLists(1, model->display_list_id);
-    model->display_list_id = 0xFFFFFFFF;
+    if (model->display_list_id != 0xFFFFFFFF) {
+        glDeleteLists(1, model->display_list_id);
+        model->display_list_id = 0xFFFFFFFF;
+    } else {
+        model->animated_index_count = 0;
+        model->animated_vertex_count = 0;
+
+        free(model->animated_vertex_indices);
+        model->animated_vertex_indices = NULL;
+
+        free(model->animated_vertices);
+        model->animated_vertices = NULL;
+
+        free(model->animated_vertices_src_data);
+        model->animated_vertices_src_data = NULL;
+    }
 
     /* DO NOT: set NULL to world in this function, the caller is expected to do it if needed */
 }

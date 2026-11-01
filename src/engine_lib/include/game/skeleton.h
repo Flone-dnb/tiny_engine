@@ -31,7 +31,7 @@ void skeleton_unload_animations(te_skeleton* skeleton);
 /* returns the total number of bones the skeleton has */
 unsigned int skeleton_get_bone_count(te_skeleton* skeleton);
 
-/* returns an array where each matrix stores the final transform of a bone (to be passed to the shader)
+/* returns an array where each matrix stores the final transform of a bone (converts vertex data in model space),
  * matrices in this array will be updated every time @ref skeleton_update is called
  * do not free returned pointer, valid while the skeleton is not destroyed */
 te_mat4* skeleton_get_skinning_mats(te_skeleton* skeleton);
@@ -39,10 +39,6 @@ te_mat4* skeleton_get_skinning_mats(te_skeleton* skeleton);
 /* ------------------------------------------------------------------------------------------------
  *                                       PRIVATE API
  * ------------------------------------------------------------------------------------------------ */
-
-/* same as in skeleton.vert.glsl
- * you can increase this value if needed (but also update the shader) */
-#define TE_MAX_BONE_COUNT 80
 
 enum te_animation_channel_type {
     TE_ACT_POSITION = 0,

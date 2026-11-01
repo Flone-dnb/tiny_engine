@@ -10,32 +10,6 @@
 #include <window.h>
 #include <glad/gl.h>
 
-#define WIDGET_QUAD_GL_VERT_ATTRIB_PTR                                                        \
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(te_vec4), NULL);
-
-/* groups data related to the text shader program */
-typedef struct te_text_shader_data {
-    int uniform_in_pos;
-    int uniform_in_size;
-    int uniform_clip_rect;
-    int uniform_window_size;
-    int uniform_text_color;
-    int uniform_glyph_rel_size;
-    int uniform_glyph_rel_offset;
-} te_text_shader_data;
-
-/* groups data related to the quad shader program */
-typedef struct te_quad_shader_data {
-    unsigned int prog_id;
-
-    int uniform_in_pos;
-    int uniform_in_size;
-    int uniform_clip_rect;
-    int uniform_window_size;
-    int uniform_is_using_tex;
-    int uniform_quad_color;
-} te_quad_shader_data;
-
 struct te_widget_renderer {
     te_render_data_array* text_widget_data;
     te_render_data_array* rect_widget_data;
@@ -43,13 +17,6 @@ struct te_widget_renderer {
     /* do not free/destroy this pointer */
     te_renderer* renderer;
     te_font_manager* font_manager;
-
-    /* quad geometry */
-    unsigned int vbo;
-    unsigned int ebo;
-
-    te_text_shader_data text_shader;
-    te_quad_shader_data quad_shader;
 };
 
 te_widget_renderer*
@@ -62,60 +29,6 @@ widget_renderer_create(te_renderer* renderer) {
         render_data_array_create(sizeof(te_text_widget_render_data), 64, 64);
     widget_renderer->rect_widget_data =
         render_data_array_create(sizeof(te_rect_widget_render_data), 32, 32);
-
-    /* load text shader */
-    {
-        te_text_shader_data* shader = &widget_renderer->text_shader;
-
-        shader->uniform_in_pos = get_uniform_location(shader->prog_id, "in_pos");
-        shader->uniform_in_size = get_uniform_location(shader->prog_id, "in_size");
-        shader->uniform_clip_rect = get_uniform_location(shader->prog_id, "clip_rect");
-        shader->uniform_window_size = get_uniform_location(shader->prog_id, "window_size");
-        shader->uniform_text_color = get_uniform_location(shader->prog_id, "text_color");
-        shader->uniform_glyph_rel_size =
-            get_uniform_location(shader->prog_id, "glyph_rel_size");
-        shader->uniform_glyph_rel_offset =
-            get_uniform_location(shader->prog_id, "glyph_rel_offset");
-    }
-
-    /* load quad shader */
-    {
-        te_quad_shader_data* shader = &widget_renderer->quad_shader;
-
-        shader->uniform_in_pos = get_uniform_location(shader->prog_id, "in_pos");
-        shader->uniform_in_size = get_uniform_location(shader->prog_id, "in_size");
-        shader->uniform_clip_rect = get_uniform_location(shader->prog_id, "clip_rect");
-        shader->uniform_window_size = get_uniform_location(shader->prog_id, "window_size");
-        shader->uniform_is_using_tex = get_uniform_location(shader->prog_id, "is_using_tex");
-        shader->uniform_quad_color = get_uniform_location(shader->prog_id, "quad_color");
-    }
-
-    /* create quad geometry */
-    {
-        const unsigned short indices[6] = {0, 1, 2, 0, 2, 3};
-        te_vec4 vertices[4]; /* XY pos, ZW uv */
-        vec4_set(0.0f, 0.0f, 0.0f, 0.0f, &vertices[0][0]);
-        vec4_set(0.0f, 1.0f, 0.0f, 1.0f, &vertices[1][0]);
-        vec4_set(1.0f, 1.0f, 1.0f, 1.0f, &vertices[2][0]);
-        vec4_set(1.0f, 0.0f, 1.0f, 0.0f, &vertices[3][0]);
-
-        glGenBuffers(1, &widget_renderer->vbo);
-        glGenBuffers(1, &widget_renderer->ebo);
-        {
-            /* vertex buffer */
-            glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
-            glBufferData(
-                GL_ARRAY_BUFFER, 4 * sizeof(te_vec4), &vertices[0][0], GL_STATIC_DRAW);
-
-            /* index buffer */
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
-            glBufferData(
-                GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned short), &indices[0],
-                GL_STATIC_DRAW);
-        }
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    }
 
     return widget_renderer;
 }
@@ -139,9 +52,6 @@ widget_renderer_destroy(te_widget_renderer* widget_renderer) {
         abort();
     }
     render_data_array_destroy(widget_renderer->rect_widget_data);
-
-    glDeleteBuffers(1, &widget_renderer->vbo);
-    glDeleteBuffers(1, &widget_renderer->ebo);
 
     free(widget_renderer);
 }
@@ -199,7 +109,6 @@ widget_renderer_remove_rect_widget(te_widget_renderer* renderer, unsigned int ha
 
 void
 widget_renderer_draw(te_widget_renderer* widget_renderer) {
-    te_vec2 window_size;
     unsigned int window_width;
     unsigned int window_height;
     unsigned int rect_widget_count;
@@ -211,42 +120,58 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
     window_get_size(
         renderer_get_window(widget_renderer->renderer), &window_width, &window_height);
-    vec2_set((float)window_width, (float)window_height, window_size);
+
+    /* we want to specify quads in pixels */
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(0.0f, (float)window_width, (float)window_height, 0.0f, -1.0f, 1.0f);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
 
     /* draw rect widgets */
     rect_widget_count = render_data_array_get_item_count(widget_renderer->rect_widget_data);
     if (rect_widget_count > 0) {
         te_rect_widget_render_data* data;
         unsigned int widget_idx;
-
-        te_quad_shader_data* shader = &widget_renderer->quad_shader;
         GPU_SECTION_BEGIN("rect");
 
-        glUseProgram(shader->prog_id);
-
-        glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
-
-        glEnableVertexAttribArray(0);
-        WIDGET_QUAD_GL_VERT_ATTRIB_PTR
-
-        glActiveTexture(GL_TEXTURE0); /* quad texture */
-
-        glUniform2fv(shader->uniform_window_size, 1, window_size);
+        glEnable(GL_TEXTURE_2D);
 
         data = render_data_array_get_internal_array(widget_renderer->rect_widget_data);
-
         for (widget_idx = 0; widget_idx < rect_widget_count; widget_idx++) {
-            glUniform4fv(shader->uniform_quad_color, 1, data->color);
-            glUniform4fv(shader->uniform_clip_rect, 1, data->clip_rect);
-
-            glUniform2fv(shader->uniform_in_pos, 1, data->pos_pix);
-            glUniform2fv(shader->uniform_in_size, 1, data->size_pix);
-
-            glUniform1i(shader->uniform_is_using_tex, data->tex_id > 0);
             glBindTexture(GL_TEXTURE_2D, data->tex_id);
 
-            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
+            glBegin(GL_QUADS);
+
+            glColor4fv(data->color);
+
+            /* left-bottom */
+            glTexCoord2fv(data->clip_rect);
+            glVertex2f(
+                data->pos_pix[0] + data->size_pix[0] * data->clip_rect[0],
+                data->pos_pix[1] + data->size_pix[1] * data->clip_rect[1]);
+
+            /* top-left */
+            glTexCoord2f(data->clip_rect[0], data->clip_rect[1] + data->clip_rect[3]);
+            glVertex2f(
+                data->pos_pix[0] + data->size_pix[0] * data->clip_rect[0],
+                data->pos_pix[1] + data->size_pix[1] * data->clip_rect[3]);
+
+            /* top-right */
+            glTexCoord2f(
+                data->clip_rect[0] + data->clip_rect[2],
+                data->clip_rect[1] + data->clip_rect[3]);
+            glVertex2f(
+                data->pos_pix[0] + data->size_pix[0] * data->clip_rect[2],
+                data->pos_pix[1] + data->size_pix[1] * data->clip_rect[3]);
+
+            /* right-bottom */
+            glTexCoord2f(data->clip_rect[0] + data->clip_rect[2], data->clip_rect[1]);
+            glVertex2f(
+                data->pos_pix[0] + data->size_pix[0] * data->clip_rect[2],
+                data->pos_pix[1] + data->size_pix[1] * data->clip_rect[1]);
+
+            glEnd();
 
             data += 1;
         }
@@ -258,49 +183,49 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
     text_widget_count = render_data_array_get_item_count(widget_renderer->text_widget_data);
     if (text_widget_count > 0) {
         te_text_widget_render_data* data;
-        te_vec4 clip_rect;
         te_vec2 pos_pix;
         unsigned int widget_idx;
         unsigned int glyph_idx;
 
-        te_text_shader_data* shader = &widget_renderer->text_shader;
         GPU_SECTION_BEGIN("text");
 
-        glUseProgram(shader->prog_id);
-
-        glBindBuffer(GL_ARRAY_BUFFER, widget_renderer->vbo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, widget_renderer->ebo);
-        WIDGET_QUAD_GL_VERT_ATTRIB_PTR
-
-        glEnableVertexAttribArray(0);
-        WIDGET_QUAD_GL_VERT_ATTRIB_PTR
-
-        glActiveTexture(GL_TEXTURE0);
         glBindTexture(
             GL_TEXTURE_2D, font_manager_get_font_bitmap_id(widget_renderer->font_manager));
-
-        vec4_set(0.0f, 0.0f, 1.0f, 1.0f, clip_rect);
-        glUniform4fv(shader->uniform_clip_rect, 1, clip_rect);
-
-        glUniform2fv(shader->uniform_window_size, 1, window_size);
 
         data = render_data_array_get_internal_array(widget_renderer->text_widget_data);
 
         for (widget_idx = 0; widget_idx < text_widget_count; widget_idx++) {
-            glUniform4fv(shader->uniform_text_color, 1, data->color);
+            glColor4fv(data->color);
 
             for (glyph_idx = 0; glyph_idx < data->glyph_count; glyph_idx++) {
-                vec2_add(data->pos_pix, data->glyphs[glyph_idx].offset_pix, pos_pix);
+                te_text_widget_glyph* glyph = &data->glyphs[glyph_idx];
+                vec2_add(data->pos_pix, glyph->offset_pix, pos_pix);
 
-                glUniform2fv(shader->uniform_in_pos, 1, pos_pix);
-                glUniform2fv(shader->uniform_in_size, 1, data->glyphs[glyph_idx].size_pix);
-                glUniform2fv(
-                    shader->uniform_glyph_rel_size, 1, data->glyphs[glyph_idx].glyph_rel_size);
-                glUniform2fv(
-                    shader->uniform_glyph_rel_offset, 1,
-                    data->glyphs[glyph_idx].glyph_rel_offset);
+                glBegin(GL_QUADS);
 
-                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
+                /* left-bottom */
+                glTexCoord2fv(glyph->glyph_rel_offset);
+                glVertex2fv(pos_pix);
+
+                /* top-left */
+                glTexCoord2f(
+                    glyph->glyph_rel_offset[0] + glyph->glyph_rel_size[0],
+                    glyph->glyph_rel_offset[1]);
+                glVertex2f(pos_pix[0] + glyph->size_pix[0], pos_pix[1]);
+
+                /* top-right */
+                glTexCoord2f(
+                    glyph->glyph_rel_offset[0] + glyph->glyph_rel_size[0],
+                    glyph->glyph_rel_offset[1] + glyph->glyph_rel_size[1]);
+                glVertex2f(pos_pix[0] + glyph->size_pix[0], pos_pix[1] + glyph->size_pix[1]);
+
+                /* right-bottom */
+                glTexCoord2f(
+                    glyph->glyph_rel_offset[0],
+                    glyph->glyph_rel_offset[1] + glyph->glyph_rel_size[1]);
+                glVertex2f(pos_pix[0], pos_pix[1] + glyph->size_pix[1]);
+
+                glEnd();
             }
 
             data += 1;
@@ -308,6 +233,8 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
 
         GPU_SECTION_END;
     }
+
+    glDisable(GL_TEXTURE_2D);
 
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);

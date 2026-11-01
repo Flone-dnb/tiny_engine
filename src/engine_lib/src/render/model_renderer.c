@@ -77,8 +77,10 @@ model_renderer_draw(
     te_mat4* proj_mat, te_frustum_shape* camera_frustum) {
     te_model_render_data* data;
     te_vec4 zero, default_diffuse;
-    unsigned int model_count;
+    unsigned int rendered_model_count, model_count;
     unsigned int model_idx;
+
+    rendered_model_count = 0;
 
     vec4_zero(zero);
     vec4_set(1.0f, 1.0f, 1.0f, 1.0f, default_diffuse);
@@ -145,7 +147,7 @@ model_renderer_draw(
     /* draw non-skinned models */
     data = render_data_array_get_internal_array(renderer->non_skinned_data_array);
     model_count = render_data_array_get_item_count(renderer->non_skinned_data_array);
-    for (model_idx = 0; model_idx < model_count; model_idx++) {
+    for (model_idx = 0; model_idx < model_count; model_idx++, data++) {
         if (!frustum_shape_is_aabb_inside(camera_frustum, &data->aabb_world)) {
             continue;
         }
@@ -158,10 +160,8 @@ model_renderer_draw(
         glMaterialfv(data->gl_face_type, GL_DIFFUSE, data->color);
         glBindTexture(GL_TEXTURE_2D, data->tex_id); /* binds 0 if not set */
 
-        glCallList(data->display_list_id);
-        model_count += 1;
-
-        data += 1;
+        glCallList(data->list_id_or_idx_count);
+        rendered_model_count += 1;
 
         /* remove modified model view mat */
         glPopMatrix();
@@ -170,25 +170,36 @@ model_renderer_draw(
     /* skinned models */
     data = render_data_array_get_internal_array(renderer->skinned_data_array);
     model_count = render_data_array_get_item_count(renderer->skinned_data_array);
-    for (model_idx = 0; model_idx < model_count; model_idx++) {
-        /* NOTE: don't do frustum culling on skinned models due to animations */
+    if (model_count > 0) {
+        glEnableClientState(GL_VERTEX_ARRAY);
+        glEnableClientState(GL_NORMAL_ARRAY);
+        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
-        /* copy view matrix and modify to be model view */
-        glPushMatrix();
-        glMultMatrixf(data->world_mat[0]);
+        for (model_idx = 0; model_idx < model_count; model_idx++, data++) {
+            /* NOTE: don't do frustum culling on skinned models due to animations */
 
-        /* texture and color */
-        glMaterialfv(data->gl_face_type, GL_DIFFUSE, data->color);
-        glBindTexture(GL_TEXTURE_2D, data->tex_id); /* binds 0 if not set */
+            /* copy view matrix and modify to be model view */
+            glPushMatrix();
+            glMultMatrixf(data->world_mat[0]);
 
-        TODO;
-        /*glCallList(data->display_list_id);*/
-        model_count += 1;
+            /* texture and color */
+            glMaterialfv(data->gl_face_type, GL_DIFFUSE, data->color);
+            glBindTexture(GL_TEXTURE_2D, data->tex_id); /* binds 0 if not set */
 
-        data += 1;
+            prv_model_set_skinned_vertex_pointers(data->animated_vertices);
 
-        /* remove modified model view mat */
-        glPopMatrix();
+            glDrawElements(
+                GL_TRIANGLES, data->list_id_or_idx_count, GL_UNSIGNED_SHORT,
+                data->animated_vertex_indices);
+            rendered_model_count += 1;
+
+            /* remove modified model view mat */
+            glPopMatrix();
+        }
+
+        glDisableClientState(GL_VERTEX_ARRAY);
+        glDisableClientState(GL_NORMAL_ARRAY);
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     }
 
     glDisable(GL_TEXTURE_2D);
@@ -198,5 +209,5 @@ model_renderer_draw(
     glDisable(GL_LIGHT1);
     glDisable(GL_LIGHTING);
 
-    return model_count;
+    return rendered_model_count;
 }

@@ -239,6 +239,5 @@ unsigned int prv_model_get_render_data_handle(te_model* model);
  * otherwise returns model renderer used to render the model */
 struct te_model_renderer* prv_model_get_model_renderer(te_model* model);
 
-/* used during the rendering */
-void prv_model_set_attribute_pointers_model_vertex(void);
-void prv_model_set_attribute_pointers_model_vertex_skinned(void);
+/* sets glVertexPointer for skinned geometry */
+void prv_model_set_skinned_vertex_pointers(unsigned char* vertex_data);

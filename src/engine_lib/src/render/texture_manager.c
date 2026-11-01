@@ -109,8 +109,6 @@ texture_manager_request_texture(
         int width = 0;
         int height = 0;
         int channel_count = 0;
-        int gl_format;
-        int gl_internal_format;
 
         stbi_uc* pixels = stbi_load(tex_path, &width, &height, &channel_count, 0);
         if (pixels == NULL) {
@@ -130,9 +128,6 @@ texture_manager_request_texture(
             stbi_image_free(pixels);
             return 0;
         }
-
-        gl_format = channel_count == 4 ? GL_RGBA : GL_RGB;
-        gl_internal_format = gl_format;
 
         glGenTextures(1, &tex_id);
 
@@ -300,15 +295,21 @@ texture_manager_upload_tex_with_mipmaps(
                 next_data[dst + 0] = (curr_data[p00 + 0] + curr_data[p10 + 0]
                                       + curr_data[p01 + 0] + curr_data[p11 + 0])
                                      / 4;
-                next_data[dst + 1] = (curr_data[p00 + 1] + curr_data[p10 + 1]
-                                      + curr_data[p01 + 1] + curr_data[p11 + 1])
-                                     / 4;
-                next_data[dst + 2] = (curr_data[p00 + 2] + curr_data[p10 + 2]
-                                      + curr_data[p01 + 2] + curr_data[p11 + 2])
-                                     / 4;
-                next_data[dst + 3] = (curr_data[p00 + 3] + curr_data[p10 + 3]
-                                      + curr_data[p01 + 3] + curr_data[p11 + 3])
-                                     / 4;
+                if (channel_count > 1) {
+                    next_data[dst + 1] = (curr_data[p00 + 1] + curr_data[p10 + 1]
+                                          + curr_data[p01 + 1] + curr_data[p11 + 1])
+                                         / 4;
+                    if (channel_count > 2) {
+                        next_data[dst + 2] = (curr_data[p00 + 2] + curr_data[p10 + 2]
+                                              + curr_data[p01 + 2] + curr_data[p11 + 2])
+                                             / 4;
+                        if (channel_count == 4) {
+                            next_data[dst + 3] = (curr_data[p00 + 3] + curr_data[p10 + 3]
+                                                  + curr_data[p01 + 3] + curr_data[p11 + 3])
+                                                 / 4;
+                        }
+                    }
+                }
             }
         }
 

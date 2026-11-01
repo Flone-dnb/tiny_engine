@@ -31,7 +31,7 @@ struct te_num_hashtable {
     size_t entry_count_msb_idx;
 };
 
-size_t
+static size_t
 round_to_power_of_2(size_t x) {
     x--;
 
