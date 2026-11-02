@@ -44,7 +44,7 @@ bool model_renderer_has_models(te_model_renderer* renderer);
  * returns handle to update model's render data using @ref model_renderer_get_render_data_tmp
  *
  * later you would need to remove the model from rendering using @ref model_renderer_remove_model,
- * if you specified @ref uses_skinning here then in remove model you also need to pass the same value */
+ * if you specified uses_skinning here then in remove model you also need to pass the same value */
 unsigned int model_renderer_add_model(te_model_renderer* renderer, bool uses_skinning);
 
 /* removes a model from rendering */
