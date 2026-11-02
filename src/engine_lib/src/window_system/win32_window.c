@@ -360,7 +360,11 @@ win32_window_create(te_os_window* os_window, const char* title) {
         WGL_CONTEXT_MINOR_VERSION_ARB,
         TE_OS_WINDOW_GL_MINOR_VERSION,
         WGL_CONTEXT_PROFILE_MASK_ARB,
+#if TE_OS_WINDOW_GL_PROFILE_COMPATIBILITY == 1
+        WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,
+#else
         WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+#endif
 #if defined(DEBUG)
         WGL_CONTEXT_FLAGS_ARB,
         WGL_CONTEXT_DEBUG_BIT_ARB,

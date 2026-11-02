@@ -9,9 +9,10 @@
 typedef struct te_os_window te_os_window;
 
 /* configurable options */
-#define TE_OS_WINDOW_GL_MAJOR_VERSION 1 /* same as GLAD version */
-#define TE_OS_WINDOW_GL_MINOR_VERSION 1 /* same as GLAD version */
-#define TE_OS_WINDOW_MSAA 1             /* no MSAA under GLES */
+#define TE_OS_WINDOW_GL_MAJOR_VERSION 1         /* same as GLAD version */
+#define TE_OS_WINDOW_GL_MINOR_VERSION 1         /* same as GLAD version */
+#define TE_OS_WINDOW_GL_PROFILE_COMPATIBILITY 1 /* 0 for core profile */
+#define TE_OS_WINDOW_MSAA 1                     /* no MSAA under GLES */
 #define TE_OS_WINDOW_DEPTH_BITS 24
 #define TE_OS_WINDOW_STENCIL_BITS 8
 #define TE_OS_WINDOW_GAMEPAD_AXIS_DEADZONE 0.05f
