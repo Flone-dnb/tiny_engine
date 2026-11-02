@@ -154,8 +154,8 @@ renderer_create(struct te_window* window) {
 #endif
     te_renderer* renderer;
 
-    const GLubyte* gl_version = glGetString(GL_VERSION);
-    log_info_fmt(__FILE__, __LINE__, "GL_VERSION: %s", (char*)gl_version);
+    log_info_fmt(__FILE__, __LINE__, "GL_VERSION: %s", (char*)glGetString(GL_VERSION));
+    log_info_fmt(__FILE__, __LINE__, "GL_RENDERER: %s", (char*)glGetString(GL_RENDERER));
 
     renderer = malloc(sizeof(te_renderer));
 
