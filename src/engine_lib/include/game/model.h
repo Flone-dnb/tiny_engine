@@ -131,13 +131,14 @@ void model_set_texture(te_model* model, const char* relative_path);
  * do not free returned string, valid while the model exists */
 const char* model_get_texture(te_model* model);
 
-/* sets texture tiling multiplier */
 void model_set_texture_tiling(te_model* model, te_vec2 tex_tiling);
 void model_get_texture_tiling(te_model* model, te_vec2 tex_tiling);
 
-/* disables backface culling */
 void model_set_disable_backface_culling(te_model* model, bool disable_backface_culling);
 bool model_get_disable_backface_culling(te_model* model);
+
+void model_set_disable_depth_test(te_model* model, bool disable_depth_test);
+bool model_get_disable_depth_test(te_model* model);
 
 /* child model's location/rotation/scale will then be treated as relative to the parents location/rotation/scale
  * 

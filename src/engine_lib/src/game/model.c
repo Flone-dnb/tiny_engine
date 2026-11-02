@@ -164,6 +164,7 @@ struct te_model {
 
     bool is_opaque;
     bool disable_backface_culling;
+    bool disable_depth_test;
     bool is_serialization_allowed;
 };
 
@@ -205,6 +206,7 @@ model_create(void) {
     model->custom_get_geometry = NULL;
     model->is_opaque = true;
     model->disable_backface_culling = false;
+    model->disable_depth_test = false;
     model->is_serialization_allowed = true;
 
     vec2_set(1.0f, 1.0f, model->tex_tiling);
@@ -741,6 +743,22 @@ model_get_disable_backface_culling(te_model* model) {
 }
 
 void
+model_set_disable_depth_test(te_model* model, bool disable_depth_test) {
+    if (model->world == NULL) {
+        model->disable_depth_test = disable_depth_test;
+    } else {
+        prv_model_remove_from_model_renderer(model);
+        model->disable_depth_test = disable_depth_test;
+        prv_model_add_to_model_renderer(model);
+    }
+}
+
+bool
+model_get_disable_depth_test(te_model* model) {
+    return model->disable_depth_test;
+}
+
+void
 model_set_parent(te_model* model, te_model* new_parent, unsigned int parent_bone_idx) {
     unsigned int i;
 
@@ -1087,6 +1105,9 @@ prv_model_add_to_model_renderer(te_model* model) {
                 if (model->disable_backface_culling) {
                     glDisable(GL_CULL_FACE);
                 }
+                if (model->disable_depth_test) {
+                    glDisable(GL_DEPTH_TEST);
+                }
 
                 non_uniform_scale = has_non_uniform_scale(world_mat);
                 if (non_uniform_scale) {
@@ -1114,6 +1135,9 @@ prv_model_add_to_model_renderer(te_model* model) {
 
                 if (model->disable_backface_culling) {
                     glEnable(GL_CULL_FACE);
+                }
+                if (model->disable_depth_test) {
+                    glEnable(GL_DEPTH_TEST);
                 }
                 if (non_uniform_scale) {
                     glDisable(GL_NORMALIZE);
