@@ -266,6 +266,10 @@ texture_manager_upload_tex_with_mipmaps(
             channel_count = 1;
             break;
         }
+        default: {
+            log_error(__FILE__, __LINE__, "unhandles case");
+            abort();
+        }
     }
 
     curr_data = malloc(tex_width * tex_height * channel_count);
