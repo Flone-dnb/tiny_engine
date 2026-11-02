@@ -178,7 +178,7 @@ renderer_create(struct te_window* window) {
 
         data = renderer->light_params;
 
-        vec4_set(0.5f, 0.5f, 0.5f, 0.5f, data->ambient_light_color);
+        vec4_set(0.5f, 0.5f, 0.5f, 1.0f, data->ambient_light_color);
 
         vec3_set(1.0f, -1.0f, 1.0f, data->directional_light_direction);
         vec3_normalize(data->directional_light_direction);

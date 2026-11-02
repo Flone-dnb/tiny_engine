@@ -1104,6 +1104,7 @@ prv_model_add_to_model_renderer(te_model* model) {
 
                 if (model->disable_backface_culling) {
                     glDisable(GL_CULL_FACE);
+                    glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, 1.0f);
                 }
                 if (model->disable_depth_test) {
                     glDisable(GL_DEPTH_TEST);
@@ -1135,6 +1136,7 @@ prv_model_add_to_model_renderer(te_model* model) {
 
                 if (model->disable_backface_culling) {
                     glEnable(GL_CULL_FACE);
+                    glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, 0.0f);
                 }
                 if (model->disable_depth_test) {
                     glEnable(GL_DEPTH_TEST);

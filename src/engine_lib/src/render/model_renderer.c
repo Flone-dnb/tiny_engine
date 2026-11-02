@@ -4,6 +4,7 @@
 #include <debug_console.h>
 #include <game/model.h>
 #include <io/log.h>
+#include <math/math_funcs.h>
 #include <render/renderer.h>
 #include <render/render_data_array.h>
 #include <shape/frustum_shape.h>
@@ -98,7 +99,8 @@ model_renderer_draw(
         te_vec4 light_gl_pos;
 
         /* ambient light */
-        glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, light_params->ambient_light_color);
+        glLightModelfv(GL_LIGHT_MODEL_AMBIENT, light_params->ambient_light_color);
+        glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, 0.0f);
 
         /* directional light */
         glEnable(GL_LIGHT0);
@@ -119,7 +121,9 @@ model_renderer_draw(
         glLightfv(GL_LIGHT1, GL_DIFFUSE, light_params->point_light_color);
         glLightfv(GL_LIGHT1, GL_SPECULAR, zero);
         glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 0.0f);
-        glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, light_params->point_light_pos_and_dist[3]);
+        glLightf(
+            GL_LIGHT1, GL_LINEAR_ATTENUATION,
+            1.0f / math_max(light_params->point_light_pos_and_dist[3], 0.001f));
         glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.0f);
         glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 180.0f); /* to tell that this is not a spotlight */
 
@@ -138,7 +142,6 @@ model_renderer_draw(
     }
 
     /* reset some material params (before drawing) */
-    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, default_diffuse);
     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, zero);
     glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 0.0f);
     glEnable(GL_TEXTURE_2D);
@@ -158,6 +161,9 @@ model_renderer_draw(
         /* texture and color */
         glMaterialfv(data->gl_face_type, GL_DIFFUSE, data->color);
         glBindTexture(GL_TEXTURE_2D, data->tex_id); /* binds 0 if not set */
+
+        glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, data->color);
+        glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, data->color);
 
         glCallList(data->list_id_or_idx_count);
         rendered_model_count += 1;

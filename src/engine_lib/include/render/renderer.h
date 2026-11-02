@@ -16,7 +16,7 @@ typedef struct te_light_params {
     te_vec4 directional_light_color;
     te_vec4 point_light_color;
 
-    /* position in XYZ and light radius in W */
+    /* position in XYZ and light attenuation in W */
     te_vec4 point_light_pos_and_dist;
 
     /* unit vector in the direction of the light source */
