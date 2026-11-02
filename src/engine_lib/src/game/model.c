@@ -1240,7 +1240,7 @@ prv_model_remove_from_model_renderer(te_model* model) {
 
     /* release geometry */
     if (model->display_list_id != 0xFFFFFFFF) {
-        glDeleteLists(1, model->display_list_id);
+        glDeleteLists(model->display_list_id, 1);
         model->display_list_id = 0xFFFFFFFF;
     } else {
         model->animated_index_count = 0;

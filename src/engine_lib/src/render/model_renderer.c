@@ -85,8 +85,6 @@ model_renderer_draw(
     vec4_zero(zero);
     vec4_set(1.0f, 1.0f, 1.0f, 1.0f, default_diffuse);
 
-    glEnable(GL_LIGHTING);
-
     /* setup global matrices */
     glMatrixMode(GL_PROJECTION);
     glLoadMatrixf((*proj_mat)[0]);
@@ -95,6 +93,7 @@ model_renderer_draw(
     glLoadMatrixf((*view_mat)[0]);
 
     /* setup lighting */
+    glEnable(GL_LIGHTING);
     {
         te_vec4 light_gl_pos;
 
