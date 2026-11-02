@@ -277,8 +277,9 @@ texture_manager_upload_tex_with_mipmaps(
     while (1) {
         if (level >= level_skip_count) {
             glTexImage2D(
-                GL_TEXTURE_2D, (int)(level - level_skip_count), (GLint)gl_format, curr_w,
-                curr_h, 0, (GLenum)gl_format, GL_UNSIGNED_BYTE, curr_data);
+                GL_TEXTURE_2D, (int)(level - level_skip_count), (GLint)gl_format,
+                (GLsizei)curr_w, (GLsizei)curr_h, 0, (GLenum)gl_format, GL_UNSIGNED_BYTE,
+                curr_data);
         }
 
         if (curr_w == 1 && curr_h == 1) {
@@ -308,21 +309,25 @@ texture_manager_upload_tex_with_mipmaps(
 
                 /* average channels */
                 unsigned int dst = (y * next_w + x) * channel_count;
-                next_data[dst + 0] = (curr_data[p00 + 0] + curr_data[p10 + 0]
-                                      + curr_data[p01 + 0] + curr_data[p11 + 0])
-                                     / 4;
+                next_data[dst + 0] =
+                    (unsigned char)((curr_data[p00 + 0] + curr_data[p10 + 0]
+                                     + curr_data[p01 + 0] + curr_data[p11 + 0])
+                                    / 4);
                 if (channel_count > 1) {
-                    next_data[dst + 1] = (curr_data[p00 + 1] + curr_data[p10 + 1]
-                                          + curr_data[p01 + 1] + curr_data[p11 + 1])
-                                         / 4;
+                    next_data[dst + 1] =
+                        (unsigned char)((curr_data[p00 + 1] + curr_data[p10 + 1]
+                                         + curr_data[p01 + 1] + curr_data[p11 + 1])
+                                        / 4);
                     if (channel_count > 2) {
-                        next_data[dst + 2] = (curr_data[p00 + 2] + curr_data[p10 + 2]
-                                              + curr_data[p01 + 2] + curr_data[p11 + 2])
-                                             / 4;
+                        next_data[dst + 2] =
+                            (unsigned char)((curr_data[p00 + 2] + curr_data[p10 + 2]
+                                             + curr_data[p01 + 2] + curr_data[p11 + 2])
+                                            / 4);
                         if (channel_count == 4) {
-                            next_data[dst + 3] = (curr_data[p00 + 3] + curr_data[p10 + 3]
-                                                  + curr_data[p01 + 3] + curr_data[p11 + 3])
-                                                 / 4;
+                            next_data[dst + 3] =
+                                (unsigned char)((curr_data[p00 + 3] + curr_data[p10 + 3]
+                                                 + curr_data[p01 + 3] + curr_data[p11 + 3])
+                                                / 4);
                         }
                     }
                 }

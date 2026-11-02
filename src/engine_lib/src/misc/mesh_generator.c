@@ -208,13 +208,14 @@ mesh_generator_icosphere(
     unsigned char pos_offset;
     unsigned char norm_offset;
     unsigned char uv_offset;
-    const float X = 0.525731112119133606f;
-    const float Z = 0.850650808352039932f;
-    const float N = 0.0f;
+#define IS_X 0.525731112119133606f
+#define IS_Z 0.850650808352039932f
+#define IS_N 0.0f
 
-    te_vec3 positions[] = {{-X, N, Z}, {X, N, Z},  {-X, N, -Z}, {X, N, -Z},
-                           {N, Z, X},  {N, Z, -X}, {N, -Z, X},  {N, -Z, -X},
-                           {Z, X, N},  {-Z, X, N}, {Z, -X, N},  {-Z, -X, N}};
+    te_vec3 positions[] = {{-IS_X, IS_N, IS_Z}, {IS_X, IS_N, IS_Z},   {-IS_X, IS_N, -IS_Z},
+                           {IS_X, IS_N, -IS_Z}, {IS_N, IS_Z, IS_X},   {IS_N, IS_Z, -IS_X},
+                           {IS_N, -IS_Z, IS_X}, {IS_N, -IS_Z, -IS_X}, {IS_Z, IS_X, IS_N},
+                           {-IS_Z, IS_X, IS_N}, {IS_Z, -IS_X, IS_N},  {-IS_Z, -IS_X, IS_N}};
 
     unsigned short triangle_indices[] = {0, 4,  1,  0, 9, 4,  9, 5,  4, 4,  5, 8, 4, 8, 1,
                                          8, 10, 1,  8, 3, 10, 5, 3,  8, 5,  2, 3, 2, 7, 3,
