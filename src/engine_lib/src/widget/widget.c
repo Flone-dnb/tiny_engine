@@ -476,13 +476,14 @@ void
 prv_widget_on_spawned(te_widget* widget, te_world* world) {
     unsigned int i;
 
-    /* spawn from top to bottom (in the hierarchy) so that widgets will be placed in the renderer
-     * in the order from top to bottom (in the hierarchy) for top widgets to be rendered first and bottom widgets last */
     widget->world = world;
+
     if (widget->on_after_spawned != NULL) {
         widget->on_after_spawned(widget->owner);
     }
 
+    /* spawn from top to bottom (in the hierarchy) so that widgets will be placed in the renderer
+     * in the order from top to bottom (in the hierarchy) for top widgets to be rendered first and bottom widgets last */
     for (i = 0; i < widget->child_widget_count; i++) {
         prv_widget_on_spawned(widget->child_widgets[i], world);
     }
@@ -492,14 +493,14 @@ void
 prv_widget_on_despawned(te_widget* widget) {
     unsigned int i;
 
-    /* despawn children first */
+    if (widget->on_before_despawned != NULL) {
+        widget->on_before_despawned(widget->owner);
+    }
+
     for (i = 0; i < widget->child_widget_count; i++) {
         prv_widget_on_despawned(widget->child_widgets[i]);
     }
 
-    if (widget->on_before_despawned != NULL) {
-        widget->on_before_despawned(widget->owner);
-    }
     widget->world = NULL;
 }
 
