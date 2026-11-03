@@ -609,12 +609,17 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 
                 glEnable(GL_BLEND);
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                glEnable(GL_ALPHA_TEST);
+                glAlphaFunc(GL_GREATER, 0.0f);
+
 #if defined(ENGINE_DEBUG_TOOLS)
                 debug_stats->rendered_transparent_model_count =
 #endif
                     model_renderer_draw(
                         transparent_model_renderer, renderer->light_params, view_mat, proj_mat,
                         camera_frustum);
+
+                glDisable(GL_ALPHA_TEST);
                 glDisable(GL_BLEND);
 
                 glEnable(GL_CULL_FACE);

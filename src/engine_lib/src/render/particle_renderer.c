@@ -53,6 +53,8 @@ particle_renderer_draw(
     te_mat4* view_proj_mat) {
     unsigned int emitter_count;
 
+    glEnable(GL_ALPHA_TEST);
+    glAlphaFunc(GL_GREATER, 0.0f);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -66,11 +68,7 @@ particle_renderer_draw(
         camera_get_right(camera, camera_world_right);
         camera_get_up(camera, camera_world_up);
 
-        /* note: lighting should be already setup from the model renderer
-	 * here we just need to enable a few things */
-        glEnable(GL_LIGHTING);
-        glEnable(GL_LIGHT0);
-        glEnable(GL_LIGHT1);
+        glDisable(GL_LIGHTING);
         if (light_params->distance_fog_range[0] >= 0.0f) {
             glEnable(GL_FOG);
         } else {
@@ -120,9 +118,12 @@ particle_renderer_draw(
                     vec3_divs(min, min[3], min);
                     vec3_divs(max, max[3], max);
 
-                    if (min[0] > 1.0f || min[1] > 1.0f || max[0] < 0.0f || max[1] < 0.0f) {
+                    if (min[0] > 1.0f || min[1] > 1.0f || max[0] < -1.0f || max[1] < -1.0f) {
                         continue;
                     }
+
+                    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, p->color);
+                    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, p->color);
 
                     glBegin(GL_QUADS);
 
@@ -130,19 +131,19 @@ particle_renderer_draw(
 
                     /* left-bottom */
                     glTexCoord2f(0.0f, 0.0f);
-                    glVertex2f(min[0], min[1]);
-
-                    /* top-left */
-                    glTexCoord2f(0.0f, 1.0f);
-                    glVertex2f(min[0], max[1]);
-
-                    /* top-right */
-                    glTexCoord2f(1.0f, 1.0f);
-                    glVertex2f(max[0], max[1]);
+                    glVertex3f(min[0], min[1], max[2]);
 
                     /* right-bottom */
                     glTexCoord2f(1.0f, 0.0f);
-                    glVertex2f(max[0], min[1]);
+                    glVertex3f(max[0], min[1], max[2]);
+
+                    /* top-right */
+                    glTexCoord2f(1.0f, 1.0f);
+                    glVertex3f(max[0], max[1], max[2]);
+
+                    /* top-left */
+                    glTexCoord2f(0.0f, 1.0f);
+                    glVertex3f(min[0], max[1], max[2]);
 
                     glEnd();
                 }
@@ -152,11 +153,8 @@ particle_renderer_draw(
     }
 
     glDisable(GL_BLEND);
+    glDisable(GL_ALPHA_TEST);
 
     glDisable(GL_TEXTURE_2D);
     glDisable(GL_FOG);
-
-    glDisable(GL_LIGHT0);
-    glDisable(GL_LIGHT1);
-    glDisable(GL_LIGHTING);
 }
