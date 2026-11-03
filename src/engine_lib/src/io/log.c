@@ -15,6 +15,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
+static bool shown_error_msg = false;
 #endif
 
 #ifndef va_copy
@@ -150,10 +151,13 @@ prv_log(enum te_log_category category, const char* message, const char* filepath
 #endif
 
 #if defined(WIN32)
-    if (category == TE_LOG_ERROR) {
+    if (category == TE_LOG_ERROR && !shown_error_msg) {
         MessageBoxW(
-            NULL, L"an error occurred, see the log file at %localappdata%/tiny_engine",
+            NULL,
+            L"an error occurred, see the log file at %localappdata%/tiny_engine\n"
+            "\ntry restarting the application",
             L"Error", MB_OK);
+        shown_error_msg = true;
     }
 #endif
 
