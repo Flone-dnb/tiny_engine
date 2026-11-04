@@ -234,6 +234,7 @@ add_float_widget(
     }
     text_edit_widget_set_text_height(text_edit, editor_theme_get_text_height() * 0.95f);
     text_edit_widget_set_on_text_accepted(text_edit, on_variable_text_edit_changed);
+    text_edit_widget_set_on_cursor_left(text_edit, on_variable_text_edit_changed);
 
     len = snprintf(NULL, 0, "%.2f", value);
     if (len < 0) {

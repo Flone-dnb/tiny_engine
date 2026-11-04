@@ -26,6 +26,12 @@ void text_edit_widget_set_on_text_accepted(
     te_text_edit_widget* text_edit_widget,
     void (*on_text_accepted)(te_text_edit_widget* text_edit_widget));
 
+/* sets a callback that will be triggered after the cursor has left the widget
+ * (no longer hovers over the widget) */
+void text_edit_widget_set_on_cursor_left(
+    te_text_edit_widget* text_edit_widget,
+    void (*on_cursor_left)(te_text_edit_widget* text_edit_widget));
+
 /* text will be copied to the widget's data */
 void text_edit_widget_set_text(te_text_edit_widget* text_edit_widget, const wchar_t* text);
 /* do not free returned string pointer, valid while the text is not changed and the widget is not destroyed */

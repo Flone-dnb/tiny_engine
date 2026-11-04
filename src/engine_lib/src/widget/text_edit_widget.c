@@ -29,6 +29,7 @@ struct te_text_edit_widget {
     /* may be NULL if not set */
     void (*on_text_changed)(te_text_edit_widget*, wchar_t*, unsigned int);
     void (*on_text_accepted)(te_text_edit_widget*);
+    void (*on_cursor_left)(te_text_edit_widget*);
 
     te_vec4 text_color;
 
@@ -95,6 +96,7 @@ text_edit_widget_create(void) {
 
     text_edit_widget->on_text_changed = NULL;
     text_edit_widget->on_text_accepted = NULL;
+    text_edit_widget->on_cursor_left = NULL;
 
     return text_edit_widget;
 }
@@ -137,6 +139,13 @@ text_edit_widget_set_on_text_accepted(
     te_text_edit_widget* text_edit_widget,
     void (*on_text_accepted)(te_text_edit_widget* text_edit_widget)) {
     text_edit_widget->on_text_accepted = on_text_accepted;
+}
+
+void
+text_edit_widget_set_on_cursor_left(
+    te_text_edit_widget* text_edit_widget,
+    void (*on_cursor_left)(te_text_edit_widget* text_edit_widget)) {
+    text_edit_widget->on_cursor_left = on_cursor_left;
 }
 
 void
@@ -362,6 +371,10 @@ prv_text_edit_widget_on_cursor_left(void* this, te_vec2 cursor_pos) {
 
     if (text_edit_widget->rect_cursor_widget != NULL) {
         prv_text_edit_widget_despawn_destroy_cursor(text_edit_widget);
+    }
+
+    if (text_edit_widget->on_cursor_left != NULL) {
+        text_edit_widget->on_cursor_left(text_edit_widget);
     }
 }
 
