@@ -92,6 +92,7 @@ struct te_widget** world_get_widgets(te_world* world, unsigned int* count);
 /* do not free/destroy returned pointer, valid while the world exists */
 struct te_model_renderer* world_get_opaque_model_renderer(te_world* world);
 struct te_model_renderer* world_get_transparent_model_renderer(te_world* world);
+struct te_model_renderer* world_get_last_model_renderer(te_world* world);
 
 /* do not free/destroy returned pointer, valid while the world exists */
 struct te_widget_renderer* world_get_widget_renderer(te_world* world);

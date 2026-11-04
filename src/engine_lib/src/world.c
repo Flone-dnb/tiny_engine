@@ -64,6 +64,7 @@ struct te_world {
 
     te_model_renderer* opaque_model_renderer;
     te_model_renderer* transparent_model_renderer;
+    te_model_renderer* last_model_renderer;
 
     te_widget_renderer* widget_renderer;
     te_particle_renderer* particle_renderer;
@@ -141,6 +142,7 @@ prv_world_create(struct te_game_manager* game_manager, const char* name) {
 
     world->opaque_model_renderer = model_renderer_create(128, 128);
     world->transparent_model_renderer = model_renderer_create(4, 4);
+    world->last_model_renderer = model_renderer_create(1, 2);
     world->widget_renderer = widget_renderer_create(game_manager_get_renderer(game_manager));
     world->particle_renderer =
         particle_renderer_create(game_manager_get_renderer(game_manager));
@@ -220,6 +222,7 @@ prv_world_destroy(te_world* world) {
     free(world->name);
     model_renderer_destroy(world->opaque_model_renderer);
     model_renderer_destroy(world->transparent_model_renderer);
+    model_renderer_destroy(world->last_model_renderer);
     widget_renderer_destroy(world->widget_renderer);
     particle_renderer_destroy(world->particle_renderer);
 
@@ -983,9 +986,14 @@ world_get_opaque_model_renderer(te_world* world) {
     return world->opaque_model_renderer;
 }
 
-struct te_model_renderer*
+te_model_renderer*
 world_get_transparent_model_renderer(te_world* world) {
     return world->transparent_model_renderer;
+}
+
+te_model_renderer*
+world_get_last_model_renderer(te_world* world) {
+    return world->last_model_renderer;
 }
 
 te_widget_renderer*

@@ -89,6 +89,15 @@ vertex_pack_destroy(te_vertex_pack* pack) {
     free(pack);
 }
 
+/* specified bit offset into the flags variable of the model */
+enum te_model_flags {
+    TE_MF_IS_OPAQUE = 0,
+    TE_MF_IS_SERIALIZATION_ALLOWED,
+    TE_MF_DISABLE_BACKFACE_CULLING,
+    TE_MF_DISABLE_DEPTH_TEST,
+    TE_MF_DRAW_LAST
+};
+
 struct te_model {
     /* in model space */
     te_aabb_shape aabb_local;
@@ -162,10 +171,8 @@ struct te_model {
     /* NULL if not spawned or if @ref skeleton_relative_path is NULL */
     te_skeleton* skeleton;
 
-    bool is_opaque;
-    bool disable_backface_culling;
-    bool disable_depth_test;
-    bool is_serialization_allowed;
+    /* refer to @ref te_model_flags for bit meaning */
+    unsigned char flags;
 };
 
 static void on_spawned(te_model* model, te_world* world);
@@ -204,10 +211,11 @@ model_create(void) {
     model->custom_on_after_spawned = NULL;
     model->custom_on_before_despawned = NULL;
     model->custom_get_geometry = NULL;
-    model->is_opaque = true;
-    model->disable_backface_culling = false;
-    model->disable_depth_test = false;
-    model->is_serialization_allowed = true;
+
+    /* init flags */
+    model->flags = 0;
+    model->flags |= 1 << TE_MF_IS_OPAQUE;
+    model->flags |= 1 << TE_MF_IS_SERIALIZATION_ALLOWED;
 
     vec2_set(1.0f, 1.0f, model->tex_tiling);
 
@@ -386,10 +394,14 @@ prv_model_get_renderer(te_model* model) {
     }
 #endif
 
-    if (model->is_opaque) {
-        return world_get_opaque_model_renderer(model->world);
+    if ((model->flags >> TE_MF_DRAW_LAST) & 1) {
+        return world_get_last_model_renderer(model->world);
     } else {
-        return world_get_transparent_model_renderer(model->world);
+        if ((model->flags >> TE_MF_IS_OPAQUE) & 1) {
+            return world_get_opaque_model_renderer(model->world);
+        } else {
+            return world_get_transparent_model_renderer(model->world);
+        }
     }
 }
 
@@ -635,17 +647,18 @@ model_set_texture_tiling(te_model* model, te_vec2 tex_tiling) {
 
 bool
 model_is_transparency_enabled(te_model* model) {
-    return !model->is_opaque;
+    return ((model->flags >> TE_MF_IS_OPAQUE) & 1) == 0;
 }
 
 void
 model_set_is_serialization_allowed(te_model* model, bool enable) {
-    model->is_serialization_allowed = enable;
+    model->flags &= ~(1 << TE_MF_IS_SERIALIZATION_ALLOWED);
+    model->flags |= enable << TE_MF_IS_SERIALIZATION_ALLOWED;
 }
 
 bool
 model_is_serialization_allowed(te_model* model) {
-    return model->is_serialization_allowed;
+    return (model->flags >> TE_MF_IS_SERIALIZATION_ALLOWED) & 1;
 }
 
 void
@@ -732,35 +745,88 @@ model_get_texture_tiling(te_model* model, te_vec2 tex_tiling) {
 }
 
 void
-model_set_disable_backface_culling(te_model* model, bool disable_backface_culling) {
+model_enable_transparency(te_model* model, bool enable) {
+    bool is_opaque = !enable;
+
+    if (((model->flags >> TE_MF_IS_OPAQUE) & 1) == is_opaque) {
+        return;
+    }
+
     if (model->world == NULL) {
-        model->disable_backface_culling = disable_backface_culling;
+        model->flags &= ~(1 << TE_MF_IS_OPAQUE);
+        model->flags |= is_opaque << TE_MF_IS_OPAQUE;
     } else {
         prv_model_remove_from_model_renderer(model);
-        model->disable_backface_culling = disable_backface_culling;
+        model->flags &= ~(1 << TE_MF_IS_OPAQUE);
+        model->flags |= is_opaque << TE_MF_IS_OPAQUE;
+        prv_model_add_to_model_renderer(model);
+    }
+}
+
+void
+model_set_disable_backface_culling(te_model* model, bool disable_backface_culling) {
+    if (((model->flags >> TE_MF_DISABLE_BACKFACE_CULLING) & 1) == disable_backface_culling) {
+        return;
+    }
+
+    if (model->world == NULL) {
+        model->flags &= ~(1 << TE_MF_DISABLE_BACKFACE_CULLING);
+        model->flags |= disable_backface_culling << TE_MF_DISABLE_BACKFACE_CULLING;
+    } else {
+        prv_model_remove_from_model_renderer(model);
+        model->flags &= ~(1 << TE_MF_DISABLE_BACKFACE_CULLING);
+        model->flags |= disable_backface_culling << TE_MF_DISABLE_BACKFACE_CULLING;
         prv_model_add_to_model_renderer(model);
     }
 }
 
 bool
 model_get_disable_backface_culling(te_model* model) {
-    return model->disable_backface_culling;
+    return (model->flags >> TE_MF_DISABLE_BACKFACE_CULLING) & 1;
 }
 
 void
 model_set_disable_depth_test(te_model* model, bool disable_depth_test) {
+    if (((model->flags >> TE_MF_DISABLE_DEPTH_TEST) & 1) == disable_depth_test) {
+        return;
+    }
+
     if (model->world == NULL) {
-        model->disable_depth_test = disable_depth_test;
+        model->flags &= ~(1 << TE_MF_DISABLE_DEPTH_TEST);
+        model->flags |= disable_depth_test << TE_MF_DISABLE_DEPTH_TEST;
     } else {
         prv_model_remove_from_model_renderer(model);
-        model->disable_depth_test = disable_depth_test;
+        model->flags &= ~(1 << TE_MF_DISABLE_DEPTH_TEST);
+        model->flags |= disable_depth_test << TE_MF_DISABLE_DEPTH_TEST;
         prv_model_add_to_model_renderer(model);
     }
 }
 
 bool
 model_get_disable_depth_test(te_model* model) {
-    return model->disable_depth_test;
+    return (model->flags >> TE_MF_DISABLE_DEPTH_TEST) & 1;
+}
+
+void
+model_set_draw_last(te_model* model, bool draw_last) {
+    if (((model->flags >> TE_MF_DRAW_LAST) & 1) == draw_last) {
+        return;
+    }
+
+    if (model->world == NULL) {
+        model->flags &= ~(1 << TE_MF_DRAW_LAST);
+        model->flags |= draw_last << TE_MF_DRAW_LAST;
+    } else {
+        prv_model_remove_from_model_renderer(model);
+        model->flags &= ~(1 << TE_MF_DRAW_LAST);
+        model->flags |= draw_last << TE_MF_DRAW_LAST;
+        prv_model_add_to_model_renderer(model);
+    }
+}
+
+bool
+model_get_draw_last(te_model* model) {
+    return (model->flags >> TE_MF_DRAW_LAST) & 1;
 }
 
 void
@@ -1106,12 +1172,16 @@ prv_model_add_to_model_renderer(te_model* model) {
                 unsigned char* vert_data;
                 te_vec2 uv;
                 bool non_uniform_scale;
+                GLboolean prev_cull_face, prev_depth_test;
 
-                if (model->disable_backface_culling) {
+                prev_cull_face = glIsEnabled(GL_CULL_FACE);
+                prev_depth_test = glIsEnabled(GL_DEPTH_TEST);
+
+                if ((model->flags >> TE_MF_DISABLE_BACKFACE_CULLING) & 1) {
                     glDisable(GL_CULL_FACE);
                     glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, 1.0f);
                 }
-                if (model->disable_depth_test) {
+                if ((model->flags >> TE_MF_DISABLE_DEPTH_TEST) & 1) {
                     glDisable(GL_DEPTH_TEST);
                 }
 
@@ -1139,12 +1209,20 @@ prv_model_add_to_model_renderer(te_model* model) {
                 }
                 glEnd();
 
-                if (model->disable_backface_culling) {
-                    glEnable(GL_CULL_FACE);
+                if ((model->flags >> TE_MF_DISABLE_BACKFACE_CULLING) & 1) {
+                    if (prev_cull_face) {
+                        glEnable(GL_CULL_FACE);
+                    } else {
+                        glDisable(GL_CULL_FACE);
+                    }
                     glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, 0.0f);
                 }
-                if (model->disable_depth_test) {
-                    glEnable(GL_DEPTH_TEST);
+                if ((model->flags >> TE_MF_DISABLE_DEPTH_TEST) & 1) {
+                    if (prev_depth_test) {
+                        glEnable(GL_DEPTH_TEST);
+                    } else {
+                        glDisable(GL_DEPTH_TEST);
+                    }
                 }
                 if (non_uniform_scale) {
                     glDisable(GL_NORMALIZE);
@@ -1226,7 +1304,9 @@ prv_model_add_to_model_renderer(te_model* model) {
         data->tex_id = tex_id;
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
 
-        data->gl_face_type = model->disable_backface_culling ? GL_FRONT_AND_BACK : GL_FRONT;
+        data->gl_face_type = ((model->flags >> TE_MF_DISABLE_BACKFACE_CULLING) & 1)
+                                 ? GL_FRONT_AND_BACK
+                                 : GL_FRONT;
     }
 }
 
@@ -1318,17 +1398,6 @@ prv_model_get_world_aabb(te_model* model) {
         prv_model_get_renderer(model), model->render_data_handle,
         model->skeleton_relative_path != NULL);
     return &data->aabb_world;
-}
-
-void
-model_enable_transparency(te_model* model, bool enable) {
-    if (model->world == NULL) {
-        model->is_opaque = !enable;
-    } else {
-        prv_model_remove_from_model_renderer(model);
-        model->is_opaque = !enable;
-        prv_model_add_to_model_renderer(model);
-    }
 }
 
 void

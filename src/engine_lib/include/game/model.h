@@ -140,6 +140,10 @@ bool model_get_disable_backface_culling(te_model* model);
 void model_set_disable_depth_test(te_model* model, bool disable_depth_test);
 bool model_get_disable_depth_test(te_model* model);
 
+/* makes the model to be rendered in front of every other model */
+void model_set_draw_last(te_model* model, bool draw_last);
+bool model_get_draw_last(te_model* model);
+
 /* child model's location/rotation/scale will then be treated as relative to the parents location/rotation/scale
  * 
  * if you want to attach to parent model's skeleton bone specify skeleton bone index or 0xFFFFFFFF to just attach to model

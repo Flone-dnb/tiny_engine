@@ -537,6 +537,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
     for (i = 0; i < world_count; i++) {
         te_model_renderer* opaque_model_renderer;
         te_model_renderer* transparent_model_renderer;
+        te_model_renderer* last_model_renderer;
         te_widget_renderer* widget_renderer;
         te_particle_renderer* particle_renderer;
         te_mat4* proj_mat;
@@ -566,6 +567,7 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 
         opaque_model_renderer = world_get_opaque_model_renderer(worlds[i]);
         transparent_model_renderer = world_get_transparent_model_renderer(worlds[i]);
+        last_model_renderer = world_get_last_model_renderer(worlds[i]);
         widget_renderer = world_get_widget_renderer(worlds[i]);
         particle_renderer = world_get_particle_renderer(worlds[i]);
 
@@ -623,6 +625,20 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
                 glDisable(GL_BLEND);
 
                 glEnable(GL_CULL_FACE);
+
+                GPU_SECTION_END;
+            }
+
+            if (model_renderer_has_models(last_model_renderer)) {
+                GPU_SECTION_BEGIN("last (in front) models");
+
+#if defined(ENGINE_DEBUG_TOOLS)
+                /* adding to opaque because don't want to create a separate metric for this */
+                debug_stats->rendered_opaque_model_count +=
+#endif
+                    model_renderer_draw(
+                        last_model_renderer, renderer->light_params, view_mat, proj_mat,
+                        camera_frustum);
 
                 GPU_SECTION_END;
             }

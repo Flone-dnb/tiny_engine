@@ -81,6 +81,9 @@ spawn_gizmo_models(te_gizmo* gizmo, te_world* world) {
     model_set_position(gizmo->model_y, target_pos);
     model_set_position(gizmo->model_z, target_pos);
 
+    model_set_draw_last(gizmo->model_x, true);
+    model_set_draw_last(gizmo->model_y, true);
+    model_set_draw_last(gizmo->model_z, true);
     model_set_disable_depth_test(gizmo->model_x, true);
     model_set_disable_depth_test(gizmo->model_y, true);
     model_set_disable_depth_test(gizmo->model_z, true);
