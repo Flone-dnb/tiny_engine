@@ -160,10 +160,8 @@ model_renderer_draw(
 
         /* texture and color */
         glMaterialfv((GLenum)data->gl_face_type, GL_DIFFUSE, data->color);
+        glMaterialfv((GLenum)data->gl_face_type, GL_AMBIENT, data->color);
         glBindTexture(GL_TEXTURE_2D, data->tex_id); /* binds 0 if not set */
-
-        glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, data->color);
-        glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, data->color);
 
         glCallList(data->list_id_or_idx_count);
         rendered_model_count += 1;
@@ -188,10 +186,9 @@ model_renderer_draw(
             glMultMatrixf(data->world_mat[0]);
 
             /* texture and color */
+            glMaterialfv((GLenum)data->gl_face_type, GL_DIFFUSE, data->color);
+            glMaterialfv((GLenum)data->gl_face_type, GL_AMBIENT, data->color);
             glBindTexture(GL_TEXTURE_2D, data->tex_id); /* binds 0 if not set */
-
-            glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, data->color);
-            glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, data->color);
 
             prv_model_set_skinned_vertex_pointers(data->animated_vertices);
             glDrawElements(
