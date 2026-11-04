@@ -28,6 +28,11 @@ struct te_checkbox_widget {
     te_vec4 background_color;
     te_vec4 checked_color;
 
+    te_vec2 uv_offset;
+    te_vec2 uv_size;
+    te_vec2 uv_offset_checked;
+    te_vec2 uv_size_checked;
+
     /* `true` if entered the "destroy" function */
     bool is_checkbox_widget_destroy;
 
@@ -62,6 +67,11 @@ checkbox_widget_create(void) {
 
     vec4_set(0.5f, 0.5f, 0.5f, 1.0f, checkbox_widget->background_color);
     vec4_set(1.0f, 1.0f, 1.0f, 1.0f, checkbox_widget->checked_color);
+
+    vec2_zero(checkbox_widget->uv_offset);
+    vec2_zero(checkbox_widget->uv_offset_checked);
+    vec2_set(1.0f, 1.0f, checkbox_widget->uv_size);
+    vec2_set(1.0f, 1.0f, checkbox_widget->uv_size_checked);
 
     checkbox_widget->background_tex_relative_path = NULL;
     checkbox_widget->checked_tex_relative_path = NULL;
@@ -159,6 +169,10 @@ prv_checkbox_widget_create_checked_rect(te_checkbox_widget* checkbox_widget) {
         rect_widget_set_texture(
             checkbox_widget->checked_rect, checkbox_widget->checked_tex_relative_path);
     }
+
+    rect_widget_set_uv_offset(
+        checkbox_widget->checked_rect, checkbox_widget->uv_offset_checked);
+    rect_widget_set_uv_size(checkbox_widget->checked_rect, checkbox_widget->uv_size_checked);
 
     widget_set_parent(rect, checkbox_widget->widget);
 }
@@ -269,6 +283,62 @@ checkbox_widget_get_checked_texture(te_checkbox_widget* checkbox_widget) {
     return checkbox_widget->checked_tex_relative_path;
 }
 
+void
+checkbox_widget_set_uv_offset(te_checkbox_widget* checkbox_widget, te_vec2 uv_offset) {
+    vec2_copy(uv_offset, checkbox_widget->uv_offset);
+
+    if (widget_get_world(checkbox_widget->widget) != NULL) {
+        rect_widget_set_uv_offset(checkbox_widget->background_rect, uv_offset);
+    }
+}
+
+void
+checkbox_widget_get_uv_offset(te_checkbox_widget* checkbox_widget, te_vec2 out) {
+    vec2_copy(checkbox_widget->uv_offset, out);
+}
+
+void
+checkbox_widget_set_uv_size(te_checkbox_widget* checkbox_widget, te_vec2 uv_size) {
+    vec2_copy(uv_size, checkbox_widget->uv_size);
+
+    if (widget_get_world(checkbox_widget->widget) != NULL) {
+        rect_widget_set_uv_size(checkbox_widget->background_rect, uv_size);
+    }
+}
+
+void
+checkbox_widget_get_uv_size(te_checkbox_widget* checkbox_widget, te_vec2 out) {
+    vec2_copy(checkbox_widget->uv_size, out);
+}
+
+void
+checkbox_widget_set_uv_offset_checked(te_checkbox_widget* checkbox_widget, te_vec2 uv_offset) {
+    vec2_copy(uv_offset, checkbox_widget->uv_offset_checked);
+
+    if (checkbox_widget->checked_rect != NULL) {
+        rect_widget_set_uv_offset(checkbox_widget->checked_rect, uv_offset);
+    }
+}
+
+void
+checkbox_widget_get_uv_offset_checked(te_checkbox_widget* checkbox_widget, te_vec2 out) {
+    vec2_copy(checkbox_widget->uv_offset_checked, out);
+}
+
+void
+checkbox_widget_set_uv_size_checked(te_checkbox_widget* checkbox_widget, te_vec2 uv_size) {
+    vec2_copy(uv_size, checkbox_widget->uv_size_checked);
+
+    if (checkbox_widget->checked_rect != NULL) {
+        rect_widget_set_uv_size(checkbox_widget->checked_rect, uv_size);
+    }
+}
+
+void
+checkbox_widget_get_uv_size_checked(te_checkbox_widget* checkbox_widget, te_vec2 out) {
+    vec2_copy(checkbox_widget->uv_size_checked, out);
+}
+
 static void
 prv_checkbox_widget_set_position(te_checkbox_widget* checkbox_widget, te_vec2 pos) {
     widget_set_relative_position(checkbox_widget->widget, pos);
@@ -352,6 +422,16 @@ checkbox_widget_register_type(void) {
     type_info_add_string_variable(
         info, "checked_texture", checkbox_widget_set_checked_texture,
         checkbox_widget_get_checked_texture);
+    type_info_add_vec2_variable(
+        info, "uv_offset", checkbox_widget_set_uv_offset, checkbox_widget_get_uv_offset);
+    type_info_add_vec2_variable(
+        info, "uv_size", checkbox_widget_set_uv_size, checkbox_widget_get_uv_size);
+    type_info_add_vec2_variable(
+        info, "uv_offset_checked", checkbox_widget_set_uv_offset_checked,
+        checkbox_widget_get_uv_offset_checked);
+    type_info_add_vec2_variable(
+        info, "uv_size_checked", checkbox_widget_set_uv_size_checked,
+        checkbox_widget_get_uv_size_checked);
     type_info_add_string_variable(info, "name", set_name, get_name);
 
     type_database_register_type(info);
@@ -435,6 +515,8 @@ prv_checkbox_widget_on_after_spawned(void* this) {
         rect_widget_set_texture(
             checkbox_widget->background_rect, checkbox_widget->background_tex_relative_path);
     }
+    rect_widget_set_uv_offset(checkbox_widget->background_rect, checkbox_widget->uv_offset);
+    rect_widget_set_uv_size(checkbox_widget->background_rect, checkbox_widget->uv_size);
 
     if (checkbox_widget->is_checked) {
         prv_checkbox_widget_create_checked_rect(checkbox_widget);

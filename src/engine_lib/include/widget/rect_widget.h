@@ -1,5 +1,6 @@
 #pragma once
 
+#include <math/vec2.h>
 #include <math/vec4.h>
 
 /* rectangular widget, displays a color or a texture */
@@ -21,6 +22,15 @@ void rect_widget_get_color(te_rect_widget* rect_widget, te_vec4 out);
 /* sets path (relative to the `res` directory) to texture to use
  * the path string will be copied and stored in the model, specify NULL to remove texture */
 void rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path);
+
+/* if texture is used specifies offset and size in the referenced texture to display
+ * value in range [0.0; 1.0] relative to the texture size
+ * this is useful when a texture contains multiple elements and 1 widgets
+ * needs to reference only 1 element from the texture */
+void rect_widget_set_uv_offset(te_rect_widget* rect_widget, te_vec2 uv_offset);
+void rect_widget_get_uv_offset(te_rect_widget* rect_widget, te_vec2 out);
+void rect_widget_set_uv_size(te_rect_widget* rect_widget, te_vec2 uv_size);
+void rect_widget_get_uv_size(te_rect_widget* rect_widget, te_vec2 out);
 
 /* returns NULL if texture is not set, otherwise path (relative to the `res` directory) to the used texture
  * do not free returned string, valid while the model exists */

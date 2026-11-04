@@ -44,6 +44,9 @@ typedef struct te_rect_widget_render_data {
     /* XY stores clip start in range [0.0; 1.0] and ZW stores clip size in the same range */
     te_vec4 clip_rect;
 
+    te_vec2 uv_offset;
+    te_vec2 uv_size;
+
     /* 0 if not used */
     unsigned int tex_id;
 } te_rect_widget_render_data;

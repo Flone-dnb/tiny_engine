@@ -134,6 +134,7 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
     rect_widget_count = render_data_array_get_item_count(widget_renderer->rect_widget_data);
     if (rect_widget_count > 0) {
         te_rect_widget_render_data* data;
+        te_vec4 uv;
         unsigned int widget_idx;
         GPU_SECTION_BEGIN("rect");
 
@@ -141,32 +142,35 @@ widget_renderer_draw(te_widget_renderer* widget_renderer) {
         for (widget_idx = 0; widget_idx < rect_widget_count; widget_idx++) {
             glBindTexture(GL_TEXTURE_2D, data->tex_id);
 
+            vec4_copy(data->clip_rect, uv);
+            vec2_add(uv, data->uv_offset, uv);
+            uv[2] *= data->uv_size[0];
+            uv[3] *= data->uv_size[1];
+
             glBegin(GL_QUADS);
 
             glColor4fv(data->color);
 
             /* left-bottom */
-            glTexCoord2fv(data->clip_rect);
+            glTexCoord2fv(uv);
             glVertex2f(
                 data->pos_pix[0] + data->size_pix[0] * data->clip_rect[0],
                 data->pos_pix[1] + data->size_pix[1] * data->clip_rect[1]);
 
             /* top-left */
-            glTexCoord2f(data->clip_rect[0], data->clip_rect[1] + data->clip_rect[3]);
+            glTexCoord2f(uv[0], uv[1] + uv[3]);
             glVertex2f(
                 data->pos_pix[0] + data->size_pix[0] * data->clip_rect[0],
                 data->pos_pix[1] + data->size_pix[1] * data->clip_rect[3]);
 
             /* top-right */
-            glTexCoord2f(
-                data->clip_rect[0] + data->clip_rect[2],
-                data->clip_rect[1] + data->clip_rect[3]);
+            glTexCoord2f(uv[0] + uv[2], uv[1] + uv[3]);
             glVertex2f(
                 data->pos_pix[0] + data->size_pix[0] * data->clip_rect[2],
                 data->pos_pix[1] + data->size_pix[1] * data->clip_rect[3]);
 
             /* right-bottom */
-            glTexCoord2f(data->clip_rect[0] + data->clip_rect[2], data->clip_rect[1]);
+            glTexCoord2f(uv[0] + uv[2], uv[1]);
             glVertex2f(
                 data->pos_pix[0] + data->size_pix[0] * data->clip_rect[2],
                 data->pos_pix[1] + data->size_pix[1] * data->clip_rect[1]);

@@ -35,6 +35,13 @@ struct te_button_widget {
     unsigned int tex_hovered_id;
     unsigned int tex_pressed_id;
 
+    te_vec2 uv_offset;
+    te_vec2 uv_size;
+    te_vec2 uv_offset_hovered;
+    te_vec2 uv_size_hovered;
+    te_vec2 uv_offset_pressed;
+    te_vec2 uv_size_pressed;
+
     /* `true` if entered the "destroy" function */
     bool is_button_widget_destroy;
     bool is_cursor_inside_widget;
@@ -71,6 +78,13 @@ button_widget_create(void) {
     vec4_set(1.0f, 1.0f, 1.0f, 1.0f, button_widget->color);
     vec4_set(1.0f, 1.0f, 1.0f, 1.0f, button_widget->color_hovered);
     vec4_set(1.0f, 1.0f, 1.0f, 1.0f, button_widget->color_pressed);
+
+    vec2_zero(button_widget->uv_offset);
+    vec2_zero(button_widget->uv_offset_hovered);
+    vec2_zero(button_widget->uv_offset_pressed);
+    vec2_set(1.0f, 1.0f, button_widget->uv_size);
+    vec2_set(1.0f, 1.0f, button_widget->uv_size_hovered);
+    vec2_set(1.0f, 1.0f, button_widget->uv_size_pressed);
 
     button_widget->on_clicked = NULL;
     button_widget->on_right_clicked = NULL;
@@ -140,10 +154,7 @@ prv_button_widget_on_after_spawned(void* this) {
     prv_button_widget_register_render_data(button_widget);
 
     button_widget->is_cursor_inside_widget = false;
-    rect_widget_set_color(button_widget->rect_widget, button_widget->color);
-    if (button_widget->tex_relative_path != NULL) {
-        rect_widget_set_texture(button_widget->rect_widget, button_widget->tex_relative_path);
-    }
+    button_widget_enter_normal_state(button_widget);
 }
 
 static void
@@ -300,6 +311,22 @@ button_widget_register_type(void) {
     type_info_add_string_variable(
         info, "texture_pressed", button_widget_set_texture_pressed,
         button_widget_get_texture_pressed);
+    type_info_add_vec2_variable(
+        info, "uv_offset", button_widget_set_uv_offset, button_widget_get_uv_offset);
+    type_info_add_vec2_variable(
+        info, "uv_size", button_widget_set_uv_size, button_widget_get_uv_size);
+    type_info_add_vec2_variable(
+        info, "uv_offset_hovered", button_widget_set_uv_offset_hovered,
+        button_widget_get_uv_offset_hovered);
+    type_info_add_vec2_variable(
+        info, "uv_size_hovered", button_widget_set_uv_size_hovered,
+        button_widget_get_uv_size_hovered);
+    type_info_add_vec2_variable(
+        info, "uv_offset_pressed", button_widget_set_uv_offset_pressed,
+        button_widget_get_uv_offset_pressed);
+    type_info_add_vec2_variable(
+        info, "uv_size_pressed", button_widget_set_uv_size_pressed,
+        button_widget_get_uv_size_pressed);
     type_info_add_string_variable(info, "name", set_name, get_name);
 
     type_database_register_type(info);
@@ -472,6 +499,87 @@ button_widget_get_texture_pressed(te_button_widget* button_widget) {
     return button_widget->tex_pressed_relative_path;
 }
 
+void
+button_widget_set_uv_offset(te_button_widget* button_widget, te_vec2 uv_offset) {
+    vec2_copy(uv_offset, button_widget->uv_offset);
+
+    if (widget_get_world(button_widget->widget) != NULL
+        && !button_widget->is_cursor_inside_widget) {
+        rect_widget_set_uv_offset(button_widget->rect_widget, button_widget->uv_offset);
+    }
+}
+
+void
+button_widget_get_uv_offset(te_button_widget* button_widget, te_vec2 out) {
+    vec2_copy(button_widget->uv_offset, out);
+}
+
+void
+button_widget_set_uv_size(te_button_widget* button_widget, te_vec2 uv_size) {
+    vec2_copy(uv_size, button_widget->uv_size);
+
+    if (widget_get_world(button_widget->widget) != NULL
+        && !button_widget->is_cursor_inside_widget) {
+        rect_widget_set_uv_size(button_widget->rect_widget, button_widget->uv_size);
+    }
+}
+
+void
+button_widget_get_uv_size(te_button_widget* button_widget, te_vec2 out) {
+    vec2_copy(button_widget->uv_size, out);
+}
+
+void
+button_widget_set_uv_offset_hovered(te_button_widget* button_widget, te_vec2 uv_offset) {
+    vec2_copy(uv_offset, button_widget->uv_offset_hovered);
+
+    if (widget_get_world(button_widget->widget) != NULL
+        && button_widget->is_cursor_inside_widget) {
+        rect_widget_set_uv_offset(
+            button_widget->rect_widget, button_widget->uv_offset_hovered);
+    }
+}
+
+void
+button_widget_get_uv_offset_hovered(te_button_widget* button_widget, te_vec2 out) {
+    vec2_copy(button_widget->uv_offset_hovered, out);
+}
+
+void
+button_widget_set_uv_size_hovered(te_button_widget* button_widget, te_vec2 uv_size) {
+    vec2_copy(uv_size, button_widget->uv_size_hovered);
+
+    if (widget_get_world(button_widget->widget) != NULL
+        && button_widget->is_cursor_inside_widget) {
+        rect_widget_set_uv_size(button_widget->rect_widget, button_widget->uv_size_hovered);
+    }
+}
+
+void
+button_widget_get_uv_size_hovered(te_button_widget* button_widget, te_vec2 out) {
+    vec2_copy(button_widget->uv_size_hovered, out);
+}
+
+void
+button_widget_set_uv_offset_pressed(te_button_widget* button_widget, te_vec2 uv_offset) {
+    vec2_copy(uv_offset, button_widget->uv_offset_pressed);
+}
+
+void
+button_widget_get_uv_offset_pressed(te_button_widget* button_widget, te_vec2 out) {
+    vec2_copy(button_widget->uv_offset_pressed, out);
+}
+
+void
+button_widget_set_uv_size_pressed(te_button_widget* button_widget, te_vec2 uv_size) {
+    vec2_copy(uv_size, button_widget->uv_size_pressed);
+}
+
+void
+button_widget_get_uv_size_pressed(te_button_widget* button_widget, te_vec2 out) {
+    vec2_copy(button_widget->uv_size_pressed, out);
+}
+
 static void
 prv_button_widget_on_pos_changed(void* this) {
     te_button_widget* button_widget = this;
@@ -496,6 +604,8 @@ button_widget_enter_normal_state(te_button_widget* button_widget) {
     if (button_widget->tex_relative_path != NULL) {
         rect_widget_set_texture(button_widget->rect_widget, button_widget->tex_relative_path);
     }
+    rect_widget_set_uv_offset(button_widget->rect_widget, button_widget->uv_offset);
+    rect_widget_set_uv_size(button_widget->rect_widget, button_widget->uv_size);
 }
 
 void
@@ -505,6 +615,8 @@ button_widget_enter_hovered_state(te_button_widget* button_widget) {
         rect_widget_set_texture(
             button_widget->rect_widget, button_widget->tex_hovered_relative_path);
     }
+    rect_widget_set_uv_offset(button_widget->rect_widget, button_widget->uv_offset_hovered);
+    rect_widget_set_uv_size(button_widget->rect_widget, button_widget->uv_size_hovered);
 }
 
 void
@@ -514,6 +626,8 @@ button_widget_enter_pressed_state(te_button_widget* button_widget) {
         rect_widget_set_texture(
             button_widget->rect_widget, button_widget->tex_pressed_relative_path);
     }
+    rect_widget_set_uv_offset(button_widget->rect_widget, button_widget->uv_offset_pressed);
+    rect_widget_set_uv_size(button_widget->rect_widget, button_widget->uv_size_pressed);
 }
 
 static void

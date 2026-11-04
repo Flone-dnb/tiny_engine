@@ -18,6 +18,11 @@ struct te_progress_widget {
     te_vec4 background_color;
     te_vec4 foreground_color;
 
+    te_vec2 uv_offset;
+    te_vec2 uv_size;
+    te_vec2 uv_offset_foreground;
+    te_vec2 uv_size_foreground;
+
     /* NULL if was not set */
     char* background_tex_relative_path;
     char* foreground_tex_relative_path;
@@ -51,6 +56,11 @@ progress_widget_create(void) {
     vec4_set(1.0f, 1.0f, 1.0f, 1.0f, progress_widget->foreground_color);
     progress_widget->value = 0.5f;
     progress_widget->is_progress_widget_destroy = false;
+
+    vec2_zero(progress_widget->uv_offset);
+    vec2_zero(progress_widget->uv_offset_foreground);
+    vec2_set(1.0f, 1.0f, progress_widget->uv_size);
+    vec2_set(1.0f, 1.0f, progress_widget->uv_size_foreground);
 
     {
         progress_widget->background_rect = rect_widget_create();
@@ -207,6 +217,51 @@ progress_widget_get_foreground_texture(te_progress_widget* progress_widget) {
     return progress_widget->foreground_tex_relative_path;
 }
 
+void
+progress_widget_set_uv_offset(te_progress_widget* progress_widget, te_vec2 uv_offset) {
+    vec2_copy(uv_offset, progress_widget->uv_offset);
+    rect_widget_set_uv_offset(progress_widget->background_rect, uv_offset);
+}
+
+void
+progress_widget_get_uv_offset(te_progress_widget* progress_widget, te_vec2 out) {
+    vec2_copy(progress_widget->uv_offset, out);
+}
+
+void
+progress_widget_set_uv_size(te_progress_widget* progress_widget, te_vec2 uv_size) {
+    vec2_copy(uv_size, progress_widget->uv_size);
+    rect_widget_set_uv_size(progress_widget->background_rect, uv_size);
+}
+
+void
+progress_widget_get_uv_size(te_progress_widget* progress_widget, te_vec2 out) {
+    vec2_copy(progress_widget->uv_size, out);
+}
+
+void
+progress_widget_set_uv_offset_foreground(
+    te_progress_widget* progress_widget, te_vec2 uv_offset) {
+    vec2_copy(uv_offset, progress_widget->uv_offset_foreground);
+    rect_widget_set_uv_offset(progress_widget->foreground_rect, uv_offset);
+}
+
+void
+progress_widget_get_uv_offset_foreground(te_progress_widget* progress_widget, te_vec2 out) {
+    vec2_copy(progress_widget->uv_offset_foreground, out);
+}
+
+void
+progress_widget_set_uv_size_foreground(te_progress_widget* progress_widget, te_vec2 uv_size) {
+    vec2_copy(uv_size, progress_widget->uv_size_foreground);
+    rect_widget_set_uv_size(progress_widget->foreground_rect, uv_size);
+}
+
+void
+progress_widget_get_uv_size_foreground(te_progress_widget* progress_widget, te_vec2 out) {
+    vec2_copy(progress_widget->uv_size_foreground, out);
+}
+
 static void
 prv_progress_widget_on_after_spawned(void* this) {
     te_vec4 rect;
@@ -232,6 +287,14 @@ prv_progress_widget_on_after_spawned(void* this) {
 
     vec4_set(0.0f, 0.0f, progress_widget->value, 1.0f, rect);
     rect_widget_set_clip_rect(progress_widget->foreground_rect, rect);
+
+    rect_widget_set_uv_offset(progress_widget->background_rect, progress_widget->uv_offset);
+    rect_widget_set_uv_size(progress_widget->background_rect, progress_widget->uv_size);
+
+    rect_widget_set_uv_offset(
+        progress_widget->foreground_rect, progress_widget->uv_offset_foreground);
+    rect_widget_set_uv_size(
+        progress_widget->foreground_rect, progress_widget->uv_size_foreground);
 }
 
 static void
@@ -328,6 +391,16 @@ progress_widget_register_type(void) {
     type_info_add_string_variable(
         info, "foreground_texture", progress_widget_set_foreground_texture,
         progress_widget_get_foreground_texture);
+    type_info_add_vec2_variable(
+        info, "uv_offset", progress_widget_set_uv_offset, progress_widget_get_uv_offset);
+    type_info_add_vec2_variable(
+        info, "uv_size", progress_widget_set_uv_size, progress_widget_get_uv_size);
+    type_info_add_vec2_variable(
+        info, "uv_offset_foreground", progress_widget_set_uv_offset_foreground,
+        progress_widget_get_uv_offset_foreground);
+    type_info_add_vec2_variable(
+        info, "uv_size_foreground", progress_widget_set_uv_size_foreground,
+        progress_widget_get_uv_size_foreground);
     type_info_add_string_variable(info, "name", set_name, get_name);
 
     type_database_register_type(info);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <math/vec2.h>
 #include <math/vec4.h>
 
 typedef struct te_slider_widget te_slider_widget;
@@ -44,6 +45,20 @@ slider_widget_set_handle_texture(te_slider_widget* slider_widget, const char* re
  * do not free returned string, valid while the slider exists and the texture is not changed */
 char* slider_widget_get_background_texture(te_slider_widget* slider_widget);
 char* slider_widget_get_handle_texture(te_slider_widget* slider_widget);
+
+/* if texture is used specifies offset and size in the referenced texture to display
+ * value in range [0.0; 1.0] relative to the texture size
+ * this is useful when a texture contains multiple elements and 1 widgets
+ * needs to reference only 1 element from the texture */
+void slider_widget_set_uv_offset(te_slider_widget* slider_widget, te_vec2 uv_offset);
+void slider_widget_get_uv_offset(te_slider_widget* slider_widget, te_vec2 out);
+void slider_widget_set_uv_size(te_slider_widget* slider_widget, te_vec2 uv_size);
+void slider_widget_get_uv_size(te_slider_widget* slider_widget, te_vec2 out);
+
+void slider_widget_set_uv_offset_handle(te_slider_widget* slider_widget, te_vec2 uv_offset);
+void slider_widget_get_uv_offset_handle(te_slider_widget* slider_widget, te_vec2 out);
+void slider_widget_set_uv_size_handle(te_slider_widget* slider_widget, te_vec2 uv_size);
+void slider_widget_get_uv_size_handle(te_slider_widget* slider_widget, te_vec2 out);
 
 /* returns unique ID of this type in the type database */
 const char* slider_widget_get_type_id(void);

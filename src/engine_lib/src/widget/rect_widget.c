@@ -29,6 +29,13 @@ struct te_rect_widget {
 
     te_vec4 color;
 
+    /* if texture is used specifies offset and size in the referenced texture to display
+     * value in range [0.0; 1.0] relative to the texture size
+     * this is useful when a texture contains multiple elements and 1 widgets
+     * needs to reference only 1 element from the texture */
+    te_vec2 uv_offset;
+    te_vec2 uv_size;
+
     /* stores invalid value if not being rendered */
     unsigned int render_data_handle;
 
@@ -61,6 +68,9 @@ rect_widget_create(void) {
     rect_widget->tex_relative_path = NULL;
     rect_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
     rect_widget->is_rect_widget_destroy = false;
+
+    vec2_zero(rect_widget->uv_offset);
+    vec2_set(1.0f, 1.0f, rect_widget->uv_size);
 
     vec4_set(0.0f, 0.0f, 1.0f, 1.0f, rect_widget->clip_rect);
 
@@ -209,6 +219,46 @@ rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) 
     }
 }
 
+void
+rect_widget_set_uv_offset(te_rect_widget* rect_widget, te_vec2 uv_offset) {
+    te_world* world;
+    te_rect_widget_render_data* data;
+
+    vec2_copy(uv_offset, rect_widget->uv_offset);
+
+    world = widget_get_world(rect_widget->widget);
+    if (world != NULL) {
+        data = widget_renderer_get_rect_widget_render_data_tmp(
+            world_get_widget_renderer(world), rect_widget->render_data_handle);
+        vec2_copy(uv_offset, data->uv_offset);
+    }
+}
+
+void
+rect_widget_get_uv_offset(te_rect_widget* rect_widget, te_vec2 out) {
+    vec2_copy(rect_widget->uv_offset, out);
+}
+
+void
+rect_widget_set_uv_size(te_rect_widget* rect_widget, te_vec2 uv_size) {
+    te_world* world;
+    te_rect_widget_render_data* data;
+
+    vec2_copy(uv_size, rect_widget->uv_size);
+
+    world = widget_get_world(rect_widget->widget);
+    if (world != NULL) {
+        data = widget_renderer_get_rect_widget_render_data_tmp(
+            world_get_widget_renderer(world), rect_widget->render_data_handle);
+        vec2_copy(uv_size, data->uv_size);
+    }
+}
+
+void
+rect_widget_get_uv_size(te_rect_widget* rect_widget, te_vec2 out) {
+    vec2_copy(rect_widget->uv_size, out);
+}
+
 const char*
 rect_widget_get_texture(te_rect_widget* rect_widget) {
     return rect_widget->tex_relative_path;
@@ -274,6 +324,9 @@ prv_rect_widget_register_for_rendering(te_rect_widget* rect_widget) {
             texture_manager, rect_widget->tex_relative_path,
             prv_widget_should_generate_mipmaps());
     }
+
+    vec2_copy(rect_widget->uv_offset, data->uv_offset);
+    vec2_copy(rect_widget->uv_size, data->uv_size);
 
     prv_rect_widget_update_non_tex_render_data(rect_widget);
 }
@@ -466,6 +519,10 @@ rect_widget_register_type(void) {
     type_info_add_vec4_variable(info, "color", rect_widget_set_color, rect_widget_get_color);
     type_info_add_string_variable(
         info, "texture", rect_widget_set_texture, rect_widget_get_texture);
+    type_info_add_vec2_variable(
+        info, "uv_offset", rect_widget_set_uv_offset, rect_widget_get_uv_offset);
+    type_info_add_vec2_variable(
+        info, "uv_size", rect_widget_set_uv_size, rect_widget_get_uv_size);
     type_info_add_string_variable(info, "name", set_name, get_name);
 
     type_database_register_type(info);

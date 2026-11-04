@@ -14,15 +14,20 @@
 struct te_slider_widget {
     te_widget* widget;
 
-    /* slider elements */
+    /* always valid */
     te_rect_widget* background_rect;
     te_rect_widget* handle_rect;
 
-    /* may be NULL if not set */
+    /* NULL if not set */
     void (*on_value_changed)(te_slider_widget* slider_widget, float new_value);
 
     te_vec4 background_color;
     te_vec4 handle_color;
+
+    te_vec2 uv_offset;
+    te_vec2 uv_size;
+    te_vec2 uv_offset_handle;
+    te_vec2 uv_size_handle;
 
     char* background_tex_relative_path;
     char* handle_tex_relative_path;
@@ -65,6 +70,11 @@ slider_widget_create(void) {
     slider_widget->on_value_changed = NULL;
     slider_widget->is_slider_widget_destroy = false;
     slider_widget->is_handle_grabbed = false;
+
+    vec2_zero(slider_widget->uv_offset);
+    vec2_zero(slider_widget->uv_offset_handle);
+    vec2_set(1.0f, 1.0f, slider_widget->uv_size);
+    vec2_set(1.0f, 1.0f, slider_widget->uv_size_handle);
 
     slider_widget->widget = widget_create(
         slider_widget, slider_widget_get_type_id, NULL, NULL,
@@ -253,6 +263,50 @@ slider_widget_get_background_texture(te_slider_widget* slider_widget) {
 char*
 slider_widget_get_handle_texture(te_slider_widget* slider_widget) {
     return slider_widget->handle_tex_relative_path;
+}
+
+void
+slider_widget_set_uv_offset(te_slider_widget* slider_widget, te_vec2 uv_offset) {
+    vec2_copy(uv_offset, slider_widget->uv_offset);
+    rect_widget_set_uv_offset(slider_widget->background_rect, uv_offset);
+}
+
+void
+slider_widget_get_uv_offset(te_slider_widget* slider_widget, te_vec2 out) {
+    vec2_copy(slider_widget->uv_offset, out);
+}
+
+void
+slider_widget_set_uv_size(te_slider_widget* slider_widget, te_vec2 uv_size) {
+    vec2_copy(uv_size, slider_widget->uv_size);
+    rect_widget_set_uv_size(slider_widget->background_rect, uv_size);
+}
+
+void
+slider_widget_get_uv_size(te_slider_widget* slider_widget, te_vec2 out) {
+    vec2_copy(slider_widget->uv_size, out);
+}
+
+void
+slider_widget_set_uv_offset_handle(te_slider_widget* slider_widget, te_vec2 uv_offset) {
+    vec2_copy(uv_offset, slider_widget->uv_offset_handle);
+    rect_widget_set_uv_offset(slider_widget->handle_rect, uv_offset);
+}
+
+void
+slider_widget_get_uv_offset_handle(te_slider_widget* slider_widget, te_vec2 out) {
+    vec2_copy(slider_widget->uv_offset_handle, out);
+}
+
+void
+slider_widget_set_uv_size_handle(te_slider_widget* slider_widget, te_vec2 uv_size) {
+    vec2_copy(uv_size, slider_widget->uv_size_handle);
+    rect_widget_set_uv_size(slider_widget->handle_rect, uv_size);
+}
+
+void
+slider_widget_get_uv_size_handle(te_slider_widget* slider_widget, te_vec2 out) {
+    vec2_copy(slider_widget->uv_size_handle, out);
 }
 
 static void
@@ -471,6 +525,16 @@ slider_widget_register_type(void) {
     type_info_add_string_variable(
         info, "handle_texture", slider_widget_set_handle_texture,
         slider_widget_get_handle_texture);
+    type_info_add_vec2_variable(
+        info, "uv_offset", slider_widget_set_uv_offset, slider_widget_get_uv_offset);
+    type_info_add_vec2_variable(
+        info, "uv_size", slider_widget_set_uv_size, slider_widget_get_uv_size);
+    type_info_add_vec2_variable(
+        info, "uv_offset_handle", slider_widget_set_uv_offset_handle,
+        slider_widget_get_uv_offset_handle);
+    type_info_add_vec2_variable(
+        info, "uv_size_handle", slider_widget_set_uv_size_handle,
+        slider_widget_get_uv_size_handle);
     type_info_add_string_variable(info, "name", set_name, get_name);
 
     type_database_register_type(info);
