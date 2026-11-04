@@ -46,7 +46,7 @@ typedef struct te_skeletal_mesh_vertex_src_data {
     te_vec3 pos;
     te_vec3 normal;
     te_vec4 bone_weights;
-    te_vec4 bone_indices;
+    te_bone_index_t bone_indices[4];
 } te_skeletal_mesh_vertex_src_data;
 
 te_vertex_pack*
@@ -417,42 +417,47 @@ prv_model_update_child_model_mats(te_model* model) {
 
 void
 prv_model_on_after_skeleton_updated(te_model* model) {
-    /* update geometry */
-    unsigned int vert_idx, i;
-    te_skeletal_mesh_vertex_src_data* src;
-    te_skeletal_mesh_vertex* dst;
-    te_vec4 skinned_pos, skinned_normal, pos, normal;
-    te_mat4* skinning_mats = skeleton_get_skinning_mats(model->skeleton);
-    for (vert_idx = 0; vert_idx < model->animated_vertex_count; vert_idx++) {
-        src = &model->animated_vertices_src_data[vert_idx];
-        dst = &model->animated_vertices[vert_idx];
+    if (model->skeleton == NULL) {
+        /* not spawned yet */
+        return;
+    } else {
+        /* update geometry */
+        unsigned int vert_idx, i;
+        te_skeletal_mesh_vertex_src_data* src;
+        te_skeletal_mesh_vertex* dst;
+        te_vec4 skinned_pos, skinned_normal, pos, normal;
+        te_mat4* skinning_mats = skeleton_get_skinning_mats(model->skeleton);
+        for (vert_idx = 0; vert_idx < model->animated_vertex_count; vert_idx++) {
+            src = &model->animated_vertices_src_data[vert_idx];
+            dst = &model->animated_vertices[vert_idx];
 
-        vec4_zero(skinned_pos);
-        vec4_zero(pos);
-        vec4_zero(skinned_normal);
-        vec4_zero(normal);
-        for (i = 0; i < 4; i++) {
-            te_mat4* bone_mat = &skinning_mats[(int)src->bone_indices[i]];
+            vec4_zero(skinned_pos);
+            vec4_zero(pos);
+            vec4_zero(skinned_normal);
+            vec4_zero(normal);
+            for (i = 0; i < 4; i++) {
+                te_mat4* bone_mat = &skinning_mats[(int)src->bone_indices[i]];
 
-            vec3_copy(src->pos, pos);
-            pos[3] = 1.0f;
-            mat4_mulv(*bone_mat, pos, pos);
-            vec4_muls(pos, src->bone_weights[i], pos);
+                vec3_copy(src->pos, pos);
+                pos[3] = 1.0f;
+                mat4_mulv(*bone_mat, pos, pos);
+                vec4_muls(pos, src->bone_weights[i], pos);
 
-            vec4_add(skinned_pos, pos, skinned_pos);
+                vec4_add(skinned_pos, pos, skinned_pos);
 
-            vec3_copy(src->normal, normal);
-            normal[3] = 0.0f;
-            mat4_mulv(*bone_mat, normal, normal);
-            vec4_muls(normal, src->bone_weights[i], normal);
+                vec3_copy(src->normal, normal);
+                normal[3] = 0.0f;
+                mat4_mulv(*bone_mat, normal, normal);
+                vec4_muls(normal, src->bone_weights[i], normal);
 
-            vec4_add(skinned_normal, normal, skinned_normal);
+                vec4_add(skinned_normal, normal, skinned_normal);
+            }
+            vec3_copy(skinned_pos, dst->pos);
+            vec3_copy(skinned_normal, dst->normal);
         }
-        vec3_copy(skinned_pos, dst->pos);
-        vec3_copy(skinned_normal, dst->normal);
-    }
 
-    prv_model_update_child_model_mats(model);
+        prv_model_update_child_model_mats(model);
+    }
 }
 
 static void
@@ -1176,9 +1181,10 @@ prv_model_add_to_model_renderer(te_model* model) {
                 vec4_copy(
                     (float*)(src + vertices->attribute_offsets[TE_VA_BONE_WEIGHTS]),
                     init_data->bone_weights);
-                vec4_copy(
-                    (float*)(src + vertices->attribute_offsets[TE_VA_BONE_INDICES]),
-                    init_data->bone_indices);
+                memcpy(
+                    init_data->bone_indices,
+                    src + vertices->attribute_offsets[TE_VA_BONE_INDICES],
+                    sizeof(te_bone_index_t) * 4);
             }
         }
 

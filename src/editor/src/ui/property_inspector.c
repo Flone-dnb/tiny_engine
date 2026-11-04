@@ -274,7 +274,9 @@ on_preview_animation_selected(void* custom, const char* absolute_path_to_file) {
     skeleton_load_animations(skeleton, relative_path_to_anim);
 
     filename = filesystem_find_filename(relative_path_to_anim, false, NULL);
-    skeleton_play_animation(skeleton, filename, true, 0.0f);
+    if (filename != NULL) {
+        skeleton_play_animation(skeleton, filename, true, 0.0f);
+    }
 
     free(relative_path_to_anim);
 }

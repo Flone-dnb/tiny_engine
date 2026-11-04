@@ -656,6 +656,7 @@ prv_skeleton_preload_animation_file(
 
     /* add to cache */
     num_hashtable_insert(skeleton->preloaded_anims, name_hash, anim);
+    free(anim); /* hashtable copied data to a newly allocated place */
 }
 
 void
@@ -665,7 +666,8 @@ skeleton_load_animations(te_skeleton* skeleton, const char* relative_path) {
     if (!filesystem_does_path_exists(anim_path)) {
         log_error_fmt(
             __FILE__, __LINE__, "the specified path does not exist \"%s\"", anim_path);
-        abort();
+        free(anim_path);
+        return;
     }
 
     if (filesystem_path_is_directory(anim_path)) {
@@ -700,11 +702,13 @@ skeleton_load_animations(te_skeleton* skeleton, const char* relative_path) {
         if (filename_len < 6) {
             log_error_fmt(
                 __FILE__, __LINE__, "invalid anim file path specified: %s", anim_path);
-            abort();
+            free(anim_path);
+            return;
         }
         if (strncmp(filename + filename_len - 5, ".anim", 5) != 0) {
             log_error_fmt(__FILE__, __LINE__, "expected .anim extension: %s", anim_path);
-            abort();
+            free(anim_path);
+            return;
         }
         prv_skeleton_preload_animation_file(skeleton, anim_path, filename, filename_len);
     }
@@ -724,7 +728,7 @@ skeleton_play_animation(
         log_error_fmt(
             __FILE__, __LINE__, "unable to find animation %s (was it loaded previously?)",
             anim_name);
-        abort();
+        return;
     }
 
     if (blend_time_sec >= 0.01f) {
