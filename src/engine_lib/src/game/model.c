@@ -652,7 +652,7 @@ model_is_transparency_enabled(te_model* model) {
 
 void
 model_set_is_serialization_allowed(te_model* model, bool enable) {
-    model->flags &= ~(1 << TE_MF_IS_SERIALIZATION_ALLOWED);
+    model->flags &= (unsigned char)(~(1 << TE_MF_IS_SERIALIZATION_ALLOWED));
     model->flags |= enable << TE_MF_IS_SERIALIZATION_ALLOWED;
 }
 
@@ -753,11 +753,11 @@ model_enable_transparency(te_model* model, bool enable) {
     }
 
     if (model->world == NULL) {
-        model->flags &= ~(1 << TE_MF_IS_OPAQUE);
+        model->flags &= (unsigned char)(~(1 << TE_MF_IS_OPAQUE));
         model->flags |= is_opaque << TE_MF_IS_OPAQUE;
     } else {
         prv_model_remove_from_model_renderer(model);
-        model->flags &= ~(1 << TE_MF_IS_OPAQUE);
+        model->flags &= (unsigned char)(~(1 << TE_MF_IS_OPAQUE));
         model->flags |= is_opaque << TE_MF_IS_OPAQUE;
         prv_model_add_to_model_renderer(model);
     }
@@ -770,11 +770,11 @@ model_set_disable_backface_culling(te_model* model, bool disable_backface_cullin
     }
 
     if (model->world == NULL) {
-        model->flags &= ~(1 << TE_MF_DISABLE_BACKFACE_CULLING);
+        model->flags &= (unsigned char)(~(1 << TE_MF_DISABLE_BACKFACE_CULLING));
         model->flags |= disable_backface_culling << TE_MF_DISABLE_BACKFACE_CULLING;
     } else {
         prv_model_remove_from_model_renderer(model);
-        model->flags &= ~(1 << TE_MF_DISABLE_BACKFACE_CULLING);
+        model->flags &= (unsigned char)(~(1 << TE_MF_DISABLE_BACKFACE_CULLING));
         model->flags |= disable_backface_culling << TE_MF_DISABLE_BACKFACE_CULLING;
         prv_model_add_to_model_renderer(model);
     }
@@ -792,11 +792,11 @@ model_set_disable_depth_test(te_model* model, bool disable_depth_test) {
     }
 
     if (model->world == NULL) {
-        model->flags &= ~(1 << TE_MF_DISABLE_DEPTH_TEST);
+        model->flags &= (unsigned char)(~(1 << TE_MF_DISABLE_DEPTH_TEST));
         model->flags |= disable_depth_test << TE_MF_DISABLE_DEPTH_TEST;
     } else {
         prv_model_remove_from_model_renderer(model);
-        model->flags &= ~(1 << TE_MF_DISABLE_DEPTH_TEST);
+        model->flags &= (unsigned char)(~(1 << TE_MF_DISABLE_DEPTH_TEST));
         model->flags |= disable_depth_test << TE_MF_DISABLE_DEPTH_TEST;
         prv_model_add_to_model_renderer(model);
     }
@@ -814,11 +814,11 @@ model_set_draw_last(te_model* model, bool draw_last) {
     }
 
     if (model->world == NULL) {
-        model->flags &= ~(1 << TE_MF_DRAW_LAST);
+        model->flags &= (unsigned char)(~(1 << TE_MF_DRAW_LAST));
         model->flags |= draw_last << TE_MF_DRAW_LAST;
     } else {
         prv_model_remove_from_model_renderer(model);
-        model->flags &= ~(1 << TE_MF_DRAW_LAST);
+        model->flags &= (unsigned char)(~(1 << TE_MF_DRAW_LAST));
         model->flags |= draw_last << TE_MF_DRAW_LAST;
         prv_model_add_to_model_renderer(model);
     }
