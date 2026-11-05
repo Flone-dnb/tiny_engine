@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <math/vec2.h>
 #include <math/vec4.h>
 
@@ -35,6 +36,11 @@ void progress_widget_set_foreground_texture(
  * do not free returned string, valid while the slider exists and the texture is not changed */
 char* progress_widget_get_background_texture(te_progress_widget* progress_widget);
 char* progress_widget_get_foreground_texture(te_progress_widget* progress_widget);
+
+/* sets linear or nearest (default) texture filtering */
+void progress_widget_set_texture_linear_filtering(
+    te_progress_widget* progress_widget, bool linear_filtering);
+bool progress_widget_get_texture_linear_filtering(te_progress_widget* progress_widget);
 
 /* if texture is used specifies offset and size in the referenced texture to display
  * value in range [0.0; 1.0] relative to the texture size

@@ -31,6 +31,7 @@ struct te_progress_widget {
     float value;
 
     bool is_progress_widget_destroy;
+    bool texture_linear_filtering;
 };
 
 /* widget callbacks */
@@ -56,6 +57,7 @@ progress_widget_create(void) {
     vec4_set(1.0f, 1.0f, 1.0f, 1.0f, progress_widget->foreground_color);
     progress_widget->value = 0.5f;
     progress_widget->is_progress_widget_destroy = false;
+    progress_widget->texture_linear_filtering = false;
 
     vec2_zero(progress_widget->uv_offset);
     vec2_zero(progress_widget->uv_offset_foreground);
@@ -218,6 +220,22 @@ progress_widget_get_foreground_texture(te_progress_widget* progress_widget) {
 }
 
 void
+progress_widget_set_texture_linear_filtering(
+    te_progress_widget* progress_widget, bool linear_filtering) {
+    progress_widget->texture_linear_filtering = linear_filtering;
+
+    rect_widget_set_texture_linear_filtering(
+        progress_widget->background_rect, progress_widget->texture_linear_filtering);
+    rect_widget_set_texture_linear_filtering(
+        progress_widget->foreground_rect, progress_widget->texture_linear_filtering);
+}
+
+bool
+progress_widget_get_texture_linear_filtering(te_progress_widget* progress_widget) {
+    return progress_widget->texture_linear_filtering;
+}
+
+void
 progress_widget_set_uv_offset(te_progress_widget* progress_widget, te_vec2 uv_offset) {
     vec2_copy(uv_offset, progress_widget->uv_offset);
     rect_widget_set_uv_offset(progress_widget->background_rect, uv_offset);
@@ -295,6 +313,11 @@ prv_progress_widget_on_after_spawned(void* this) {
         progress_widget->foreground_rect, progress_widget->uv_offset_foreground);
     rect_widget_set_uv_size(
         progress_widget->foreground_rect, progress_widget->uv_size_foreground);
+
+    rect_widget_set_texture_linear_filtering(
+        progress_widget->background_rect, progress_widget->texture_linear_filtering);
+    rect_widget_set_texture_linear_filtering(
+        progress_widget->foreground_rect, progress_widget->texture_linear_filtering);
 }
 
 static void
@@ -391,6 +414,9 @@ progress_widget_register_type(void) {
     type_info_add_string_variable(
         info, "foreground_texture", progress_widget_set_foreground_texture,
         progress_widget_get_foreground_texture);
+    type_info_add_bool_variable(
+        info, "linear_filtering", progress_widget_set_texture_linear_filtering,
+        progress_widget_get_texture_linear_filtering);
     type_info_add_vec2_variable(
         info, "uv_offset", progress_widget_set_uv_offset, progress_widget_get_uv_offset);
     type_info_add_vec2_variable(

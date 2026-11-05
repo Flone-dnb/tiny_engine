@@ -40,6 +40,11 @@ void checkbox_widget_set_checked_texture(
 char* checkbox_widget_get_background_texture(te_checkbox_widget* checkbox_widget);
 char* checkbox_widget_get_checked_texture(te_checkbox_widget* checkbox_widget);
 
+/* sets linear or nearest (default) texture filtering */
+void checkbox_widget_set_texture_linear_filtering(
+    te_checkbox_widget* checkbox_widget, bool linear_filtering);
+bool checkbox_widget_get_texture_linear_filtering(te_checkbox_widget* checkbox_widget);
+
 /* if texture is used specifies offset and size in the referenced texture to display
  * value in range [0.0; 1.0] relative to the texture size
  * this is useful when a texture contains multiple elements and 1 widgets

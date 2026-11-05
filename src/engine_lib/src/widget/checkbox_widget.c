@@ -38,6 +38,7 @@ struct te_checkbox_widget {
 
     bool is_checked;
     bool is_fixing_height;
+    bool texture_linear_filtering;
 };
 
 /* widget callbacks */
@@ -79,6 +80,7 @@ checkbox_widget_create(void) {
     checkbox_widget->checked_rect = NULL;
     checkbox_widget->is_checked = false;
     checkbox_widget->is_fixing_height = false;
+    checkbox_widget->texture_linear_filtering = false;
     checkbox_widget->on_changed = NULL;
 
     checkbox_widget->is_checkbox_widget_destroy = false;
@@ -157,6 +159,9 @@ prv_checkbox_widget_create_checked_rect(te_checkbox_widget* checkbox_widget) {
     rect = rect_widget_get_widget(checkbox_widget->checked_rect);
 
     widget_set_is_serialization_allowed(rect, false);
+
+    rect_widget_set_texture_linear_filtering(
+        checkbox_widget->checked_rect, checkbox_widget->texture_linear_filtering);
 
     vec2_set(0.2f, 0.2f, tmp2);
     widget_set_relative_position(rect, tmp2);
@@ -281,6 +286,26 @@ checkbox_widget_get_background_texture(te_checkbox_widget* checkbox_widget) {
 char*
 checkbox_widget_get_checked_texture(te_checkbox_widget* checkbox_widget) {
     return checkbox_widget->checked_tex_relative_path;
+}
+
+void
+checkbox_widget_set_texture_linear_filtering(
+    te_checkbox_widget* checkbox_widget, bool linear_filtering) {
+    checkbox_widget->texture_linear_filtering = linear_filtering;
+
+    if (widget_get_world(checkbox_widget->widget) != NULL) {
+        rect_widget_set_texture_linear_filtering(
+            checkbox_widget->background_rect, linear_filtering);
+        if (checkbox_widget->checked_rect != NULL) {
+            rect_widget_set_texture_linear_filtering(
+                checkbox_widget->checked_rect, linear_filtering);
+        }
+    }
+}
+
+bool
+checkbox_widget_get_texture_linear_filtering(te_checkbox_widget* checkbox_widget) {
+    return checkbox_widget->texture_linear_filtering;
 }
 
 void
@@ -422,6 +447,9 @@ checkbox_widget_register_type(void) {
     type_info_add_string_variable(
         info, "checked_texture", checkbox_widget_set_checked_texture,
         checkbox_widget_get_checked_texture);
+    type_info_add_bool_variable(
+        info, "linear_filtering", checkbox_widget_set_texture_linear_filtering,
+        checkbox_widget_get_texture_linear_filtering);
     type_info_add_vec2_variable(
         info, "uv_offset", checkbox_widget_set_uv_offset, checkbox_widget_get_uv_offset);
     type_info_add_vec2_variable(
@@ -517,6 +545,9 @@ prv_checkbox_widget_on_after_spawned(void* this) {
     }
     rect_widget_set_uv_offset(checkbox_widget->background_rect, checkbox_widget->uv_offset);
     rect_widget_set_uv_size(checkbox_widget->background_rect, checkbox_widget->uv_size);
+
+    rect_widget_set_texture_linear_filtering(
+        checkbox_widget->background_rect, checkbox_widget->texture_linear_filtering);
 
     if (checkbox_widget->is_checked) {
         prv_checkbox_widget_create_checked_rect(checkbox_widget);

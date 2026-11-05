@@ -95,7 +95,8 @@ enum te_model_flags {
     TE_MF_IS_SERIALIZATION_ALLOWED,
     TE_MF_DISABLE_BACKFACE_CULLING,
     TE_MF_DISABLE_DEPTH_TEST,
-    TE_MF_DRAW_LAST
+    TE_MF_DRAW_LAST,
+    TE_MF_IS_LINEAR_FILTERING
 };
 
 struct te_model {
@@ -627,7 +628,8 @@ model_set_texture(te_model* model, const char* relative_path) {
                 texture_manager_mark_unused_texture(texture_manager, data->tex_id);
             }
             data->tex_id = texture_manager_request_texture(
-                texture_manager, relative_path, MODEL_TEX_OPTION_GENERATE_MIPMAPS);
+                texture_manager, relative_path, MODEL_TEX_OPTION_GENERATE_MIPMAPS,
+                model_get_texture_linear_filtering(model));
         }
     }
 }
@@ -737,6 +739,28 @@ model_get_color(te_model* model, te_vec4 out) {
 const char*
 model_get_texture(te_model* model) {
     return model->tex_relative_path;
+}
+
+void
+model_set_texture_linear_filtering(te_model* model, bool linear_filtering) {
+    if (((model->flags >> TE_MF_IS_LINEAR_FILTERING) & 1) == linear_filtering) {
+        return;
+    }
+
+    if (model->world == NULL) {
+        model->flags &= (unsigned char)(~(1 << TE_MF_IS_LINEAR_FILTERING));
+        model->flags |= linear_filtering << TE_MF_IS_LINEAR_FILTERING;
+    } else {
+        prv_model_remove_from_model_renderer(model);
+        model->flags &= (unsigned char)(~(1 << TE_MF_IS_LINEAR_FILTERING));
+        model->flags |= linear_filtering << TE_MF_IS_LINEAR_FILTERING;
+        prv_model_add_to_model_renderer(model);
+    }
+}
+
+bool
+model_get_texture_linear_filtering(te_model* model) {
+    return (model->flags >> TE_MF_IS_LINEAR_FILTERING) & 1;
 }
 
 void
@@ -1139,11 +1163,12 @@ prv_model_add_to_model_renderer(te_model* model) {
     /* setup texture */
     tex_id = 0;
     if (model->tex_relative_path != NULL) {
-        te_texture_manager* texture_manager =
-            renderer_get_texture_manager(game_manager_get_renderer(game_manager));
+        te_renderer* renderer = game_manager_get_renderer(game_manager);
+        te_texture_manager* texture_manager = renderer_get_texture_manager(renderer);
 
         tex_id = texture_manager_request_texture(
-            texture_manager, model->tex_relative_path, MODEL_TEX_OPTION_GENERATE_MIPMAPS);
+            texture_manager, model->tex_relative_path, MODEL_TEX_OPTION_GENERATE_MIPMAPS,
+            model_get_texture_linear_filtering(model));
     }
 
     /* load geometry */
@@ -1703,6 +1728,9 @@ model_register_type(void) {
     type_info_add_string_variable(
         info, "skeleton", model_set_skeleton_path, model_get_skeleton_path);
     type_info_add_string_variable(info, "texture", model_set_texture, model_get_texture);
+    type_info_add_bool_variable(
+        info, "linear_filtering", model_set_texture_linear_filtering,
+        model_get_texture_linear_filtering);
     type_info_add_vec2_variable(
         info, "texture_tiling", model_set_texture_tiling, model_get_texture_tiling);
     type_info_add_uint_variable(

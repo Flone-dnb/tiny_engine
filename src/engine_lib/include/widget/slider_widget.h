@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <math/vec2.h>
 #include <math/vec4.h>
 
@@ -45,6 +46,11 @@ slider_widget_set_handle_texture(te_slider_widget* slider_widget, const char* re
  * do not free returned string, valid while the slider exists and the texture is not changed */
 char* slider_widget_get_background_texture(te_slider_widget* slider_widget);
 char* slider_widget_get_handle_texture(te_slider_widget* slider_widget);
+
+/* sets linear or nearest (default) texture filtering */
+void slider_widget_set_texture_linear_filtering(
+    te_slider_widget* slider_widget, bool linear_filtering);
+bool slider_widget_get_texture_linear_filtering(te_slider_widget* slider_widget);
 
 /* if texture is used specifies offset and size in the referenced texture to display
  * value in range [0.0; 1.0] relative to the texture size

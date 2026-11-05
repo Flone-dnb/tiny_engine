@@ -126,10 +126,13 @@ void model_get_color(te_model* model, te_vec4 out);
 /* sets path (relative to the `res` directory) to texture to use
  * the path string will be copied and stored in the model, specify NULL to remove texture */
 void model_set_texture(te_model* model, const char* relative_path);
-
 /* returns NULL if texture is not set
  * do not free returned string, valid while the model exists */
 const char* model_get_texture(te_model* model);
+
+/* sets linear or nearest (default) texture filtering */
+void model_set_texture_linear_filtering(te_model* model, bool linear_filtering);
+bool model_get_texture_linear_filtering(te_model* model);
 
 void model_set_texture_tiling(te_model* model, te_vec2 tex_tiling);
 void model_get_texture_tiling(te_model* model, te_vec2 tex_tiling);

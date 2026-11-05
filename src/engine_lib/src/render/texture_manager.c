@@ -25,6 +25,8 @@ typedef struct te_texture {
 
     /* The number of places this texture is currently used in. */
     unsigned int usage_count;
+
+    bool linear_filtering;
 } te_texture;
 
 /* Loads textures from disk. */
@@ -76,7 +78,8 @@ is_power_of_2(unsigned int value) {
 
 unsigned int
 texture_manager_request_texture(
-    te_texture_manager* manager, const char* relative_path, bool generate_mipmaps) {
+    te_texture_manager* manager, const char* relative_path, bool generate_mipmaps,
+    bool linear_filtering) {
     size_t relative_path_len;
     unsigned int i;
     unsigned int index;
@@ -93,6 +96,14 @@ texture_manager_request_texture(
         }
         if (strcmp(manager->textures[i].relative_path, relative_path) != 0) {
             continue;
+        }
+        if (manager->textures[i].linear_filtering != linear_filtering) {
+            log_error_fmt(
+                __FILE__, __LINE__,
+                "requested texture %s was previously requested with a different filtering "
+                "type",
+                manager->textures[i].relative_path);
+            abort();
         }
         found = true;
         index = i;
@@ -138,10 +149,17 @@ texture_manager_request_texture(
                 channel_count == 4 ? TE_TF_RGBA : TE_TF_RGB, pixels, generate_mipmaps ? 0 : 1,
                 0);
 
-            glTexParameteri(
-                GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                generate_mipmaps ? GL_NEAREST_MIPMAP_LINEAR : GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            if (linear_filtering) {
+                glTexParameteri(
+                    GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                    generate_mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            } else {
+                glTexParameteri(
+                    GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                    generate_mipmaps ? GL_NEAREST_MIPMAP_LINEAR : GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            }
 
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         }
@@ -163,6 +181,7 @@ texture_manager_request_texture(
 
         tex->usage_count = 0; /* will increment below */
         tex->id = tex_id;
+        tex->linear_filtering = linear_filtering;
 
         tex->relative_path = malloc(sizeof(char) * (relative_path_len + 1));
         memcpy(tex->relative_path, relative_path, sizeof(char) * relative_path_len);

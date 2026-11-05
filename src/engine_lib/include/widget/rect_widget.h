@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <math/vec2.h>
 #include <math/vec4.h>
 
@@ -22,6 +23,11 @@ void rect_widget_get_color(te_rect_widget* rect_widget, te_vec4 out);
 /* sets path (relative to the `res` directory) to texture to use
  * the path string will be copied and stored in the model, specify NULL to remove texture */
 void rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path);
+
+/* sets linear or nearest (default) texture filtering */
+void
+rect_widget_set_texture_linear_filtering(te_rect_widget* rect_widget, bool linear_filtering);
+bool rect_widget_get_texture_linear_filtering(te_rect_widget* rect_widget);
 
 /* if texture is used specifies offset and size in the referenced texture to display
  * value in range [0.0; 1.0] relative to the texture size

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <math/vec2.h>
 #include <math/vec4.h>
 
@@ -40,6 +41,11 @@ button_widget_set_texture_pressed(te_button_widget* button_widget, const char* r
 char* button_widget_get_texture(te_button_widget* button_widget);
 char* button_widget_get_texture_hovered(te_button_widget* button_widget);
 char* button_widget_get_texture_pressed(te_button_widget* button_widget);
+
+/* sets linear or nearest (default) texture filtering */
+void button_widget_set_texture_linear_filtering(
+    te_button_widget* button_widget, bool linear_filtering);
+bool button_widget_get_texture_linear_filtering(te_button_widget* button_widget);
 
 /* if texture is used specifies offset and size in the referenced texture to display
  * value in range [0.0; 1.0] relative to the texture size

@@ -467,6 +467,14 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
         abort();
     }
 
+    /* get window size */
+    window_width = 0;
+    window_height = 0;
+    window_get_size(renderer->window, &window_width, &window_height);
+    if (window_width == 0 || window_height == 0) {
+        return;
+    }
+
 #if defined(ENGINE_DEBUG_TOOLS)
     debug_stats = prv_debug_console_get_stats();
     record_new_queries = true;
@@ -517,11 +525,6 @@ prv_renderer_draw_frame(te_renderer* renderer, float delta_time_sec) {
 
     cpu_frame_start_counter = high_freq_timer_now();
 #endif
-
-    /* get window size (for later) */
-    window_width = 0;
-    window_height = 0;
-    window_get_size(renderer->window, &window_width, &window_height);
 
     /* rendering to window's framebuffer */
     glClearColor(

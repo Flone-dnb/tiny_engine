@@ -45,6 +45,7 @@ struct te_button_widget {
     /* `true` if entered the "destroy" function */
     bool is_button_widget_destroy;
     bool is_cursor_inside_widget;
+    bool texture_linear_filtering;
 };
 
 /* widget callbacks */
@@ -99,6 +100,7 @@ button_widget_create(void) {
 
     button_widget->is_cursor_inside_widget = false;
     button_widget->is_button_widget_destroy = false;
+    button_widget->texture_linear_filtering = false;
 
     button_widget->rect_widget = rect_widget_create();
     widget_set_parent(
@@ -173,22 +175,25 @@ prv_button_widget_register_render_data(te_button_widget* button_widget) {
         abort();
     }
 
+    rect_widget_set_texture_linear_filtering(
+        button_widget->rect_widget, button_widget->texture_linear_filtering);
+
     texture_manager =
         renderer_get_texture_manager(game_manager_get_renderer(world_get_game_manager(world)));
     if (button_widget->tex_relative_path != NULL) {
         button_widget->tex_id = texture_manager_request_texture(
             texture_manager, button_widget->tex_relative_path,
-            prv_widget_should_generate_mipmaps());
+            prv_widget_should_generate_mipmaps(), button_widget->texture_linear_filtering);
     }
     if (button_widget->tex_hovered_relative_path != NULL) {
         button_widget->tex_hovered_id = texture_manager_request_texture(
             texture_manager, button_widget->tex_hovered_relative_path,
-            prv_widget_should_generate_mipmaps());
+            prv_widget_should_generate_mipmaps(), button_widget->texture_linear_filtering);
     }
     if (button_widget->tex_pressed_relative_path != NULL) {
         button_widget->tex_pressed_id = texture_manager_request_texture(
             texture_manager, button_widget->tex_pressed_relative_path,
-            prv_widget_should_generate_mipmaps());
+            prv_widget_should_generate_mipmaps(), button_widget->texture_linear_filtering);
     }
 
     prv_world_add_interactable_widget(world, button_widget->widget);
@@ -311,6 +316,9 @@ button_widget_register_type(void) {
     type_info_add_string_variable(
         info, "texture_pressed", button_widget_set_texture_pressed,
         button_widget_get_texture_pressed);
+    type_info_add_bool_variable(
+        info, "linear_filtering", button_widget_set_texture_linear_filtering,
+        button_widget_get_texture_linear_filtering);
     type_info_add_vec2_variable(
         info, "uv_offset", button_widget_set_uv_offset, button_widget_get_uv_offset);
     type_info_add_vec2_variable(
@@ -409,7 +417,8 @@ button_widget_set_texture(te_button_widget* button_widget, const char* relative_
 
         if (relative_path != NULL) {
             button_widget->tex_id = texture_manager_request_texture(
-                texture_manager, relative_path, prv_widget_should_generate_mipmaps());
+                texture_manager, relative_path, prv_widget_should_generate_mipmaps(),
+                button_widget->texture_linear_filtering);
         }
 
         if (!button_widget->is_cursor_inside_widget) {
@@ -444,7 +453,8 @@ button_widget_set_texture_hovered(te_button_widget* button_widget, const char* r
 
         if (relative_path != NULL) {
             button_widget->tex_hovered_id = texture_manager_request_texture(
-                texture_manager, relative_path, prv_widget_should_generate_mipmaps());
+                texture_manager, relative_path, prv_widget_should_generate_mipmaps(),
+                button_widget->texture_linear_filtering);
         }
 
         if (button_widget->is_cursor_inside_widget) {
@@ -479,7 +489,8 @@ button_widget_set_texture_pressed(te_button_widget* button_widget, const char* r
 
         if (relative_path != NULL) {
             button_widget->tex_pressed_id = texture_manager_request_texture(
-                texture_manager, relative_path, prv_widget_should_generate_mipmaps());
+                texture_manager, relative_path, prv_widget_should_generate_mipmaps(),
+                button_widget->texture_linear_filtering);
         }
     }
 }
@@ -497,6 +508,22 @@ button_widget_get_texture_hovered(te_button_widget* button_widget) {
 char*
 button_widget_get_texture_pressed(te_button_widget* button_widget) {
     return button_widget->tex_pressed_relative_path;
+}
+
+void
+button_widget_set_texture_linear_filtering(
+    te_button_widget* button_widget, bool linear_filtering) {
+    button_widget->texture_linear_filtering = linear_filtering;
+
+    if (widget_get_world(button_widget->widget) != NULL) {
+        prv_button_widget_unregister_render_data(button_widget);
+        prv_button_widget_register_render_data(button_widget);
+    }
+}
+
+bool
+button_widget_get_texture_linear_filtering(te_button_widget* button_widget) {
+    return button_widget->texture_linear_filtering;
 }
 
 void

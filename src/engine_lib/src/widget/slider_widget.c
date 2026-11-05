@@ -40,6 +40,7 @@ struct te_slider_widget {
     bool is_slider_widget_destroy;
 
     bool is_handle_grabbed;
+    bool texture_linear_filtering;
 };
 
 /* widget callbacks */
@@ -70,6 +71,7 @@ slider_widget_create(void) {
     slider_widget->on_value_changed = NULL;
     slider_widget->is_slider_widget_destroy = false;
     slider_widget->is_handle_grabbed = false;
+    slider_widget->texture_linear_filtering = false;
 
     vec2_zero(slider_widget->uv_offset);
     vec2_zero(slider_widget->uv_offset_handle);
@@ -266,6 +268,22 @@ slider_widget_get_handle_texture(te_slider_widget* slider_widget) {
 }
 
 void
+slider_widget_set_texture_linear_filtering(
+    te_slider_widget* slider_widget, bool linear_filtering) {
+    slider_widget->texture_linear_filtering = linear_filtering;
+
+    rect_widget_set_texture_linear_filtering(
+        slider_widget->background_rect, slider_widget->texture_linear_filtering);
+    rect_widget_set_texture_linear_filtering(
+        slider_widget->handle_rect, slider_widget->texture_linear_filtering);
+}
+
+bool
+slider_widget_get_texture_linear_filtering(te_slider_widget* slider_widget) {
+    return slider_widget->texture_linear_filtering;
+}
+
+void
 slider_widget_set_uv_offset(te_slider_widget* slider_widget, te_vec2 uv_offset) {
     vec2_copy(uv_offset, slider_widget->uv_offset);
     rect_widget_set_uv_offset(slider_widget->background_rect, uv_offset);
@@ -332,6 +350,17 @@ prv_slider_widget_on_after_spawned(void* this) {
         rect_widget_set_texture(
             slider_widget->handle_rect, slider_widget->handle_tex_relative_path);
     }
+
+    rect_widget_set_uv_offset(slider_widget->background_rect, slider_widget->uv_offset);
+    rect_widget_set_uv_size(slider_widget->background_rect, slider_widget->uv_size);
+
+    rect_widget_set_uv_offset(slider_widget->handle_rect, slider_widget->uv_offset_handle);
+    rect_widget_set_uv_size(slider_widget->handle_rect, slider_widget->uv_size_handle);
+
+    rect_widget_set_texture_linear_filtering(
+        slider_widget->background_rect, slider_widget->texture_linear_filtering);
+    rect_widget_set_texture_linear_filtering(
+        slider_widget->handle_rect, slider_widget->texture_linear_filtering);
 
     vec2_set(slider_widget->value - TE_SLIDER_HANDLE_WIDTH / 2.0f, 0.0f, pos);
     widget_set_relative_position(rect_widget_get_widget(slider_widget->handle_rect), pos);
@@ -525,6 +554,9 @@ slider_widget_register_type(void) {
     type_info_add_string_variable(
         info, "handle_texture", slider_widget_set_handle_texture,
         slider_widget_get_handle_texture);
+    type_info_add_bool_variable(
+        info, "linear_filtering", slider_widget_set_texture_linear_filtering,
+        slider_widget_get_texture_linear_filtering);
     type_info_add_vec2_variable(
         info, "uv_offset", slider_widget_set_uv_offset, slider_widget_get_uv_offset);
     type_info_add_vec2_variable(

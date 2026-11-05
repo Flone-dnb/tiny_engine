@@ -6,14 +6,14 @@ enum te_texture_format { TE_TF_RED, TE_TF_ALPHA, TE_TF_RGB, TE_TF_RGBA };
 
 typedef struct te_texture_manager te_texture_manager;
 
-/* Looks if the specified texture is already used (loaded) and if so returns OpenGL ID
+/* Looks if the specified texture (relative to the `res` directory) is already used (loaded) and if so returns OpenGL ID
  * of the texture (otherwise loads it).
+ * Specify @ref linear_filtering as `false` for point filtering.
  * 
- * You must use @ref texture_manager_mark_unused_texture when you no longer need the shader.
- * 
- * Specify a non-NULL path to the texture file relative to the `res` directory. */
+ * You must use @ref texture_manager_mark_unused_texture when you no longer need the shader. */
 unsigned int texture_manager_request_texture(
-    te_texture_manager* manager, const char* relative_path, bool generate_mipmaps);
+    te_texture_manager* manager, const char* relative_path, bool generate_mipmaps,
+    bool linear_filtering);
 
 /* Decrements texture usage counter. */
 void texture_manager_mark_unused_texture(te_texture_manager* manager, unsigned int tex_id);

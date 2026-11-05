@@ -83,6 +83,7 @@ struct te_particle_emitter {
     bool emit_new_particles;
     bool is_buf_a;
     bool is_serialization_allowed;
+    bool texture_linear_filtering;
 };
 
 static void on_spawned(te_particle_emitter* emitter, te_world* world);
@@ -123,6 +124,7 @@ particle_emitter_create(void) {
     emitter->is_paused = false;
     emitter->is_serialization_allowed = true;
     emitter->emit_new_particles = true;
+    emitter->texture_linear_filtering = false;
 
     emitter->world = NULL;
     emitter->name = NULL;
@@ -255,7 +257,8 @@ particle_emitter_set_texture(te_particle_emitter* emitter, const char* relative_
                 texture_manager_mark_unused_texture(texture_manager, emitter->tex_id);
             }
             emitter->tex_id = texture_manager_request_texture(
-                texture_manager, relative_path, PARTICLE_EMITTER_OPTION_GENERATE_MIPMAPS);
+                texture_manager, relative_path, PARTICLE_EMITTER_OPTION_GENERATE_MIPMAPS,
+                emitter->texture_linear_filtering);
 
             /* update render data */
             particle_renderer = world_get_particle_renderer(emitter->world);
@@ -264,6 +267,25 @@ particle_emitter_set_texture(te_particle_emitter* emitter, const char* relative_
             data->tex_id = emitter->tex_id;
         }
     }
+}
+
+static void add_to_renderer(te_particle_emitter* emitter);
+static void remove_from_renderer(te_particle_emitter* emitter);
+
+void
+particle_emitter_set_texture_linear_filtering(
+    te_particle_emitter* emitter, bool linear_filtering) {
+    emitter->texture_linear_filtering = linear_filtering;
+
+    if (emitter->world != NULL) {
+        remove_from_renderer(emitter);
+        add_to_renderer(emitter);
+    }
+}
+
+bool
+particle_emitter_get_texture_linear_filtering(te_particle_emitter* emitter) {
+    return emitter->texture_linear_filtering;
 }
 
 const char*
@@ -376,9 +398,6 @@ float
 particle_emitter_get_size_fade_out(te_particle_emitter* emitter) {
     return emitter->size_fade_out;
 }
-
-static void add_to_renderer(te_particle_emitter* emitter);
-static void remove_from_renderer(te_particle_emitter* emitter);
 
 void
 particle_emitter_set_time_to_live_sec(te_particle_emitter* emitter, float time_sec) {
@@ -519,6 +538,9 @@ particle_emitter_register_type(void) {
 
     type_info_add_string_variable(
         info, "texture", particle_emitter_set_texture, particle_emitter_get_texture);
+    type_info_add_bool_variable(
+        info, "linear_filtering", particle_emitter_set_texture_linear_filtering,
+        particle_emitter_get_texture_linear_filtering);
 
     type_info_add_vec4_variable(
         info, "color", particle_emitter_set_color, particle_emitter_get_color);
@@ -703,7 +725,7 @@ add_to_renderer(te_particle_emitter* emitter) {
 
         emitter->tex_id = texture_manager_request_texture(
             texture_manager, emitter->tex_relative_path,
-            PARTICLE_EMITTER_OPTION_GENERATE_MIPMAPS);
+            PARTICLE_EMITTER_OPTION_GENERATE_MIPMAPS, emitter->texture_linear_filtering);
     }
 
     particle_renderer = world_get_particle_renderer(emitter->world);

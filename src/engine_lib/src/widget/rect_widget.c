@@ -41,6 +41,7 @@ struct te_rect_widget {
 
     /* `true` if entered the "destroy" function */
     bool is_rect_widget_destroy;
+    bool texture_linear_filtering;
 };
 
 /* widget callbacks */
@@ -68,6 +69,7 @@ rect_widget_create(void) {
     rect_widget->tex_relative_path = NULL;
     rect_widget->render_data_handle = INVALID_RENDER_DATA_HANDLE;
     rect_widget->is_rect_widget_destroy = false;
+    rect_widget->texture_linear_filtering = false;
 
     vec2_zero(rect_widget->uv_offset);
     vec2_set(1.0f, 1.0f, rect_widget->uv_size);
@@ -214,9 +216,28 @@ rect_widget_set_texture(te_rect_widget* rect_widget, const char* relative_path) 
 
             /* load new texture */
             data->tex_id = texture_manager_request_texture(
-                texture_manager, relative_path, prv_widget_should_generate_mipmaps());
+                texture_manager, relative_path, prv_widget_should_generate_mipmaps(),
+                rect_widget->texture_linear_filtering);
         }
     }
+}
+
+void
+rect_widget_set_texture_linear_filtering(te_rect_widget* rect_widget, bool linear_filtering) {
+    te_world* world;
+
+    rect_widget->texture_linear_filtering = linear_filtering;
+
+    world = widget_get_world(rect_widget->widget);
+    if (world != NULL) {
+        prv_rect_widget_unregister_from_rendering(rect_widget);
+        prv_rect_widget_register_for_rendering(rect_widget);
+    }
+}
+
+bool
+rect_widget_get_texture_linear_filtering(te_rect_widget* rect_widget) {
+    return rect_widget->texture_linear_filtering;
 }
 
 void
@@ -322,7 +343,7 @@ prv_rect_widget_register_for_rendering(te_rect_widget* rect_widget) {
             renderer_get_texture_manager(game_manager_get_renderer(game_manager));
         data->tex_id = texture_manager_request_texture(
             texture_manager, rect_widget->tex_relative_path,
-            prv_widget_should_generate_mipmaps());
+            prv_widget_should_generate_mipmaps(), rect_widget->texture_linear_filtering);
     }
 
     vec2_copy(rect_widget->uv_offset, data->uv_offset);
@@ -519,6 +540,9 @@ rect_widget_register_type(void) {
     type_info_add_vec4_variable(info, "color", rect_widget_set_color, rect_widget_get_color);
     type_info_add_string_variable(
         info, "texture", rect_widget_set_texture, rect_widget_get_texture);
+    type_info_add_bool_variable(
+        info, "linear_filtering", rect_widget_set_texture_linear_filtering,
+        rect_widget_get_texture_linear_filtering);
     type_info_add_vec2_variable(
         info, "uv_offset", rect_widget_set_uv_offset, rect_widget_get_uv_offset);
     type_info_add_vec2_variable(

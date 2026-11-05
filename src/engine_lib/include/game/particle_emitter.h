@@ -27,6 +27,11 @@ void particle_emitter_get_position(te_particle_emitter* emitter, te_vec3 out);
 void particle_emitter_set_texture(te_particle_emitter* emitter, const char* relative_path);
 const char* particle_emitter_get_texture(te_particle_emitter* emitter);
 
+/* sets linear or nearest (default) texture filtering */
+void particle_emitter_set_texture_linear_filtering(
+    te_particle_emitter* emitter, bool linear_filtering);
+bool particle_emitter_get_texture_linear_filtering(te_particle_emitter* emitter);
+
 /* sets RGBA color of particles */
 void particle_emitter_set_color(te_particle_emitter* emitter, te_vec4 color);
 void particle_emitter_get_color(te_particle_emitter* emitter, te_vec4 out);
