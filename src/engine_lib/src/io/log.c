@@ -11,13 +11,6 @@
 #include <render/debug_drawer.h>
 #include <math/vec3.h>
 
-#if defined(WIN32)
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
-static bool shown_error_msg = false;
-#endif
-
 #ifndef va_copy
 #ifdef __va_copy
 #define va_copy(dest, src) __va_copy((dest), (src))
@@ -147,17 +140,6 @@ prv_log(enum te_log_category category, const char* message, const char* filepath
         debug_drawer_draw_text_color(message, 5.0f, color_warn);
     } else if (category == TE_LOG_ERROR) {
         debug_drawer_draw_text_color(message, 5.0f, color_error);
-    }
-#endif
-
-#if defined(WIN32)
-    if (category == TE_LOG_ERROR && !shown_error_msg) {
-        MessageBoxW(
-            NULL,
-            L"an error occurred, see the log file at %localappdata%/tiny_engine\n"
-            "\ntry restarting the application",
-            L"Error", MB_OK);
-        shown_error_msg = true;
     }
 #endif
 

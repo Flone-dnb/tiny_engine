@@ -11,11 +11,44 @@
 #include <memcheck.h>
 #endif
 
+#if defined(WIN32)
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <Windows.h>
+#include <signal.h>
+static void
+custom_abort_handler(int signum) {
+    (void)signum;
+    MessageBoxW(
+        NULL,
+        L"an error occurred, see the log file at %localappdata%/tiny_engine\n"
+        "\ntry restarting the application",
+        L"Error", MB_OK);
+    _exit(EXIT_FAILURE);
+}
+static LONG WINAPI
+exception_handler(struct _EXCEPTION_POINTERS* exception_info) {
+    (void)exception_info;
+    MessageBoxW(
+        NULL,
+        L"an error occurred, see the log file at %localappdata%/tiny_engine\n"
+        "\ntry restarting the application",
+        L"Error", MB_OK);
+    ExitProcess(1);
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+#endif
+
 int
 main(void) {
     te_window* window;
     te_game* game;
     te_window_callbacks callbacks;
+
+#if defined(WIN32)
+    signal(SIGABRT, custom_abort_handler);
+    SetUnhandledExceptionFilter(exception_handler);
+#endif
 
 #if defined(ENGINE_MEMCHECK_ENABLED)
     memcheck_init();
