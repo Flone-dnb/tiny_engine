@@ -98,12 +98,7 @@ texture_manager_request_texture(
             continue;
         }
         if (manager->textures[i].linear_filtering != linear_filtering) {
-            log_error_fmt(
-                __FILE__, __LINE__,
-                "requested texture %s was previously requested with a different filtering "
-                "type",
-                manager->textures[i].relative_path);
-            abort();
+            continue;
         }
         found = true;
         index = i;
