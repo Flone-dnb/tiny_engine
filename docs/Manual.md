@@ -8,7 +8,7 @@ To create a new game project just clone the repository. There are already 2 game
 
 # Thread safety
 
-The engine is single threaded and expects all functions to be executed in a single (main) thread. Only game resource loading (deserialization) is asynchronous (so you can show a loading screen while loading game resources).
+The engine is single threaded for simplicity and because retro hardware (which this engine targets) often had just 1 core / 1 thread. So the engine expects all functions to be executed in a single (main) thread. Only game resource loading (deserialization) can be asynchronous (so you can show a loading screen while loading game resources). Although the engine is single threaded in the `include/thread` you can find cross platform thread and mutex functionality that you can use for various cases.
 
 # Memory leak checks
 
