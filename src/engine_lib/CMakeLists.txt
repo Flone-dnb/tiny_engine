@@ -26,8 +26,6 @@ set(PROJECT_SOURCES
     src/type_database.c
     src/window_system/os_window.h
     src/window_system/os_window.c
-    src/window_system/x11_window.c
-    src/window_system/x11_window.h
     src/shape/aabb_shape.c
     src/shape/cone_shape.c
     src/shape/frustum_shape.c
@@ -52,6 +50,8 @@ set(PROJECT_SOURCES
     src/render/render_data_array.h
     src/render/gpu_section.h
     src/render/gpu_time_section.h
+    src/thread/thread.c
+    src/thread/mutex.c
     src/input/mouse_button.c
     src/input/keyboard_button.c
     src/game/camera.c
@@ -95,6 +95,8 @@ set(PROJECT_SOURCES
     include/misc/mesh_generator.h
     include/misc/high_freq_timer.h
     include/misc/num_hashtable.h
+    include/thread/thread.h
+    include/thread/mutex.h
     include/game_manager.h
     include/sound_manager.h
     include/render/renderer.h
@@ -122,9 +124,23 @@ set(PROJECT_SOURCES
 set(WIN32_SOURCES
     src/window_system/win32_window.c
     src/window_system/win32_window.h
+    src/thread/win32_thread.c
+    src/thread/win32_thread.h
+    src/thread/win32_mutex.c
+    src/thread/win32_mutex.h
+)
+set(LINUX_SOURCES
+    src/window_system/x11_window.c
+    src/window_system/x11_window.h
+    src/thread/posix_thread.c
+    src/thread/posix_thread.h
+    src/thread/posix_mutex.c
+    src/thread/posix_mutex.h
 )
 if (WIN32)
     list(APPEND PROJECT_SOURCES ${WIN32_SOURCES})
+else()
+    list(APPEND PROJECT_SOURCES ${LINUX_SOURCES})
 endif()
 
 # Define targets (one without any specific macros and another for compilation with editor).
@@ -171,6 +187,15 @@ if(NOT MSVC)
 
     # for math
     target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE m)
+
+    # for threads
+    find_package(Threads REQUIRED)
+    target_link_libraries(${ENGINE_LIB_TARGET} ${CMAKE_THREAD_LIBS_INIT})
+    target_link_libraries(${ENGINE_LIB_TARGET_FOR_EDITOR} ${CMAKE_THREAD_LIBS_INIT})
+    if(THREADS_HAVE_PTHREAD_ARG)
+        target_compile_options(${ENGINE_LIB_TARGET} PUBLIC "-pthread")
+        target_compile_options(${ENGINE_LIB_TARGET_FOR_EDITOR} PUBLIC "-pthread")
+    endif()
 endif()
 
 # Add GLAD.
