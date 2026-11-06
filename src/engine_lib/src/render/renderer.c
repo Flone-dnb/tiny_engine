@@ -245,6 +245,14 @@ renderer_create(struct te_window* window) {
     /* should be disabled by default but still disable just in case */
     glDisable(GL_NORMALIZE);
 
+    {
+        /* enable fps limit */
+        unsigned int refresh_rate = window_get_display_refresh_rate(window);
+        renderer_set_fps_limit(renderer, refresh_rate);
+        log_info_fmt(
+            __FILE__, __LINE__, "set fps limit to %u (display's refresh rate)", refresh_rate);
+    }
+
 #if defined(ENGINE_DEBUG_TOOLS)
     fps_command.name = "set_fps_limit";
     fps_command.arg_uint = debug_command_set_fps_limit;

@@ -458,14 +458,11 @@ win32_window_create(te_os_window* os_window, const char* title) {
         abort();
     }
 
-    /* enable vsync */
+    /* disable vsync */
     if (wglSwapIntervalEXT != NULL) {
-        wglSwapIntervalEXT(1);
-        log_info(__FILE__, __LINE__, "vsync enabled");
-        win32_window->vsync_enabled = true;
-    } else {
-        win32_window->vsync_enabled = false;
+        wglSwapIntervalEXT(0);
     }
+    win32_window->vsync_enabled = false;
 
     /* NOTE: RIDEV_NOLEGACY should only be used for fullscreen apps
      * because it disables lots of window events that are needed for windowed apps */

@@ -860,19 +860,17 @@ x11_window_create(te_os_window* os_window, const char* title) {
         abort();
     }
 
-    /* enable vsync */
+    /* disable vsync */
     if (glXSwapIntervalEXT_ptr != NULL) {
-        glXSwapIntervalEXT_ptr(x11_window->display, x11_window->window, 1);
-        x11_window->vsync_enabled = true;
-        log_info(__FILE__, __LINE__, "vsync enabled");
-    } else {
-        x11_window->vsync_enabled = false;
+        glXSwapIntervalEXT_ptr(x11_window->display, x11_window->window, 0);
     }
+    x11_window->vsync_enabled = false;
 
     /* initialize window state */
     x11_window->width = screen_w;
     x11_window->height = screen_h;
     x11_window->capture_mouse = false;
+    x11_window->vsync_enabled = false;
     x11_window->keyboard_mods.bitmask = 0;
 
     /* save current cursor pos */
