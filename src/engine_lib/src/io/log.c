@@ -56,16 +56,16 @@ prv_log(enum te_log_category category, const char* message, const char* filepath
     struct tm* tm_info;
     FILE* log_file;
 #if defined(ENGINE_DEBUG_TOOLS)
-    te_vec3 color_warn;
-    te_vec3 color_error;
+    te_vec4 color_warn;
+    te_vec4 color_error;
 #endif
     time_t t;
     unsigned long filename_start = 0;
     unsigned long i;
 
 #if defined(ENGINE_DEBUG_TOOLS)
-    vec3_set(1.0f, 1.0f, 0.0f, color_warn);
-    vec3_set(1.0f, 0.0f, 0.0f, color_error);
+    vec4_set(1.0f, 1.0f, 0.0f, 1.0f, color_warn);
+    vec4_set(1.0f, 0.0f, 0.0f, 1.0f, color_error);
 #endif
 
     memset(log_prefix, 0, sizeof(log_prefix));

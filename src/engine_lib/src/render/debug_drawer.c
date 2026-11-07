@@ -141,7 +141,7 @@ typedef struct te_debug_drawer_text {
     /* if less than zero then text should be destroyed */
     float time_left_sec;
 
-    te_vec4 color;
+    te_vec4 rgba;
 
     /* -1 if should be automatically picked */
     te_vec2 pos;
@@ -151,7 +151,7 @@ typedef struct te_debug_drawer_text {
 typedef struct te_debug_drawer_aabb {
     te_aabb_shape aabb;
 
-    te_vec3 color;
+    te_vec4 rgba;
 
     /* if less than zero then item should be destroyed */
     float time_left_sec;
@@ -239,14 +239,14 @@ prv_debug_drawer_deinit(void) {
 }
 
 void
-debug_drawer_draw_aabb(te_aabb_shape* aabb, float time_sec, te_vec3 color) {
+debug_drawer_draw_aabb(te_aabb_shape* aabb, float time_sec, te_vec4 rgba) {
     if (drawer.renderer == NULL) {
         return;
     } else {
         te_debug_drawer_aabb new_item;
         new_item.aabb = *aabb;
         new_item.time_left_sec = time_sec;
-        vec3_copy(color, new_item.color);
+        vec4_copy(rgba, new_item.rgba);
 
         double_array_add_item(drawer.aabbs, &new_item);
     }
@@ -323,15 +323,14 @@ debug_drawer_draw_text_fmt(float time_sec, const char* fmt, ...) {
 }
 
 void
-debug_drawer_draw_text_color(const char* text, float time_sec, te_vec3 color) {
+debug_drawer_draw_text_color(const char* text, float time_sec, te_vec4 rgba) {
     te_vec2 pos;
     vec2_set(-1.0f, -1.0f, pos);
-    debug_drawer_draw_text_color_pos(text, time_sec, color, pos);
+    debug_drawer_draw_text_color_pos(text, time_sec, rgba, pos);
 }
 
 void
-debug_drawer_draw_text_color_pos(
-    const char* text, float time_sec, te_vec3 color, te_vec2 pos) {
+debug_drawer_draw_text_color_pos(const char* text, float time_sec, te_vec4 rgba, te_vec2 pos) {
     if (drawer.renderer == NULL) {
         return;
     } else {
@@ -343,8 +342,7 @@ debug_drawer_draw_text_color_pos(
 
         /* init data */
         te_debug_drawer_text new_item;
-        vec3_copy(color, new_item.color);
-        new_item.color[3] = 1.0f;
+        vec4_copy(rgba, new_item.rgba);
         vec2_copy(pos, new_item.pos);
         new_item.time_left_sec = time_sec;
 
@@ -497,7 +495,7 @@ prv_debug_drawer_draw(
             vec3_sub(data->aabb.center, data->aabb.extents, min);
             vec3_add(data->aabb.center, data->aabb.extents, max);
 
-            glColor4fv(data->color);
+            glColor4fv(data->rgba);
 
             glBegin(GL_LINES);
             /* bottom face */
@@ -589,7 +587,7 @@ prv_debug_drawer_draw(
             }
             screen_pos[1] += text_height;
 
-            glColor4fv(text->color);
+            glColor4fv(text->rgba);
 
             /* draw each glyph */
             for (i = 0; i < text->text_len; i++) {

@@ -18,12 +18,12 @@ struct te_aabb_shape;
  * otherwise specify a position (relative to the window's top-left corner) in range [0.0; 1.0] */
 void debug_drawer_draw_text(float time_sec, const char* text);
 void debug_drawer_draw_text_fmt(float time_sec, const char* fmt, ...);
-void debug_drawer_draw_text_color(const char* text, float time_sec, te_vec3 color);
+void debug_drawer_draw_text_color(const char* text, float time_sec, te_vec4 rgba);
 void
-debug_drawer_draw_text_color_pos(const char* text, float time_sec, te_vec3 color, te_vec2 pos);
+debug_drawer_draw_text_color_pos(const char* text, float time_sec, te_vec4 rgba, te_vec2 pos);
 
 /* specify 0 as time to draw for just 1 frame */
-void debug_drawer_draw_aabb(struct te_aabb_shape* aabb, float time_sec, te_vec3 color);
+void debug_drawer_draw_aabb(struct te_aabb_shape* aabb, float time_sec, te_vec4 rgba);
 
 /* specify 0 as time to draw for just 1 frame */
 void debug_drawer_draw_line(te_vec3 from, te_vec3 to, float time_sec);

@@ -267,7 +267,7 @@ void
 prv_debug_console_draw_stat(te_vec2 screen_pos, const char* fmt, ...) {
     va_list args;
     va_list args_copy;
-    te_vec3 color;
+    te_vec4 rgba;
     char* text;
     int len;
 
@@ -283,9 +283,8 @@ prv_debug_console_draw_stat(te_vec2 screen_pos, const char* fmt, ...) {
     text = malloc(sizeof(char) * ((unsigned int)len + 1));
     vsnprintf(text, (unsigned int)len + 1, fmt, args_copy);
 
-    vec3_set(1.0f, 1.0f, 1.0f, color);
-    debug_drawer_draw_text_color_pos(
-        text, console.time_sec_to_update_stats, color, screen_pos);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, rgba);
+    debug_drawer_draw_text_color_pos(text, console.time_sec_to_update_stats, rgba, screen_pos);
 
     screen_pos[1] += debug_drawer_get_default_text_height();
 
@@ -296,10 +295,10 @@ prv_debug_console_draw_stat(te_vec2 screen_pos, const char* fmt, ...) {
 
 void
 prv_debug_console_draw(float delta_time_sec) {
-    te_vec3 color;
+    te_vec4 rgba;
     bool update_stats;
 
-    vec3_set(1.0f, 1.0f, 1.0f, color);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, rgba);
 
     console.time_sec_to_update_stats -= delta_time_sec;
 
@@ -416,14 +415,14 @@ prv_debug_console_draw(float delta_time_sec) {
 
     if (console.message_sec_left > 0.0f) {
         console.message_sec_left -= delta_time_sec;
-        debug_drawer_draw_text_color_pos(console.message, 0.0f, color, console.screen_pos);
+        debug_drawer_draw_text_color_pos(console.message, 0.0f, rgba, console.screen_pos);
         return;
     }
 
     if (console.input_valid_len == 0) {
-        debug_drawer_draw_text_color_pos("type a command...", 0.0f, color, console.screen_pos);
+        debug_drawer_draw_text_color_pos("type a command...", 0.0f, rgba, console.screen_pos);
     } else {
-        debug_drawer_draw_text_color_pos(console.input, 0.0f, color, console.screen_pos);
+        debug_drawer_draw_text_color_pos(console.input, 0.0f, rgba, console.screen_pos);
     }
 }
 
