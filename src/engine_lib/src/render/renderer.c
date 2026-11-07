@@ -35,10 +35,6 @@
 #include <world.h>
 #include <glad/gl.h>
 
-#if defined(WIN32)
-#pragma comment(lib, "Winmm.lib") /* for timeBeginPeriod and timeEndPeriod */
-#endif
-
 #if defined(ENGINE_DEBUG_TOOLS)
 static bool
 is_gpu_timers_supported(void) {
@@ -383,13 +379,16 @@ prv_renderer_calc_frame_stats(te_renderer* renderer, float delta_time_sec) {
     /* FPS limit */
     if (renderer->fps_limit > 0) {
 #if defined(WIN32)
+        te_hft_t start = high_freq_timer_now();
         const float target_time_ms = 1000.0f / (float)renderer->fps_limit;
-        const float time_to_sleep_ms = target_time_ms - delta_time_sec;
-        if (time_to_sleep_ms >= 1.0) {
-            timeBeginPeriod(1);
-            Sleep((unsigned long)time_to_sleep_ms);
-            timeEndPeriod(1);
-        }
+        float time_to_sleep_ms = target_time_ms - delta_time_sec;
+#if defined(ENGINE_32BIT)
+        /* don't ask */
+        time_to_sleep_ms *= 0.91f;
+#endif
+        while (high_freq_timer_get_elapsed_ms(start) < time_to_sleep_ms) {
+            Sleep(0);
+        };
 #elif defined(__linux__)
         long delta_ns;
         long time_to_sleep_ns;
