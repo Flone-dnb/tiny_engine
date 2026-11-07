@@ -2,11 +2,14 @@
 
 Tiny 3D game engine for making small games.
 
-Supported platforms: Windows (Windows XP and above (x32, x64)), Linux (x32, x64).
+Supported platforms:
+
+- Windows (Windows XP and above (x32, x64))
+- Linux (x32, x64)
 
 # Features
 
-- [X] Simple forward renderer using OpenGL 1.1
+- [X] Renderer using OpenGL 1.1
 - [X] Game save/config management
 - [X] GUI
 - [X] Type reflection
