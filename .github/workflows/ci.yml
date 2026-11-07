@@ -15,7 +15,7 @@ jobs:
           cd tiny_ref_checker
           mkdir build
           cd build
-          cmake -DCMAKE_BUILD_TYPE=Release ..
+          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ..
           cmake --build . --target tiny_ref_checker --config=Release
           ./tiny_ref_checker ../../src
   build-windows:
@@ -30,7 +30,7 @@ jobs:
       run: mkdir build
     - name: Build (Release)
       run: |
-        cmake -DCMAKE_BUILD_TYPE=Release ..
+        cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ..
         cmake --build . --config Release
       working-directory: build
   build-linux-clang:
@@ -48,7 +48,7 @@ jobs:
       run: mkdir build
     - name: Build (Release)
       run: |
-        cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Release ..
+        cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ..
         cmake --build . --config Release
       working-directory: build
   build-linux-gcc:
@@ -66,7 +66,7 @@ jobs:
       run: mkdir build
     - name: Build (Release)
       run: |
-        cmake -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_BUILD_TYPE=Release ..
+        cmake -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ..
         cmake --build . --config Release
       working-directory: build
 
