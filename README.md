@@ -25,6 +25,10 @@ These features are enough for me to make games but there are some additional "ni
 
 You can read the manual from `docs/Manual.md`. There are also a lot of comments in the code.
 
+# GL 2.0 and GLES 2.0 branch
+
+In the branch `last_version_with_gl20_gles20` there's an old version of the engine that uses OpenGL 2.0 and OpenGL ES 2.0 renderers in case you need a version of the engine that has shaders and supports retro-handhelds.
+
 # Prerequisites
 
 - Compiler that supports C89/C90
