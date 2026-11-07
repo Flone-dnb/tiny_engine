@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 2.8)
 
 project(tiny_engine C)
 
@@ -48,23 +48,23 @@ function(tiny_engine_configure_target TARGET_NAME)
     # More warnings.
     if(MSVC)
         target_compile_options(${TARGET_NAME} PUBLIC /W3 /WX /permissive- /wd4996 /wd4113)
-	if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-	    target_compile_options(${TARGET_NAME} PUBLIC /wd4090)
-	endif()
+    if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+        target_compile_options(${TARGET_NAME} PUBLIC /wd4090)
+    endif()
     else()
-	target_compile_options(${TARGET_NAME} PUBLIC -Wall -Wextra -Werror -Wpedantic --ansi -Wconversion -Wno-unused-but-set-parameter -Wno-incompatible-function-pointer-types)
-	if(CMAKE_COMPILER_IS_GNUCC)
-	    target_compile_options(${TARGET_NAME} PUBLIC -Wno-incompatible-pointer-types -Wno-unused-result -Wno-unknown-warning-option)
-	endif()
-	if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-	    target_compile_options(${TARGET_NAME} PUBLIC -Wno-incompatible-pointer-types -Wno-unknown-warning-option)
-	endif()
+    target_compile_options(${TARGET_NAME} PUBLIC -Wall -Wextra -Werror -Wpedantic --ansi -Wconversion -Wno-unused-but-set-parameter -Wno-incompatible-function-pointer-types)
+    if(CMAKE_COMPILER_IS_GNUCC)
+        target_compile_options(${TARGET_NAME} PUBLIC -Wno-incompatible-pointer-types -Wno-unused-result -Wno-unknown-warning-option)
+    endif()
+    if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+        target_compile_options(${TARGET_NAME} PUBLIC -Wno-incompatible-pointer-types -Wno-unknown-warning-option)
+    endif()
     endif()
 
     # Add `DEBUG` macro in non-release builds.
     if(NOT IS_RELEASE_BUILD)
-	    message(STATUS "${PROJECT_NAME}: adding DEBUG macro")
-	    target_compile_definitions(${TARGET_NAME} PUBLIC DEBUG)
+        message(STATUS "${PROJECT_NAME}: adding DEBUG macro")
+        target_compile_definitions(${TARGET_NAME} PUBLIC DEBUG)
     endif()
 
     # Add 32-bit macro.
@@ -75,10 +75,10 @@ function(tiny_engine_configure_target TARGET_NAME)
 
     # Debug tools.
     if(NOT IS_RELEASE_BUILD)
-	    target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_DEBUG_TOOLS)
+        target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_DEBUG_TOOLS)
     elseif(ENGINE_FORCE_ENABLE_DEBUG_TOOLS)
-	    message(WARNING "Note: you enabled ENGINE_DEBUG_TOOLS in release build.")
-	    target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_DEBUG_TOOLS)
+        message(WARNING "Note: you enabled ENGINE_DEBUG_TOOLS in release build.")
+        target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_DEBUG_TOOLS)
     endif()
 
     # Add includes (relative to the target's directory).
@@ -87,9 +87,9 @@ function(tiny_engine_configure_target TARGET_NAME)
     target_include_directories(${TARGET_NAME} PRIVATE src)
 
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "v8|arm64|aarch64")
-	    set(IS_ARM64 1)
+        set(IS_ARM64 1)
     else()
-	    set(IS_ARM64 0)
+        set(IS_ARM64 0)
     endif()
     message(STATUS "${TARGET_NAME}: is running ARM64: ${IS_ARM64}")
 
@@ -105,17 +105,17 @@ function(tiny_engine_configure_target TARGET_NAME)
             target_compile_options(${TARGET_NAME} PRIVATE -static-libasan)
         endif()
     else()
-	    if (NOT IS_RELEASE_BUILD AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT MSVC)
+        if (NOT IS_RELEASE_BUILD AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT MSVC)
             # 64-bit debug non-msvc build, asan should be used but for some reason is disabled, make it more noticable
-	        message(WARNING "${TARGET_NAME}: Address sanitizer is disabled.")
-	    else()
-	        message(STATUS "${TARGET_NAME}: Address sanitizer is disabled.")
-	    endif()
+            message(WARNING "${TARGET_NAME}: Address sanitizer is disabled.")
+        else()
+            message(STATUS "${TARGET_NAME}: Address sanitizer is disabled.")
+        endif()
     endif()
 
     # Memcheck macro.
     if(ENGINE_MEMCHECK_ENABLED)
-	    target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_MEMCHECK_ENABLED)
+        target_compile_definitions(${TARGET_NAME} PUBLIC ENGINE_MEMCHECK_ENABLED)
     endif()
 endfunction()
 
@@ -139,9 +139,9 @@ function(create_symlink_to_res DIR_NAME)
                 COMMAND cmd /c mklink /J "${DST_DIR}" "${SRC_DIR}"
                 RESULT_VARIABLE result
             )
-	    if(result EQUAL 1)
-		message(WARNING "\n\nCan't use mklink to create a symlink to \"res\", you have to copy it yourself\n\n")
-	    endif()
+        if(result EQUAL 1)
+        message(WARNING "\n\nCan't use mklink to create a symlink to \"res\", you have to copy it yourself\n\n")
+        endif()
         else()
             execute_process(
                 COMMAND ${CMAKE_COMMAND} -E create_symlink "${RES_LINK_FROM}" "${RES_LINK_TO}"

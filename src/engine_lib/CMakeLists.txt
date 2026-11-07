@@ -171,35 +171,7 @@ endif()
 #                                       DEPENDENCIES
 # -------------------------------------------------------------------------------------------------
 
-# Group all dependencies into a single interface library, later we will link it to 2 versions of the engine_lib
-# one for the editor (with some editor macros) and one for the game.
-set(ENGINE_LIB_DEPS_TARGET engine_lib_deps)
-add_library(${ENGINE_LIB_DEPS_TARGET} INTERFACE)
-
-if(NOT MSVC)
-    # for our custom windowing system
-    find_package(X11 REQUIRED COMPONENTS Xrandr Xfixes)
-    target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE
-        X11::X11
-        X11::Xrandr
-        X11::Xfixes
-    )
-
-    # for math
-    target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE m)
-
-    # for threads
-    find_package(Threads REQUIRED)
-    target_link_libraries(${ENGINE_LIB_TARGET} ${CMAKE_THREAD_LIBS_INIT})
-    target_link_libraries(${ENGINE_LIB_TARGET_FOR_EDITOR} ${CMAKE_THREAD_LIBS_INIT})
-    if(THREADS_HAVE_PTHREAD_ARG)
-        target_compile_options(${ENGINE_LIB_TARGET} PUBLIC "-pthread")
-        target_compile_options(${ENGINE_LIB_TARGET_FOR_EDITOR} PUBLIC "-pthread")
-    endif()
-endif()
-
-# Add GLAD.
-message(STATUS "${PROJECT_NAME}: adding dependency \"GLAD\"...")
+# Setup GLAD library.
 set(GLAD_TARGET_NAME glad)
 set(GLAD_PATH ${RELATIVE_EXT_PATH}/glad)
 add_library(${GLAD_TARGET_NAME} STATIC
@@ -213,12 +185,8 @@ if(NOT MSVC)
         ${GLAD_PATH}/include/glad/glx.h
     )
 endif()
-target_include_directories(${GLAD_TARGET_NAME} SYSTEM PUBLIC ${GLAD_PATH}/include)
-target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE ${GLAD_TARGET_NAME})
-add_dependencies(${ENGINE_LIB_DEPS_TARGET} ${GLAD_TARGET_NAME})
 
-# Miniaudio.
-message(STATUS "${PROJECT_NAME}: adding external dependency \"miniaudio\"...")
+# Setup miniaudio library.
 set(MINIAUDIO_NO_RUNTIME_LINKING OFF CACHE BOOL "" FORCE)
 set(MINIAUDIO_INSTALL OFF CACHE BOOL "" FORCE)
 set(MINIAUDIO_FORCE_C89 ON CACHE BOOL "" FORCE)
@@ -253,12 +221,42 @@ else()
     set(MINIAUDIO_ENABLE_NULL OFF CACHE BOOL "" FORCE)
 endif()
 add_subdirectory(${RELATIVE_EXT_PATH}/miniaudio ${DEPENDENCY_BUILD_DIR_NAME}/miniaudio)
-target_link_libraries(${ENGINE_LIB_DEPS_TARGET} INTERFACE miniaudio)
-if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT MSVC)
-    cmake_policy(SET CMP0079 NEW)
-    target_link_libraries(miniaudio PUBLIC atomic)
-endif()
 
-# Link engine library to dependencies.
-target_link_libraries(${ENGINE_LIB_TARGET} PUBLIC ${ENGINE_LIB_DEPS_TARGET})
-target_link_libraries(${ENGINE_LIB_TARGET_FOR_EDITOR} PUBLIC ${ENGINE_LIB_DEPS_TARGET})
+# we have 2 versions of the engine_lib one for the editor (with some editor macros) and one for the game
+# this function will add dependencies to both versions (we will call this function twice)
+function(add_engine_lib_dependencies TARGET_NAME)
+    if(NOT MSVC)
+        # for our custom windowing system
+        find_package(X11 REQUIRED COMPONENTS Xrandr Xfixes)
+        target_link_libraries(${TARGET_NAME} PUBLIC
+            X11::X11
+            X11::Xrandr
+            X11::Xfixes
+        )
+
+        # for math
+        target_link_libraries(${TARGET_NAME} PUBLIC m)
+
+        # for threads
+        find_package(Threads REQUIRED)
+        target_link_libraries(${TARGET_NAME} ${CMAKE_THREAD_LIBS_INIT})
+        if(THREADS_HAVE_PTHREAD_ARG)
+            target_compile_options(${TARGET_NAME} PUBLIC "-pthread")
+        endif()
+    endif()
+
+    # Add GLAD.
+    target_include_directories(${GLAD_TARGET_NAME} SYSTEM PUBLIC ${GLAD_PATH}/include)
+    target_link_libraries(${TARGET_NAME} PUBLIC ${GLAD_TARGET_NAME})
+    add_dependencies(${TARGET_NAME} ${GLAD_TARGET_NAME})
+
+    # Add miniaudio.
+    target_link_libraries(${TARGET_NAME} PUBLIC miniaudio)
+    if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT MSVC)
+        cmake_policy(SET CMP0079 NEW)
+        target_link_libraries(miniaudio PUBLIC atomic)
+    endif()
+endfunction()
+
+add_engine_lib_dependencies(${ENGINE_LIB_TARGET})
+add_engine_lib_dependencies(${ENGINE_LIB_TARGET_FOR_EDITOR})
