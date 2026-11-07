@@ -285,15 +285,15 @@ debug_drawer_draw_triangle_solid(
 
 void
 debug_drawer_draw_text(float time_sec, const char* text) {
-    te_vec3 color;
-    vec3_set(1.0f, 1.0f, 1.0f, color);
+    te_vec4 color;
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, color);
     debug_drawer_draw_text_color(text, time_sec, color);
 }
 
 void
 debug_drawer_draw_text_fmt(float time_sec, const char* fmt, ...) {
     char* message;
-    te_vec3 color;
+    te_vec4 color;
     size_t size;
     int test_size;
 
@@ -316,7 +316,7 @@ debug_drawer_draw_text_fmt(float time_sec, const char* fmt, ...) {
     va_end(args_copy);
     va_end(args);
 
-    vec3_set(1.0f, 1.0f, 1.0f, color);
+    vec4_set(1.0f, 1.0f, 1.0f, 1.0f, color);
     debug_drawer_draw_text_color(message, time_sec, color);
 
     free(message);
