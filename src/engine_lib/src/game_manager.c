@@ -15,6 +15,7 @@
 #include <sound_manager.h>
 #include <time.h>
 #include <misc/high_freq_timer.h>
+#include <misc/globals.h>
 
 typedef struct te_game_tick_callback {
     void* custom;
@@ -359,7 +360,17 @@ prv_game_manager_tick(te_game_manager* game_manager, float delta_time_sec) {
         camera_get_forward(active_camera, forward);
         camera_get_up(active_camera, up);
 
-        prv_sound_manager_set_listener(game_manager->sound_manager, pos, forward, up);
+        prv_sound_manager_tick(game_manager->sound_manager, pos, forward, up);
+    } else {
+        te_vec3 pos;
+        te_vec3 forward;
+        te_vec3 up;
+
+        vec3_zero(pos);
+        globals_get_world_forward(forward);
+        globals_get_world_up(up);
+
+        prv_sound_manager_tick(game_manager->sound_manager, pos, forward, up);
     }
 
     /* tick worlds */

@@ -86,15 +86,8 @@ function(tiny_engine_configure_target TARGET_NAME)
     target_include_directories(${TARGET_NAME} PUBLIC include)
     target_include_directories(${TARGET_NAME} PRIVATE src)
 
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "v8|arm64|aarch64")
-        set(IS_ARM64 1)
-    else()
-        set(IS_ARM64 0)
-    endif()
-    message(STATUS "${TARGET_NAME}: is running ARM64: ${IS_ARM64}")
-
     # Enable ASan.
-    if(IS_ARM64 EQUAL 0 AND NOT IS_RELEASE_BUILD AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT ENGINE_DISABLE_ASAN_IN_DEBUG AND (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER MATCHES "clang"))
+    if(NOT IS_RELEASE_BUILD AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT ENGINE_DISABLE_ASAN_IN_DEBUG AND (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER MATCHES "clang"))
         message(STATUS "${TARGET_NAME}: Address sanitizer is enabled.")
         target_compile_definitions(${TARGET_NAME} PRIVATE ENGINE_ASAN_ENABLED)
         target_compile_options(${TARGET_NAME} PRIVATE -fno-omit-frame-pointer)

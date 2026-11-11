@@ -480,6 +480,8 @@ prv_world_tick(te_world* world) {
                 continue;
             }
 
+            sound_destroy(world->spawned_sounds[i]);
+
             if (world->spawned_sound_count == 1) {
                 world->spawned_sound_count = 0;
                 free(world->spawned_sounds);
@@ -533,7 +535,7 @@ world_play_fire_and_forget_sound_2d(te_world* world, te_sound* sound) {
 
     prv_sound_set_on_finished_callback_audio_thread(
         sound, world, on_sound_finished_audio_thread);
-    sound_play(sound);
+    sound_play(sound, true);
 }
 
 void
@@ -553,7 +555,7 @@ world_play_fire_and_forget_sound_3d(
         sound, world, on_sound_finished_audio_thread);
 
     sound_set_3d_position(sound, world_position);
-    sound_play(sound);
+    sound_play(sound, true);
 }
 
 static void

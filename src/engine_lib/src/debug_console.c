@@ -357,6 +357,10 @@ prv_debug_console_draw(float delta_time_sec) {
                 screen_pos, "%s: %.2f", "CPU time on tick callbacks (ms)",
                 stats->cpu_time_tick_callbacks_ms);
 
+            prv_debug_console_draw_stat(
+                screen_pos, "%s: %u", "playing sounds",
+                stats->playing_sound_count);
+
             /* rendered model count */
             prv_debug_console_draw_stat(
                 screen_pos, "rendered opaque model count: %u",

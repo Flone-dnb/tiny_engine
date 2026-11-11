@@ -20,7 +20,12 @@ set(PROJECT_SOURCES
     src/misc/high_freq_timer.c
     src/misc/num_hashtable.c
     src/game_manager.c
-    src/sound_manager.c
+    src/sound/sound_manager.c
+    src/sound/audio_mixer.c
+    src/sound/audio_mixer.h
+    src/sound/os_audio_system.c
+    src/sound/os_audio_system.h
+    src/sound/sound_constants.h
     src/world.c
     src/debug_console.c
     src/type_database.c
@@ -128,6 +133,8 @@ set(WIN32_SOURCES
     src/thread/win32_thread.h
     src/thread/win32_mutex.c
     src/thread/win32_mutex.h
+    src/sound/win32_audio_system.c
+    src/sound/win32_audio_system.h
 )
 set(LINUX_SOURCES
     src/window_system/x11_window.c
@@ -136,6 +143,8 @@ set(LINUX_SOURCES
     src/thread/posix_thread.h
     src/thread/posix_mutex.c
     src/thread/posix_mutex.h
+    src/sound/alsa_audio_system.c
+    src/sound/alsa_audio_system.h
 )
 if (WIN32)
     list(APPEND PROJECT_SOURCES ${WIN32_SOURCES})
@@ -186,42 +195,6 @@ if(NOT MSVC)
     )
 endif()
 
-# Setup miniaudio library.
-set(MINIAUDIO_NO_RUNTIME_LINKING OFF CACHE BOOL "" FORCE)
-set(MINIAUDIO_INSTALL OFF CACHE BOOL "" FORCE)
-set(MINIAUDIO_FORCE_C89 ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_EXTRA_NODES ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_LIBVORBIS ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_LIBOPUS ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_WASAPI ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_DSOUND ON CACHE BOOL "" FORCE)
-#set(MINIAUDIO_NO_PULSEAUDIO ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_JACK ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_COREAUDIO ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_SNDIO ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_AUDIO4 ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_OSS ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_AAUDIO ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_OPENSL ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_WEBAUDIO ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_CUSTOM ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_ENCODING ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_FLAC ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_WAV ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_GENERATION ON CACHE BOOL "" FORCE)
-set(MINIAUDIO_NO_AVX2 ON CACHE BOOL "" FORCE)
-if(ENGINE_MEMCHECK_ENABLED AND CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT MSVC)
-    set(MINIAUDIO_NO_RUNTIME_LINKING ON CACHE BOOL "" FORCE)
-    set(MINIAUDIO_ENABLE_ONLY_SPECIFIC_BACKENDS ON CACHE BOOL "" FORCE)
-    set(MINIAUDIO_ENABLE_NULL ON CACHE BOOL "" FORCE)
-    message(WARNING "Sound is disabled on 32-bit debug builds with memcheck enabled because memcheck is unable to track some of miniaudio's allocations on old 32-bit Linux systems.")
-else()
-    set(MINIAUDIO_NO_RUNTIME_LINKING OFF CACHE BOOL "" FORCE)
-    set(MINIAUDIO_ENABLE_ONLY_SPECIFIC_BACKENDS OFF CACHE BOOL "" FORCE)
-    set(MINIAUDIO_ENABLE_NULL OFF CACHE BOOL "" FORCE)
-endif()
-add_subdirectory(${RELATIVE_EXT_PATH}/miniaudio ${DEPENDENCY_BUILD_DIR_NAME}/miniaudio)
-
 # we have 2 versions of the engine_lib one for the editor (with some editor macros) and one for the game
 # this function will add dependencies to both versions (we will call this function twice)
 function(add_engine_lib_dependencies TARGET_NAME)
@@ -233,6 +206,12 @@ function(add_engine_lib_dependencies TARGET_NAME)
             X11::Xrandr
             X11::Xfixes
         )
+
+	# for sound
+	find_package(ALSA REQUIRED)
+	target_link_libraries(${TARGET_NAME} PUBLIC
+	    ALSA::ALSA
+	)
 
         # for math
         target_link_libraries(${TARGET_NAME} PUBLIC m)
@@ -249,13 +228,6 @@ function(add_engine_lib_dependencies TARGET_NAME)
     target_include_directories(${GLAD_TARGET_NAME} SYSTEM PUBLIC ${GLAD_PATH}/include)
     target_link_libraries(${TARGET_NAME} PUBLIC ${GLAD_TARGET_NAME})
     add_dependencies(${TARGET_NAME} ${GLAD_TARGET_NAME})
-
-    # Add miniaudio.
-    target_link_libraries(${TARGET_NAME} PUBLIC miniaudio)
-    if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT MSVC)
-        cmake_policy(SET CMP0079 NEW)
-        target_link_libraries(miniaudio PUBLIC atomic)
-    endif()
 endfunction()
 
 add_engine_lib_dependencies(${ENGINE_LIB_TARGET})
