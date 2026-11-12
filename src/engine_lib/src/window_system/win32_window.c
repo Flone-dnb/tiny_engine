@@ -40,6 +40,7 @@ typedef struct te_win32_window {
     bool is_cached_cursor_pos_valid;
 
     bool vsync_enabled;
+    bool has_focus;
 } te_win32_window;
 
 static PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB = NULL;
@@ -68,6 +69,9 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
         if (callbacks != NULL) {
             switch (msg) {
                 case WM_INPUT: {
+                    te_win32_window* win32_window =
+                        (te_win32_window*)prv_os_window_get_impl(os_window);
+
                     static BYTE buffer[sizeof(RAWINPUT)];
                     UINT size = sizeof(buffer);
                     RAWINPUT* raw;
@@ -77,6 +81,15 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                             sizeof(RAWINPUTHEADER))
                         != size) {
                         return 0;
+                    }
+
+                    if (!win32_window->has_focus) {
+                        /* if we lost focus (clicked on the second monitor) and click back on the app
+                         * we won't receive focus (we have to click on the icon or explicitly alt tab)
+                         * to fix this case: */
+                        SetForegroundWindow(win32_window->hwnd);
+                        SetActiveWindow(win32_window->hwnd);
+                        win32_window->has_focus = true;
                     }
 
                     raw = (RAWINPUT*)buffer;
@@ -183,10 +196,16 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                     break;
                 }
                 case WM_SETFOCUS: {
+                    te_win32_window* win32_window =
+                        (te_win32_window*)prv_os_window_get_impl(os_window);
+                    win32_window->has_focus = true;
                     callbacks->on_received_focus(os_window);
                     break;
                 }
                 case WM_KILLFOCUS: {
+                    te_win32_window* win32_window =
+                        (te_win32_window*)prv_os_window_get_impl(os_window);
+                    win32_window->has_focus = false;
                     callbacks->on_lost_focus(os_window);
                     break;
                 }
@@ -235,7 +254,7 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
         }
     }
 
-    return DefWindowProc(hwnd, msg, wparam, lparam);
+    return DefWindowProcW(hwnd, msg, wparam, lparam);
 }
 
 static void
@@ -322,7 +341,7 @@ win32_window_create(te_os_window* os_window, const char* title) {
     te_win32_window* win32_window;
     HINSTANCE hinstance;
     PIXELFORMATDESCRIPTOR pfd;
-    WNDCLASSW wc = {0};
+    WNDCLASSEXW wc = {0};
     RAWINPUTDEVICE rid = {0};
     RECT rect;
     UINT num_formats;
@@ -392,12 +411,13 @@ win32_window_create(te_os_window* os_window, const char* title) {
 
     hinstance = GetModuleHandle(NULL);
 
+    wc.cbSize = sizeof(WNDCLASSEXW);
     wc.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = wnd_proc;
     wc.hInstance = hinstance;
     wc.hCursor = NULL;
     wc.lpszClassName = window_class;
-    if (!RegisterClassW(&wc)) {
+    if (!RegisterClassExW(&wc)) {
         log_error(__FILE__, __LINE__, "failed to register window class");
         abort();
     }
@@ -463,6 +483,8 @@ win32_window_create(te_os_window* os_window, const char* title) {
         wglSwapIntervalEXT(0);
     }
     win32_window->vsync_enabled = false;
+
+    win32_window->has_focus = true;
 
     /* NOTE: RIDEV_NOLEGACY should only be used for fullscreen apps
      * because it disables lots of window events that are needed for windowed apps */
@@ -586,13 +608,13 @@ win32_window_poll_event(te_os_window* os_window) {
     te_win32_window* win32_window = prv_os_window_get_impl(os_window);
     win32_window->is_cached_cursor_pos_valid = false;
 
-    while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) {
+    while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
         if (msg.message == WM_QUIT) {
             os_window_should_close(os_window);
             break;
         }
         TranslateMessage(&msg);
-        DispatchMessageA(&msg);
+        DispatchMessageW(&msg);
     }
 
     /* check gamepad input changes */
