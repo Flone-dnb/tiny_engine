@@ -9,8 +9,10 @@
 #include <glad/gl.h>
 
 #define STB_IMAGE_IMPLEMENTATION
+#if defined(ENGINE_32BIT)
 #define STBI_NO_SIMD
-#include <stb/stb_image.h>
+#endif
+#include <stb_image.h>
 
 /* Groups information about a texture. */
 typedef struct te_texture {
