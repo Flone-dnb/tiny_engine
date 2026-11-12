@@ -546,6 +546,11 @@ sound_stop(te_sound* sound) {
 
 void
 sound_manager_set_volume(te_sound_manager* sound_manager, float volume) {
+    if (volume > 1.0f) {
+        volume = 1.0f;
+    } else if (volume < 0.0f) {
+        volume = 0.0f;
+    }
     audio_mixer_set_volume(sound_manager->mixer, volume);
 }
 
@@ -556,6 +561,12 @@ sound_is_playing(te_sound* sound) {
 
 void
 sound_set_volume(te_sound* sound, float volume) {
+    if (volume > 1.0f) {
+        volume = 1.0f;
+    } else if (volume < 0.0f) {
+        volume = 0.0f;
+    }
+
     sound->volume = volume;
 
     mutex_lock(sound->sm->mtx_audio_threads);
@@ -573,6 +584,12 @@ sound_set_is_looping(te_sound* sound, bool is_looping) {
 
 void
 sound_set_pan(te_sound* sound, float pan) {
+    if (pan > 1.0f) {
+        pan = 1.0f;
+    } else if (pan < -1.0f) {
+        pan = 1.0f;
+    }
+
     sound->pan = pan;
 
     mutex_lock(sound->sm->mtx_audio_threads);
