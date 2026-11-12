@@ -104,8 +104,6 @@ struct te_model {
     te_aabb_shape aabb_local;
 
     /* NULL if default is used, otherwise path (relative to the `res` directory). */
-    char* custom_vert_relative_path;
-    char* custom_frag_relative_path;
     char* path_to_geo;
 
     /* NULL if not set, otherwise path (relative to the `res` directory) to a file */
@@ -204,8 +202,6 @@ model_create(void) {
     model->skeleton_relative_path = NULL;
     model->skeleton = NULL;
     model->path_to_geo = NULL;
-    model->custom_vert_relative_path = NULL;
-    model->custom_frag_relative_path = NULL;
     model->custom_ptr = NULL;
     model->custom_value = 0;
     model->custom_on_before_destroyed = NULL;
@@ -321,8 +317,6 @@ model_destroy(te_model* model) {
 
     free(model->name);
     free(model->tex_relative_path);
-    free(model->custom_frag_relative_path);
-    free(model->custom_vert_relative_path);
     free(model->skeleton_relative_path);
     free(model->path_to_geo);
 
@@ -1426,65 +1420,6 @@ prv_model_get_world_aabb(te_model* model) {
 }
 
 void
-model_set_custom_vert_shader(te_model* model, const char* vert_relative_path) {
-#if defined(ENGINE_EDITOR)
-    if (!check_file_path(vert_relative_path)) {
-        return;
-    }
-#endif
-
-    if (model->world != NULL) {
-        prv_model_remove_from_model_renderer(model);
-    }
-
-    free(model->custom_vert_relative_path);
-    model->custom_vert_relative_path = NULL;
-
-    if (vert_relative_path != NULL) {
-        const size_t len = strlen(vert_relative_path);
-        model->custom_vert_relative_path = malloc(sizeof(char) * (len + 1));
-        memcpy(model->custom_vert_relative_path, vert_relative_path, sizeof(char) * len);
-        model->custom_vert_relative_path[len] = 0;
-    }
-
-    if (model->world != NULL) {
-        prv_model_add_to_model_renderer(model);
-    }
-}
-
-const char*
-model_get_custom_vert_shader(te_model* model) {
-    return model->custom_vert_relative_path;
-}
-
-void
-model_set_custom_frag_shader(te_model* model, const char* frag_relative_path) {
-#if defined(ENGINE_EDITOR)
-    if (!check_file_path(frag_relative_path)) {
-        return;
-    }
-#endif
-
-    if (model->world != NULL) {
-        prv_model_remove_from_model_renderer(model);
-    }
-
-    free(model->custom_frag_relative_path);
-    model->custom_frag_relative_path = NULL;
-
-    if (frag_relative_path != NULL) {
-        const size_t len = strlen(frag_relative_path);
-        model->custom_frag_relative_path = malloc(sizeof(char) * (len + 1));
-        memcpy(model->custom_frag_relative_path, frag_relative_path, sizeof(char) * len);
-        model->custom_frag_relative_path[len] = 0;
-    }
-
-    if (model->world != NULL) {
-        prv_model_add_to_model_renderer(model);
-    }
-}
-
-void
 model_set_geometry(te_model* model, const char* relative_path) {
 #if defined(ENGINE_EDITOR)
     if (!check_file_path(relative_path)) {
@@ -1522,11 +1457,6 @@ model_set_custom_geometry_provider(
                          te_model* model, te_vertex_pack** vertices, unsigned short** indices,
                          unsigned int* index_count, bool* free_custom_geometry)) {
     model->custom_get_geometry = custom_get_geometry;
-}
-
-const char*
-model_get_custom_frag_shader(te_model* model) {
-    return model->custom_frag_relative_path;
 }
 
 unsigned int
@@ -1743,12 +1673,6 @@ model_register_type(void) {
     type_info_add_uint_variable(
         info, "parent_bone_idx", set_parent_bone_idx, get_parent_bone_idx);
     type_info_add_string_variable(info, "geometry", model_set_geometry, model_get_geometry);
-    type_info_add_string_variable(
-        info, "custom_vert_shader", model_set_custom_vert_shader,
-        model_get_custom_vert_shader);
-    type_info_add_string_variable(
-        info, "custom_frag_shader", model_set_custom_frag_shader,
-        model_get_custom_frag_shader);
     type_info_add_string_variable(info, "name", model_set_name, model_get_name);
 
     type_database_register_type(info);

@@ -196,16 +196,6 @@ void model_set_custom_on_before_despawned(
 void model_set_custom_on_before_destroyed(
     te_model* model, void (*custom_on_before_destroyed)(te_model*));
 
-/* specify path to the shader file (relative to the `res` directory), the string will be copied
- * to the model's object, specify NULL to remove */
-void model_set_custom_vert_shader(te_model* model, const char* vert_relative_path);
-const char* model_get_custom_vert_shader(te_model* model);
-
-/* specify path to the shader file (relative to the `res` directory), the string will be copied
- * to the model's object, specify NULL to remove */
-void model_set_custom_frag_shader(te_model* model, const char* frag_relative_path);
-const char* model_get_custom_frag_shader(te_model* model);
-
 /* transparency is disabled by default
  * note that this option is not required to draw something like grass blades
  * (for such case just import grass texture with alpha channel), this option is

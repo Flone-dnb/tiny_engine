@@ -39,7 +39,6 @@ create_gizmo_model(te_gizmo* gizmo, unsigned int axis_idx) {
     model_set_custom_ptr(model, gizmo);
     model_set_custom_value(model, axis_idx);
     model_set_custom_geometry_provider(model, get_geometry);
-    model_set_custom_vert_shader(model, "editor/shader/gizmo.vert.glsl");
 
     return model;
 }
