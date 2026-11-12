@@ -364,7 +364,8 @@ audio_mixer_add_new_samples(
         unsigned char use_buffer_idx =
             os_audio_system_get_next_buffer_idx(mixer->audio_system);
         on_need_next_audio_buffer(mixer, use_buffer_idx);
-        on_need_next_audio_buffer(mixer, (use_buffer_idx + 1) % TE_SOUND_BUFFER_COUNT);
+        on_need_next_audio_buffer(
+            mixer, (unsigned char)((use_buffer_idx + 1) % TE_SOUND_BUFFER_COUNT));
     }
 }
 

@@ -376,7 +376,8 @@ audio_thread(te_alsa_audio_system* sys) {
         mutex_lock(sys->mtx_data_ready);
         sys->buffer_ready_count -= 1;
         sys->buffer_in_flight[idx] = true;
-        sys->next_buffer_idx = (sys->next_buffer_idx + 1) % TE_SOUND_BUFFER_COUNT;
+        sys->next_buffer_idx =
+            (unsigned char)((sys->next_buffer_idx + 1) % TE_SOUND_BUFFER_COUNT);
         mutex_unlock(sys->mtx_data_ready);
 
         /* win32 loop fired on_need_next_audio_buffer after the driver signalled completion

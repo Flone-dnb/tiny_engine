@@ -35,5 +35,5 @@ bool audio_mixer_is_audio_source_have_samples_not_sent_yet(
 void audio_mixer_add_new_samples(
     te_audio_mixer* mixer, void* audio_source_id, short* samples, unsigned int sample_count);
 
-/* tells if the specified audio source can call @ref audio_mixer_on_audio_source_samples_ready again */
+/* tells if the specified audio source can call @ref audio_mixer_add_new_samples again */
 bool audio_mixer_is_ready_for_new_samples(te_audio_mixer* mixer, void* audio_source_id);
