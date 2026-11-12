@@ -1,7 +1,9 @@
-#include <freetype/freetype.h>
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <wchar.h>
 
 #if defined(WIN32)
@@ -40,7 +42,7 @@ wchar_from_char(const char* src, unsigned int* dst_strlen) {
         abort();
     }
 
-    dst = malloc(sizeof(wchar_t) * (len + 1));
+    dst = (wchar_t*)malloc(sizeof(wchar_t) * (len + 1));
     mbstowcs(dst, src, len + 1);
 
     if (len > 0xffffffff) {
@@ -76,8 +78,7 @@ filesystem_does_path_exists(const char* path) {
 int
 main(void) {
     FILE* fp;
-    FT_Library ft_library;
-    FT_Face ft_face;
+    stbtt_fontinfo font;
     size_t elem_count_read;
     unsigned int bitmap_byte_count;
     unsigned int bitmap_byte_idx, bitmap_bit_idx;
@@ -88,7 +89,13 @@ main(void) {
     unsigned int wchars_len;
     unsigned int i, j;
     char* chars_to_load;
-    int error_code;
+    unsigned char* ttf_buffer;
+    unsigned char* glyph_bitmap;
+    float scale;
+    int glyph_w, glyph_h;
+    int x0, y0, x1, y1;
+    int advance, lsb;
+    int offset_x, offset_y;
 
     if (!filesystem_does_path_exists(PATH_TO_TTF)) {
         printf("path \"%s\" does not exist\n", PATH_TO_TTF);
@@ -100,19 +107,37 @@ main(void) {
         return 1;
     }
 
-    error_code = FT_Init_FreeType(&ft_library);
-    if (error_code != 0) {
-        printf("failed to init FreeType library, error: %d\n", error_code);
+    /* load ttf into memory (stb_truetype requires the buffer to stay alive) */
+    fp = fopen(PATH_TO_TTF, "rb");
+    if (fp == NULL) {
+        printf("failed to open ttf file \"%s\"\n", PATH_TO_TTF);
+        return 1;
+    }
+    fseek(fp, 0, SEEK_END);
+    {
+        long size = ftell(fp);
+        if (size < 0) {
+            printf("failed to get ttf file size\n");
+            return 1;
+        }
+        file_size = (unsigned long)size;
+    }
+    rewind(fp);
+
+    ttf_buffer = malloc(file_size);
+    elem_count_read = fread(ttf_buffer, 1, file_size, fp);
+    fclose(fp);
+    if (elem_count_read != file_size) {
+        printf("failed to read the ttf file\n");
         return 1;
     }
 
-    error_code = FT_New_Face(ft_library, PATH_TO_TTF, 0, &ft_face);
-    if (error_code != 0) {
-        printf("failed to create FreeType face, error: %d\n", error_code);
+    if (!stbtt_InitFont(&font, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer, 0))) {
+        printf("failed to init stb_truetype font\n");
         return 1;
     }
 
-    FT_Set_Pixel_Sizes(ft_face, 0, FONT_HEIGHT_PIX_TO_LOAD);
+    scale = stbtt_ScaleForMappingEmToPixels(&font, (float)FONT_HEIGHT_PIX_TO_LOAD);
 
     fp = fopen(PATH_TO_CHARS_TO_LOAD, "rb");
     if (fp == NULL) {
@@ -166,17 +191,15 @@ main(void) {
     for (i = 0; i < wchars_len; i++) {
         unsigned int char_code = (unsigned int)wchars_to_load[i];
 
-        /* load glyph */
-        error_code = FT_Load_Char(ft_face, char_code, FT_LOAD_RENDER);
-        if (error_code != 0) {
-            printf(
-                "failed to load glyph for character %u, error: %d\n", char_code, error_code);
-            return 1;
-        }
+        stbtt_GetCodepointHMetrics(&font, (int)char_code, &advance, &lsb);
+        stbtt_GetCodepointBitmapBox(&font, (int)char_code, scale, scale, &x0, &y0, &x1, &y1);
+
+        glyph_w = x1 - x0;
+        glyph_h = y1 - y0;
 
         /* don't skip if width is 0, we still need to know distance to next glyph for such cases */
 
-        for (j = 0; j < ft_face->glyph->bitmap.width * ft_face->glyph->bitmap.rows; j++) {
+        for (j = 0; j < (unsigned int)(glyph_w * glyph_h); j++) {
             bitmap_bit_idx += 1;
             if (bitmap_bit_idx == 8) {
                 bitmap_bit_idx = 0;
@@ -206,34 +229,47 @@ main(void) {
     for (i = 0; i < wchars_len; i++) {
         unsigned int char_code = (unsigned int)wchars_to_load[i];
 
-        /* load glyph */
-        error_code = FT_Load_Char(ft_face, char_code, FT_LOAD_RENDER);
-        if (error_code != 0) {
-            printf(
-                "failed to load glyph for character %u, error: %d\n", char_code, error_code);
-            return 1;
+        stbtt_GetCodepointHMetrics(&font, (int)char_code, &advance, &lsb);
+        stbtt_GetCodepointBitmapBox(&font, (int)char_code, scale, scale, &x0, &y0, &x1, &y1);
+
+        glyph_w = x1 - x0;
+        glyph_h = y1 - y0;
+
+        /* bitmap left and top (stb gives y0 relative to baseline, FreeType's bitmap_top is positive up) */
+        offset_x = x0;
+        offset_y =
+            -y0; /* stb y0 is negative above baseline, so -y0 gives top offset (positive up) */
+
+        /* advance 1/64 like freetype */
+        {
+            int advance_26_6 = (int)((float)advance * scale * 64.0f + 0.01f);
+            if (advance_26_6 < 0)
+                advance_26_6 = 0;
+            tmp_uint = (unsigned int)advance_26_6;
         }
 
         fwrite(&char_code, sizeof(char_code), 1, fp);
-        fwrite(&ft_face->glyph->bitmap.width, sizeof(ft_face->glyph->bitmap.width), 1, fp);
-        fwrite(&ft_face->glyph->bitmap.rows, sizeof(ft_face->glyph->bitmap.rows), 1, fp);
-        fwrite(&ft_face->glyph->bitmap_left, sizeof(ft_face->glyph->bitmap_left), 1, fp);
-        fwrite(&ft_face->glyph->bitmap_top, sizeof(ft_face->glyph->bitmap_top), 1, fp);
-        if (ft_face->glyph->advance.x > 0xffffffff) {
-            printf("glyph advance can't fit in uint\n");
-            return 1;
-        }
-        tmp_uint = (unsigned int)ft_face->glyph->advance.x;
+        fwrite(&glyph_w, sizeof(glyph_w), 1, fp);
+        fwrite(&glyph_h, sizeof(glyph_h), 1, fp);
+        fwrite(&offset_x, sizeof(offset_x), 1, fp);
+        fwrite(&offset_y, sizeof(offset_y), 1, fp);
         fwrite(&tmp_uint, sizeof(tmp_uint), 1, fp);
 
-        for (j = 0; j < ft_face->glyph->bitmap.width * ft_face->glyph->bitmap.rows; j++) {
-            bitmap_data[bitmap_byte_idx] |= (ft_face->glyph->bitmap.buffer[j] & 1)
-                                            << bitmap_bit_idx;
-            bitmap_bit_idx += 1;
-            if (bitmap_bit_idx == 8) {
-                bitmap_bit_idx = 0;
-                bitmap_byte_idx += 1;
+        /* render glyph into a temporary buffer if non-empty */
+        if (glyph_w > 0 && glyph_h > 0) {
+            glyph_bitmap = malloc((unsigned long)(glyph_w * glyph_h));
+            stbtt_MakeCodepointBitmap(
+                &font, glyph_bitmap, glyph_w, glyph_h, glyph_w, scale, scale, (int)char_code);
+
+            for (j = 0; j < (unsigned int)(glyph_w * glyph_h); j++) {
+                bitmap_data[bitmap_byte_idx] |= (glyph_bitmap[j] & 1) << bitmap_bit_idx;
+                bitmap_bit_idx += 1;
+                if (bitmap_bit_idx == 8) {
+                    bitmap_bit_idx = 0;
+                    bitmap_byte_idx += 1;
+                }
             }
+            free(glyph_bitmap);
         }
     }
 
@@ -242,20 +278,7 @@ main(void) {
     fclose(fp);
     free(wchars_to_load);
     free(bitmap_data);
-
-    if (ft_face != NULL) {
-        error_code = FT_Done_Face(ft_face);
-        if (error_code != 0) {
-            printf("failed to deinit FreeType face, error: %d\n", error_code);
-            return 1;
-        }
-    }
-
-    error_code = FT_Done_FreeType(ft_library);
-    if (error_code != 0) {
-        printf("failed to deinit FreeType library, error: %d\n", error_code);
-        return 1;
-    }
+    free(ttf_buffer);
 
     printf("successfully generated font bitmap at \"%s\"\n", PATH_TO_BITMAP);
 

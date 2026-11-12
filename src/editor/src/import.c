@@ -10,10 +10,10 @@
 #include <math/mat4.h>
 #include <math/math_funcs.h>
 #define CGLTF_IMPLEMENTATION
-#include <cgltf/cgltf.h>
+#include <cgltf.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <stb/stb_image_write.h>
-#include <stb/stb_image.h>
+#include <stb_image_write.h>
+#include <stb_image.h>
 
 /* Returns absolute path to the destination texture (located in the "res" directory).
  * You must free returned pointer. */
