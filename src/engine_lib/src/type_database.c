@@ -42,10 +42,10 @@ free_type_info(void* ptr) {
     free(info->vec3_getters);
     free(info->vec4_setters);
     free(info->vec4_getters);
-    free(info->string_setters);
-    free(info->string_getters);
-    free(info->wstring_setters);
-    free(info->wstring_getters);
+    free((void*)info->string_setters);
+    free((void*)info->string_getters);
+    free((void*)info->wstring_setters);
+    free((void*)info->wstring_getters);
 
     free(info);
 }
@@ -156,14 +156,14 @@ prv_type_database_deinit(void) {
     new_setters = malloc(sizeof(void*) * (type_var_count + 1));                               \
     memcpy(new_setters, setters, sizeof(void*) * type_var_count);                             \
                                                                                               \
-    free(setters);                                                                            \
+    free((void*)setters);                                                                     \
     setters = new_setters;                                                                    \
     setters[type_var_count] = new_setter;                                                     \
                                                                                               \
     new_getters = malloc(sizeof(void*) * (type_var_count + 1));                               \
     memcpy(new_getters, getters, sizeof(void*) * type_var_count);                             \
                                                                                               \
-    free(getters);                                                                            \
+    free((void*)getters);                                                                     \
     getters = new_getters;                                                                    \
     getters[type_var_count] = new_getter;                                                     \
                                                                                               \

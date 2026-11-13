@@ -843,9 +843,9 @@ on_top_button_clicked(te_button_widget* button) {
         type_ids[idx] = (void*)(types[i]);
         idx += 1;
     }
-    inspector->item_list = type_ids;
+    inspector->item_list = (void*)type_ids;
 
-    free(types);
+    free((void*)types);
 
     inspector->current_page = 0;
     refresh_page_text(inspector);
@@ -1129,7 +1129,7 @@ on_button_list_item_right_clicked(te_button_widget* button) {
         option_names[TE_OMO_DELETE_OBJ] = "delete object";
 
         free(inspector->item_list);
-        inspector->item_list = option_names;
+        inspector->item_list = (void*)option_names;
 
         /* make top button a "cancel" button */
         wtext = wchar_from_char("Cancel object options", &text_len);

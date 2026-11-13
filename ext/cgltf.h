@@ -105,7 +105,11 @@ extern "C" {
 #endif
 
 typedef size_t cgltf_size;
+#if defined(_MSC_VER) && _MSC_VER <= 1200
+typedef __int64 cgltf_ssize;
+#else
 typedef long long int cgltf_ssize;
+#endif
 typedef float cgltf_float;
 typedef int cgltf_int;
 typedef unsigned int cgltf_uint;
@@ -1072,7 +1076,11 @@ static cgltf_result cgltf_default_file_read(const struct cgltf_memory_options* m
 		fseek(file, 0, SEEK_END);
 
 #ifdef _MSC_VER
+#if _MSC_VER <= 1200
+		length = ftell(file);
+#else
 		length = _ftelli64(file);
+#endif
 #else
 		length = ftell(file);
 #endif
@@ -2873,7 +2881,11 @@ static int cgltf_json_to_int(jsmntok_t const* tok, const unsigned char* json_chu
 static cgltf_size cgltf_json_to_size(jsmntok_t const* tok, const unsigned char* json_chunk)
 {
 	char tmp[128];
+#if defined(_MSC_VER) && _MSC_VER <= 1200
+	long res;
+#else
 	long long res;
+#endif
 	int size;
 
 	CGLTF_CHECK_TOKTYPE_RET(*tok, JSMN_PRIMITIVE, 0);

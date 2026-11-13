@@ -12,8 +12,8 @@ typedef struct te_frustum_shape {
     te_plane_shape bottom;
     te_plane_shape right;
     te_plane_shape left;
-    te_plane_shape near;
-    te_plane_shape far;
+    te_plane_shape near_; /* to prevent VC 6.0 error C4226: nonstandard extension used : 'near' is an obsolete keyword */
+    te_plane_shape far_;
 } te_frustum_shape;
 
 te_frustum_shape frustum_shape_create_for_perspective(

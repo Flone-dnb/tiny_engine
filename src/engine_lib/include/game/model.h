@@ -117,6 +117,7 @@ void model_get_world_position(te_model* model, te_vec3 out);
 void model_set_skeleton_path(te_model* model, const char* relative_path);
 const char* model_get_skeleton_path(te_model* model);
 struct te_skeleton* model_get_skeleton(te_model* model);
+bool model_uses_skinning(te_model* model);
 
 /* sets color of the model in the RGBA format in range [0.0; 1.0]
  * note that alpha will be ignored if @ref model_enable_transparency is disabled */

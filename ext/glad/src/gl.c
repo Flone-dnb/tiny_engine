@@ -9,7 +9,7 @@
 #ifndef GLAD_IMPL_UTIL_C_
 #define GLAD_IMPL_UTIL_C_
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && _MSC_VER > 1200
 #define GLAD_IMPL_UTIL_SSCANF sscanf_s
 #else
 #define GLAD_IMPL_UTIL_SSCANF sscanf

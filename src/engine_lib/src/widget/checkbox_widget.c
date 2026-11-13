@@ -593,7 +593,7 @@ prv_checkbox_widget_on_mouse_button_released(
         return;
     }
 
-    checkbox_widget_set_is_checked(checkbox_widget, !checkbox_widget->is_checked);
+    checkbox_widget_set_is_checked(checkbox_widget, (bool)(!checkbox_widget->is_checked));
     if (checkbox_widget->on_changed) {
         checkbox_widget->on_changed(checkbox_widget, checkbox_widget->is_checked);
     }

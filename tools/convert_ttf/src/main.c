@@ -11,6 +11,9 @@
 #include <direct.h>
 #include <windows.h>
 #include <tchar.h>
+#ifndef INVALID_FILE_ATTRIBUTES
+#define INVALID_FILE_ATTRIBUTES ((DWORD) - 1)
+#endif
 #define mkdir(dir, mode) _mkdir(dir)
 #elif __linux__
 #include <dirent.h>

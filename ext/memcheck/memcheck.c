@@ -2,6 +2,7 @@
 
 #if defined(WIN32)
 
+#if defined(_MSC_VER) && _MSC_VER > 1200
 #include <stdio.h>
 #include <Windows.h>
 #include <crtdbg.h>
@@ -11,16 +12,21 @@ int __cdecl crt_report_hook(int reportType, char* message, int* returnValue) {
     OutputDebugStringA(message);
     return TRUE;
 }
+#endif
 
 void
 memcheck_init(void) {
+#if defined(_MSC_VER) && _MSC_VER > 1200
     _CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, crt_report_hook);
     _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+#endif
 }
 
 void
 memcheck_deinit(void) {
+#if defined(_MSC_VER) && _MSC_VER > 1200
     _CrtDumpMemoryLeaks();
+#endif
 }
 
 #else

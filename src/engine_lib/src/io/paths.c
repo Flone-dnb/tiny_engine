@@ -8,11 +8,12 @@
 #include <misc/globals.h>
 
 #if defined(WIN32)
-#include <misc/wchar_funcs.h>
 #define NOMINMAX
 #include <Windows.h>
-#include <KnownFolders.h>
 #include <Shlobj.h>
+#ifndef CSIDL_LOCAL_APPDATA
+#define CSIDL_LOCAL_APPDATA 0x001C
+#endif
 #endif
 
 static char cached_path_to_config_dir[2048] = {0};
@@ -22,35 +23,35 @@ const char*
 paths_get_config_dir(void) {
     if (cached_path_to_config_dir[0] == 0) {
 #if defined(WIN32)
-        char* path_tmp;
-        wchar_t folder_wpath[MAX_PATH + 1] = {0};
+        char folder_path[MAX_PATH + 2] = {0};
         unsigned int path_len;
         size_t i;
-        const HRESULT result = SHGetFolderPathW(
-            NULL, CSIDL_LOCAL_APPDATA, NULL, SHGFP_TYPE_CURRENT, folder_wpath);
-        if (result != S_OK) {
+
+        if (!SHGetSpecialFolderPathA(NULL, folder_path, CSIDL_LOCAL_APPDATA, FALSE)) {
             log_error(__FILE__, __LINE__, "failed to query config dir path");
             abort();
         }
 
-        path_tmp = wchar_to_char(folder_wpath, &path_len);
-
-        /* copy path and replace slashes */
-        if (path_len > 256) {
-            log_error(__FILE__, __LINE__, "path to AppData folder is too long");
+        path_len = (unsigned int)strlen(folder_path);
+        if (path_len == 0) {
+            log_error(__FILE__, __LINE__, "failed to query config dir path");
             abort();
         }
+
+        /* copy path and replace slashes */
         for (i = 0; i < path_len; i++) {
-            if (path_tmp[i] == '\\') {
-                path_tmp[i] = '/';
+            if (folder_path[i] == '\\') {
+                folder_path[i] = '/';
             }
+        }
+        if (folder_path[path_len - 1] == '/') {
+            /* we expect no trailing slash */
+            folder_path[path_len - 1] = 0;
         }
 
         sprintf(
-            cached_path_to_config_dir, "%s/tiny_engine/%s/config/", &path_tmp[0],
+            cached_path_to_config_dir, "%s/tiny_engine/%s/config/", folder_path,
             globals_get_app_name());
-
-        free(path_tmp);
 #elif __linux__
 
 #if defined(__aarch64__)
@@ -79,35 +80,35 @@ const char*
 paths_get_log_file(void) {
     if (cached_path_to_log_file[0] == 0) {
 #if defined(WIN32)
-        char* path_tmp;
-        wchar_t folder_wpath[MAX_PATH + 1] = {0};
+        char folder_path[MAX_PATH + 2] = {0};
         unsigned int path_len;
         size_t i;
-        const HRESULT result = SHGetFolderPathW(
-            NULL, CSIDL_LOCAL_APPDATA, NULL, SHGFP_TYPE_CURRENT, folder_wpath);
-        if (result != S_OK) {
+
+        if (!SHGetSpecialFolderPathA(NULL, folder_path, CSIDL_LOCAL_APPDATA, FALSE)) {
             log_error(__FILE__, __LINE__, "failed to query config dir path");
             abort();
         }
 
-        path_tmp = wchar_to_char(folder_wpath, &path_len);
-
-        /* copy path and replace slashes */
-        if (path_len > 256) {
-            log_error(__FILE__, __LINE__, "path to AppData folder is too long");
+        path_len = (unsigned int)strlen(folder_path);
+        if (path_len == 0) {
+            log_error(__FILE__, __LINE__, "failed to query config dir path");
             abort();
         }
+
+        /* copy path and replace slashes */
         for (i = 0; i < path_len; i++) {
-            if (path_tmp[i] == '\\') {
-                path_tmp[i] = '/';
+            if (folder_path[i] == '\\') {
+                folder_path[i] = '/';
             }
+        }
+        if (folder_path[path_len - 1] == '/') {
+            /* we expect no trailing slash */
+            folder_path[path_len - 1] = 0;
         }
 
         sprintf(
-            cached_path_to_log_file, "%s/tiny_engine/%s/log.txt", &path_tmp[0],
+            cached_path_to_log_file, "%s/tiny_engine/%s/log.txt", folder_path,
             globals_get_app_name());
-
-        free(path_tmp);
 #elif __linux__
 
 #if defined(__aarch64__)

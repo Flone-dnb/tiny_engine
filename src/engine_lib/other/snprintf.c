@@ -3,6 +3,7 @@
 #if !defined(HAVE_SNPRINTF) || !defined(HAVE_VSNPRINTF)
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #if !defined(HAVE_VSNPRINTF)
@@ -10,35 +11,41 @@ int
 vsnprintf(char* str, size_t size, const char* format, va_list ap) {
     int retval;
 
-#if defined(_MSC_VER) && (_MSC_VER < 1900)
-    /* old msvc does not guarantee null terminated when overflow */
-    retval = _vsnprintf(str, size, format, ap);
-    if (retval < 0 || (size_t)retval >= size) {
+#if defined(_MSC_VER)
+    if (size != 0 && str != NULL) {
+        retval = _vsnprintf(str, size, format, ap);
+
+        /* guarantee null-termination even if truncated */
         str[size - 1] = '\0';
-        retval = -1;
+    }
+
+    if (retval < 0) {
+        FILE* nul = fopen("NUL", "wb");
+        if (nul != NULL) {
+            retval = vfprintf(nul, format, ap);
+            fclose(nul);
+        }
     }
 #else
-    {
-        size_t alloc_size = size + 512;
-        char* tmp_buf = (char*)malloc(alloc_size);
+    FILE* fp;
 
-        if (tmp_buf == NULL) {
-            return -1;
-        }
-
-        retval = vsprintf(tmp_buf, format, ap);
-
-        if (retval >= 0 && str != NULL && size > 0) {
-            size_t copy_len = (size_t)retval;
-            if (copy_len >= size) {
-                copy_len = size - 1;
-            }
-            memcpy(str, tmp_buf, copy_len);
-            str[copy_len] = '\0';
-        }
-
-        free(tmp_buf);
+    fp = tmpfile();
+    if (fp == NULL) {
+        return -1;
     }
+
+    retval = vfprintf(fp, format, ap);
+
+    if (retval >= 0 && size > 0 && str != NULL) {
+        size_t to_read = (size_t)retval < (size - 1) ? (size_t)retval : (size - 1);
+        rewind(fp);
+        if (to_read > 0) {
+            to_read = fread(str, 1, to_read, fp);
+        }
+        str[to_read] = '\0';
+    }
+
+    fclose(fp);
 #endif
 
     return retval;

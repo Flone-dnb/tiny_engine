@@ -1,5 +1,15 @@
 #include <window_system/win32_window.h>
 #if defined(WIN32)
+
+#if !defined(_MSC_VER)
+/* we're on windows and not VC compiler */
+#error "expected _MSC_VER to be defined"
+#else
+#if _MSC_VER <= 1200
+#define WINDOWS_98_AND_BELOW
+#endif
+#endif
+
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
@@ -8,17 +18,38 @@
 #include <math/math_funcs.h>
 #include <window_system/os_window.h>
 #define NOMINMAX
+#if defined(WINDOWS_98_AND_BELOW)
+/* to support WM_MOUSEWHEEL event mark that we are targeting Windows 98 (will not work on Windows 95) */
+#ifndef _WIN32_WINDOWS
+#define _WIN32_WINDOWS 0x0410
+#endif
+#endif
 #include <Windows.h>
 #include <windowsx.h>
 #include <glad/gl.h>
-#include <Xinput.h>
 #include "wglext.h"
 
 #pragma comment(lib, "opengl32.lib") /* for wgl functions */
-#pragma comment(lib, "XInput.lib")
 
+/* no XInput or raw input on VC 6.0 */
+#if !defined(WINDOWS_98_AND_BELOW)
+#define HAVE_XINPUT
+#define HAVE_RAWINPUT
+#endif
+
+#if defined(HAVE_XINPUT)
+#include <Xinput.h>
+#pragma comment(lib, "XInput.lib")
 #ifndef XUSER_MAX_COUNT
 #define XUSER_MAX_COUNT 4
+#endif
+#endif
+
+#if defined(WINDOWS_98_AND_BELOW)
+#define GetWindowLongPtr GetWindowLong
+#define SetWindowLongPtr SetWindowLong
+#define GWLP_USERDATA GWL_USERDATA
+#define LONG_PTR LONG
 #endif
 
 typedef BOOL(WINAPI* SetProcessDPIAwarePtr)(void);
@@ -33,9 +64,18 @@ typedef struct te_win32_window {
 
     te_keyboard_modifiers keyboard_mods;
 
+#if defined(HAVE_XINPUT)
     XINPUT_STATE xinput_state;
-
     unsigned char controller_id; /* 255 if not connected */
+#endif
+
+#if !defined(HAVE_RAWINPUT)
+    int prev_cursor_x;
+    int prev_cursor_y;
+    unsigned int window_width;
+    unsigned int window_height;
+#endif
+
     bool capture_mouse;
     bool is_cached_cursor_pos_valid;
 
@@ -68,6 +108,7 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
         te_os_window_callbacks* callbacks = prv_os_window_get_callbacks(os_window);
         if (callbacks != NULL) {
             switch (msg) {
+#if defined(HAVE_RAWINPUT)
                 case WM_INPUT: {
                     te_win32_window* win32_window =
                         (te_win32_window*)prv_os_window_get_impl(os_window);
@@ -143,6 +184,72 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                         return 0;
                     }
                 }
+#else
+                case WM_MOUSEMOVE: {
+                    te_win32_window* win32_window =
+                        (te_win32_window*)prv_os_window_get_impl(os_window);
+					int x, y, diff_x, diff_y;
+
+                    x = LOWORD(lparam);
+                    y = HIWORD(lparam);
+
+                    if (win32_window->capture_mouse && x == win32_window->prev_cursor_x
+                        && y == win32_window->prev_cursor_y) {
+                        break;
+                    }
+
+                    diff_x = x - win32_window->prev_cursor_x;
+                    diff_y = y - win32_window->prev_cursor_y;
+
+                    if (win32_window->capture_mouse) {
+                        win32_window_set_cursor_position(
+                            os_window, (float)(win32_window->window_width / 2),
+                            (float)(win32_window->window_height / 2));
+                    } else {
+                        win32_window->prev_cursor_x = x;
+                        win32_window->prev_cursor_y = y;
+
+                        win32_window->is_cached_cursor_pos_valid = false;
+                    }
+
+                    log_info_fmt(
+                        __FILE__, __LINE__, "%ix%i (prev: %ix%i) diff: %ix%i", x, y,
+                        win32_window->prev_cursor_x, win32_window->prev_cursor_y, diff_x,
+                        diff_y);
+
+                    callbacks->on_mouse_move(os_window, (float)diff_x, (float)diff_y);
+                    break;
+                }
+                case WM_LBUTTONDOWN: {
+                    callbacks->on_mouse_button_pressed(os_window, TE_MB_LEFT);
+                    break;
+                }
+                case WM_LBUTTONUP: {
+                    callbacks->on_mouse_button_released(os_window, TE_MB_LEFT);
+                    break;
+                }
+                case WM_RBUTTONDOWN: {
+                    callbacks->on_mouse_button_pressed(os_window, TE_MB_RIGHT);
+                    break;
+                }
+                case WM_RBUTTONUP: {
+                    callbacks->on_mouse_button_released(os_window, TE_MB_RIGHT);
+                    break;
+                }
+                case WM_MBUTTONDOWN: {
+                    callbacks->on_mouse_button_pressed(os_window, TE_MB_MIDDLE);
+                    break;
+                }
+                case WM_MBUTTONUP: {
+                    callbacks->on_mouse_button_released(os_window, TE_MB_MIDDLE);
+                    break;
+                }
+                case WM_MOUSEWHEEL: {
+                    short delta = (short)HIWORD(wparam);
+                    callbacks->on_mouse_scroll_moved(os_window, (float)delta);
+                    break;
+                }
+#endif
                 case WM_CHAR: {
                     process_wm_char(os_window, (wchar_t)wparam);
                     break;
@@ -212,10 +319,18 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                 case WM_SIZE: {
                     unsigned int width = (unsigned int)LOWORD(lparam);
                     unsigned int height = (unsigned int)HIWORD(lparam);
+#if !defined(HAVE_RAWINPUT)
+                    te_win32_window* win32_window =
+                        (te_win32_window*)prv_os_window_get_impl(os_window);
+
+                    win32_window->window_width = width;
+                    win32_window->window_height = height;
+#endif
                     prv_os_window_on_size_changed(os_window, width, height);
                     callbacks->on_resized(os_window, width, height);
                     break;
                 }
+#if defined(HAVE_XINPUT)
                 case WM_DEVICECHANGE: {
                     te_win32_window* win32_window =
                         (te_win32_window*)prv_os_window_get_impl(os_window);
@@ -245,6 +360,7 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                     }
                     break;
                 }
+#endif
                 case WM_CLOSE: {
                     os_window_close(os_window);
                     PostQuitMessage(0);
@@ -342,10 +458,11 @@ win32_window_create(te_os_window* os_window, const char* title) {
     HINSTANCE hinstance;
     PIXELFORMATDESCRIPTOR pfd;
     WNDCLASSEXW wc = {0};
+#if defined(HAVE_RAWINPUT)
     RAWINPUTDEVICE rid = {0};
+#endif
     RECT rect;
     UINT num_formats;
-    DWORD i;
     int screen_w;
     int screen_h;
     int width;
@@ -486,6 +603,7 @@ win32_window_create(te_os_window* os_window, const char* title) {
 
     win32_window->has_focus = true;
 
+#if defined(HAVE_RAWINPUT)
     /* NOTE: RIDEV_NOLEGACY should only be used for fullscreen apps
      * because it disables lots of window events that are needed for windowed apps */
     rid.usUsagePage = 0x01;
@@ -494,6 +612,10 @@ win32_window_create(te_os_window* os_window, const char* title) {
         RIDEV_NOLEGACY; /* (see note from above) disable events like MOUSEMOVE for perf */
     rid.hwndTarget = win32_window->hwnd;
     RegisterRawInputDevices(&rid, 1, sizeof(rid));
+#else
+    win32_window->prev_cursor_x = 0;
+    win32_window->prev_cursor_y = 0;
+#endif
 
     win32_window->capture_mouse = false;
     win32_window->is_cached_cursor_pos_valid = false;
@@ -509,17 +631,34 @@ win32_window_create(te_os_window* os_window, const char* title) {
 
     SetCursor(LoadCursor(NULL, IDC_ARROW));
 
-    /* check controller */
-    win32_window->controller_id = 255;
-    for (i = 0; i < XUSER_MAX_COUNT; i++) {
-        memset(&win32_window->xinput_state, 0, sizeof(XINPUT_STATE));
-        if (XInputGetState(i, &win32_window->xinput_state) == ERROR_SUCCESS) {
-            win32_window->controller_id = (unsigned char)i;
-            log_info(__FILE__, __LINE__, "gamepad connected");
-            /* note: don't trigger gamepad_connected callback here */
-            break;
+#if defined(HAVE_XINPUT)
+    {
+        /* check controller */
+        DWORD i;
+        win32_window->controller_id = 255;
+        for (i = 0; i < XUSER_MAX_COUNT; i++) {
+            memset(&win32_window->xinput_state, 0, sizeof(XINPUT_STATE));
+            if (XInputGetState(i, &win32_window->xinput_state) == ERROR_SUCCESS) {
+                win32_window->controller_id = (unsigned char)i;
+                log_info(__FILE__, __LINE__, "gamepad connected");
+                /* note: don't trigger gamepad_connected callback here */
+                break;
+            }
         }
     }
+#endif
+
+#if !defined(HAVE_RAWINPUT)
+	{
+        float x, y;
+        win32_window_get_cursor_position(os_window, &x, &y);
+        win32_window->prev_cursor_x = (int)x;
+        win32_window->prev_cursor_y = (int)y;
+
+        os_window_get_size(
+            os_window, &win32_window->window_width, &win32_window->window_height);
+	}
+#endif
 }
 
 void
@@ -544,6 +683,7 @@ win32_window_destroy(te_os_window* os_window) {
     }
 }
 
+#if defined(HAVE_XINPUT)
 static void
 trigger_gamepad_button_events(
     te_os_window* os_window, te_os_window_callbacks* callbacks, DWORD prev_state,
@@ -600,6 +740,7 @@ check_thumbstick_changes(
     CHECK_GAMEPAD_AXIS(sThumbRX, TE_GA_RIGHT_STICK_X, 1);
     CHECK_GAMEPAD_AXIS(sThumbRY, TE_GA_RIGHT_STICK_Y, -1);
 }
+#endif
 
 void
 win32_window_poll_event(te_os_window* os_window) {
@@ -617,6 +758,7 @@ win32_window_poll_event(te_os_window* os_window) {
         DispatchMessageW(&msg);
     }
 
+#if defined(HAVE_XINPUT)
     /* check gamepad input changes */
     if (win32_window->controller_id != 255) {
         XINPUT_GAMEPAD prev_state = win32_window->xinput_state.Gamepad;
@@ -645,6 +787,7 @@ win32_window_poll_event(te_os_window* os_window) {
             prv_os_window_get_callbacks(os_window)->on_gamepad_disconnected(os_window);
         }
     }
+#endif
 }
 
 void
@@ -708,7 +851,9 @@ win32_window_is_vsync_enabled(struct te_os_window* os_window) {
 
 void
 win32_window_capture_mouse_cursor(te_os_window* os_window, bool capture) {
+#if defined(HAVE_RAWINPUT)
     static POINT pos_before_lock;
+#endif
     te_win32_window* win32_window = prv_os_window_get_impl(os_window);
 
     if (win32_window->capture_mouse == capture) {
@@ -718,6 +863,7 @@ win32_window_capture_mouse_cursor(te_os_window* os_window, bool capture) {
     win32_window->capture_mouse = capture;
 
     if (capture) {
+#if defined(HAVE_RAWINPUT)
         RECT cap_rect;
         cap_rect.top = 0;
         cap_rect.left = 0;
@@ -727,20 +873,37 @@ win32_window_capture_mouse_cursor(te_os_window* os_window, bool capture) {
         GetCursorPos(&pos_before_lock);
 
         ClipCursor(&cap_rect);
+#else
+        SetCapture(win32_window->hwnd);
+        win32_window->prev_cursor_x = win32_window->window_width / 2;
+        win32_window->prev_cursor_y = win32_window->window_height / 2;
+        win32_window_set_cursor_position(
+            os_window, (float)win32_window->prev_cursor_x, (float)win32_window->prev_cursor_y);
+#endif
+
         ShowCursor(FALSE);
     } else {
-        ClipCursor(NULL);
         ShowCursor(TRUE);
 
+#if defined(HAVE_RAWINPUT)
+        ClipCursor(NULL);
         SetCursorPos(pos_before_lock.x, pos_before_lock.y);
+#else
+        ReleaseCapture();
+#endif
     }
 }
 
 bool
 win32_window_is_gamepad_connected(te_os_window* os_window) {
+#if defined(HAVE_XINPUT)
     te_win32_window* win32_window = prv_os_window_get_impl(os_window);
 
     return win32_window->controller_id != 255;
+#else
+	(void)os_window;
+	return false;
+#endif
 }
 
 void

@@ -413,7 +413,7 @@ prv_model_update_child_model_mats(te_model* model) {
             te_model_renderer* renderer = prv_model_get_renderer(child_model);
             te_model_render_data* data = model_renderer_get_render_data_tmp(
                 renderer, child_model->render_data_handle,
-                model->skeleton_relative_path != NULL);
+                model_uses_skinning(model));
 
             calc_world_mat(child_model, data->world_mat);
             data->aabb_world =
@@ -497,7 +497,7 @@ calc_world_mat(te_model* model, te_mat4 out_world) {
             te_model_renderer* renderer = prv_model_get_renderer(model->parent_model);
             te_model_render_data* data = model_renderer_get_render_data_tmp(
                 renderer, model->parent_model->render_data_handle,
-                model->skeleton_relative_path != NULL);
+                model_uses_skinning(model));
 
             mat4_copy(data->world_mat, mat1);
         }
@@ -525,7 +525,7 @@ model_set_position(te_model* model, te_vec3 position) {
         /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             prv_model_get_renderer(model), model->render_data_handle,
-            model->skeleton_relative_path != NULL);
+            model_uses_skinning(model));
 
         calc_world_mat(model, data->world_mat);
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
@@ -540,7 +540,7 @@ model_set_rotation(te_model* model, te_vec3 rotation) {
         /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             prv_model_get_renderer(model), model->render_data_handle,
-            model->skeleton_relative_path != NULL);
+            model_uses_skinning(model));
 
         calc_world_mat(model, data->world_mat);
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
@@ -555,7 +555,7 @@ model_set_scale(te_model* model, te_vec3 scale) {
         /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             prv_model_get_renderer(model), model->render_data_handle,
-            model->skeleton_relative_path != NULL);
+            model_uses_skinning(model));
 
         calc_world_mat(model, data->world_mat);
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
@@ -570,7 +570,7 @@ model_set_color(te_model* model, te_vec4 color) {
         /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             prv_model_get_renderer(model), model->render_data_handle,
-            model->skeleton_relative_path != NULL);
+            model_uses_skinning(model));
         vec4_copy(model->color, data->color);
     }
 }
@@ -593,7 +593,7 @@ model_set_texture(te_model* model, const char* relative_path) {
             /* update render data */
             te_model_render_data* data = model_renderer_get_render_data_tmp(
                 prv_model_get_renderer(model), model->render_data_handle,
-                model->skeleton_relative_path != NULL);
+                model_uses_skinning(model));
 
             if (data->tex_id > 0) {
                 te_texture_manager* texture_manager = renderer_get_texture_manager(
@@ -614,7 +614,7 @@ model_set_texture(te_model* model, const char* relative_path) {
             /* update render data */
             te_model_render_data* data = model_renderer_get_render_data_tmp(
                 prv_model_get_renderer(model), model->render_data_handle,
-                model->skeleton_relative_path != NULL);
+                model_uses_skinning(model));
 
             te_texture_manager* texture_manager = renderer_get_texture_manager(
                 game_manager_get_renderer(world_get_game_manager(model->world)));
@@ -683,7 +683,7 @@ model_get_world_position(te_model* model, te_vec3 out) {
 
     target_data = model_renderer_get_render_data_tmp(
         prv_model_get_model_renderer(model), prv_model_get_render_data_handle(model),
-        model->skeleton_relative_path != NULL);
+        model_uses_skinning(model));
 
     vec3_copy(target_data->world_mat[3], out);
 }
@@ -723,6 +723,11 @@ model_get_skeleton_path(te_model* model) {
 te_skeleton*
 model_get_skeleton(te_model* model) {
     return model->skeleton;
+}
+
+bool
+model_uses_skinning(te_model* model) {
+    return (bool)(model->skeleton_relative_path != NULL);
 }
 
 void
@@ -931,7 +936,7 @@ model_set_parent(te_model* model, te_model* new_parent, unsigned int parent_bone
         /* update render data */
         te_model_render_data* data = model_renderer_get_render_data_tmp(
             prv_model_get_renderer(model), model->render_data_handle,
-            model->skeleton_relative_path != NULL);
+            model_uses_skinning(model));
 
         calc_world_mat(model, data->world_mat);
         data->aabb_world = aabb_shape_convert_to_world(&model->aabb_local, data->world_mat);
@@ -1301,12 +1306,12 @@ prv_model_add_to_model_renderer(te_model* model) {
     /* add to rendering */
     model_renderer = prv_model_get_renderer(model);
     model->render_data_handle =
-        model_renderer_add_model(model_renderer, model->skeleton_relative_path != NULL);
+        model_renderer_add_model(model_renderer, model_uses_skinning(model));
 
     /* init render data */
     {
         te_model_render_data* data = model_renderer_get_render_data_tmp(
-            model_renderer, model->render_data_handle, model->skeleton_relative_path != NULL);
+            model_renderer, model->render_data_handle, model_uses_skinning(model));
 
         vec4_copy(model->color, data->color);
         mat4_copy(world_mat, data->world_mat);
@@ -1350,13 +1355,13 @@ prv_model_remove_from_model_renderer(te_model* model) {
     tex_id = 0;
     {
         te_model_render_data* data = model_renderer_get_render_data_tmp(
-            model_renderer, model->render_data_handle, model->skeleton_relative_path != NULL);
+            model_renderer, model->render_data_handle, model_uses_skinning(model));
         tex_id = data->tex_id;
     }
 
     /* remove from rendering */
     model_renderer_remove_model(
-        model_renderer, model->render_data_handle, model->skeleton_relative_path != NULL);
+        model_renderer, model->render_data_handle, model_uses_skinning(model));
     model->render_data_handle = 0xFFFFFFFF;
 
     /* mark unused stuff */
@@ -1401,7 +1406,7 @@ prv_model_get_world_mat_tmp(te_model* model) {
 
     data = model_renderer_get_render_data_tmp(
         prv_model_get_renderer(model), model->render_data_handle,
-        model->skeleton_relative_path != NULL);
+        model_uses_skinning(model));
     return &data->world_mat;
 }
 
@@ -1415,7 +1420,7 @@ prv_model_get_world_aabb(te_model* model) {
 
     data = model_renderer_get_render_data_tmp(
         prv_model_get_renderer(model), model->render_data_handle,
-        model->skeleton_relative_path != NULL);
+        model_uses_skinning(model));
     return &data->aabb_world;
 }
 

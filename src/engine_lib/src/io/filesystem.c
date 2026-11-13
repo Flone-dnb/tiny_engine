@@ -14,6 +14,9 @@
 #define NOMINMAX
 #include <direct.h>
 #include <windows.h>
+#ifndef INVALID_FILE_ATTRIBUTES
+#define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
+#endif
 #include <tchar.h>
 #define mkdir(dir, mode) _mkdir(dir)
 #elif __linux__
@@ -531,7 +534,7 @@ filesystem_list_directory(const char* path_to_dir, unsigned int* entry_count) {
 
             entries[i].name_len = (unsigned int)len;
 
-            entries[i].is_dir = ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY;
+            entries[i].is_dir = (bool)(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
 
             i += 1;
         } while (FindNextFile(hFind, &ffd) != 0);

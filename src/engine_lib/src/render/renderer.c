@@ -428,7 +428,15 @@ static float
 prv_renderer_get_query_time_ms(unsigned int query) {
     GLuint64 time_elapsed = 0;
     glGetQueryObjectui64v(query, GL_QUERY_RESULT_ARB, &time_elapsed);
-    return (float)(time_elapsed) / 1000000.0f; /* nanoseconds to milliseconds */
+#if defined(_MSC_VER) && _MSC_VER <= 1200
+    if (time_elapsed > 9223372036854775807i64) { /* INT64_MAX */
+        time_elapsed = 9223372036854775807i64;
+    }
+	/* conversion from uint64 to float is not implemented on VC 6.0, using int64 instead */
+    return (float)((__int64)time_elapsed) / 1000000.0f; /* nanoseconds to milliseconds */
+#else
+	return (float)(time_elapsed) / 1000000.0f; /* nanoseconds to milliseconds */
+#endif
 }
 #endif
 

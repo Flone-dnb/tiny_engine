@@ -3967,9 +3967,9 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
                   z->YCbCr_to_RGB_kernel(out, y, coutput[1], coutput[2], z->s->img_x, n);
                   for (i=0; i < z->s->img_x; ++i) {
                      stbi_uc m = coutput[3][i];
-                     out[0] = stbi__blinn_8x8(255 - out[0], m);
-                     out[1] = stbi__blinn_8x8(255 - out[1], m);
-                     out[2] = stbi__blinn_8x8(255 - out[2], m);
+                     out[0] = stbi__blinn_8x8((stbi_uc)(255 - out[0]), m);
+                     out[1] = stbi__blinn_8x8((stbi_uc)(255 - out[1]), m);
+                     out[2] = stbi__blinn_8x8((stbi_uc)(255 - out[2]), m);
                      out += n;
                   }
                } else { // YCbCr + alpha?  Ignore the fourth channel for now
@@ -4004,7 +4004,7 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
                }
             } else if (z->s->img_n == 4 && z->app14_color_transform == 2) {
                for (i=0; i < z->s->img_x; ++i) {
-                  out[0] = stbi__blinn_8x8(255 - coutput[0][i], coutput[3][i]);
+                  out[0] = stbi__blinn_8x8((stbi_uc)(255 - coutput[0][i]), coutput[3][i]);
                   out[1] = 255;
                   out += n;
                }

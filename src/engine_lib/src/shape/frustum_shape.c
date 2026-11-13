@@ -46,8 +46,8 @@ frustum_shape_create_for_perspective(
     /* far pos */
     vec3_add(camera_pos, to_far, far_pos);
 
-    frustum.near = plane_shape_create(forward, near_pos);
-    frustum.far = plane_shape_create(far_normal, far_pos);
+    frustum.near_ = plane_shape_create(forward, near_pos);
+    frustum.far_ = plane_shape_create(far_normal, far_pos);
 
     vec3_muls(right, far_half_width, right_scaled);
     vec3_copy(right_scaled, neg_right_scaled);
@@ -112,8 +112,8 @@ frustum_shape_create_for_orthographic(
     vec3_add(camera_pos, to_near, near_pos);
     vec3_add(camera_pos, to_far, far_pos);
 
-    frustum.near = plane_shape_create(forward, near_pos);
-    frustum.far = plane_shape_create(far_normal, far_pos);
+    frustum.near_ = plane_shape_create(forward, near_pos);
+    frustum.far_ = plane_shape_create(far_normal, far_pos);
 
     vec3_muls(forward, target_distance, to_midpoint);
     vec3_add(camera_pos, to_midpoint, box_center);
@@ -145,8 +145,8 @@ frustum_shape_is_aabb_inside(te_frustum_shape* frustum, te_aabb_shape* aabb) {
            && !aabb_shape_is_behind_plane(aabb, &frustum->right)
            && !aabb_shape_is_behind_plane(aabb, &frustum->top)
            && !aabb_shape_is_behind_plane(aabb, &frustum->bottom)
-           && !aabb_shape_is_behind_plane(aabb, &frustum->near)
-           && !aabb_shape_is_behind_plane(aabb, &frustum->far);
+           && !aabb_shape_is_behind_plane(aabb, &frustum->near_)
+           && !aabb_shape_is_behind_plane(aabb, &frustum->far_);
 }
 
 bool
@@ -155,8 +155,8 @@ frustum_shape_is_sphere_inside(te_frustum_shape* frustum, te_sphere_shape* spher
            && !sphere_shape_is_behind_plane(sphere, &frustum->right)
            && !sphere_shape_is_behind_plane(sphere, &frustum->top)
            && !sphere_shape_is_behind_plane(sphere, &frustum->bottom)
-           && !sphere_shape_is_behind_plane(sphere, &frustum->near)
-           && !sphere_shape_is_behind_plane(sphere, &frustum->far);
+           && !sphere_shape_is_behind_plane(sphere, &frustum->near_)
+           && !sphere_shape_is_behind_plane(sphere, &frustum->far_);
 }
 
 bool
@@ -165,6 +165,6 @@ frustum_shape_is_cone_inside(te_frustum_shape* frustum, te_cone_shape* cone) {
            && !cone_shape_is_behind_plane(cone, &frustum->right)
            && !cone_shape_is_behind_plane(cone, &frustum->top)
            && !cone_shape_is_behind_plane(cone, &frustum->bottom)
-           && !cone_shape_is_behind_plane(cone, &frustum->near)
-           && !cone_shape_is_behind_plane(cone, &frustum->far);
+           && !cone_shape_is_behind_plane(cone, &frustum->near_)
+           && !cone_shape_is_behind_plane(cone, &frustum->far_);
 }

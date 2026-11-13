@@ -12,6 +12,15 @@
 
 #pragma comment(lib, "winmm.lib")
 
+#if !defined(_MSC_VER)
+/* we're on windows and not VC compiler */
+#error "expected _MSC_VER to be defined"
+#else
+#if _MSC_VER <= 1200
+#define DWORD_PTR DWORD
+#endif
+#endif
+
 struct te_win32_audio_system {
     te_thread* thread;
     te_mutex* mtx_data_ready;
