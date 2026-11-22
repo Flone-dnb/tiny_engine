@@ -4,7 +4,9 @@ This is a manual - a step-by-step guide to introduce you to various aspects of t
 
 # Creating a new game project
 
-To create a new game project just clone the repository. There are already 2 game targets included with base game code see `src/game` and `src/game_lib`. After cloning just continue working in `game_lib` target (which is included by the `game` target where you can change the game name and contents of `main.c`). In case you would want to update engine to a newer version just merge changes from the engine repository.
+To create a new game project just clone the repository. There are already 2 game targets included with base game code see `src/game` and `src/game_lib`. After cloning just continue working in `game_lib` target (which is included by the `game` target where you can change the game name and contents of `main.c`). The engine uses a custom build system which is similar to cmake, you can learn more about it at `tools/tb`.
+
+In case you would want to update engine to a newer version just merge changes from the engine repository.
 
 # Thread safety
 
@@ -138,7 +140,7 @@ Debug console can show various statistics such as FPS, RAM usage, number of draw
 
 To view debug stats using a gamepad you can click both the "start" button and the "menu" button (sometimes called the "back" button) to both toggle debug stats command and disable fps limit while the stats are visible.
 
-Debug tools are disabled in the "Release" build mode but if you need them in your release builds you can enable them if you pass `-DENGINE_FORCE_ENABLE_DEBUG_TOOLS=ON` while configuring cmake, cmake will then print a warning that you enabled debug tools in release build.
+Debug tools are disabled in the "Release" build mode but if you need them in your release builds you can enable them if you specify `tb game release ENGINE_FORCE_ENABLE_DEBUG_TOOLS`, the build system will then print a warning that you enabled debug tools in release build.
 
 Note that in case you created a custom game object and want it to (for example) draw something when used in the editor you can use `ifdef ENGINE_EDITOR` macro for code that will only run in the editor.
 

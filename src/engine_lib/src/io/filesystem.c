@@ -111,7 +111,7 @@ filesystem_path_is_directory(const char* path) {
 void
 filesystem_remove_file(const char* path) {
 #if defined(WIN32)
-    DeleteFile(path);
+    DeleteFileA(path);
 #elif __linux__
     remove(path);
 #else

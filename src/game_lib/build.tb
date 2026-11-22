@@ -1,0 +1,22 @@
+target(game_lib)
+set_target_type(lib)
+
+add_sources(
+    src/game.c
+    src/camera_controller.c
+    include/game.h
+    include/camera_controller.h
+)
+
+add_private_includes(src)
+add_public_includes(include)
+configure_engine_target()
+
+add_subproject(../engine_lib)
+link_target(engine_lib)
+
+duplicate_target(game_lib game_lib_for_editor)
+unlink_target(engine_lib)
+link_target(engine_lib_for_editor)
+add_macro(ENGINE_DEBUG_TOOLS) # editor needs debug tools even in release
+add_macro(ENGINE_EDITOR)

@@ -9,7 +9,7 @@
 #if !defined(HAVE_VSNPRINTF)
 int
 vsnprintf(char* str, size_t size, const char* format, va_list ap) {
-    int retval;
+    int retval = -1;
 
 #if defined(_MSC_VER)
     if (size != 0 && str != NULL) {

@@ -1,0 +1,27 @@
+target(memcheck)
+
+if OS_LINUX
+    # compile as shared for linker "wrap" to work
+    set_target_type(dll)
+else
+    set_target_type(lib)
+endif
+
+if SYSTEM_32BIT
+    add_macro(MEMCHECK_32BIT)
+endif
+
+if OS_LINUX
+    add_linker_flags(-m)
+    # tb already links to pthread on linux
+endif
+
+add_sources(
+    src/memcheck.c
+    src/memcheck.h
+    src/mem_ht.c
+    src/mem_ht.h
+)
+
+add_private_includes(src)
+add_public_includes(include)

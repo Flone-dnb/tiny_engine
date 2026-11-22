@@ -1,0 +1,56 @@
+# options that you can specify:
+# ENGINE_FORCE_ENABLE_DEBUG_TOOLS - can be useful in Release builds to measure performance, enabled in non-release builds by default
+
+create_function(configure_engine_target)
+if BUILD_DEBUG
+    # add memcheck
+    if OS_LINUX
+        add_linker_flags(--wrap=malloc --wrap=realloc --wrap=calloc --wrap=free --wrap=strdup --wrap=wcsdup --wrap=scandir --wrap=getline --wrap=realpath)
+    endif
+
+    add_macro(ENGINE_MEMCHECK_ENABLED)
+
+    # debug tools
+    add_macro(ENGINE_DEBUG_TOOLS)
+
+    if SYSTEM_64BIT
+        if OS_LINUX
+            info("address sanitizer is enabled")
+            add_macro(ENGINE_ASAN_ENABLED)
+            # tb already includes "-fno-omit-frame-pointer -fsanitize=address -static-libasan" in debug builds on 64 bit linux
+        endif
+    endif
+
+    # tb already defines DEBUG macro in debug builds
+else
+    # debug tools
+    if ENGINE_FORCE_ENABLE_DEBUG_TOOLS
+        warn("note: you enabled ENGINE_DEBUG_TOOLS in release build")
+        add_macro(ENGINE_DEBUG_TOOLS)
+    endif
+endif
+
+if SYSTEM_32BIT
+    add_macro(ENGINE_32BIT)
+endif
+
+# system dependencies
+if OS_LINUX
+    # for our window system
+    add_linker_flags(-lX11 -lXrandr -lXfixes)
+
+    # for math
+    add_linker_flags(-lm)
+
+    # for audio system
+    add_linker_flags(-lasound)
+
+    # tb already links to pthread on linux
+endif
+end_function()
+
+# define all library targets so that later add_subproject calls will just link to them
+add_subproject(src/game_lib)
+
+add_subproject(src/editor)
+add_subproject(src/game)

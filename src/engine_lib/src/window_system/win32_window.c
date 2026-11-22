@@ -29,6 +29,7 @@
 #include <glad/gl.h>
 #include "wglext.h"
 
+#pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "opengl32.lib") /* for wgl functions */
 
 /* no XInput or raw input on VC 6.0 */

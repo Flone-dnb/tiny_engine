@@ -14,6 +14,8 @@
 #ifndef CSIDL_LOCAL_APPDATA
 #define CSIDL_LOCAL_APPDATA 0x001C
 #endif
+#pragma comment(lib, "user32.lib")
+#pragma comment(lib, "shell32.lib")
 #endif
 
 static char cached_path_to_config_dir[2048] = {0};

@@ -34,9 +34,7 @@ In the branch `last_version_with_gl20_gles20` there's an old version of the engi
 
 # Prerequisites
 
-- Compiler that supports C89/C90
-- [CMake](https://cmake.org/download/)
+- compiler that supports C89/C90
+- the engine uses a custom build system, you can find more information about it at `tools/tb`
 
-Optional (for automatic code formatting):
-- [LLVM](https://github.com/llvm/llvm-project/releases/latest) for clang-format
 

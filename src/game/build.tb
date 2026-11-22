@@ -1,0 +1,12 @@
+target(game)
+create_symlink(../../res ../../build/game/res)
+
+add_sources(
+    src/main.c
+)
+
+add_private_includes(src)
+
+configure_engine_target()
+
+link_target(game_lib)

@@ -10,3 +10,5 @@ CMakeSettings.json
 src/*/debug.cmake
 .ccls-cache
 compile_commands.json
+tb
+tb.exe

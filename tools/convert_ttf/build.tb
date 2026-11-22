@@ -1,0 +1,9 @@
+target(convert_ttf)
+
+add_macro(PATH_TO_CHARS_TO_LOAD=\"../../font/chars_to_load.txt\")
+add_macro(PATH_TO_TTF=\"../../font/font.ttf\")
+add_macro(PATH_TO_BITMAP=\"../../font/font_bitmap.bin\")
+
+add_private_includes(../../ext)
+
+add_sources(main.c)
