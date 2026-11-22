@@ -213,11 +213,6 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                         win32_window->is_cached_cursor_pos_valid = false;
                     }
 
-                    log_info_fmt(
-                        __FILE__, __LINE__, "%ix%i (prev: %ix%i) diff: %ix%i", x, y,
-                        win32_window->prev_cursor_x, win32_window->prev_cursor_y, diff_x,
-                        diff_y);
-
                     callbacks->on_mouse_move(os_window, (float)diff_x, (float)diff_y);
                     break;
                 }
