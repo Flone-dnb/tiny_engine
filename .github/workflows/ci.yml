@@ -27,9 +27,10 @@ jobs:
     - name: Pull submodules
       run: git submodule update --init --recursive
     - name: Build tb
-      run: |
-        nmake -f nmake.mk
-        copy "build\\tb.exe" "..\\.."
+      run: nmake -f nmake.mk
+      working-directory: tools/tb
+    - name: Setup tb
+      run: copy "build\\tb.exe" "..\\.."
       working-directory: tools/tb
     - name: Build (Release)
       run: tb -v all release
