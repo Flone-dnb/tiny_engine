@@ -17,7 +17,7 @@ CFLAGS = $(CFLAGS) /O2 /Ob2 /DNDEBUG /MD
 !endif
 
 # more warnings
-CFLAGS = $(CFLAGS) /W3 /WX
+CFLAGS = $(CFLAGS) /W3 /WX /D_CRT_SECURE_NO_WARNINGS
 
 # default MSVC flags
 CFLAGS = $(CFLAGS) /nologo /DWIN32 /D_WINDOWS /EHsc

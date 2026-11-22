@@ -432,14 +432,14 @@ main(int argc, char* argv[]) {
 
     /* prepare default compiler flags */
     if (strcmp(config.cc, "cl.exe") == 0) {
-#define CL_CC_FLAGS "/c /TC /W3 /WX /nologo /DWIN32 /D_WINDOWS /EHsc"
+#define CL_CC_FLAGS "/c /D_CRT_SECURE_NO_WARNINGS /TC /W3 /WX /nologo /DWIN32 /D_WINDOWS /EHsc"
 #define CL_LD_FLAGS "/nologo"
         if (config.is_release) {
             config.cc_flags = CL_CC_FLAGS " /O2 /Ob2 /MD";
             config.ld_flags = CL_LD_FLAGS " /INCREMENTAL:NO";
         } else {
             config.cc_flags = CL_CC_FLAGS " /Od /Ob0 /Zi /MDd /DDEBUG";
-            config.ld_flags = CL_LD_FLAGS " /DEBUG /INCREMENTAL:YES";
+            config.ld_flags = CL_LD_FLAGS " /DEBUG";
         }
         config.ar_flags = "/nologo /WX";
     } else if (strcmp(config.cc, "gcc") == 0 || strcmp(config.cc, "clang") == 0) {
