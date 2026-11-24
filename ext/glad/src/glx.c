@@ -347,7 +347,7 @@ int gladLoaderLoadGLX(Display *display, int screen) {
 }
 
 
-void gladLoaderUnloadGLX() {
+void gladLoaderUnloadGLX(void) {
     if (_glx_handle != NULL) {
         glad_close_dlopen_handle(_glx_handle);
         _glx_handle = NULL;

@@ -14,6 +14,13 @@
 #define int32_t int
 #define uint32_t unsigned int
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wimplicit-int-conversion"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wimplicit-int-float-conversion"
+
 #define MINIMP3_MAX_SAMPLES_PER_FRAME (1152*2)
 
 typedef struct
@@ -1870,4 +1877,6 @@ void mp3dec_f32_to_s16(const float *in, int16_t *out, int num_samples)
     }
 }
 #endif /* MINIMP3_FLOAT_OUTPUT */
+
+#pragma GCC diagnostic pop
 #endif /* MINIMP3_IMPLEMENTATION && !_MINIMP3_IMPLEMENTATION_GUARD */

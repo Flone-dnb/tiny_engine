@@ -10,7 +10,7 @@ BUILD := release
 endif
 
 # build flags
-ifeq ($(BUILD)",debug)
+ifeq ($(BUILD),debug)
 $(info - building in DEBUG mode)
 CFLAGS += -g3 -O0 -DDEBUG
 else

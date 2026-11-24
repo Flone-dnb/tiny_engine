@@ -108,7 +108,7 @@ typedef size_t cgltf_size;
 #if defined(_MSC_VER) && _MSC_VER <= 1200
 typedef __int64 cgltf_ssize;
 #else
-typedef long long int cgltf_ssize;
+typedef long int cgltf_ssize;
 #endif
 typedef float cgltf_float;
 typedef int cgltf_int;
@@ -933,6 +933,11 @@ cgltf_size cgltf_animation_channel_index(const cgltf_animation* animation, const
 
 #ifdef CGLTF_IMPLEMENTATION
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+
 #include <assert.h> /* For assert */
 #include <string.h> /* For strncpy */
 #include <stdio.h>  /* For fopen */
@@ -1166,7 +1171,7 @@ cgltf_result cgltf_parse(const cgltf_options* options, const void* data, cgltf_s
 		fixed_options.memory.free_func = &cgltf_default_free;
 	}
 
-	// Magic
+	/* Magic */
 	memcpy(&tmp, data, 4);
 	if (tmp != GlbMagic)
 	{
@@ -1194,7 +1199,7 @@ cgltf_result cgltf_parse(const cgltf_options* options, const void* data, cgltf_s
 	}
 
 	ptr = (const unsigned char*)data;
-	// Version
+	/* Version */
 	memcpy(&tmp, ptr + 4, 4);
 	version = tmp;
 	if (version != GlbVersion)
@@ -1202,7 +1207,7 @@ cgltf_result cgltf_parse(const cgltf_options* options, const void* data, cgltf_s
 		return version < GlbVersion ? cgltf_result_legacy_gltf : cgltf_result_unknown_format;
 	}
 
-	// Total length
+	/* Total length */
 	memcpy(&tmp, ptr + 8, 4);
 	if (tmp > size)
 	{
@@ -1216,14 +1221,14 @@ cgltf_result cgltf_parse(const cgltf_options* options, const void* data, cgltf_s
 		return cgltf_result_data_too_short;
 	}
 
-	// JSON chunk: length
+	/* JSON chunk: length */
 	memcpy(&json_length, json_chunk, 4);
 	if (json_length > size - GlbHeaderSize - GlbChunkHeaderSize)
 	{
 		return cgltf_result_data_too_short;
 	}
 
-	// JSON chunk: magic
+	/* JSON chunk: magic */
 	memcpy(&tmp, json_chunk + 4, 4);
 	if (tmp != GlbMagicJsonChunk)
 	{
@@ -1237,10 +1242,10 @@ cgltf_result cgltf_parse(const cgltf_options* options, const void* data, cgltf_s
 
 	if (GlbChunkHeaderSize <= size - GlbHeaderSize - GlbChunkHeaderSize - json_length)
 	{
-		// We can read another chunk
+		/* We can read another chunk */
 		const unsigned char* bin_chunk = json_chunk + json_length;
 
-		// Bin chunk: length
+		/* Bin chunk: length */
 		unsigned int bin_length;
 		memcpy(&bin_length, bin_chunk, 4);
 		if (bin_length > size - GlbHeaderSize - GlbChunkHeaderSize - json_length - GlbChunkHeaderSize)
@@ -1248,7 +1253,7 @@ cgltf_result cgltf_parse(const cgltf_options* options, const void* data, cgltf_s
 			return cgltf_result_data_too_short;
 		}
 
-		// Bin chunk: magic
+		/* Bin chunk: magic */
 		memcpy(&tmp, bin_chunk + 4, 4);
 		if (tmp != GlbMagicBinChunk)
 		{
@@ -1347,7 +1352,7 @@ static cgltf_result cgltf_load_buffer_file(const cgltf_options* options, cgltf_s
 
 	cgltf_combine_paths(path, gltf_path, uri);
 
-	// after combining, the tail of the resulting path is a uri; decode_uri converts it into path
+	/* after combining, the tail of the resulting path is a uri; decode_uri converts it into path */
 	cgltf_decode_uri(path + strlen(path) - strlen(uri));
 
 	file_data = NULL;
@@ -1438,7 +1443,7 @@ cgltf_size cgltf_decode_string(char* string)
 
 	for (;;)
 	{
-		// Copy characters since last escaped sequence
+		/* Copy characters since last escaped sequence */
 		cgltf_size written = read - last;
 		memmove(write, last, written);
 		write += written;
@@ -1448,7 +1453,7 @@ cgltf_size cgltf_decode_string(char* string)
 			break;
 		}
 
-		// jsmn already checked that all escape sequences are valid
+		/* jsmn already checked that all escape sequences are valid */
 		switch (*read++)
 		{
 		case '\"': *write++ = '\"'; break;
@@ -1461,7 +1466,7 @@ cgltf_size cgltf_decode_string(char* string)
 		case 't':  *write++ = '\t'; break;
 		case 'u':
 		{
-			// UCS-2 codepoint \uXXXX to UTF-8
+			/* UCS-2 codepoint \uXXXX to UTF-8 */
 			int character = 0;
 			for (i = 0; i < 4; ++i)
 			{
@@ -2331,7 +2336,7 @@ static cgltf_float cgltf_component_read_float(const void* in, cgltf_component_ty
 	{
 		switch (component_type)
 		{
-			// note: glTF spec doesn't currently define normalized conversions for 32-bit integers
+			/* note: glTF spec doesn't currently define normalized conversions for 32-bit integers */
 			case cgltf_component_type_r_16:
 				return *((const short*) in) / (cgltf_float)32767;
 			case cgltf_component_type_r_16u:
@@ -2358,7 +2363,7 @@ static cgltf_bool cgltf_element_read_float(const unsigned char* element, cgltf_t
 		return 0;
 	}
 
-	// There are three special cases for component extraction, see #data-alignment in the 2.0 spec.
+	/* There are three special cases for component extraction, see #data-alignment in the 2.0 spec. */
 
 	component_size = cgltf_component_size(component_type);
 
@@ -2510,7 +2515,7 @@ cgltf_size cgltf_accessor_unpack_floats(const cgltf_accessor* accessor, cgltf_fl
 	float_count = available_floats < float_count ? available_floats : float_count;
 	element_count = float_count / floats_per_element;
 
-	// First pass: convert each element in the base accessor.
+	/* First pass: convert each element in the base accessor. */
 	if (accessor->buffer_view == NULL)
 	{
 		memset(out, 0, element_count * floats_per_element * sizeof(cgltf_float));
@@ -2543,7 +2548,7 @@ cgltf_size cgltf_accessor_unpack_floats(const cgltf_accessor* accessor, cgltf_fl
 		}
 	}
 
-	// Second pass: write out each element in the sparse accessor.
+	/* Second pass: write out each element in the sparse accessor. */
 	if (accessor->is_sparse)
 	{
 		cgltf_size reader_index;
@@ -2612,7 +2617,7 @@ static cgltf_bool cgltf_element_read_uint(const unsigned char* element, cgltf_ty
 		return 0;
 	}
 
-	// Reading integer matrices is not a valid use case
+	/* Reading integer matrices is not a valid use case */
 	if (type == cgltf_type_mat2 || type == cgltf_type_mat3 || type == cgltf_type_mat4)
 	{
 		return 0;
@@ -2667,7 +2672,7 @@ cgltf_size cgltf_accessor_read_index(const cgltf_accessor* accessor, cgltf_size 
 	element = cgltf_buffer_view_data(accessor->buffer_view);
 	if (element == NULL)
 	{
-		return 0; // This is an error case, but we can't communicate the error with existing interface.
+		return 0; /* This is an error case, but we can't communicate the error with existing interface. */
 	}
 	element += accessor->offset + accessor->stride * index;
 	return cgltf_component_read_index(element, accessor->component_type);
@@ -2813,9 +2818,9 @@ cgltf_size cgltf_accessor_unpack_indices(const cgltf_accessor* accessor, void* o
 		return index_count;
 	}
 
-	// Data couldn't be copied with memcpy due to stride being larger than the component size.
-	// OR
-	// The component size of the output array is larger than the component size of the index data, so index data will be padded.
+	/* Data couldn't be copied with memcpy due to stride being larger than the component size. */
+	/* OR */
+	/* The component size of the output array is larger than the component size of the index data, so index data will be padded. */
 	switch (out_component_size)
 	{
 	case 1:
@@ -2881,11 +2886,7 @@ static int cgltf_json_to_int(jsmntok_t const* tok, const unsigned char* json_chu
 static cgltf_size cgltf_json_to_size(jsmntok_t const* tok, const unsigned char* json_chunk)
 {
 	char tmp[128];
-#if defined(_MSC_VER) && _MSC_VER <= 1200
 	long res;
-#else
-	long long res;
-#endif
 	int size;
 
 	CGLTF_CHECK_TOKTYPE_RET(*tok, JSMN_PRIMITIVE, 0);
@@ -3341,7 +3342,6 @@ static int cgltf_parse_json_material_mapping_data(cgltf_options* options, jsmnto
 		material = -1;
 		variants_tok = -1;
 		extras_tok = -1;
-		k;
 
 		for (k = 0; k < obj_size; ++k)
 		{
@@ -3953,7 +3953,7 @@ static int cgltf_parse_json_accessor(cgltf_options* options, jsmntok_t const* to
 
 			++i;
 			out_accessor->has_min = 1;
-			// note: we can't parse the precise number of elements since type may not have been computed yet
+			/* note: we can't parse the precise number of elements since type may not have been computed yet */
 			min_size = tokens[i].size > 16 ? 16 : tokens[i].size;
 			i = cgltf_parse_json_float_array(tokens, i, json_chunk, out_accessor->min, min_size);
 		}
@@ -3963,7 +3963,7 @@ static int cgltf_parse_json_accessor(cgltf_options* options, jsmntok_t const* to
 
 			++i;
 			out_accessor->has_max = 1;
-			// note: we can't parse the precise number of elements since type may not have been computed yet
+			/* note: we can't parse the precise number of elements since type may not have been computed yet */
 			max_size = tokens[i].size > 16 ? 16 : tokens[i].size;
 			i = cgltf_parse_json_float_array(tokens, i, json_chunk, out_accessor->max, max_size);
 		}
@@ -4288,7 +4288,7 @@ static int cgltf_parse_json_ior(jsmntok_t const* tokens, int i, const unsigned c
 	size = tokens[i].size;
 	++i;
 
-	// Default values
+	/* Default values */
 	out_ior->ior = 1.5f;
 
 	for (j = 0; j < size; ++j)
@@ -4323,7 +4323,7 @@ static int cgltf_parse_json_specular(cgltf_options* options, jsmntok_t const* to
 	size = tokens[i].size;
 	++i;
 
-	// Default values
+	/* Default values */
 	out_specular->specular_factor = 1.0f;
 	cgltf_fill_float_array(out_specular->specular_color_factor, 3, 1.0f);
 
@@ -4497,7 +4497,7 @@ static int cgltf_parse_json_emissive_strength(jsmntok_t const* tokens, int i, co
 	size = tokens[i].size;
 	++i;
 
-	// Default
+	/* Default */
 	out_emissive_strength->emissive_strength = 1.f;
 
 	for (j = 0; j < size; ++j)
@@ -4532,7 +4532,7 @@ static int cgltf_parse_json_iridescence(cgltf_options* options, jsmntok_t const*
 	size = tokens[i].size;
 	++i;
 
-	// Default
+	/* Default */
 	out_iridescence->iridescence_ior = 1.3f;
 	out_iridescence->iridescence_thickness_min = 100.f;
 	out_iridescence->iridescence_thickness_max = 400.f;
@@ -4595,7 +4595,7 @@ static int cgltf_parse_json_diffuse_transmission(cgltf_options* options, jsmntok
 	size = tokens[i].size;
 	++i;
 
-	// Defaults
+	/* Defaults */
 	cgltf_fill_float_array(out_diff_transmission->diffuse_transmission_color_factor, 3, 1.0f);
 	out_diff_transmission->diffuse_transmission_factor = 0.f;
 	
@@ -6958,8 +6958,8 @@ cgltf_result cgltf_parse_json(cgltf_options* options, const unsigned char* json_
 		return cgltf_result_invalid_json;
 	}
 
-	// this makes sure that we always have an UNDEFINED token at the end of the stream
-	// for invalid JSON inputs this makes sure we don't perform out of bound reads of token data
+	/* this makes sure that we always have an UNDEFINED token at the end of the stream */
+	/* for invalid JSON inputs this makes sure we don't perform out of bound reads of token data */
 	tokens[token_count].type = JSMN_UNDEFINED;
 
 	data = (cgltf_data*)options->memory.alloc_func(options->memory.user_data, sizeof(cgltf_data));
@@ -7535,6 +7535,8 @@ static void jsmn_init(jsmn_parser *parser) {
 /*
  * -- jsmn.c end --
  */
+
+#pragma GCC diagnostic pop
 
 #endif /* #ifdef CGLTF_IMPLEMENTATION */
 

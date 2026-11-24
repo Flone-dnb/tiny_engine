@@ -5,7 +5,7 @@ create_function(configure_engine_target)
 if BUILD_DEBUG
     # add memcheck
     if OS_LINUX
-        add_linker_flags(--wrap=malloc --wrap=realloc --wrap=calloc --wrap=free --wrap=strdup --wrap=wcsdup --wrap=scandir --wrap=getline --wrap=realpath)
+        add_linker_flags(-Wl,--wrap=malloc -Wl,--wrap=realloc -Wl,--wrap=calloc -Wl,--wrap=free -Wl,--wrap=strdup -Wl,--wrap=wcsdup -Wl,--wrap=scandir -Wl,--wrap=getline -Wl,--wrap=realpath)
     endif
 
     add_macro(ENGINE_MEMCHECK_ENABLED)

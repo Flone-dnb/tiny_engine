@@ -1,18 +1,13 @@
 target(memcheck)
 
-if OS_LINUX
-    # compile as shared for linker "wrap" to work
-    set_target_type(dll)
-else
-    set_target_type(lib)
-endif
+set_target_type(lib)
 
 if SYSTEM_32BIT
     add_macro(MEMCHECK_32BIT)
 endif
 
 if OS_LINUX
-    add_linker_flags(-m)
+    add_linker_flags(-lm)
     # tb already links to pthread on linux
 endif
 

@@ -50,7 +50,7 @@ jobs:
         cp ./build/tb ../..
       working-directory: tools/tb
     - name: Build (Release)
-      run: tb -v CC clang all release
+      run: ./tb -v CC clang all release
   build-linux-gcc:
     name: Build on Linux using GCC
     runs-on: ubuntu-latest
@@ -68,4 +68,4 @@ jobs:
         cp ./build/tb ../..
       working-directory: tools/tb
     - name: Build (Release)
-      run: tb -v CC gcc all release
+      run: ./tb -v CC gcc all release

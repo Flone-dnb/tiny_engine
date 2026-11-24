@@ -28,10 +28,10 @@
 #include <glad/glx.h>
 
 /* GLX extension function pointers */
-typedef GLXContext (*PFNGLXCREATECONTEXTATTRIBSARBPROC)(
+/*typedef GLXContext (*PFNGLXCREATECONTEXTATTRIBSARBPROC)(
     Display*, GLXFBConfig, GLXContext, Bool, const int*);
 typedef GLXFBConfig* (*PFNGLXCHOOSEFBCONFIGPROC)(Display*, int, const int*, int*);
-typedef int (*PFNGLXGETFBCONFIGATTRIBPROC)(Display*, GLXFBConfig, int, int*);
+typedef int (*PFNGLXGETFBCONFIGATTRIBPROC)(Display*, GLXFBConfig, int, int*);*/
 typedef void (*PFNGLXSWAPINTERVALEXTPROC)(Display*, GLXDrawable, int);
 
 static PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB_ptr = NULL;

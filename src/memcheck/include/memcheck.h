@@ -7,7 +7,9 @@ void memcheck_deinit(void);
 
 #else
 
+#ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L /* for ssize_t */
+#endif
 #include <stddef.h>
 #include <wchar.h>
 #include <sys/types.h>

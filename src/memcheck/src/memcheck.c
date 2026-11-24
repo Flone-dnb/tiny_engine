@@ -107,7 +107,9 @@ memcheck_deinit(void) {
         item = mem_ht_iterator_next(it);
         while (item != NULL) {
             const te_memcheck_mem_info* info = item;
-            printf("%zu. leaked a pointer of size %zu bytes\n", num, info->size);
+            printf(
+                "%lu. leaked a pointer of size %lu bytes\n", (unsigned long)num,
+                (unsigned long)info->size);
             if (info->caller1 != NULL) {
                 printf("%s <- here\n", info->caller1);
             }
@@ -175,9 +177,6 @@ memcheck_register_ptr_locked(void* ptr, size_t size) {
 static void
 memcheck_unregister_ptr_locked(void* ptr) {
     te_memcheck_mem_info* info;
-
-    te_memcheck_mem_info test_info;
-    test_info.user_ptr_value = (uintptr_t)ptr;
 
     info = mem_ht_find(memhashmap, (uintptr_t)ptr);
     if (info == NULL) {
@@ -253,9 +252,6 @@ __wrap_realloc(void* ptr, size_t size) {
     new_ptr = NULL;
     {
         te_memcheck_mem_info* found_info;
-
-        te_memcheck_mem_info test_info;
-        test_info.user_ptr_value = (uintptr_t)ptr;
 
         found_info = mem_ht_find(memhashmap, (uintptr_t)ptr);
         if (found_info == NULL) {

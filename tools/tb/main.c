@@ -444,16 +444,16 @@ main(int argc, char* argv[]) {
         config.ar_flags = "/nologo /WX";
     } else if (strcmp(config.cc, "gcc") == 0 || strcmp(config.cc, "clang") == 0) {
 #define GCC_CC_FLAGS                                                                          \
-    "-c -pthread -Wall -Wextra -Werror -Wpedantic --ansi -std=c89 -Wconversion "              \
+    "-c -pthread -Wall -Wextra -Werror -Wpedantic -ansi -std=c90 -Wconversion "               \
     "-Wno-unused-but-set-parameter -Wno-incompatible-function-pointer-types "                 \
     "-Wno-incompatible-pointer-types -Wno-unused-result "                                     \
     "-Wno-unknown-warning-option"
-#define GCC_LD_FLAGS "-pthread"
+#define GCC_LD_FLAGS "-pthread -Wl,-rpath,'$ORIGIN'"
         if (config.is_release) {
             config.cc_flags = "-O3 -DNDEBUG " GCC_CC_FLAGS;
             config.ld_flags = " " GCC_LD_FLAGS;
         } else {
-            config.cc_flags = "-g3 -O0 -DDEBUG" GCC_CC_FLAGS;
+            config.cc_flags = "-g3 -O0 -DDEBUG " GCC_CC_FLAGS;
             if (!config.is_32bit) {
                 config.ld_flags = "-fno-omit-frame-pointer -fsanitize=address "
                                   "-static-libasan " GCC_LD_FLAGS;
@@ -776,14 +776,23 @@ process_build_file(const char* prefix_path) {
         }
 
         if (branch_idx >= 0) {
-            if (branches[branch_idx].is_inside_true_branch) {
-                if (!branches[branch_idx].branch_state) {
-                    continue;
+            int idx = 0;
+            bool skip_line = false;
+            for (idx = 0; idx <= branch_idx; idx++) {
+                if (branches[idx].is_inside_true_branch) {
+                    if (!branches[idx].branch_state) {
+                        skip_line = true;
+                        break;
+                    }
+                } else {
+                    if (branches[idx].branch_state) {
+                        skip_line = true;
+                        break;
+                    }
                 }
-            } else {
-                if (branches[branch_idx].branch_state) {
-                    continue;
-                }
+            }
+            if (skip_line) {
+                continue;
             }
         }
 
@@ -1604,6 +1613,21 @@ func_dump_state(char* text, unsigned int text_len) {
 
         printf("\n- dump_state start -\n\n");
 
+        printf("- defined variables:\n");
+        for (i = 0; i < variable_count; i++) {
+            printf("    - %s\n", variables[i].name);
+        }
+
+        printf("- defined functions:\n");
+        for (i = 0; i < function_count; i++) {
+            printf("    - %s\n", functions[i].name);
+        }
+
+        printf("- defined user functions:\n");
+        for (i = 0; i < config.user_function_count; i++) {
+            printf("    - %s\n", config.user_functions[i].name);
+        }
+
         printf("- target: %s\n", current_target->name);
         printf("- macros: %s\n", current_target->macros);
         printf("- private includes: %s\n", current_target->private_includes);
@@ -1899,7 +1923,7 @@ create_compile_obj_cmd_gcc(
     const char* source_name = filesystem_find_filename(source_file, true, NULL);
 
 #define GCC_COMPILE_OBJ_FMT                                                                   \
-    "%s %s %s -o %s\\%s%s", config.cc, ccflags, source_file, target_dir, source_name,         \
+    "%s %s %s -o \"./%s/%s%s\"", config.cc, ccflags, source_file, target_dir, source_name,    \
         config.obj_ext
 
     len = snprintf(NULL, 0, GCC_COMPILE_OBJ_FMT);
@@ -1928,6 +1952,57 @@ create_compile_obj_cmd(
     }
 }
 
+static bool
+build_link_dependencies_recursive_cl(tb_target_info* target, char** deps) {
+    char* dep_target_dir;
+    char* add;
+    char* d;
+    size_t len;
+    unsigned int dep_target_dir_len, add_len;
+    unsigned int i;
+
+    for (i = 0; i < target->dependency_count; i++) {
+        if (target->dependencies[i]->type == TB_TT_EXE) {
+            printf(
+                "- error: target %s can't link to an executable target %s\n", target->name,
+                target->dependencies[i]->name);
+            return false;
+        }
+        if (target->dependencies[i]->type == TB_TT_DLL) {
+            /* TODO */
+            printf("- TODO: linking to DLLs on MSVC is not implemented yet!\n");
+            return false;
+        }
+
+        dep_target_dir = filesystem_append_path(
+            "build", 5, target->dependencies[i]->name, 0, &dep_target_dir_len);
+
+        add = filesystem_append_path_ext(
+            dep_target_dir, dep_target_dir_len, target->dependencies[i]->name, 0, ".lib", 4,
+            &add_len);
+
+        len = strlen(*deps);
+        d = malloc(sizeof(char) * ((len > 0 ? len + 1 : 0) + add_len + 1));
+        if (len > 0) {
+            memcpy(d, *deps, sizeof(char) * len);
+            d[len] = ' ';
+            len += 1;
+        }
+        memcpy(d + len, add, sizeof(char) * add_len);
+        d[len + add_len] = 0;
+
+        free(*deps);
+        *deps = d;
+
+        free(add);
+        free(dep_target_dir);
+
+        build_link_dependencies_recursive_cl(target->dependencies[i], deps);
+    }
+
+    return true;
+}
+
 static char*
 create_link_cmd_cl(
     const char* ld_flags, const char* objs, const char* target_dir, tb_target_info* target) {
@@ -1950,52 +2025,10 @@ create_link_cmd_cl(
     }
 
     /* prepare dependencies to link to */
-    {
-        char* dep_target_dir;
-        char* add;
-        char* d;
-        size_t len;
-        unsigned int dep_target_dir_len, add_len;
-        unsigned int i;
-
-        deps = malloc(sizeof(char));
-        deps[0] = 0;
-        for (i = 0; i < target->dependency_count; i++) {
-            if (target->dependencies[i]->type == TB_TT_EXE) {
-                printf(
-                    "- error: target %s can't link to an executable target %s\n", target->name,
-                    target->dependencies[i]->name);
-                return NULL;
-            }
-            if (target->dependencies[i]->type == TB_TT_DLL) {
-                /* TODO */
-                printf("- TODO: linking to DLLs on MSVC is not implemented yet!\n");
-                return NULL;
-            }
-
-            dep_target_dir = filesystem_append_path(
-                "build", 5, target->dependencies[i]->name, 0, &dep_target_dir_len);
-
-            add = filesystem_append_path_ext(
-                dep_target_dir, dep_target_dir_len, target->dependencies[i]->name, 0, ".lib",
-                4, &add_len);
-
-            len = deps == NULL ? 0 : strlen(deps);
-            d = malloc(sizeof(char) * ((len > 0 ? len + 1 : 0) + add_len + 1));
-            if (len > 0) {
-                memcpy(d, deps, sizeof(char) * len);
-                d[len] = ' ';
-                len += 1;
-            }
-            memcpy(d + len, add, sizeof(char) * add_len);
-            d[len + add_len] = 0;
-
-            free(deps);
-            deps = d;
-
-            free(add);
-            free(dep_target_dir);
-        }
+    deps = malloc(sizeof(char));
+    deps[0] = 0;
+    if (!build_link_dependencies_recursive_cl(target, &deps)) {
+        return NULL;
     }
 
 #define CL_LINK_OBJ_FMT                                                                       \
@@ -2015,6 +2048,46 @@ create_link_cmd_cl(
     return cmd;
 }
 
+static bool
+build_link_dependencies_recursive_gcc(tb_target_info* target, char** deps) {
+    char* d;
+    char* dep_target_dir;
+    unsigned int i;
+    int buf_len;
+
+    for (i = 0; i < target->dependency_count; i++) {
+        if (target->dependencies[i]->type == TB_TT_EXE) {
+            printf(
+                "- error: target %s can't link to an executable target %s\n", target->name,
+                target->dependencies[i]->name);
+            return false;
+        }
+
+        dep_target_dir =
+            filesystem_append_path("build", 5, target->dependencies[i]->name, 0, NULL);
+
+        buf_len = snprintf(
+            NULL, 0, "%s -L./%s -l%s", (*deps), dep_target_dir, target->dependencies[i]->name);
+        if (buf_len <= 0) {
+            printf("- snprintf error while building dependency link list\n");
+            return false;
+        }
+        d = malloc(sizeof(char) * (buf_len + 1));
+
+        snprintf(
+            d, (size_t)(buf_len + 1), "%s -L./%s -l%s", (*deps), dep_target_dir,
+            target->dependencies[i]->name);
+        free(*deps);
+        (*deps) = d;
+
+        free(dep_target_dir);
+
+        build_link_dependencies_recursive_gcc(target->dependencies[i], deps);
+    }
+
+    return true;
+}
+
 static char*
 create_link_cmd_gcc(
     const char* ld_flags, const char* objs, const char* target_dir, tb_target_info* target) {
@@ -2030,47 +2103,16 @@ create_link_cmd_gcc(
     }
 
     /* prepare dependencies to link to */
-    {
-        char* dep_target_dir;
-        char* d;
-        unsigned int i;
-        int buf_len;
-
-        deps = malloc(sizeof(char));
-        deps[0] = 0;
-        for (i = 0; i < target->dependency_count; i++) {
-            if (target->dependencies[i]->type == TB_TT_EXE) {
-                printf(
-                    "- error: target %s can't link to an executable target %s\n", target->name,
-                    target->dependencies[i]->name);
-                return NULL;
-            }
-
-            dep_target_dir = filesystem_append_path("build", 5, target->name, 0, NULL);
-
-            buf_len = snprintf(
-                NULL, 0, "%s -L./%s -l%s", deps, dep_target_dir,
-                target->dependencies[i]->name);
-            if (buf_len <= 0) {
-                printf("- snprintf error while building dependency link list\n");
-                return NULL;
-            }
-            d = malloc(sizeof(char) * (buf_len + 1));
-
-            snprintf(
-                d, (size_t)(buf_len + 1), "%s -L./%s -l%s", deps, dep_target_dir,
-                target->dependencies[i]->name);
-            free(deps);
-            deps = d;
-
-            free(dep_target_dir);
-        }
+    deps = malloc(sizeof(char));
+    deps[0] = 0;
+    if (!build_link_dependencies_recursive_gcc(target, &deps)) {
+        return NULL;
     }
 
 #define GCC_LINK_OBJ_FMT                                                                      \
-    "%s %s %s %s -o %s\\%s%s%s", config.link, ld_flags, objs, deps, target_dir, prefix,       \
+    "%s %s %s %s -o \"./%s/%s%s%s\"", config.link, ld_flags, objs, deps, target_dir, prefix,  \
         target->name, ext
-#define GCC_LIB_OBJ_FMT "%s %s\\lib%s.a %s %s", config.ar, target_dir, target->name, objs, deps
+#define GCC_LIB_OBJ_FMT "%s \"./%s/lib%s.a\" %s", config.ar, target_dir, target->name, objs
 
     if (target->type == TB_TT_EXE || target->type == TB_TT_DLL) {
         len = snprintf(NULL, 0, GCC_LINK_OBJ_FMT);
@@ -2377,6 +2419,11 @@ build_target(tb_target_info* target) {
         char* cmd;
         char tmp[1024 * 4];
 
+        const char* slash = "\\";
+#if !defined(WIN32)
+        slash = "/";
+#endif
+
         size_t capacity = 2048;
         size_t objs_len = 0;
         size_t len = 0;
@@ -2386,8 +2433,8 @@ build_target(tb_target_info* target) {
         for (i = 0; i < target->source_count; i++) {
             const char* source_name = filesystem_find_filename(target->sources[i], true, NULL);
 
-            len =
-                snprintf(tmp, 1024 * 4, "%s\\%s%s ", target_dir, source_name, config.obj_ext);
+            len = snprintf(
+                tmp, 1024 * 4, "%s%s%s%s ", target_dir, slash, source_name, config.obj_ext);
             if (len <= 0) {
                 printf("- snprintf failed\n");
                 return false;
@@ -2648,7 +2695,7 @@ have_variable(const char* name) {
         if (namelen != variables[i].name_len) {
             continue;
         }
-        if (strncmp(variables[i].name, name, namelen) != 0) {
+        if (strcmp(variables[i].name, name) != 0) {
             continue;
         }
         return true;
@@ -2668,7 +2715,7 @@ add_variable(const char* name, const char* value) {
         if (namelen != variables[i].name_len) {
             continue;
         }
-        if (strncmp(variables[i].name, name, namelen) != 0) {
+        if (strcmp(variables[i].name, name) != 0) {
             continue;
         }
         printf(
@@ -2711,7 +2758,7 @@ add_function(const char* name, bool (*process)(char* args, unsigned int args_len
         if (namelen != functions[i].name_len) {
             continue;
         }
-        if (strncmp(functions[i].name, name, namelen) != 0) {
+        if (strcmp(functions[i].name, name) != 0) {
             continue;
         }
         printf(
