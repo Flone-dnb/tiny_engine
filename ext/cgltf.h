@@ -933,10 +933,12 @@ cgltf_size cgltf_animation_channel_index(const cgltf_animation* animation, const
 
 #ifdef CGLTF_IMPLEMENTATION
 
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wconversion"
 #pragma GCC diagnostic ignored "-Wsign-conversion"
+#endif
 
 #include <assert.h> /* For assert */
 #include <string.h> /* For strncpy */
@@ -7536,7 +7538,9 @@ static void jsmn_init(jsmn_parser *parser) {
  * -- jsmn.c end --
  */
 
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic pop
+#endif
 
 #endif /* #ifdef CGLTF_IMPLEMENTATION */
 
