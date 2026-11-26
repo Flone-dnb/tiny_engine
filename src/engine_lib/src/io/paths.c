@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <stdbool.h>
 #include <io/log.h>
 #include <misc/globals.h>
 
@@ -11,9 +11,21 @@
 #define NOMINMAX
 #include <Windows.h>
 #include <Shlobj.h>
+
+#if defined(ENGINE_32BIT)
+/* windows 98 does not have local appdata */
+#ifndef CSIDL_LOCAL_APPDATA
+#define APPDATA_FOLDER_ID CSIDL_APPDATA
+#else
+#define APPDATA_FOLDER_ID CSIDL_LOCAL_APPDATA
+#endif
+#else
 #ifndef CSIDL_LOCAL_APPDATA
 #define CSIDL_LOCAL_APPDATA 0x001C
 #endif
+#define APPDATA_FOLDER_ID CSIDL_LOCAL_APPDATA
+#endif
+
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "shell32.lib")
 #endif
@@ -29,7 +41,7 @@ paths_get_config_dir(void) {
         unsigned int path_len;
         size_t i;
 
-        if (!SHGetSpecialFolderPathA(NULL, folder_path, CSIDL_LOCAL_APPDATA, FALSE)) {
+        if (!SHGetSpecialFolderPathA(NULL, folder_path, APPDATA_FOLDER_ID, FALSE)) {
             log_error(__FILE__, __LINE__, "failed to query config dir path");
             abort();
         }
@@ -82,19 +94,27 @@ const char*
 paths_get_log_file(void) {
     if (cached_path_to_log_file[0] == 0) {
 #if defined(WIN32)
+        static bool failed_to_get_log_path = false;
         char folder_path[MAX_PATH + 2] = {0};
         unsigned int path_len;
         size_t i;
 
-        if (!SHGetSpecialFolderPathA(NULL, folder_path, CSIDL_LOCAL_APPDATA, FALSE)) {
-            log_error(__FILE__, __LINE__, "failed to query config dir path");
-            abort();
+        if (!SHGetSpecialFolderPathA(NULL, folder_path, APPDATA_FOLDER_ID, FALSE)) {
+            /* don't call log here to avoid recursion */
+            if (!failed_to_get_log_path) {
+                failed_to_get_log_path = true;
+                printf("failed to query config dir path\n");
+            }
+            return NULL;
         }
 
         path_len = (unsigned int)strlen(folder_path);
         if (path_len == 0) {
-            log_error(__FILE__, __LINE__, "failed to query config dir path");
-            abort();
+            if (!failed_to_get_log_path) {
+                failed_to_get_log_path = true;
+                printf("failed to query config dir path\n");
+            }
+            return NULL;
         }
 
         /* copy path and replace slashes */

@@ -86,7 +86,7 @@ typedef struct te_win32_window {
 
 static PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB = NULL;
 static PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT = NULL;
-static const wchar_t* window_class = L"Win32WindowClass";
+static const char* window_class = "TinyEngineWindowClass";
 static HMODULE opengl32dll = NULL;
 
 static void
@@ -366,7 +366,7 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
         }
     }
 
-    return DefWindowProcW(hwnd, msg, wparam, lparam);
+    return DefWindowProcA(hwnd, msg, wparam, lparam);
 }
 
 static void
@@ -377,17 +377,17 @@ load_wgl_extensions(void) {
     PIXELFORMATDESCRIPTOR pfd;
     int pf;
 
-    WNDCLASSW wc = {0};
+    WNDCLASSA wc = {0};
     wc.lpfnWndProc = DefWindowProcA;
     wc.hInstance = GetModuleHandleA(NULL);
-    wc.lpszClassName = L"DummyWindowClass";
-    if (!RegisterClassW(&wc)) {
+    wc.lpszClassName = "DummyWindowClass";
+    if (!RegisterClassA(&wc)) {
         log_error(__FILE__, __LINE__, "failed to register a dummy window class");
         abort();
     }
 
-    dummy = CreateWindowExW(
-        0, L"DummyWindowClass", L"", WS_OVERLAPPEDWINDOW, 0, 0, 1, 1, NULL, NULL, wc.hInstance,
+    dummy = CreateWindowExA(
+        0, "DummyWindowClass", "", WS_OVERLAPPEDWINDOW, 0, 0, 1, 1, NULL, NULL, wc.hInstance,
         NULL);
     if (!dummy) {
         log_error(__FILE__, __LINE__, "failed to create a dummy window");
@@ -449,11 +449,10 @@ gladloadproc(const char* name) {
 
 void
 win32_window_create(te_os_window* os_window, const char* title) {
-    wchar_t* titlew;
     te_win32_window* win32_window;
     HINSTANCE hinstance;
     PIXELFORMATDESCRIPTOR pfd;
-    WNDCLASSEXW wc = {0};
+    WNDCLASSEXA wc = {0};
 #if defined(HAVE_RAWINPUT)
     RAWINPUTDEVICE rid = {0};
 #endif
@@ -524,13 +523,13 @@ win32_window_create(te_os_window* os_window, const char* title) {
 
     hinstance = GetModuleHandle(NULL);
 
-    wc.cbSize = sizeof(WNDCLASSEXW);
+    wc.cbSize = sizeof(WNDCLASSEXA);
     wc.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = wnd_proc;
     wc.hInstance = hinstance;
     wc.hCursor = NULL;
     wc.lpszClassName = window_class;
-    if (!RegisterClassExW(&wc)) {
+    if (!RegisterClassExA(&wc)) {
         log_error(__FILE__, __LINE__, "failed to register window class");
         abort();
     }
@@ -538,17 +537,14 @@ win32_window_create(te_os_window* os_window, const char* title) {
     screen_w = GetSystemMetrics(SM_CXSCREEN);
     screen_h = GetSystemMetrics(SM_CYSCREEN);
 
-    titlew = wchar_from_char(title, NULL);
-
     /* fullscreen borderless window */
-    win32_window->hwnd = CreateWindowExW(
-        WS_EX_APPWINDOW, window_class, titlew, WS_POPUP | WS_VISIBLE | WS_MAXIMIZE, 0, 0,
+    win32_window->hwnd = CreateWindowExA(
+        WS_EX_APPWINDOW, window_class, title, WS_POPUP | WS_VISIBLE | WS_MAXIMIZE, 0, 0,
         screen_w, screen_h, NULL, NULL, hinstance, NULL);
     if (!win32_window->hwnd) {
         log_error(__FILE__, __LINE__, "failed to create window");
         abort();
     }
-    free(titlew);
 
     SetWindowLongPtr(win32_window->hwnd, GWLP_USERDATA, (LONG_PTR)os_window);
     SetWindowPos(
@@ -668,7 +664,7 @@ win32_window_destroy(te_os_window* os_window) {
     ReleaseDC(wnd->hwnd, wnd->hdc);
 
     DestroyWindow(wnd->hwnd);
-    UnregisterClassW(window_class, GetModuleHandle(NULL));
+    UnregisterClassA(window_class, GetModuleHandle(NULL));
 
     free(wnd);
     prv_os_window_set_impl(os_window, NULL);
@@ -745,13 +741,13 @@ win32_window_poll_event(te_os_window* os_window) {
     te_win32_window* win32_window = prv_os_window_get_impl(os_window);
     win32_window->is_cached_cursor_pos_valid = false;
 
-    while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
+    while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) {
         if (msg.message == WM_QUIT) {
             os_window_should_close(os_window);
             break;
         }
         TranslateMessage(&msg);
-        DispatchMessageW(&msg);
+        DispatchMessageA(&msg);
     }
 
 #if defined(HAVE_XINPUT)

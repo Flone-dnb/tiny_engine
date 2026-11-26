@@ -16,14 +16,18 @@
 #define NOMINMAX
 #include <Windows.h>
 #include <signal.h>
+#include <io/paths.h>
+#include <snprintf.h>
 static void
 custom_abort_handler(int signum) {
+    char buff[1024 * 4];
     (void)signum;
-    MessageBoxW(
-        NULL,
-        L"an error occurred, see the log file at %localappdata%/tiny_engine\n"
-        L"\ntry restarting the application",
-        L"Error", MB_OK);
+    snprintf(
+        buff, 1024 * 4,
+        "an error occurred, see the log file at %s\n"
+        "\ntry restarting the application",
+        paths_get_log_file());
+    MessageBoxA(NULL, buff, "Error", MB_OK);
     _exit(EXIT_FAILURE);
 }
 #endif

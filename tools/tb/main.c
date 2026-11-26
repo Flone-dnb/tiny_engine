@@ -1912,6 +1912,32 @@ filesystem_remove_file(const char* path) {
 #endif
 }
 
+#if defined(WIN32)
+bool
+update_file_timestamp(const char* path_to_file) {
+    HANDLE h;
+    FILETIME ft;
+    BOOL success;
+
+    h = CreateFileA(
+        path_to_file, FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (h == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+
+    GetSystemTimeAsFileTime(&ft);
+
+    success = SetFileTime(h, NULL, NULL, &ft);
+    if (!success) {
+        return false;
+    }
+
+    CloseHandle(h);
+    return true;
+}
+#endif
+
 static char*
 create_compile_obj_cmd_cl(
     const char* ccflags, const char* target_name, const char* target_dir,
@@ -2352,6 +2378,7 @@ build_target(tb_target_info* target) {
         if (filesystem_is_src_newer_than_obj(target->headers[i], h_path)) {
             target->recompile_all_sources = true;
             target->headers_outdated = true;
+
             /* note: don't break here we need to finish creating/updating all header timestamp files */
 
             fp = fopen(h_path, "wb");
@@ -2361,6 +2388,14 @@ build_target(tb_target_info* target) {
             }
             fwrite(&ch, 1, sizeof(ch), fp);
             fclose(fp);
+
+#if defined(WIN32)
+            /* on old systems newly created files may have old creation time and it breaks build caching */
+            if (!update_file_timestamp(h_path)) {
+                printf("- failed to update file timestamp for %s\n", h_path);
+                return false;
+            }
+#endif
         }
 
         free(h_path);
@@ -2433,6 +2468,21 @@ build_target(tb_target_info* target) {
                 free(cache_file_path);
                 return false;
             }
+
+#if defined(WIN32)
+            {
+                char* obj_path = filesystem_append_path_ext(
+                    target_dir, 0, source_name, 0, config.obj_ext, 0, NULL);
+
+                /* on old systems newly created files may have old creation time and it breaks build caching */
+                if (!update_file_timestamp(obj_path)) {
+                    printf("- failed to update file timestamp for %s\n", obj_path);
+                    return false;
+                }
+
+                free(obj_path);
+            }
+#endif
 
             free(cmd);
         }
@@ -2555,12 +2605,11 @@ prefix_cmd(const char* prefix, char** cmd, size_t cmd_len) {
 
     prefix_len = strlen(prefix);
 
-    cmd2 = malloc(sizeof(char) * (prefix_len + 5 + cmd_len + 1 + 1));
+    cmd2 = malloc(sizeof(char) * (prefix_len + 4 + cmd_len + 1));
     memcpy(cmd2, prefix, sizeof(char) * prefix_len);
-    memcpy(cmd2 + prefix_len, " /C \"", sizeof(char) * 5);
-    memcpy(cmd2 + prefix_len + 5, *cmd, sizeof(char) * cmd_len);
-    cmd2[prefix_len + 5 + cmd_len] = '\"';
-    cmd2[prefix_len + 5 + cmd_len + 1] = 0;
+    memcpy(cmd2 + prefix_len, " /C ", sizeof(char) * 4);
+    memcpy(cmd2 + prefix_len + 4, *cmd, sizeof(char) * cmd_len);
+    cmd2[prefix_len + 4 + cmd_len] = 0;
 
     free(*cmd);
     *cmd = cmd2;

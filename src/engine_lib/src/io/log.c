@@ -102,8 +102,11 @@ prv_log(enum te_log_category category, const char* message, const char* filepath
         &log_prefix[0], 511, "[%s] [%s] [%s:%d]", time_str, category_str,
         filepath + filename_start, line);
 
-    /** open log file (not checking if directories exist because we checked this at game start) */
+    /* open log file (not checking if directories exist because we checked this at game start) */
     path_to_log_file = paths_get_log_file();
+    if (path_to_log_file == NULL) {
+        return;
+    }
     log_file = fopen(path_to_log_file, "a");
     if (log_file == NULL) {
         static bool logging_disabled = false;
