@@ -384,7 +384,7 @@ prv_renderer_calc_frame_stats(te_renderer* renderer, float delta_time_sec) {
         float time_to_sleep_ms = target_time_ms - delta_time_sec;
 #if defined(ENGINE_32BIT)
         /* don't ask */
-        time_to_sleep_ms *= 0.91f;
+        time_to_sleep_ms *= 0.9f;
 #endif
         while (high_freq_timer_get_elapsed_ms(start) < time_to_sleep_ms) {
             Sleep(0);

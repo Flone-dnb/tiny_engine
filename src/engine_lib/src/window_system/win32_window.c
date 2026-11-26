@@ -189,7 +189,7 @@ wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
                 case WM_MOUSEMOVE: {
                     te_win32_window* win32_window =
                         (te_win32_window*)prv_os_window_get_impl(os_window);
-					int x, y, diff_x, diff_y;
+                    int x, y, diff_x, diff_y;
 
                     x = LOWORD(lparam);
                     y = HIWORD(lparam);
@@ -474,7 +474,7 @@ win32_window_create(te_os_window* os_window, const char* title) {
         WGL_PIXEL_TYPE_ARB,
         WGL_TYPE_RGBA_ARB,
         WGL_COLOR_BITS_ARB,
-        32,
+        TE_OS_WINDOW_COLOR_BITS,
         WGL_DEPTH_BITS_ARB,
         TE_OS_WINDOW_DEPTH_BITS,
         WGL_STENCIL_BITS_ARB,
@@ -558,11 +558,20 @@ win32_window_create(te_os_window* os_window, const char* title) {
     if (!wglChoosePixelFormatARB(
             win32_window->hdc, pixel_attribs, NULL, 1, &pixel_format, &num_formats)
         || num_formats == 0) {
-        log_error(__FILE__, __LINE__, "the system failed to meet required pixel format");
-        abort();
+        /* fallback */
+        pfd.nSize = sizeof(pfd);
+        pfd.nVersion = 1;
+        pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+        pfd.iPixelType = PFD_TYPE_RGBA;
+        pfd.cColorBits = TE_OS_WINDOW_COLOR_BITS;
+        pfd.cDepthBits = TE_OS_WINDOW_DEPTH_BITS;
+        pfd.cStencilBits = TE_OS_WINDOW_STENCIL_BITS;
+        pfd.iLayerType = PFD_MAIN_PLANE;
+        pixel_format = ChoosePixelFormat(win32_window->hdc, &pfd);
+    } else {
+        DescribePixelFormat(win32_window->hdc, pixel_format, sizeof(pfd), &pfd);
     }
 
-    DescribePixelFormat(win32_window->hdc, pixel_format, sizeof(pfd), &pfd);
     if (!SetPixelFormat(win32_window->hdc, pixel_format, &pfd)) {
         log_error(__FILE__, __LINE__, "failed to set pixel format");
         abort();
@@ -641,7 +650,7 @@ win32_window_create(te_os_window* os_window, const char* title) {
 #endif
 
 #if !defined(HAVE_RAWINPUT)
-	{
+    {
         float x, y;
         win32_window_get_cursor_position(os_window, &x, &y);
         win32_window->prev_cursor_x = (int)x;
@@ -649,7 +658,7 @@ win32_window_create(te_os_window* os_window, const char* title) {
 
         os_window_get_size(
             os_window, &win32_window->window_width, &win32_window->window_height);
-	}
+    }
 #endif
 }
 
@@ -893,8 +902,8 @@ win32_window_is_gamepad_connected(te_os_window* os_window) {
 
     return win32_window->controller_id != 255;
 #else
-	(void)os_window;
-	return false;
+    (void)os_window;
+    return false;
 #endif
 }
 

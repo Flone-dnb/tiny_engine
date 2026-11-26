@@ -31,12 +31,12 @@
 size_t
 memory_usage_get_process_used_memory(void) {
 #if defined(_WIN32)
-#if defined(_MSC_VER) && _MSC_VER > 1200
+#if !defined(ENGINE_32BIT)
     PROCESS_MEMORY_COUNTERS info;
     GetProcessMemoryInfo(GetCurrentProcess(), &info, sizeof(info));
     return (size_t)info.WorkingSetSize;
 #else
-    return 1;
+    return 1; /* TODO */
 #endif
 #elif defined(__linux__)
     long rss = 0;
@@ -60,13 +60,16 @@ memory_usage_get_process_used_memory(void) {
 size_t
 memory_usage_get_total_memory(void) {
 #if defined(_WIN32)
-#if defined(_MSC_VER) && _MSC_VER > 1200
+#if !defined(ENGINE_32BIT)
     MEMORYSTATUSEX mem_info = {0};
     mem_info.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&mem_info);
     return (size_t)mem_info.ullTotalPhys;
 #else
-    return 1;
+    MEMORYSTATUS mem_info = {0};
+    mem_info.dwLength = sizeof(MEMORYSTATUS);
+    GlobalMemoryStatus(&mem_info);
+    return (size_t)mem_info.dwTotalPhys;
 #endif
 #elif defined(__linux__)
     struct sysinfo mem_info;
@@ -80,13 +83,16 @@ memory_usage_get_total_memory(void) {
 size_t
 memory_usage_get_total_used_memory(void) {
 #if defined(_WIN32)
-#if defined(_MSC_VER) && _MSC_VER > 1200
+#if !defined(ENGINE_32BIT)
     MEMORYSTATUSEX mem_info = {0};
     mem_info.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&mem_info);
     return (size_t)(mem_info.ullTotalPhys - mem_info.ullAvailPhys);
 #else
-    return 1;
+    MEMORYSTATUS mem_info = {0};
+    mem_info.dwLength = sizeof(MEMORYSTATUS);
+    GlobalMemoryStatus(&mem_info);
+    return (size_t)(mem_info.dwTotalPhys - mem_info.dwAvailPhys);
 #endif
 #elif defined(__linux__)
     struct sysinfo mem_info;

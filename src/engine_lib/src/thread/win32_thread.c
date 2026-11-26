@@ -22,12 +22,14 @@ thread_run(void* ptr) {
 
 te_thread*
 win32_thread_create(void (*run)(void* userdata), void* userdata) {
+    unsigned int thread_id; /* need to pass non-NULL thread ID even if not used */
+
     te_thread* thread = malloc(sizeof(te_thread));
 
     thread->run = run;
     thread->userdata = userdata;
 
-    thread->h = (HANDLE)_beginthreadex(NULL, 0, thread_run, thread, 0, NULL);
+    thread->h = (HANDLE)_beginthreadex(NULL, 0, thread_run, thread, 0, &thread_id);
     if (thread->h == NULL) {
         log_error(__FILE__, __LINE__, "failed to create a new thread");
         abort();
