@@ -26,15 +26,11 @@ These features are enough for me to make games but there are some additional "ni
 
 # Documentation
 
-You can read the manual from `docs/Manual.md`. There are also a lot of comments in the code.
+You can read the manual from `docs/Manual.md` which gives a general overview of the engine, also in the code a lot of functions have documentation comments in the header files.
 
-# GL 2.0 and GLES 2.0 branch
+# Build
 
-In the branch `last_version_with_gl20_gles20` there's an old version of the engine that uses OpenGL 2.0 and OpenGL ES 2.0 renderers in case you need a version of the engine that has shaders and supports retro-handhelds.
-
-# Prerequisites
-
-- compiler that supports C89/C90
-- the engine uses a custom build system, you can find more information about it at `tools/tb`
+- you need a compiler that supports C89/C90 (which is pretty much any C/C++ compiler nowadays)
+- to build the engine you need to use our custom (but simple) build system, you can find more information about it at `tools/tb`
 
 
