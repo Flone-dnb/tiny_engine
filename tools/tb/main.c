@@ -375,11 +375,11 @@ main(int argc, char* argv[]) {
         FILE* fp = fopen("build/arch_test.exe", "rb");
         if (fp == NULL) {
             if (system_cmd("echo int main(void){ return "
-                           "sizeof(void*); } > build\\arch_test.c")
+                           "sizeof(void*); } > \"build\\m.c\"")
                     != 0
-                || system_cmd("cl.exe /nologo build\\arch_test.c /Fe:build\\") != 0
-                || system_cmd("del build\\arch_test.c") != 0
-                || system_cmd("del build\\del arch_test.obj") != 0) {
+                || system_cmd("cl.exe /nologo build\\m.c /Fo\"build\\m.obj\" /Fe\"build\\arch_test.exe\"") != 0
+                || system_cmd("del build\\m.c") != 0
+                || system_cmd("del build\\m.obj") != 0) {
                 printf("failed to detect the environment\n");
                 return 1;
             }
@@ -2571,6 +2571,7 @@ system_cmd(const char* cmd) {
     PROCESS_INFORMATION pi;
     size_t cmd_len;
     char* cmd_output = NULL;
+    char* cmd_copy = NULL;
     DWORD cmd_output_capacity = 0;
     DWORD cmd_output_len = 0;
     DWORD bytes_read;
@@ -2578,7 +2579,7 @@ system_cmd(const char* cmd) {
 
     /* we need to create a modifiable cmd for CreateProcessA */
     cmd_len = strlen(cmd);
-    char* cmd_copy = malloc(sizeof(char) * (cmd_len + 1));
+    cmd_copy = malloc(sizeof(char) * (cmd_len + 1));
     memcpy(cmd_copy, cmd, sizeof(char) * cmd_len);
     cmd_copy[cmd_len] = 0;
 
@@ -2650,8 +2651,9 @@ system_cmd(const char* cmd) {
         cmd_output[bytes_read] = 0;
         cmd_output_len += bytes_read;
         if (cmd_output_capacity - cmd_output_len - 1 < 1024) {
+            char* s;
             cmd_output_capacity += 1024 * 2;
-            char* s = malloc(sizeof(char*) * cmd_output_capacity);
+            s = malloc(sizeof(char*) * cmd_output_capacity);
             memset(s, 0, sizeof(char) * cmd_output_capacity);
             memcpy(s, cmd_output, sizeof(char) * cmd_output_len);
             free(cmd_output);
