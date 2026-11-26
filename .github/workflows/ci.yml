@@ -26,13 +26,13 @@ jobs:
     - uses: ilammy/msvc-dev-cmd@v1
     - name: Pull submodules
       run: git submodule update --init --recursive
-    - name: Build (Release)
+    - name: Build tb
       run: |
-        cd tools/tb
         nmake -f nmake.mk
         copy "build\\tb.exe" "..\\.."
-        cd ../..
-        ./tb.exe -v all release
+      working-directory: tools/tb
+    - name: Build (Release)
+      run: ./tb.exe -v all release
   build-linux-clang:
     name: Build on Linux using Clang
     runs-on: ubuntu-latest

@@ -375,7 +375,7 @@ main(int argc, char* argv[]) {
         FILE* fp = fopen("build/arch_test.exe", "rb");
         if (fp == NULL) {
             if (system_cmd("echo int main(void){ return "
-                           "sizeof(void*); } > \"build\\m.c\"")
+                           "sizeof(void*); } > build\\m.c")
                     != 0
                 || system_cmd("cl.exe /nologo build\\m.c /Fo\"build\\m.obj\" /Fe\"build\\arch_test.exe\"") != 0
                 || system_cmd("del build\\m.c") != 0
