@@ -1953,7 +1953,7 @@ create_compile_obj_cmd(
 }
 
 static bool
-build_link_dependencies_recursive_cl(tb_target_info* target, char** deps) {
+build_link_dependencies_cl(tb_target_info* target, char** deps) {
     char* dep_target_dir;
     char* add;
     char* d;
@@ -1997,7 +1997,7 @@ build_link_dependencies_recursive_cl(tb_target_info* target, char** deps) {
         free(add);
         free(dep_target_dir);
 
-        build_link_dependencies_recursive_cl(target->dependencies[i], deps);
+        // note: no need to collect libs recursively on msvc
     }
 
     return true;
@@ -2027,7 +2027,7 @@ create_link_cmd_cl(
     /* prepare dependencies to link to */
     deps = malloc(sizeof(char));
     deps[0] = 0;
-    if (!build_link_dependencies_recursive_cl(target, &deps)) {
+    if (!build_link_dependencies_cl(target, &deps)) {
         return NULL;
     }
 
