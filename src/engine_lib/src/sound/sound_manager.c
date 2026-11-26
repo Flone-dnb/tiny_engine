@@ -157,7 +157,7 @@ sleep_ms(unsigned int ms) {
     struct timespec requested;
     struct timespec remaining;
     requested.tv_sec = 0;
-    requested.tv_nsec = ms * 1000000;
+    requested.tv_nsec = (long)(ms * 1000000u);
     while (nanosleep(&requested, &remaining) == -1) {
         if (errno == EINTR) {
             requested = remaining;
