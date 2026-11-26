@@ -232,6 +232,8 @@ static bool filesystem_does_path_exists(const char* path);
 static void filesystem_ensure_dirs_exist(const char* file_path);
 static void filesystem_remove_file(const char* path);
 
+static int system_cmd(const char* cmd);
+
 static bool process_build_file(const char* prefix_path);
 
 static bool parse_path_list(
@@ -370,12 +372,11 @@ main(int argc, char* argv[]) {
     {
         int sizeof_voidp = 4;
 #if defined(WIN32)
-#if defined(_MSC_VER) && _MSC_VER > 1200
         FILE* fp = fopen("build/arch_test.exe", "rb");
         if (fp == NULL) {
-            if (system("cd build && echo int main(void){ return "
-                       "sizeof(void*); } > arch_test.c && cl /nologo arch_test.c && del "
-                       "arch_test.c && del arch_test.obj")
+            if (system_cmd("cd build && echo int main(void){ return "
+                           "sizeof(void*); } > arch_test.c && cl /nologo arch_test.c && del "
+                           "arch_test.c && del arch_test.obj")
                 != 0) {
                 printf("failed to detect the environment\n");
                 return 1;
@@ -383,14 +384,13 @@ main(int argc, char* argv[]) {
         } else {
             fclose(fp);
         }
-        sizeof_voidp = system("build\\arch_test.exe");
-#endif
+        sizeof_voidp = system_cmd("build\\arch_test.exe");
 #elif defined(__linux__)
         FILE* fp = fopen("build/arch_test", "rb");
         if (fp == NULL) {
-            if (system("cd build && echo \"int main(void){ return "
-                       "sizeof(void*); }\" > arch_test.c && gcc arch_test.c -o "
-                       "arch_test && rm arch_test.c")
+            if (system_cmd("cd build && echo \"int main(void){ return "
+                           "sizeof(void*); }\" > arch_test.c && gcc arch_test.c -o "
+                           "arch_test && rm arch_test.c")
                 != 0) {
                 printf("failed to detect the environment\n");
                 return 1;
@@ -398,13 +398,7 @@ main(int argc, char* argv[]) {
         } else {
             fclose(fp);
         }
-        sizeof_voidp = system("./build/arch_test");
-        if (sizeof_voidp == -1 || WIFSIGNALED(sizeof_voidp)) {
-            printf("failed to test architecture\n");
-            return 1;
-        } else {
-            sizeof_voidp = WEXITSTATUS(sizeof_voidp);
-        }
+        sizeof_voidp = system_cmd("./build/arch_test");
 #endif
         if (sizeof_voidp == 8) {
             config.is_32bit = false;
@@ -1348,15 +1342,24 @@ func_create_symlink(char* text, unsigned int text_len) {
         }
         cmd = malloc(sizeof(char) * (len + 1));
         snprintf(cmd, (size_t)(len + 1), "mklink /J \"%s\" \"%s\"", symlink, path);
-        if (system(cmd) != 0) {
-            /* on windows xp and below it can fail because mklink does not exist */
-            printf(
-                "\n- WARNING: failed to create a symlink from \"%s\" to \"%s\"\n\n", path,
-                symlink);
+        if (system_cmd(cmd) != 0) {
+            if (config.is_32bit) {
+                /* on windows xp and below it can fail because mklink does not exist */
+                printf(
+                    "\n- WARNING: failed to create a symlink from \"%s\" to \"%s\"\n\n", path,
+                    symlink);
+            } else {
+                printf(
+                    "\n- failed to create a symlink from \"%s\" to \"%s\"\n\n", path, symlink);
+            }
             free(cmd);
             free(path);
             free(symlink);
-            return true;
+            if (config.is_32bit) {
+                return true;
+            } else {
+                return false;
+            }
         }
 #elif defined(__linux__)
         len = snprintf(NULL, 0, "ln -sfnr %s %s", path, symlink);
@@ -1366,7 +1369,7 @@ func_create_symlink(char* text, unsigned int text_len) {
         }
         cmd = malloc(sizeof(char) * (len + 1));
         snprintf(cmd, (size_t)(len + 1), "ln -sfnr %s %s", path, symlink);
-        len = system(cmd);
+        len = system_cmd(cmd);
         if (len == -1 || WIFSIGNALED(len) || WEXITSTATUS(len) != 0) {
             printf(
                 "failed to create a symlink from \"%s\" to \"%s\", returned code: %i", path,
@@ -2395,7 +2398,7 @@ build_target(tb_target_info* target) {
             if (config.verbose) {
                 printf("- [%s] %s\n", target->name, cmd);
             }
-            if (system(cmd) != 0) {
+            if (system_cmd(cmd) != 0) {
                 char* cache_file_path;
 
                 printf(
@@ -2468,7 +2471,7 @@ build_target(tb_target_info* target) {
         } else {
             printf("- [%s] linking the code...\n", target->name);
         }
-        if (system(cmd) != 0) {
+        if (system_cmd(cmd) != 0) {
             char* cache_file_path;
 
             printf("- [%s] link failed, full link command:\n%s\n", target->name, cmd);
@@ -2503,6 +2506,183 @@ build_target(tb_target_info* target) {
     free(ldflags);
     free(target_dir);
     return true;
+}
+
+#if defined(WIN32)
+void
+print_win32_last_error(DWORD code) {
+    LPSTR msg = NULL;
+    DWORD size;
+
+    size = FormatMessageA(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM
+            | FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL, code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&msg, 0, NULL);
+
+    if (size > 0 && msg != NULL) {
+        printf("- %s\n", msg);
+        LocalFree(msg);
+    } else {
+        printf("- failed to get error msg from code %lu", code);
+    }
+}
+
+void
+prefix_cmd(const char* prefix, char** cmd, size_t cmd_len) {
+    char* cmd2;
+    size_t prefix_len;
+
+    prefix_len = strlen(prefix);
+
+    cmd2 = malloc(sizeof(char) * (prefix_len + 5 + cmd_len + 1 + 1));
+    memcpy(cmd2, prefix, sizeof(char) * prefix_len);
+    memcpy(cmd2 + prefix_len, " /C \"", sizeof(char) * 5);
+    memcpy(cmd2 + prefix_len + 5, *cmd, sizeof(char) * cmd_len);
+    cmd2[prefix_len + 5 + cmd_len] = '\"';
+    cmd2[prefix_len + 5 + cmd_len + 1] = 0;
+
+    free(*cmd);
+    *cmd = cmd2;
+}
+#endif
+
+static int
+system_cmd(const char* cmd) {
+#if defined(WIN32)
+    /* spawn a subprocess (instead of just calling `system`) because 2 reasons: */
+    /* 1. cl.exe prints source file names if called using `system` */
+    /* 2. on Windows 98 COMMAND.COM has a limitation of 126 characters */
+    SECURITY_ATTRIBUTES sa;
+    HANDLE read_pipe = NULL;
+    HANDLE write_pipe = NULL;
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    size_t cmd_len;
+    char* cmd_output = NULL;
+    DWORD cmd_output_capacity = 0;
+    DWORD cmd_output_len = 0;
+    DWORD bytes_read;
+    DWORD exit_code = 0;
+
+    /* we need to create a modifiable cmd for CreateProcessA */
+    cmd_len = strlen(cmd);
+    char* cmd_copy = malloc(sizeof(char) * (cmd_len + 1));
+    memcpy(cmd_copy, cmd, sizeof(char) * cmd_len);
+    cmd_copy[cmd_len] = 0;
+
+    ZeroMemory(&sa, sizeof(sa));
+    sa.nLength = sizeof(sa);
+    sa.bInheritHandle = TRUE;
+    sa.lpSecurityDescriptor = NULL;
+
+    if (!CreatePipe(&read_pipe, &write_pipe, &sa, 0)) {
+        printf("- failed to create a pipe for child process, error:\n");
+        print_win32_last_error(GetLastError());
+        free(cmd_copy);
+        return -1;
+    }
+    SetHandleInformation(read_pipe, HANDLE_FLAG_INHERIT, 0);
+
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    si.dwFlags |= STARTF_USESTDHANDLES;
+    si.hStdOutput = write_pipe;
+    si.hStdError = write_pipe;
+    si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+    si.dwFlags |= STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+
+    ZeroMemory(&pi, sizeof(pi));
+
+    if (!CreateProcessA(NULL, cmd_copy, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+        DWORD err = GetLastError();
+        if (err == 2) {
+            /* not found, try adding a cmd prefix */
+            char buf[MAX_PATH];
+            DWORD len = GetEnvironmentVariableA("COMSPEC", buf, sizeof(buf));
+            if (len == 0) {
+                printf("- error: expected to find COMSPEC environment variable\n");
+            } else if (len >= sizeof(buf)) {
+                printf("- error: buffer for COMSPEC was not big enough\n");
+            } else {
+                prefix_cmd(buf, &cmd_copy, cmd_len);
+                if (!CreateProcessA(
+                        NULL, cmd_copy, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+                    err = GetLastError();
+                } else {
+                    err = 0;
+                }
+            }
+        }
+        if (err != 0) {
+            printf("- failed to spawn a child process, error:\n");
+            print_win32_last_error(err);
+            printf("- used command:\n%s\n", cmd_copy);
+            CloseHandle(read_pipe);
+            CloseHandle(write_pipe);
+            free(cmd_copy);
+            return -1;
+        }
+    }
+
+    CloseHandle(write_pipe);
+
+    cmd_output_capacity = 1024 * 2;
+    cmd_output = malloc(sizeof(char) * cmd_output_capacity);
+    memset(cmd_output, 0, sizeof(char) * cmd_output_capacity);
+
+    while (
+        ReadFile(
+            read_pipe, cmd_output, cmd_output_capacity - cmd_output_len - 1, &bytes_read, NULL)
+        && bytes_read > 0) {
+        cmd_output[bytes_read] = 0;
+        cmd_output_len += bytes_read;
+        if (cmd_output_capacity - cmd_output_len - 1 < 1024) {
+            cmd_output_capacity += 1024 * 2;
+            char* s = malloc(sizeof(char*) * cmd_output_capacity);
+            memset(s, 0, sizeof(char) * cmd_output_capacity);
+            memcpy(s, cmd_output, sizeof(char) * cmd_output_len);
+            free(cmd_output);
+            cmd_output = s;
+        }
+    }
+
+    WaitForSingleObject(pi.hProcess, INFINITE);
+    GetExitCodeProcess(pi.hProcess, &exit_code);
+
+    CloseHandle(read_pipe);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+
+    if (exit_code != 0) {
+        unsigned int i = 0;
+        unsigned int start_idx = 0;
+        for (i; i < cmd_output_len; i++) {
+            if (cmd_output[i] == 0 || i + 1 == cmd_output_len) {
+                printf("%s\n", cmd_output + start_idx);
+                start_idx = i + 1;
+                if (i + 1 < cmd_output_len && cmd_output[i + 1] == 0) {
+                    break;
+                }
+            }
+        }
+        free(cmd_output);
+        free(cmd_copy);
+        return (int)exit_code;
+    }
+
+    free(cmd_output);
+    free(cmd_copy);
+    return 0;
+#elif defined(__linux__)
+    int ret = system(cmd);
+    if (ret == -1 || WIFSIGNALED(ret)) {
+        return -1;
+    }
+    return WEXITSTATUS(ret);
+#else
+#error "unsupported OS"
+#endif
 }
 
 static void
