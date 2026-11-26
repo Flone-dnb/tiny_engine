@@ -376,11 +376,20 @@ main(int argc, char* argv[]) {
         if (fp == NULL) {
             if (system_cmd("echo int main(void){ return "
                            "sizeof(void*); } > build\\m.c")
+                != 0) {
+                /* maybe we're in powershell */
+                if (system_cmd("echo \"int main(void){ return "
+                               "sizeof(void*); }\" > build\\m.c")
+                    != 0) {
+                    printf("failed to echo into a test file\n");
+                    return 1;
+                }
+            }
+            if (system_cmd("cl.exe /nologo build\\m.c /Fo\"build\\m.obj\" "
+                           "/Fe\"build\\arch_test.exe\"")
                     != 0
-                || system_cmd("cl.exe /nologo build\\m.c /Fo\"build\\m.obj\" /Fe\"build\\arch_test.exe\"") != 0
-                || system_cmd("del build\\m.c") != 0
-                || system_cmd("del build\\m.obj") != 0) {
-                printf("failed to detect the environment\n");
+                || system_cmd("del build\\m.c") != 0 || system_cmd("del build\\m.obj") != 0) {
+                printf("failed to build a test C program\n");
                 return 1;
             }
         } else {
