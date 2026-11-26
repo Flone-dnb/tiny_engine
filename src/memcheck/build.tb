@@ -13,9 +13,9 @@ endif
 
 add_sources(
     src/memcheck.c
-    src/memcheck.h
     src/mem_ht.c
     src/mem_ht.h
+    include/memcheck.h
 )
 
 add_private_includes(src)

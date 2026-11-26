@@ -374,10 +374,12 @@ main(int argc, char* argv[]) {
 #if defined(WIN32)
         FILE* fp = fopen("build/arch_test.exe", "rb");
         if (fp == NULL) {
-            if (system_cmd("cd build && echo int main(void){ return "
-                           "sizeof(void*); } > arch_test.c && cl /nologo arch_test.c && del "
-                           "arch_test.c && del arch_test.obj")
-                != 0) {
+            if (system_cmd("echo int main(void){ return "
+                           "sizeof(void*); } > build\\arch_test.c")
+                    != 0
+                || system_cmd("cl.exe /nologo build\\arch_test.c /Fe:build\\") != 0
+                || system_cmd("del build\\arch_test.c") != 0
+                || system_cmd("del build\\del arch_test.obj") != 0) {
                 printf("failed to detect the environment\n");
                 return 1;
             }
@@ -1037,6 +1039,16 @@ func_add_public_includes_internal(char* text, unsigned int text_len) {
 static bool
 func_add_sources_internal(char* text, unsigned int text_len) {
     char* src;
+
+    /* make sure the file exists */
+    {
+        FILE* fp = fopen(text, "rb");
+        if (fp == NULL) {
+            printf("- path does not exist: %s\n", text);
+            return false;
+        }
+        fclose(fp);
+    }
 
     if (text[text_len - 1] == 'h') {
         add_header_file(text, text_len);
