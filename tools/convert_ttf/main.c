@@ -243,9 +243,8 @@ main(void) {
         offset_y =
             -y0; /* stb y0 is negative above baseline, so -y0 gives top offset (positive up) */
 
-        /* advance 1/64 like freetype */
         {
-            int advance_26_6 = (int)((float)advance * scale * 64.0f + 0.01f);
+            int advance_26_6 = (int)((float)advance * scale + 0.01f);
             if (advance_26_6 < 0)
                 advance_26_6 = 0;
             tmp_uint = (unsigned int)advance_26_6;

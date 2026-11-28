@@ -409,7 +409,7 @@ collect_glyphs(
             font_manager_get_glyph(font_manager, (unsigned int)text_widget->text[char_idx]);
         glyph_count += src_glyph->width > 0;
 
-        distance_to_next_glyph = (float)(src_glyph->advance >> 6) * glyph_scale;
+        distance_to_next_glyph = (float)(src_glyph->advance) * glyph_scale;
 
         if (offset[0] + distance_to_next_glyph > size[0]) {
             if (text_widget->is_multiline) {

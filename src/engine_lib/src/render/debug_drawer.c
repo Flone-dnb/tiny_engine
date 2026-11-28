@@ -368,10 +368,7 @@ debug_drawer_draw_text_color_pos(const char* text, float time_sec, te_vec4 rgba,
                 font_manager_get_glyph(font_manager, (unsigned int)new_item.text[i]);
             te_debug_drawer_glyph* dst = &new_item.glyphs[i];
 
-            dst->distance_to_next_glyph =
-                (float)(src->advance
-                        >> 6) /* bitshift by 6 to get value in pixels (2^6 = 64) */
-                * font_scale;
+            dst->distance_to_next_glyph = (float)(src->advance) * font_scale;
 
             if (src->width > 0) {
                 vec2_set(

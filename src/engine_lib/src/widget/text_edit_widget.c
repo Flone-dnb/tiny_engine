@@ -305,8 +305,7 @@ prv_text_edit_widget_on_mouse_button_pressed(
 
             float x_end = 0.0f;
             if (glyph->width == 0) {
-                const float distance_to_next_glyph =
-                    (float)(glyph->advance >> 6) * glyph_scale;
+                const float distance_to_next_glyph = (float)(glyph->advance) * glyph_scale;
                 x_end = x_start + distance_to_next_glyph;
             } else {
                 x_end = data->pos_pix[0] + data->glyphs[glyph_idx].offset_pix[0]
@@ -434,8 +433,7 @@ prv_text_edit_widget_update_cursor(te_text_edit_widget* text_edit_widget) {
 
             float x_end = 0.0f;
             if (glyph->width == 0) {
-                const float distance_to_next_glyph =
-                    (float)(glyph->advance >> 6) * glyph_scale;
+                const float distance_to_next_glyph = (float)(glyph->advance) * glyph_scale;
                 x_end = x_start + distance_to_next_glyph;
             } else {
                 x_end = data->pos_pix[0] + data->glyphs[glyph_idx].offset_pix[0]

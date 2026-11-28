@@ -16,7 +16,7 @@ typedef struct te_font_glyph {
     /* character code of this glyph */
     unsigned int char_code;
 
-    /* horizontal offset (in 1/64 pixels) until the next glyph */
+    /* horizontal offset (in pixels) until the next glyph */
     unsigned int advance;
 
     /* starting X and Y position (in pixels) of this glyph on the font bitmap */
