@@ -15,7 +15,7 @@
 #include <direct.h>
 #include <windows.h>
 #ifndef INVALID_FILE_ATTRIBUTES
-#define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
+#define INVALID_FILE_ATTRIBUTES ((DWORD) - 1)
 #endif
 #include <tchar.h>
 #define mkdir(dir, mode) _mkdir(dir)
@@ -179,10 +179,8 @@ filesystem_find_filename(const char* path, bool include_extension, unsigned int*
         }
     }
     if (idx >= len) {
-        if (ret_len != NULL) {
-            (*ret_len) = 0;
-        }
-        return NULL;
+        /* path only has filename */
+        idx = 0;
     }
 
     if (include_extension) {
@@ -342,7 +340,11 @@ filesystem_append_path(
         add_len = (unsigned int)strlen(add);
     }
 
-    have_slash = path[path_len - 1] == '/' || path[path_len - 1] == '\\';
+    if (path_len > 0) {
+        have_slash = path[path_len - 1] == '/' || path[path_len - 1] == '\\';
+    } else {
+        have_slash = true;
+    }
 
     out_len = path_len + !have_slash + add_len;
     out = malloc(sizeof(char) * (out_len + 1));
@@ -382,7 +384,11 @@ filesystem_append_path_ext(
         extension_len = (unsigned int)strlen(extension);
     }
 
-    have_slash = path[path_len - 1] == '/' || path[path_len - 1] == '\\';
+    if (path_len > 0) {
+        have_slash = path[path_len - 1] == '/' || path[path_len - 1] == '\\';
+    } else {
+        have_slash = true;
+    }
 
     out_len = path_len + !have_slash + add_len + extension_len;
     out = malloc(sizeof(char) * (out_len + 1));
